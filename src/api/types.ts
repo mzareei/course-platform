@@ -31,31 +31,39 @@ export interface SectionInfo {
   status?: string;
 }
 
+// Flat shape returned by course-auth-context loadVisibleReleases.
+// `state` is already the effective state (a scheduled release past opens_at
+// reports as released); the raw DB state is `release_state`.
 export interface ReleaseItem {
-  id: string;
+  release_id: string;
   state: string;
-  effective_state?: string;
+  release_state: string;
   opens_at?: string | null;
   closes_at?: string | null;
-  section_id?: string | null;
-  content_item?: {
-    id: string;
-    slug: string;
-    title: string;
-    content_type: string;
-    source_kind: string;
-    source_ref: string;
-  };
+  content_type: string;
+  activity_instance_id?: string | null;
+  slug: string;
+  title: string;
+  summary: string;
+  source_kind: string;
+  source_ref: string;
+  default_points?: number;
+  class_session_title?: string;
+  planned_date?: string;
+  session_state?: string;
 }
 
+// Flat shape returned by course-auth-context loadTeacherSessions.
 export interface TeacherSession {
-  id: string;
+  session_id: string;
+  course_id: string;
+  section_id: string;
+  section_code: string;
+  section_name: string;
   sequence_number: number;
   title?: string;
-  state: string;
   planned_date?: string | null;
-  section_id?: string;
-  section_code?: string;
+  state: string;
 }
 
 export interface CourseContext {

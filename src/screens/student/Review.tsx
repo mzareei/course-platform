@@ -2,15 +2,18 @@
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
 import type { ReleaseItem } from "../../api/types";
+import { releaseHref } from "./Today";
 
-function releaseHref(release: ReleaseItem): string {
-  const item = release.content_item;
-  if (!item) return "#";
-  if (item.source_kind === "static_path") {
-    return `https://mzareei.github.io/${item.source_ref.replace(/^\//, "")}`;
+function groupTitle(type: string): string {
+  switch (type) {
+    case "lecture": return "Lectures";
+    case "mission": return "Practice missions";
+    case "activity":
+    case "quiz_bank": return "Activities";
+    case "case_file": return "Case files";
+    case "resource": return "Resources";
+    default: return "Other materials";
   }
-  if (item.source_kind === "external_url") return item.source_ref;
-  return "#";
 }
 
 export function Review() {
@@ -18,12 +21,12 @@ export function Review() {
   if (!ctx) return null;
 
   const reviewable = (ctx.releases ?? []).filter((r) =>
-    ["released", "live", "review_only", "paused"].includes(r.effective_state || r.state)
+    ["released", "live", "review_only", "paused"].includes(r.state)
   );
 
   const byType = new Map<string, ReleaseItem[]>();
   for (const release of reviewable) {
-    const key = release.content_item?.content_type ?? "other";
+    const key = release.content_type ?? "other";
     byType.set(key, [...(byType.get(key) ?? []), release]);
   }
 
@@ -58,9 +61,10 @@ export function Review() {
                 rel="noreferrer"
               >
                 <div class="row" style="justify-content: space-between;">
-                  <h3>{release.content_item?.title ?? "Material"}</h3>
-                  <StatusPill state={release.effective_state || release.state} />
+                  <h3>{release.title}</h3>
+                  <StatusPill state={release.state} />
                 </div>
+                {release.summary ? <p class="hint">{release.summary}</p> : null}
               </a>
             ))}
           </section>
@@ -68,16 +72,4 @@ export function Review() {
       )}
     </div>
   );
-}
-
-function groupTitle(type: string): string {
-  switch (type) {
-    case "lecture": return "Lectures";
-    case "mission": return "Practice missions";
-    case "activity":
-    case "quiz_bank": return "Activities";
-    case "case_file": return "Case files";
-    case "resource": return "Resources";
-    default: return "Other materials";
-  }
 }

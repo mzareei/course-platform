@@ -24,7 +24,10 @@ export function TeachHome() {
         todaySessions.map((s) => (
           <div class="card" style="border-color: var(--primary); border-width: 2px;">
             <div class="row" style="justify-content: space-between;">
-              <h2>Today's class — session {s.sequence_number}{s.section_code ? ` · Section ${s.section_code}` : ""}</h2>
+              <h2>
+                Today's class — {s.title || `session ${s.sequence_number}`}
+                {s.section_code ? ` · Section ${s.section_code}` : ""}
+              </h2>
               <StatusPill state={s.state} />
             </div>
             <p class="hint">
@@ -52,6 +55,7 @@ export function TeachHome() {
             <thead>
               <tr>
                 <th>#</th>
+                <th>Class</th>
                 <th>Date</th>
                 <th>Section</th>
                 <th>Status</th>
@@ -61,8 +65,9 @@ export function TeachHome() {
               {upcoming.map((s) => (
                 <tr>
                   <td class="num">{s.sequence_number}</td>
+                  <td>{s.title ?? "—"}</td>
                   <td>{s.planned_date ? new Date(s.planned_date).toLocaleDateString() : "—"}</td>
-                  <td>{s.section_code ?? "—"}</td>
+                  <td>{s.section_code || "—"}</td>
                   <td><StatusPill state={s.state} /></td>
                 </tr>
               ))}

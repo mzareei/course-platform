@@ -4,16 +4,27 @@ import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
 import type { ReleaseItem } from "../../api/types";
 
-function releaseHref(release: ReleaseItem): string {
-  const item = release.content_item;
-  if (!item) return "#";
+export function releaseHref(release: ReleaseItem): string {
   // Phase 1: static_path items still live on the public site.
   // Phase 2 replaces this with the gated Storage viewer.
-  if (item.source_kind === "static_path") {
-    return `https://mzareei.github.io/${item.source_ref.replace(/^\//, "")}`;
+  if (release.source_kind === "static_path") {
+    return `https://mzareei.github.io/${release.source_ref.replace(/^\//, "")}`;
   }
-  if (item.source_kind === "external_url") return item.source_ref;
+  if (release.source_kind === "external_url") return release.source_ref;
   return "#";
+}
+
+export function describeType(type?: string): string {
+  switch (type) {
+    case "lecture": return "Lecture deck";
+    case "mission": return "Practice mission";
+    case "quiz_bank":
+    case "activity": return "Graded activity";
+    case "exit_ticket": return "Reflection";
+    case "resource": return "Resource";
+    case "case_file": return "Case file";
+    default: return "Material";
+  }
 }
 
 export function Today() {
@@ -21,10 +32,10 @@ export function Today() {
   if (!ctx) return null;
 
   const releases = (ctx.releases ?? []).filter((r) =>
-    ["released", "live", "review_only"].includes(r.effective_state || r.state)
+    ["released", "live", "review_only"].includes(r.state)
   );
-  const liveNow = releases.filter((r) => (r.effective_state || r.state) === "live");
-  const newest = liveNow[0] ?? releases[0];
+  const liveNow = releases.filter((r) => r.state === "live");
+  const newest = liveNow[0] ?? releases[releases.length - 1];
 
   return (
     <div class="stack">
@@ -48,14 +59,17 @@ export function Today() {
               class="card"
               style="text-decoration: none; color: inherit;"
               href={releaseHref(release)}
-              target={release.content_item?.source_kind === "static_path" ? "_blank" : undefined}
+              target="_blank"
               rel="noreferrer"
             >
               <div class="row" style="justify-content: space-between;">
-                <h3>{release.content_item?.title ?? "Course material"}</h3>
-                <StatusPill state={release.effective_state || release.state} dateHint={release.opens_at} />
+                <h3>{release.title}</h3>
+                <StatusPill state={release.state} dateHint={release.opens_at} />
               </div>
-              <p class="hint">{describeType(release.content_item?.content_type)}</p>
+              <p class="hint">
+                {describeType(release.content_type)}
+                {release.summary ? ` — ${release.summary}` : ""}
+              </p>
             </a>
           ))}
         </div>
@@ -64,23 +78,10 @@ export function Today() {
       {newest ? (
         <div class="action-dock">
           <a class="btn primary" href={releaseHref(newest)} target="_blank" rel="noreferrer">
-            {liveNow.length ? "Join class" : `Open: ${newest.content_item?.title ?? "latest material"}`}
+            {liveNow.length ? "Join class" : `Open: ${newest.title}`}
           </a>
         </div>
       ) : null}
     </div>
   );
-}
-
-function describeType(type?: string): string {
-  switch (type) {
-    case "lecture": return "Lecture deck";
-    case "mission": return "Practice mission";
-    case "quiz_bank":
-    case "activity": return "Graded activity";
-    case "exit_ticket": return "Reflection";
-    case "resource": return "Resource";
-    case "case_file": return "Case file";
-    default: return "Material";
-  }
 }
