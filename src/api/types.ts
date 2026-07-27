@@ -48,6 +48,7 @@ export interface ReleaseItem {
   source_kind: string;
   source_ref: string;
   default_points?: number;
+  class_session_id?: string | null;
   class_session_title?: string;
   planned_date?: string;
   session_state?: string;

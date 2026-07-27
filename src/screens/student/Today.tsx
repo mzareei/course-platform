@@ -82,10 +82,14 @@ export function Today() {
         </div>
       )}
 
-      {newest ? (
+      {liveNow.length ? (
+        <div class="action-dock">
+          <a class="btn primary" href="/live">{t("today.joinClass")}</a>
+        </div>
+      ) : newest ? (
         <div class="action-dock">
           <a class="btn primary" href={releaseHref(newest)} target={releaseTarget(newest)} rel="noreferrer">
-            {liveNow.length ? t("today.joinClass") : t("today.open", { title: newest.title })}
+            {t("today.open", { title: newest.title })}
           </a>
         </div>
       ) : null}

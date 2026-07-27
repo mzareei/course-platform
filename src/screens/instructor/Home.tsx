@@ -35,7 +35,7 @@ export function TeachHome() {
               </h2>
               <StatusPill state={s.state} />
             </div>
-            <p class="hint">{t("teach.runClassSoon")}</p>
+            <a class="btn primary" href={`/teach/run/${s.session_id}`}>{t("run.title")}</a>
           </div>
         ))
       ) : (
@@ -61,6 +61,7 @@ export function TeachHome() {
                 <th>{t("teach.col.date")}</th>
                 <th>{t("teach.col.section")}</th>
                 <th>{t("teach.col.status")}</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -71,6 +72,7 @@ export function TeachHome() {
                   <td>{s.planned_date ? new Date(s.planned_date).toLocaleDateString(locale()) : "—"}</td>
                   <td>{s.section_code || "—"}</td>
                   <td><StatusPill state={s.state} /></td>
+                  <td><a class="btn quiet" href={`/teach/run/${s.session_id}`}>{t("run.title")}</a></td>
                 </tr>
               ))}
             </tbody>

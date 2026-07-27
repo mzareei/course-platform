@@ -277,6 +277,82 @@ export const strings = {
   "role.observer": ["Observer", "Observador"],
   "role.platform_owner": ["Platform owner", "Administrador de la plataforma"],
 
+  // ---------------------------------------------------------------- run class
+  "run.title": ["Run class", "Dar clase"],
+  "run.eyebrow": ["Live teaching", "Clase en vivo"],
+  "run.backToHome": ["Back to home", "Regresar al inicio"],
+  "run.noSession": ["Pick a class session first", "Primero elige una sesión de clase"],
+  "run.noSessionBody": [
+    "Open Run class from a scheduled session on your home screen.",
+    "Abre Dar clase desde una sesión programada en tu pantalla de inicio."
+  ],
+  "run.step.pulse": ["Ask a quick question", "Hacer una pregunta rápida"],
+  "run.step.pulseBody": [
+    "Push a question mid-lecture to check the room is with you. It's graded: answering earns partial credit, answering correctly earns full credit.",
+    "Lanza una pregunta a mitad de la clase para comprobar que el grupo te sigue. Cuenta para la calificación: responder da crédito parcial y acertar da crédito completo."
+  ],
+  "run.question": ["Question", "Pregunta"],
+  "run.questionPlaceholder": [
+    "Which CIA property does ransomware break first?",
+    "¿Cuál propiedad de la tríada CIA rompe primero el ransomware?"
+  ],
+  "run.option": ["Option {n}", "Opción {n}"],
+  "run.markCorrect": ["Correct answer", "Respuesta correcta"],
+  "run.seconds": ["Seconds to answer", "Segundos para responder"],
+  "run.points": ["Points", "Puntos"],
+  "run.push": ["Send to the class", "Enviar al grupo"],
+  "run.pushing": ["Sending…", "Enviando…"],
+  "run.pushFailed": ["Could not send the question.", "No se pudo enviar la pregunta."],
+  "run.needQuestion": [
+    "Write the question and at least two options, and mark which one is correct.",
+    "Escribe la pregunta y al menos dos opciones, y marca cuál es la correcta."
+  ],
+  "run.liveQuestion": ["Question on screen", "Pregunta en pantalla"],
+  "run.answeredOf": ["{answered} of {enrolled} answered", "{answered} de {enrolled} respondieron"],
+  "run.correctCount": ["{correct} correct", "{correct} correctas"],
+  "run.timeLeft": ["{seconds}s left", "quedan {seconds}s"],
+  "run.timeUp": ["Time is up", "Se acabó el tiempo"],
+  "run.reveal": ["Show the answer", "Mostrar la respuesta"],
+  "run.close": ["Close the question", "Cerrar la pregunta"],
+  "run.askAnother": ["Ask another question", "Hacer otra pregunta"],
+  "run.revealed": ["Answer shown to the class", "Respuesta mostrada al grupo"],
+  "run.whoAnswered": ["Who answered", "Quién respondió"],
+  "run.nobodyYet": ["Nobody has answered yet.", "Todavía nadie ha respondido."],
+  "run.correctLabel": ["Correct", "Correcta"],
+  "run.theirAnswer": ["Their answer", "Su respuesta"],
+  "run.startSessionFirst": [
+    "Start the class session before sending a question.",
+    "Inicia la sesión de clase antes de enviar una pregunta."
+  ],
+
+  // ---------------------------------------------------------------- student live
+  "live.title": ["In class", "En clase"],
+  "live.eyebrow": ["Live", "En vivo"],
+  "live.waitingTitle": ["You're in. Watch the screen.", "Ya estás dentro. Mira la pantalla."],
+  "live.waitingBody": [
+    "When your professor asks a question it appears here. Keep this page open.",
+    "Cuando tu profesor haga una pregunta, aparecerá aquí. Deja esta página abierta."
+  ],
+  "live.noClass": ["No class is live right now", "No hay clase en curso ahora"],
+  "live.noClassBody": [
+    "This screen wakes up when your professor starts the class.",
+    "Esta pantalla se activa cuando tu profesor inicia la clase."
+  ],
+  "live.answer": ["Tap your answer", "Toca tu respuesta"],
+  "live.sending": ["Sending…", "Enviando…"],
+  "live.recorded": ["Answer recorded", "Respuesta registrada"],
+  "live.recordedBody": [
+    "Wait for your professor to show the answer.",
+    "Espera a que tu profesor muestre la respuesta."
+  ],
+  "live.youWereRight": ["You got it right", "Respondiste bien"],
+  "live.youWereWrong": ["Not this time", "No esta vez"],
+  "live.correctWas": ["The correct answer was:", "La respuesta correcta era:"],
+  "live.pointsEarned": ["+{points} points", "+{points} puntos"],
+  "live.answerFailed": ["Could not record your answer.", "No se pudo registrar tu respuesta."],
+  "live.timeUp": ["Time is up for this question", "Se acabó el tiempo de esta pregunta"],
+  "live.backToToday": ["Leave class view", "Salir de la vista de clase"],
+
   // ---------------------------------------------------------------- status pills
   "state.draft": ["Hidden", "Oculto"],
   "state.scheduled": ["Scheduled", "Programado"],
