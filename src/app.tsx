@@ -10,6 +10,7 @@ import { Grades } from "./screens/student/Grades";
 import { TeachHome } from "./screens/instructor/Home";
 import { Gradebook } from "./screens/instructor/Gradebook";
 import { People } from "./screens/instructor/People";
+import { Viewer } from "./screens/Viewer";
 
 function StudentNav() {
   const { path } = useLocation();
@@ -168,6 +169,7 @@ export function App() {
             />
             {/* Instructors can still walk the student surface explicitly. */}
             <Route path="/student" component={Today} />
+            <Route path="/view/:releaseId" component={Viewer} />
             <Route default component={TeachHome} />
           </Router>
         ) : (
@@ -175,6 +177,7 @@ export function App() {
             <Route path="/" component={Today} />
             <Route path="/review" component={Review} />
             <Route path="/grades" component={Grades} />
+            <Route path="/view/:releaseId" component={Viewer} />
             <Route default component={Today} />
           </Router>
         )}

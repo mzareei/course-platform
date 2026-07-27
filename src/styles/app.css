@@ -409,3 +409,18 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   .shell { padding-top: 1.5rem; }
   h1 { font-size: 1.9rem; }
 }
+
+/* ---------------------------------------------------------------- gated viewer */
+.viewer-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.viewer-frame {
+  width: 100%;
+  height: calc(100dvh - 10.5rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}

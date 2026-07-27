@@ -2,7 +2,7 @@
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
 import type { ReleaseItem } from "../../api/types";
-import { releaseHref } from "./Today";
+import { releaseHref, releaseTarget } from "./Today";
 
 function groupTitle(type: string): string {
   switch (type) {
@@ -57,7 +57,7 @@ export function Review() {
                 class="card"
                 style="text-decoration: none; color: inherit;"
                 href={releaseHref(release)}
-                target="_blank"
+                target={releaseTarget(release)}
                 rel="noreferrer"
               >
                 <div class="row" style="justify-content: space-between;">

@@ -5,13 +5,18 @@ import { StatusPill } from "../../components/StatusPill";
 import type { ReleaseItem } from "../../api/types";
 
 export function releaseHref(release: ReleaseItem): string {
-  // Phase 1: static_path items still live on the public site.
-  // Phase 2 replaces this with the gated Storage viewer.
+  // Storage-backed content opens inside the app through the gated viewer.
+  if (release.source_kind === "storage_object") return `/view/${release.release_id}`;
+  // Legacy public items (until everything is migrated).
   if (release.source_kind === "static_path") {
     return `https://mzareei.github.io/${release.source_ref.replace(/^\//, "")}`;
   }
   if (release.source_kind === "external_url") return release.source_ref;
   return "#";
+}
+
+export function releaseTarget(release: ReleaseItem): string | undefined {
+  return release.source_kind === "storage_object" ? undefined : "_blank";
 }
 
 export function describeType(type?: string): string {
@@ -59,7 +64,7 @@ export function Today() {
               class="card"
               style="text-decoration: none; color: inherit;"
               href={releaseHref(release)}
-              target="_blank"
+              target={releaseTarget(release)}
               rel="noreferrer"
             >
               <div class="row" style="justify-content: space-between;">
@@ -77,7 +82,7 @@ export function Today() {
 
       {newest ? (
         <div class="action-dock">
-          <a class="btn primary" href={releaseHref(newest)} target="_blank" rel="noreferrer">
+          <a class="btn primary" href={releaseHref(newest)} target={releaseTarget(newest)} rel="noreferrer">
             {liveNow.length ? "Join class" : `Open: ${newest.title}`}
           </a>
         </div>
