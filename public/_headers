@@ -1,8 +1,15 @@
 # Cloudflare Pages headers.
-# frame-src allows the gated Storage viewer (Phase 2): decks are served from
-# Supabase Storage via short-lived signed URLs inside an iframe.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://ojmbupftdikwmlqvibwt.supabase.co wss://ojmbupftdikwmlqvibwt.supabase.co; frame-src blob: https://ojmbupftdikwmlqvibwt.supabase.co; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://ojmbupftdikwmlqvibwt.supabase.co wss://ojmbupftdikwmlqvibwt.supabase.co; frame-src 'self'; base-uri 'self'; form-action 'self'
+
+# Gated course content (lecture decks and missions) is delivered here by
+# functions/content.ts. These documents are our own generated single-file HTML
+# with an inline presenter engine, so this path — and only this path — allows
+# inline scripts and styles. It stays sandboxed by the iframe that embeds it and
+# cannot reach the platform API (no connect-src beyond fonts).
+/content
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data: blob:; frame-ancestors 'self'

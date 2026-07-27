@@ -17,7 +17,7 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const blobUrl = useRef<string | null>(null);
+  const timer = useRef<number | undefined>(undefined);
 
   async function mint() {
     if (!releaseId) return;
@@ -26,17 +26,16 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
         action: "request_url",
         release_id: releaseId
       });
-      // The Supabase gateway refuses to serve renderable HTML (anti-phishing),
-      // so fetch the gated content and render it from a local blob URL. The
-      // token-authorized fetch is still the only path into the private bucket.
-      const response = await fetch(access.url);
-      if (!response.ok) throw new Error((await response.text()) || "Could not load the content.");
-      const html = await response.text();
-      if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
-      blobUrl.current = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      // Deliver through our own /content proxy: a same-origin document gets its
+      // own CSP (which permits the deck's inline engine), where a blob: iframe
+      // would inherit this page's stricter policy and run no scripts at all.
+      const token = new URL(access.url).searchParams.get("t") || "";
       setTitle(access.content.title);
-      setUrl(blobUrl.current);
+      setUrl(`/content?t=${encodeURIComponent(token)}`);
       setError(null);
+      // Refresh before the token expires so a long read never dies mid-slide.
+      clearTimeout(timer.current);
+      timer.current = setTimeout(mint, Math.max(30, access.expires_in - 60) * 1000) as unknown as number;
     } catch (e) {
       setUrl(null);
       setError(
@@ -51,9 +50,7 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
 
   useEffect(() => {
     void mint();
-    return () => {
-      if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
-    };
+    return () => clearTimeout(timer.current);
   }, [releaseId]);
 
   if (error) {
