@@ -1,17 +1,22 @@
 // Run class — the instructor's live screen.
 //
-// Deliberately one thing at a time: either you are composing a question, or one
+// Deliberately one thing at a time: either you are picking a question, or one
 // is on screen and your only choices are "show the answer" and "close". No
 // dashboard, no state-machine vocabulary, no way to have two questions live.
+//
+// Questions always come from the generated bank — the instructor never types a
+// stem or invents distractors. Picking "Which class" + a difficulty (or
+// "Surprise me") draws one question server-side; the same click sends it.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { context } from "../../state/session";
-import { t } from "../../i18n";
+import { t, lang } from "../../i18n";
 import {
-  pushPulse, revealPulse, closePulse, pulseResults,
-  type PulseRound, type PulseResults
+  pushPulse, revealPulse, closePulse, pulseResults, listBanks, drawQuestion,
+  type PulseRound, type PulseResults, type BankSummary, type DrawnQuestion
 } from "../../api/pulse";
 
 const POLL_MS = 3000;
+type Difficulty = "easy" | "medium" | "hard";
 
 function secondsLeft(endsAt?: string): number {
   if (!endsAt) return 0;
@@ -26,23 +31,35 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [results, setResults] = useState<PulseResults | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
 
-  // Composer state
-  const [text, setText] = useState("");
-  const [options, setOptions] = useState<string[]>(["", "", "", ""]);
-  const [correctIndex, setCorrectIndex] = useState(0);
+  // Bank selection
+  const [banks, setBanks] = useState<BankSummary[] | null>(null);
+  const [bankSlug, setBankSlug] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty | "">("");
+  const [drawn, setDrawn] = useState<DrawnQuestion | null>(null);
+  const [askedKeys, setAskedKeys] = useState<string[]>([]);
   const [limit, setLimit] = useState(60);
   const [points, setPoints] = useState(1);
 
   const poll = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    listBanks()
+      .then(({ banks: list }) => {
+        setBanks(list);
+        // Default to the lecture this class session was created for, if it's in the bank list.
+        const released = (ctx?.releases ?? []).find((r) => r.class_session_id === sessionId);
+        const match = list.find((b) => b.content_slug === released?.slug) ?? list[0];
+        if (match) setBankSlug(match.content_slug);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : t("run.pushFailed")));
+  }, []);
 
   // While a question is on screen, keep the counts and the countdown moving.
   useEffect(() => {
     clearInterval(poll.current);
     if (!round || round.state === "closed") return;
     poll.current = setInterval(async () => {
-      setTick((n) => n + 1);
       try {
         setResults(await pulseResults(round.round_id));
       } catch {
@@ -62,29 +79,49 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     );
   }
 
-  const cleanOptions = options.map((o) => o.trim()).filter(Boolean);
-  const canPush = text.trim().length >= 4 && cleanOptions.length >= 2 && correctIndex < cleanOptions.length;
+  const activeBank = banks?.find((b) => b.content_slug === bankSlug) ?? null;
+  const bankHasQuestions = (activeBank?.total ?? 0) > 0;
 
-  async function onPush() {
+  async function onDraw() {
     setError(null);
     setBusy(true);
     try {
-      const payloadOptions = options
-        .map((value, index) => ({ key: `o${index + 1}`, text: value.trim(), index }))
-        .filter((option) => option.text);
-      const correct = payloadOptions.find((option) => option.index === correctIndex) ?? payloadOptions[0];
+      const { question } = await drawQuestion({
+        content_slug: bankSlug,
+        difficulty: difficulty || undefined,
+        exclude_keys: askedKeys
+      });
+      setDrawn(question);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("run.drawFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPush() {
+    if (!drawn) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const useSpanish = lang.value === "es";
       const { round: pushed } = await pushPulse({
         class_session_id: sessionId!,
         question: {
-          text: text.trim(),
-          options: payloadOptions.map(({ key, text: optionText }) => ({ key, text: optionText })),
-          correct_key: correct.key
+          text: (useSpanish && drawn.prompt_es) || drawn.prompt,
+          options: drawn.options.map((option) => ({
+            key: option.key,
+            text: (useSpanish && option.text_es) || option.text
+          })),
+          correct_key: drawn.options.find((option) => option.is_correct)!.key
         },
         time_limit_seconds: limit,
         points
       });
       setRound(pushed);
       setResults(null);
+      setAskedKeys((prev) => [...prev, drawn.generation_key]);
+      setDrawn(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("run.pushFailed"));
     } finally {
@@ -113,9 +150,6 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       await closePulse(round.round_id);
       setRound(null);
       setResults(null);
-      setText("");
-      setOptions(["", "", "", ""]);
-      setCorrectIndex(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("run.pushFailed"));
     } finally {
@@ -143,65 +177,102 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           <h2>{t("run.step.pulse")}</h2>
           <p class="hint">{t("run.step.pulseBody")}</p>
 
-          <label class="field">
-            {t("run.question")}
-            <textarea
-              value={text}
-              placeholder={t("run.questionPlaceholder")}
-              onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
-              style="min-height: 4.5rem;"
-            />
-          </label>
-
-          <div class="stack" style="gap: 0.4rem;">
-            {options.map((value, index) => (
-              <div class="row" style="gap: 0.5rem; flex-wrap: nowrap;">
-                <input
-                  type="radio"
-                  name="correct"
-                  checked={correctIndex === index}
-                  disabled={!value.trim()}
-                  onChange={() => setCorrectIndex(index)}
-                  aria-label={t("run.markCorrect")}
-                  style="width: 22px; height: 22px; flex: 0 0 auto;"
-                />
-                <input
-                  type="text"
-                  value={value}
-                  placeholder={t("run.option", { n: index + 1 })}
-                  onInput={(e) => {
-                    const next = [...options];
-                    next[index] = (e.target as HTMLInputElement).value;
-                    setOptions(next);
-                  }}
-                  style="flex: 1;"
-                />
+          {banks === null ? (
+            <p class="hint">{t("run.loadingBanks")}</p>
+          ) : banks.length === 0 ? (
+            <p class="hint">{t("run.noBank")}</p>
+          ) : (
+            <>
+              <div class="grid-2">
+                <label class="field">
+                  {t("run.pickLecture")}
+                  <select
+                    value={bankSlug}
+                    onChange={(e) => {
+                      setBankSlug((e.target as HTMLSelectElement).value);
+                      setDrawn(null);
+                      setAskedKeys([]);
+                    }}
+                  >
+                    {banks.map((bank) => (
+                      <option value={bank.content_slug}>{bank.content_title}</option>
+                    ))}
+                  </select>
+                </label>
+                <label class="field">
+                  {t("run.pickDifficulty")}
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty((e.target as HTMLSelectElement).value as Difficulty | "")}
+                  >
+                    <option value="">{t("run.anyDifficulty")}</option>
+                    <option value="easy">{t("difficulty.easy")}</option>
+                    <option value="medium">{t("difficulty.medium")}</option>
+                    <option value="hard">{t("difficulty.hard")}</option>
+                  </select>
+                </label>
               </div>
-            ))}
-            <p class="hint">{t("run.markCorrect")}</p>
-          </div>
 
-          <div class="grid-2">
-            <label class="field">
-              {t("run.seconds")}
-              <input
-                type="number" min="10" max="900" value={limit}
-                onInput={(e) => setLimit(Number((e.target as HTMLInputElement).value) || 60)}
-              />
-            </label>
-            <label class="field">
-              {t("run.points")}
-              <input
-                type="number" min="0" max="100" step="0.5" value={points}
-                onInput={(e) => setPoints(Number((e.target as HTMLInputElement).value) || 0)}
-              />
-            </label>
-          </div>
+              {activeBank ? (
+                <p class="hint">
+                  {t("run.bankCount", {
+                    total: activeBank.total,
+                    easy: activeBank.by_difficulty.easy,
+                    medium: activeBank.by_difficulty.medium,
+                    hard: activeBank.by_difficulty.hard
+                  })}
+                  {askedKeys.length ? ` · ${t("run.askedAlready", { count: askedKeys.length })}` : ""}
+                </p>
+              ) : null}
 
-          <button class="btn primary" type="button" disabled={busy || !canPush} onClick={onPush}>
-            {busy ? t("run.pushing") : t("run.push")}
-          </button>
-          {!canPush ? <p class="hint">{t("run.needQuestion")}</p> : null}
+              {!drawn ? (
+                <button class="btn primary" type="button" disabled={busy || !bankHasQuestions} onClick={onDraw}>
+                  {busy ? t("run.drawing") : t("run.draw")}
+                </button>
+              ) : (
+                <div class="card muted">
+                  <p class="eyebrow">
+                    {t("run.preview")} · {t(`difficulty.${drawn.difficulty}`)}
+                  </p>
+                  <h3>{(lang.value === "es" && drawn.prompt_es) || drawn.prompt}</h3>
+                  <div class="stack" style="gap: 0.3rem;">
+                    {drawn.options.map((option) => (
+                      <div class={`pulse-choice${option.is_correct ? " correct" : ""}`}>
+                        {(lang.value === "es" && option.text_es) || option.text}
+                        {option.is_correct ? ` ✓ ${t("run.correctAnswer")}` : ""}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div class="grid-2">
+                    <label class="field">
+                      {t("run.seconds")}
+                      <input
+                        type="number" min="10" max="900" value={limit}
+                        onInput={(e) => setLimit(Number((e.target as HTMLInputElement).value) || 60)}
+                      />
+                    </label>
+                    <label class="field">
+                      {t("run.points")}
+                      <input
+                        type="number" min="0" max="100" step="0.5" value={points}
+                        onInput={(e) => setPoints(Number((e.target as HTMLInputElement).value) || 0)}
+                      />
+                    </label>
+                  </div>
+
+                  <div class="row">
+                    <button class="btn primary" type="button" disabled={busy} onClick={onPush}>
+                      {busy ? t("run.pushing") : t("run.push")}
+                    </button>
+                    <button class="btn" type="button" disabled={busy} onClick={onDraw}>
+                      {t("run.drawAgain")}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -228,7 +299,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                     <div class="pulse-bar-fill" style={`width: ${results?.answered ? share : 0}%`} />
                     <span class="pulse-bar-label">
                       {option.text}
-                      {isCorrect ? ` ✓ ${t("run.correctLabel")}` : ""}
+                      {isCorrect ? ` ✓ ${t("run.correctAnswer")}` : ""}
                     </span>
                     <span class="pulse-bar-count">{option.count ?? 0}</span>
                   </div>
@@ -236,7 +307,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
               })}
             </div>
 
-            <p class="hint" data-tick={tick}>
+            <p class="hint">
               {t("run.answeredOf", {
                 answered: results?.answered ?? 0,
                 enrolled: results?.enrolled ?? 0

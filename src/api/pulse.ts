@@ -61,6 +61,44 @@ export function pushPulse(input: {
   return callFn<{ round: PulseRound }>("course-pulse", { action: "push", ...input });
 }
 
+// ---------------------------------------------------------------- question bank
+export interface BankSummary {
+  bank_id: string;
+  title: string;
+  content_slug: string;
+  content_title: string;
+  content_type: string;
+  total: number;
+  by_difficulty: { easy: number; medium: number; hard: number };
+}
+
+export interface DrawnQuestion {
+  question_id: string;
+  generation_key: string;
+  difficulty: "easy" | "medium" | "hard";
+  prompt: string;
+  prompt_es: string | null;
+  explanation: string | null;
+  explanation_es: string | null;
+  options: Array<{ key: string; text: string; text_es: string | null; is_correct: boolean }>;
+}
+
+export function listBanks() {
+  return callFn<{ banks: BankSummary[] }>("course-question-bank", { action: "list_banks" });
+}
+
+/** Draw one generated question for a live pulse. The instructor never types a stem. */
+export function drawQuestion(input: {
+  content_slug: string;
+  difficulty?: "easy" | "medium" | "hard";
+  exclude_keys?: string[];
+}) {
+  return callFn<{ question: DrawnQuestion; remaining: number }>("course-question-bank", {
+    action: "draw_question",
+    ...input
+  });
+}
+
 export function revealPulse(round_id: string) {
   return callFn<{ round: PulseRound } & PulseResults>("course-pulse", { action: "reveal", round_id });
 }

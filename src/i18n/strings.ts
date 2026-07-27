@@ -292,20 +292,37 @@ export const strings = {
     "Lanza una pregunta a mitad de la clase para comprobar que el grupo te sigue. Cuenta para la calificación: responder da crédito parcial y acertar da crédito completo."
   ],
   "run.question": ["Question", "Pregunta"],
-  "run.questionPlaceholder": [
-    "Which CIA property does ransomware break first?",
-    "¿Cuál propiedad de la tríada CIA rompe primero el ransomware?"
-  ],
-  "run.option": ["Option {n}", "Opción {n}"],
-  "run.markCorrect": ["Correct answer", "Respuesta correcta"],
   "run.seconds": ["Seconds to answer", "Segundos para responder"],
   "run.points": ["Points", "Puntos"],
   "run.push": ["Send to the class", "Enviar al grupo"],
   "run.pushing": ["Sending…", "Enviando…"],
   "run.pushFailed": ["Could not send the question.", "No se pudo enviar la pregunta."],
-  "run.needQuestion": [
-    "Write the question and at least two options, and mark which one is correct.",
-    "Escribe la pregunta y al menos dos opciones, y marca cuál es la correcta."
+  "run.correctAnswer": ["Correct answer", "Respuesta correcta"],
+
+  // Questions come from the generated bank — the instructor never writes one.
+  "run.pickLecture": ["Which class are you teaching?", "¿Cuál clase estás dando?"],
+  "run.pickDifficulty": ["How hard?", "¿Qué tan difícil?"],
+  "run.anyDifficulty": ["Surprise me", "Sorpréndeme"],
+  "difficulty.easy": ["Easy", "Fácil"],
+  "difficulty.medium": ["Medium", "Media"],
+  "difficulty.hard": ["Hard", "Difícil"],
+  "run.draw": ["Pick a question", "Elegir una pregunta"],
+  "run.drawing": ["Picking…", "Eligiendo…"],
+  "run.drawAgain": ["Pick a different one", "Elegir otra"],
+  "run.drawFailed": ["Could not pick a question.", "No se pudo elegir una pregunta."],
+  "run.noBank": [
+    "This class has no question bank yet. Banks are generated from the class content.",
+    "Esta clase todavía no tiene banco de preguntas. Los bancos se generan a partir del contenido de la clase."
+  ],
+  "run.bankCount": [
+    "{total} questions ready · {easy} easy · {medium} medium · {hard} hard",
+    "{total} preguntas listas · {easy} fáciles · {medium} medias · {hard} difíciles"
+  ],
+  "run.preview": ["Ready to send", "Lista para enviar"],
+  "run.loadingBanks": ["Loading your question banks…", "Cargando tus bancos de preguntas…"],
+  "run.askedAlready": [
+    "Already asked this class: {count}",
+    "Ya preguntadas en esta clase: {count}"
   ],
   "run.liveQuestion": ["Question on screen", "Pregunta en pantalla"],
   "run.answeredOf": ["{answered} of {enrolled} answered", "{answered} de {enrolled} respondieron"],
