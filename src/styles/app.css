@@ -424,3 +424,16 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   border-radius: var(--radius);
   background: var(--surface-1);
 }
+
+/* ---------------------------------------------------------------- language toggle */
+.lang-toggle {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.6rem;
+  min-height: 40px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+}
+.lang-toggle:hover { color: var(--text); background: var(--surface-2); }

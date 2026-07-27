@@ -62,10 +62,13 @@ requireMarker("src/state/session.ts", "platform_owner", "surface routing from me
 requireMarker("src/app.tsx", "InstructorNav", "instructor surface");
 requireMarker("src/app.tsx", "StudentNav", "student surface");
 
-// Plain-language labels — raw state machine words must be translated
-requireMarker("src/components/StatusPill.tsx", "Hidden", "draft renders as Hidden");
-requireMarker("src/components/StatusPill.tsx", "Open now", "released renders as Open now");
-requireMarker("src/components/StatusPill.tsx", "Review only", "review_only renders plainly");
+// Plain-language labels — raw state machine words must never reach the UI.
+// The words themselves live in the bilingual dictionary; the pill only maps
+// states to keys and styles.
+requireMarker("src/i18n/strings.ts", '"state.draft": ["Hidden"', "draft reads as Hidden");
+requireMarker("src/i18n/strings.ts", '"state.released": ["Open now"', "released reads as Open now");
+requireMarker("src/i18n/strings.ts", '"state.review_only": ["Review only"', "review_only reads plainly");
+requireMarker("src/components/StatusPill.tsx", "state.", "the pill resolves states through the dictionary");
 
 // Security posture: anon key only, never a service key
 const configSource = read("src/config.ts");

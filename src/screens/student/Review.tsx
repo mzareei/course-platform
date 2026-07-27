@@ -1,20 +1,19 @@
 // S3 Review — everything already released, grouped for self-study.
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
+import { t } from "../../i18n";
+import type { StringKey } from "../../i18n/strings";
 import type { ReleaseItem } from "../../api/types";
 import { releaseHref, releaseTarget } from "./Today";
 
-function groupTitle(type: string): string {
-  switch (type) {
-    case "lecture": return "Lectures";
-    case "mission": return "Practice missions";
-    case "activity":
-    case "quiz_bank": return "Activities";
-    case "case_file": return "Case files";
-    case "resource": return "Resources";
-    default: return "Other materials";
-  }
-}
+const GROUP_KEYS: Record<string, StringKey> = {
+  lecture: "group.lectures",
+  mission: "group.missions",
+  activity: "group.activities",
+  quiz_bank: "group.activities",
+  case_file: "group.caseFiles",
+  resource: "group.resources"
+};
 
 export function Review() {
   const ctx = context.value;
@@ -31,27 +30,25 @@ export function Review() {
   }
 
   const order = ["lecture", "mission", "activity", "quiz_bank", "case_file", "resource", "other"];
-  const groups = [...byType.entries()].sort(
-    (a, b) => order.indexOf(a[0]) - order.indexOf(b[0])
-  );
+  const groups = [...byType.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
 
   return (
     <div class="stack">
       <div>
-        <p class="eyebrow">Self-study</p>
-        <h1>Review</h1>
-        <p class="hint">Everything your professor has released stays here for you to revisit.</p>
+        <p class="eyebrow">{t("review.eyebrow")}</p>
+        <h1>{t("review.title")}</h1>
+        <p class="hint">{t("review.lede")}</p>
       </div>
 
       {reviewable.length === 0 ? (
         <div class="empty-state card">
-          <h3>Nothing to review yet</h3>
-          <p>Released lectures and practice missions collect here after each class.</p>
+          <h3>{t("review.emptyTitle")}</h3>
+          <p>{t("review.emptyBody")}</p>
         </div>
       ) : (
         groups.map(([type, items]) => (
           <section class="stack">
-            <h2>{groupTitle(type)}</h2>
+            <h2>{t(GROUP_KEYS[type] ?? "group.other")}</h2>
             {items.map((release) => (
               <a
                 class="card"

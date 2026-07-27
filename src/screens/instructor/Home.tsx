@@ -1,6 +1,7 @@
 // I1 Teach Home — the instructor landing: today's session front and center.
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
+import { t, locale } from "../../i18n";
 
 export function TeachHome() {
   const ctx = context.value;
@@ -13,11 +14,13 @@ export function TeachHome() {
     .filter((s) => ["planned", "open", "live", "paused"].includes(s.state))
     .slice(0, 6);
 
+  const name = ctx.profile?.preferred_name;
+
   return (
     <div class="stack">
       <div>
-        <p class="eyebrow">Instructor</p>
-        <h1>Welcome back{ctx.profile?.preferred_name ? `, ${ctx.profile.preferred_name}` : ""}</h1>
+        <p class="eyebrow">{t("teach.eyebrow")}</p>
+        <h1>{name ? t("teach.welcomeNamed", { name }) : t("teach.welcome")}</h1>
       </div>
 
       {todaySessions.length ? (
@@ -25,29 +28,28 @@ export function TeachHome() {
           <div class="card" style="border-color: var(--primary); border-width: 2px;">
             <div class="row" style="justify-content: space-between;">
               <h2>
-                Today's class — {s.title || `session ${s.sequence_number}`}
-                {s.section_code ? ` · Section ${s.section_code}` : ""}
+                {t("teach.todayClass", {
+                  title: s.title || t("teach.sessionN", { n: s.sequence_number })
+                })}
+                {s.section_code ? t("teach.sectionSuffix", { code: s.section_code }) : ""}
               </h2>
               <StatusPill state={s.state} />
             </div>
-            <p class="hint">
-              The guided Run Class flow (start → release → pulses → quiz → reflections → end)
-              arrives in Phase 3. Until then, manage the session from the current course app.
-            </p>
+            <p class="hint">{t("teach.runClassSoon")}</p>
           </div>
         ))
       ) : (
         <div class="card muted">
-          <h3>No class scheduled today</h3>
-          <p class="hint">Your next sessions are below. Running a class is a one-button flow once it's scheduled.</p>
+          <h3>{t("teach.noClassToday")}</h3>
+          <p class="hint">{t("teach.noClassTodayBody")}</p>
         </div>
       )}
 
-      <h2>Upcoming sessions</h2>
+      <h2>{t("teach.upcoming")}</h2>
       {upcoming.length === 0 ? (
         <div class="empty-state card">
-          <h3>No sessions planned</h3>
-          <p>Sessions are created per class meeting; each one gets a QR join code for students.</p>
+          <h3>{t("teach.noSessionsTitle")}</h3>
+          <p>{t("teach.noSessionsBody")}</p>
         </div>
       ) : (
         <div class="table-scroll">
@@ -55,10 +57,10 @@ export function TeachHome() {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Class</th>
-                <th>Date</th>
-                <th>Section</th>
-                <th>Status</th>
+                <th>{t("teach.col.class")}</th>
+                <th>{t("teach.col.date")}</th>
+                <th>{t("teach.col.section")}</th>
+                <th>{t("teach.col.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -66,7 +68,7 @@ export function TeachHome() {
                 <tr>
                   <td class="num">{s.sequence_number}</td>
                   <td>{s.title ?? "—"}</td>
-                  <td>{s.planned_date ? new Date(s.planned_date).toLocaleDateString() : "—"}</td>
+                  <td>{s.planned_date ? new Date(s.planned_date).toLocaleDateString(locale()) : "—"}</td>
                   <td>{s.section_code || "—"}</td>
                   <td><StatusPill state={s.state} /></td>
                 </tr>
@@ -78,20 +80,20 @@ export function TeachHome() {
 
       <div class="grid-2">
         <a class="card" href="/teach/content" style="text-decoration:none;color:inherit;">
-          <h3>Content</h3>
-          <p class="hint">Weekly materials, release control, and (soon) PDF upload.</p>
+          <h3>{t("teach.card.content")}</h3>
+          <p class="hint">{t("teach.card.contentBody")}</p>
         </a>
         <a class="card" href="/teach/grades" style="text-decoration:none;color:inherit;">
-          <h3>Gradebook</h3>
-          <p class="hint">Semester matrix, per-class review, weights.</p>
+          <h3>{t("teach.card.grades")}</h3>
+          <p class="hint">{t("teach.card.gradesBody")}</p>
         </a>
         <a class="card" href="/teach/people" style="text-decoration:none;color:inherit;">
-          <h3>People</h3>
-          <p class="hint">Roster, sections, guests and QA accounts.</p>
+          <h3>{t("teach.card.people")}</h3>
+          <p class="hint">{t("teach.card.peopleBody")}</p>
         </a>
         <a class="card" href="/student" style="text-decoration:none;color:inherit;">
-          <h3>View as student</h3>
-          <p class="hint">See exactly what your students see.</p>
+          <h3>{t("teach.card.asStudent")}</h3>
+          <p class="hint">{t("teach.card.asStudentBody")}</p>
         </a>
       </div>
     </div>

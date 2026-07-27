@@ -3,6 +3,7 @@ import { config } from "../config";
 import { sendOtp, verifyOtp, testSignIn, isEmailAllowedLocally } from "../auth/auth";
 import { getSession } from "../api/client";
 import { session, refreshContext } from "../state/session";
+import { t } from "../i18n";
 
 const COOLDOWN_KEY = "cp.auth-send-cooldown";
 const COOLDOWN_MS = 60_000;
@@ -19,7 +20,9 @@ function cooldownRemaining(): number {
 function startCooldown() {
   try {
     localStorage.setItem(COOLDOWN_KEY, String(Date.now() + COOLDOWN_MS));
-  } catch {}
+  } catch {
+    // Without storage the server's own rate limit still applies.
+  }
 }
 
 export function SignIn() {
@@ -41,13 +44,15 @@ export function SignIn() {
     if (!isEmailAllowedLocally(cleaned)) {
       setMessage({
         kind: "error",
-        text: `Use your institutional email (${config.allowedInstitutionalDomains.map((d) => "@" + d).join(" or ")}).`
+        text: t("signIn.wrongDomain", {
+          domains: config.allowedInstitutionalDomains.map((d) => "@" + d).join(" / ")
+        })
       });
       return;
     }
     const wait = cooldownRemaining();
     if (wait > 0) {
-      setMessage({ kind: "info", text: `A sign-in email was just sent. You can request another in ${Math.ceil(wait / 1000)}s.` });
+      setMessage({ kind: "info", text: t("signIn.cooldown", { seconds: Math.ceil(wait / 1000) }) });
       return;
     }
     setBusy(true);
@@ -55,9 +60,12 @@ export function SignIn() {
       await sendOtp(cleaned);
       startCooldown();
       setSent(true);
-      setMessage({ kind: "info", text: "Check your inbox. Open the link on this device, or type the 6-digit code below." });
+      setMessage({ kind: "info", text: t("signIn.sent") });
     } catch (error) {
-      setMessage({ kind: "error", text: error instanceof Error ? error.message : "Could not send the email." });
+      setMessage({
+        kind: "error",
+        text: error instanceof Error ? error.message : t("signIn.sendFailed")
+      });
     } finally {
       setBusy(false);
     }
@@ -70,7 +78,10 @@ export function SignIn() {
       await verifyOtp(cleaned, code.trim());
       await finishSignIn();
     } catch (error) {
-      setMessage({ kind: "error", text: error instanceof Error ? error.message : "That code didn't work. Check it and try again." });
+      setMessage({
+        kind: "error",
+        text: error instanceof Error ? error.message : t("signIn.codeFailed")
+      });
     } finally {
       setBusy(false);
     }
@@ -83,7 +94,10 @@ export function SignIn() {
       await testSignIn(cleaned);
       await finishSignIn();
     } catch (error) {
-      setMessage({ kind: "error", text: error instanceof Error ? error.message : "Test sign-in failed." });
+      setMessage({
+        kind: "error",
+        text: error instanceof Error ? error.message : t("signIn.testFailed")
+      });
     } finally {
       setBusy(false);
     }
@@ -92,16 +106,14 @@ export function SignIn() {
   return (
     <div class="stack" style="max-width: 30rem; margin: 0 auto; width: 100%;">
       <div>
-        <p class="eyebrow">Course Platform</p>
-        <h1>Sign in</h1>
-        <p class="hint">
-          No password. Enter your institutional email and we'll send you a one-time sign-in link.
-        </p>
+        <p class="eyebrow">{t("signIn.eyebrow")}</p>
+        <h1>{t("signIn.title")}</h1>
+        <p class="hint">{t("signIn.lede")}</p>
       </div>
 
       <div class="card">
         <label class="field">
-          Institutional email
+          {t("signIn.emailLabel")}
           <input
             type="email"
             placeholder={`name@${config.allowedInstitutionalDomains[0]}`}
@@ -112,14 +124,14 @@ export function SignIn() {
           />
         </label>
         <button class="btn primary" type="button" disabled={busy || !cleaned} onClick={onSend}>
-          {sent ? "Resend sign-in email" : "Email me a sign-in link"}
+          {sent ? t("signIn.resend") : t("signIn.send")}
         </button>
 
         {sent ? (
           <>
             <hr class="divider" />
             <label class="field">
-              Or type the 6-digit code from the email
+              {t("signIn.codeLabel")}
               <input
                 type="text"
                 inputmode="numeric"
@@ -130,7 +142,7 @@ export function SignIn() {
               />
             </label>
             <button class="btn" type="button" disabled={busy || code.trim().length < 6} onClick={onVerify}>
-              Verify code
+              {t("signIn.verify")}
             </button>
           </>
         ) : null}
@@ -144,13 +156,10 @@ export function SignIn() {
 
       {config.testSignIn ? (
         <div class="card muted">
-          <h3>Testing mode</h3>
-          <p class="hint">
-            Email verification is off during the testing period. Rostered students can sign in
-            without proving mailbox ownership. This disappears before the semester starts.
-          </p>
+          <h3>{t("signIn.testTitle")}</h3>
+          <p class="hint">{t("signIn.testBody")}</p>
           <button class="btn" type="button" disabled={busy || !cleaned} onClick={onTestSignIn}>
-            Sign in without email (testing)
+            {t("signIn.testButton")}
           </button>
         </div>
       ) : null}

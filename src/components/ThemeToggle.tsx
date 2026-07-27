@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import { config } from "../config";
+import { t } from "../i18n";
 
 function currentTheme(): "light" | "dark" {
   const forced = document.documentElement.dataset.theme;
@@ -15,12 +16,17 @@ export function ThemeToggle() {
     document.documentElement.dataset.theme = next;
     try {
       localStorage.setItem(config.themeStorageKey, next);
-    } catch {}
+      // The deck engine reads its own key; keep decks matching the app.
+      localStorage.setItem("tc-theme", next);
+    } catch {
+      // Preference still applies for this session.
+    }
     setTheme(next);
   }
 
+  const label = t(theme === "dark" ? "app.themeToLight" : "app.themeToDark");
   return (
-    <button class="btn quiet" type="button" onClick={toggle} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
+    <button class="btn quiet" type="button" onClick={toggle} aria-label={label} title={label}>
       {theme === "dark" ? "☀️" : "🌙"}
     </button>
   );

@@ -1,7 +1,9 @@
 import { LocationProvider, Router, Route, useLocation } from "preact-iso";
 import { booting, session, context, contextError, surface, isOwner, refreshContext } from "./state/session";
 import { signOut } from "./auth/auth";
+import { t } from "./i18n";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { LanguageToggle } from "./components/LanguageToggle";
 import { SignIn } from "./screens/SignIn";
 import { NotEnrolled } from "./screens/NotEnrolled";
 import { Today } from "./screens/student/Today";
@@ -15,12 +17,12 @@ import { Viewer } from "./screens/Viewer";
 function StudentNav() {
   const { path } = useLocation();
   const items = [
-    { href: "/", glyph: "📅", label: "Today" },
-    { href: "/review", glyph: "📚", label: "Review" },
-    { href: "/grades", glyph: "✅", label: "My Grades" }
+    { href: "/", glyph: "📅", label: t("nav.today") },
+    { href: "/review", glyph: "📚", label: t("nav.review") },
+    { href: "/grades", glyph: "✅", label: t("nav.grades") }
   ];
   return (
-    <nav class="bottom-nav" aria-label="Main">
+    <nav class="bottom-nav" aria-label={t("nav.main")}>
       {items.map((item) => (
         <a href={item.href} aria-current={path === item.href ? "page" : undefined}>
           <span class="glyph" aria-hidden="true">{item.glyph}</span>
@@ -34,13 +36,13 @@ function StudentNav() {
 function InstructorNav() {
   const { path } = useLocation();
   const items = [
-    { href: "/teach", label: "Home" },
-    { href: "/teach/content", label: "Content" },
-    { href: "/teach/grades", label: "Gradebook" },
-    { href: "/teach/people", label: "People" }
+    { href: "/teach", label: t("teach.nav.home") },
+    { href: "/teach/content", label: t("teach.nav.content") },
+    { href: "/teach/grades", label: t("teach.nav.grades") },
+    { href: "/teach/people", label: t("teach.nav.people") }
   ];
   return (
-    <nav class="nav-tabs" aria-label="Main">
+    <nav class="nav-tabs" aria-label={t("nav.main")}>
       {items.map((item) => (
         <a href={item.href} aria-current={path === item.href ? "page" : undefined}>
           {item.label}
@@ -54,9 +56,10 @@ function Topbar() {
   const profile = context.value?.profile;
   return (
     <header class="topbar">
-      <a class="brand" href={surface.value === "instructor" ? "/teach" : "/"}>Course Platform</a>
+      <a class="brand" href={surface.value === "instructor" ? "/teach" : "/"}>{t("app.name")}</a>
       <span class="spacer" />
       {profile ? <span class="hint">{profile.preferred_name || profile.full_name}</span> : null}
+      <LanguageToggle />
       <ThemeToggle />
       {session.value ? (
         <button
@@ -67,7 +70,7 @@ function Topbar() {
             location.href = "/";
           }}
         >
-          Sign out
+          {t("app.signOut")}
         </button>
       ) : null}
     </header>
@@ -88,7 +91,7 @@ export function App() {
     return (
       <div class="shell">
         <div class="empty-state">
-          <p>Loading…</p>
+          <p>{t("app.loading")}</p>
         </div>
       </div>
     );
@@ -111,11 +114,11 @@ export function App() {
         <Topbar />
         <main class="shell">
           <div class="card">
-            <h2>We couldn't load your course</h2>
+            <h2>{t("app.contextError.title")}</h2>
             <p class="error-text">{contextError.value}</p>
             <div class="row">
               <button class="btn primary" type="button" onClick={() => void refreshContext()}>
-                Try again
+                {t("app.tryAgain")}
               </button>
             </div>
           </div>
@@ -150,8 +153,8 @@ export function App() {
               path="/teach/content"
               component={() => (
                 <Placeholder
-                  title="Content"
-                  note="Your weekly materials move here in Phase 2 — hidden until you release them, with the PDF upload zone arriving in Phase 5."
+                  title={t("teach.card.content")}
+                  note={t("teach.placeholder.contentBody")}
                 />
               )}
             />
@@ -161,7 +164,10 @@ export function App() {
               path="/admin"
               component={() =>
                 isOwner.value ? (
-                  <Placeholder title="Platform admin" note="Professor and course management arrives in Phase 5." />
+                  <Placeholder
+                    title={t("teach.placeholder.adminTitle")}
+                    note={t("teach.placeholder.adminBody")}
+                  />
                 ) : (
                   <TeachHome />
                 )

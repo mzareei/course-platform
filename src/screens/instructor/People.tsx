@@ -6,6 +6,9 @@ import { callFn } from "../../api/client";
 import type { RosterOverview, Role } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
 import { context } from "../../state/session";
+import { t } from "../../i18n";
+
+const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
 
 export function People() {
   const [data, setData] = useState<RosterOverview | null>(null);
@@ -27,9 +30,7 @@ export function People() {
     callFn<RosterOverview>("course-roster-management")
       .then((d) => {
         setData(d);
-        if (!sectionCode && d.roster.length === 0 && sections[0]) {
-          setSectionCode(sections[0].section_code);
-        }
+        if (!sectionCode && sections[0]) setSectionCode(sections[0].section_code);
       })
       .catch((e: Error) => setError(e.message));
   }
@@ -54,11 +55,11 @@ export function People() {
         section_code: sectionCode,
         reason: needsReason ? reason.trim() : undefined
       });
-      setNotice(`${name.trim() || email.trim()} was added to the roster.`);
+      setNotice(t("people.added", { name: name.trim() || email.trim() }));
       setEmail(""); setName(""); setStudentId(""); setReason("");
       load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add this person.");
+      setError(e instanceof Error ? e.message : t("people.addFailed"));
     } finally {
       setBusy(false);
     }
@@ -67,50 +68,48 @@ export function People() {
   return (
     <div class="stack">
       <div>
-        <p class="eyebrow">Administration</p>
-        <h1>People</h1>
+        <p class="eyebrow">{t("people.eyebrow")}</p>
+        <h1>{t("people.title")}</h1>
       </div>
 
       <div class="card">
-        <h2>Add one person</h2>
-        <p class="hint">
-          For a whole class list, use CSV import (still in the current course app; it ports here
-          next). This form covers late enrollments, guests, and QA accounts.
-        </p>
+        <h2>{t("people.addTitle")}</h2>
+        <p class="hint">{t("people.addBody")}</p>
         <div class="grid-2">
           <label class="field">
-            Email
+            {t("people.email")}
             <input type="email" value={email} onInput={(e) => setEmail((e.target as HTMLInputElement).value)} />
           </label>
           <label class="field">
-            Full name
+            {t("people.fullName")}
             <input type="text" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
           </label>
           <label class="field">
-            Student / staff ID (optional)
+            {t("people.studentId")}
             <input type="text" value={studentId} onInput={(e) => setStudentId((e.target as HTMLInputElement).value)} />
           </label>
           <label class="field">
-            Section
+            {t("people.section")}
             <select value={sectionCode} onChange={(e) => setSectionCode((e.target as HTMLSelectElement).value)}>
-              {sections.map((s) => <option value={s.section_code}>{s.section_name || s.section_code}</option>)}
+              {sections.map((s) => (
+                <option value={s.section_code}>{s.section_name || s.section_code}</option>
+              ))}
             </select>
           </label>
           <label class="field">
-            Role
+            {t("people.role")}
             <select value={role} onChange={(e) => setRole((e.target as HTMLSelectElement).value as Role)}>
-              <option value="student">Student</option>
-              <option value="teaching_assistant">Teaching assistant</option>
-              <option value="instructor">Instructor</option>
-              <option value="observer">Observer</option>
+              {ROLE_OPTIONS.map((option) => (
+                <option value={option}>{t(`role.${option}`)}</option>
+              ))}
             </select>
           </label>
           {needsReason ? (
             <label class="field">
-              Reason for outside-institution access
+              {t("people.reason")}
               <input
                 type="text"
-                placeholder="e.g. Guest professor for week 8"
+                placeholder={t("people.reasonPlaceholder")}
                 value={reason}
                 onInput={(e) => setReason((e.target as HTMLInputElement).value)}
               />
@@ -121,32 +120,39 @@ export function People() {
           <button
             class="btn primary"
             type="button"
-            disabled={busy || !email.trim() || !name.trim() || !sectionCode || (needsReason && reason.trim().length < 3)}
+            disabled={
+              busy || !email.trim() || !name.trim() || !sectionCode ||
+              (needsReason && reason.trim().length < 3)
+            }
             onClick={addPerson}
           >
-            Add person
+            {t("people.add")}
           </button>
-          {needsReason ? (
-            <span class="hint">This address is outside the approved domains — the reason is recorded in the audit log.</span>
-          ) : null}
+          {needsReason ? <span class="hint">{t("people.reasonNote")}</span> : null}
         </div>
         {notice ? <p class="hint" role="status">{notice}</p> : null}
         {error ? <p class="error-text" role="alert">{error}</p> : null}
       </div>
 
-      <h2>Roster</h2>
+      <h2>{t("people.roster")}</h2>
       {!data ? (
-        <div class="empty-state"><p>Loading the roster…</p></div>
+        <div class="empty-state"><p>{t("people.loadingRoster")}</p></div>
       ) : data.roster.length === 0 ? (
         <div class="empty-state card">
-          <h3>Nobody on the roster yet</h3>
-          <p>Add people above, or import the class CSV to bring everyone in at once.</p>
+          <h3>{t("people.emptyTitle")}</h3>
+          <p>{t("people.emptyBody")}</p>
         </div>
       ) : (
         <div class="table-scroll">
           <table class="data">
             <thead>
-              <tr><th>Name</th><th>Email</th><th>ID</th><th>Role · Section</th><th>Status</th></tr>
+              <tr>
+                <th>{t("people.col.name")}</th>
+                <th>{t("people.email")}</th>
+                <th>{t("people.col.id")}</th>
+                <th>{t("people.col.roleSection")}</th>
+                <th>{t("grades.status")}</th>
+              </tr>
             </thead>
             <tbody>
               {data.roster.map((person) => (
@@ -155,8 +161,13 @@ export function People() {
                   <td>{person.institutional_email}</td>
                   <td>{person.student_identifier ?? "—"}</td>
                   <td>
-                    {(person.enrollments ?? []).map((e) => `${e.role} · ${e.section_code}`).join(", ") ||
-                      [person.role, person.section_code].filter(Boolean).join(" · ") || "—"}
+                    {(person.enrollments ?? [])
+                      .map((e) => `${t(`role.${e.role}`)} · ${e.section_code}`)
+                      .join(", ") ||
+                      [person.role ? t(`role.${person.role}`) : "", person.section_code]
+                        .filter(Boolean)
+                        .join(" · ") ||
+                      "—"}
                   </td>
                   <td><StatusPill state={person.status} /></td>
                 </tr>
@@ -168,11 +179,15 @@ export function People() {
 
       {data?.external_access?.length ? (
         <>
-          <h2>External access</h2>
+          <h2>{t("people.externalAccess")}</h2>
           <div class="table-scroll">
             <table class="data">
               <thead>
-                <tr><th>Email</th><th>Reason</th><th>Status</th></tr>
+                <tr>
+                  <th>{t("people.email")}</th>
+                  <th>{t("people.col.reason")}</th>
+                  <th>{t("grades.status")}</th>
+                </tr>
               </thead>
               <tbody>
                 {data.external_access.map((grant) => (

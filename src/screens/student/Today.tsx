@@ -2,6 +2,8 @@
 // a live class → "Join class"; otherwise the newest released item.
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
+import { t, locale } from "../../i18n";
+import type { StringKey } from "../../i18n/strings";
 import type { ReleaseItem } from "../../api/types";
 
 export function releaseHref(release: ReleaseItem): string {
@@ -19,17 +21,18 @@ export function releaseTarget(release: ReleaseItem): string | undefined {
   return release.source_kind === "storage_object" ? undefined : "_blank";
 }
 
+const TYPE_KEYS: Record<string, StringKey> = {
+  lecture: "type.lecture",
+  mission: "type.mission",
+  quiz_bank: "type.activity",
+  activity: "type.activity",
+  exit_ticket: "type.exitTicket",
+  resource: "type.resource",
+  case_file: "type.caseFile"
+};
+
 export function describeType(type?: string): string {
-  switch (type) {
-    case "lecture": return "Lecture deck";
-    case "mission": return "Practice mission";
-    case "quiz_bank":
-    case "activity": return "Graded activity";
-    case "exit_ticket": return "Reflection";
-    case "resource": return "Resource";
-    case "case_file": return "Case file";
-    default: return "Material";
-  }
+  return t(TYPE_KEYS[type ?? ""] ?? "type.material");
 }
 
 export function Today() {
@@ -45,17 +48,16 @@ export function Today() {
   return (
     <div class="stack">
       <div>
-        <p class="eyebrow">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
-        <h1>{liveNow.length ? "Class is live" : "Today"}</h1>
+        <p class="eyebrow">
+          {new Date().toLocaleDateString(locale(), { weekday: "long", month: "long", day: "numeric" })}
+        </p>
+        <h1>{liveNow.length ? t("today.classLive") : t("today.title")}</h1>
       </div>
 
       {releases.length === 0 ? (
         <div class="empty-state card">
-          <h3>Nothing released yet</h3>
-          <p>
-            When your professor releases materials or starts a class, they appear here.
-            You don't need to do anything else.
-          </p>
+          <h3>{t("today.emptyTitle")}</h3>
+          <p>{t("today.emptyBody")}</p>
         </div>
       ) : (
         <div class="stack">
@@ -83,7 +85,7 @@ export function Today() {
       {newest ? (
         <div class="action-dock">
           <a class="btn primary" href={releaseHref(newest)} target={releaseTarget(newest)} rel="noreferrer">
-            {liveNow.length ? "Join class" : `Open: ${newest.title}`}
+            {liveNow.length ? t("today.joinClass") : t("today.open", { title: newest.title })}
           </a>
         </div>
       ) : null}

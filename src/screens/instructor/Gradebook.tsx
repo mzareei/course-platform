@@ -5,6 +5,7 @@ import { useEffect, useState } from "preact/hooks";
 import { callFn } from "../../api/client";
 import type { GradebookSummary } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
+import { t } from "../../i18n";
 
 export function Gradebook() {
   const [data, setData] = useState<GradebookSummary | null>(null);
@@ -20,20 +21,25 @@ export function Gradebook() {
   if (error) {
     return (
       <div class="card">
-        <h2>Gradebook</h2>
+        <h2>{t("gradebook.title")}</h2>
         <p class="error-text">{error}</p>
       </div>
     );
   }
-  if (!data) return <div class="empty-state"><p>Loading the gradebook…</p></div>;
+  if (!data) {
+    return <div class="empty-state"><p>{t("gradebook.loading")}</p></div>;
+  }
 
   // Group scores by student for the matrix.
-  const students = new Map<string, { name: string; email: string; scores: Map<string, GradebookSummary["scores"][number]> }>();
+  const students = new Map<
+    string,
+    { name: string; email: string; scores: Map<string, GradebookSummary["scores"][number]> }
+  >();
   for (const score of data.scores) {
     const key = score.profile_id;
     if (!students.has(key)) {
       students.set(key, {
-        name: score.student_name ?? "Student",
+        name: score.student_name ?? t("gradebook.col.student"),
         email: score.student_email ?? "",
         scores: new Map()
       });
@@ -46,14 +52,18 @@ export function Gradebook() {
     <div class="stack">
       <div class="row" style="justify-content: space-between;">
         <div>
-          <p class="eyebrow">Assessment</p>
-          <h1>Gradebook</h1>
+          <p class="eyebrow">{t("gradebook.eyebrow")}</p>
+          <h1>{t("gradebook.title")}</h1>
         </div>
         <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">
           <a href="#" role="tab" aria-current={tab === "matrix" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("matrix"); }}>Semester</a>
+             onClick={(e) => { e.preventDefault(); setTab("matrix"); }}>
+            {t("gradebook.tab.semester")}
+          </a>
           <a href="#" role="tab" aria-current={tab === "weights" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("weights"); }}>Weights</a>
+             onClick={(e) => { e.preventDefault(); setTab("weights"); }}>
+            {t("gradebook.tab.weights")}
+          </a>
         </div>
       </div>
 
@@ -61,7 +71,12 @@ export function Gradebook() {
         <div class="table-scroll">
           <table class="data">
             <thead>
-              <tr><th>Category</th><th>Weight</th><th>Drop lowest</th><th>Status</th></tr>
+              <tr>
+                <th>{t("grades.category")}</th>
+                <th>{t("grades.weight")}</th>
+                <th>{t("gradebook.col.dropLowest")}</th>
+                <th>{t("grades.status")}</th>
+              </tr>
             </thead>
             <tbody>
               {data.categories.map((cat) => (
@@ -77,16 +92,20 @@ export function Gradebook() {
         </div>
       ) : students.size === 0 ? (
         <div class="empty-state card">
-          <h3>No grades yet</h3>
-          <p>Scores flow in automatically as students submit graded activities.</p>
+          <h3>{t("gradebook.emptyTitle")}</h3>
+          <p>{t("gradebook.emptyBody")}</p>
         </div>
       ) : (
         <div class="table-scroll">
           <table class="data">
             <thead>
               <tr>
-                <th>Student</th>
-                {items.map((item) => <th title={item.title}>{item.title.length > 14 ? item.title.slice(0, 13) + "…" : item.title}</th>)}
+                <th>{t("gradebook.col.student")}</th>
+                {items.map((item) => (
+                  <th title={item.title}>
+                    {item.title.length > 14 ? item.title.slice(0, 13) + "…" : item.title}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -116,10 +135,7 @@ export function Gradebook() {
         </div>
       )}
 
-      <p class="hint">
-        Per-class review (pulse answers, quiz stats, and reflection texts in one place) arrives in
-        Phase 4. Adjustments and locking stay in the current course app until then.
-      </p>
+      <p class="hint">{t("gradebook.perClassNote")}</p>
     </div>
   );
 }

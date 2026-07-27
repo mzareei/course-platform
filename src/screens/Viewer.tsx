@@ -1,9 +1,10 @@
 // The gated content viewer. The only way a browser reaches a deck or mission:
-// ask course-content-access for a short-lived signed URL (it re-checks the
-// release gate every time), render it in an iframe, and mint a fresh URL
-// before the old one expires. No gate pass — no content.
+// ask course-content-access for a short-lived delivery token (it re-checks the
+// release gate every time), then load it through the same-origin /content proxy
+// so the deck's inline engine can actually run. No gate pass — no content.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { callFn, ApiError } from "../api/client";
+import { t } from "../i18n";
 
 interface AccessResponse {
   access: string;
@@ -43,7 +44,7 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
           ? e.message // the gate's own plain-language reason ("not released for your section", …)
           : e instanceof Error
             ? e.message
-            : "Could not open this content."
+            : t("viewer.openFailed")
       );
     }
   }
@@ -56,23 +57,27 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
   if (error) {
     return (
       <div class="card">
-        <h2>This content isn't available</h2>
+        <h2>{t("viewer.unavailableTitle")}</h2>
         <p class="error-text">{error}</p>
         <div class="row">
-          <a class="btn" href="/">Back to Today</a>
-          <button class="btn primary" type="button" onClick={() => void mint()}>Try again</button>
+          <a class="btn" href="/">{t("viewer.backToToday")}</a>
+          <button class="btn primary" type="button" onClick={() => void mint()}>
+            {t("app.tryAgain")}
+          </button>
         </div>
       </div>
     );
   }
 
-  if (!url) return <div class="empty-state"><p>Opening…</p></div>;
+  if (!url) {
+    return <div class="empty-state"><p>{t("viewer.opening")}</p></div>;
+  }
 
   return (
     <div class="viewer-shell">
       <div class="row" style="justify-content: space-between; padding: 0 0 0.5rem;">
         <h2>{title}</h2>
-        <a class="btn quiet" href="/">← Back</a>
+        <a class="btn quiet" href="/">← {t("app.back")}</a>
       </div>
       <iframe
         class="viewer-frame"
