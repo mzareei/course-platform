@@ -1,0 +1,17 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Local env — never commit service keys. Only VITE_-prefixed public values load in the app.
+.env
+.env.local
+.env.*.local
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Claude Code local settings
+.claude/settings.local.json
