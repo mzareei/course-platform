@@ -17,7 +17,7 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
+  const blobUrl = useRef<string | null>(null);
 
   async function mint() {
     if (!releaseId) return;
@@ -26,12 +26,17 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
         action: "request_url",
         release_id: releaseId
       });
+      // The Supabase gateway refuses to serve renderable HTML (anti-phishing),
+      // so fetch the gated content and render it from a local blob URL. The
+      // token-authorized fetch is still the only path into the private bucket.
+      const response = await fetch(access.url);
+      if (!response.ok) throw new Error((await response.text()) || "Could not load the content.");
+      const html = await response.text();
+      if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
+      blobUrl.current = URL.createObjectURL(new Blob([html], { type: "text/html" }));
       setTitle(access.content.title);
-      setUrl(access.url);
+      setUrl(blobUrl.current);
       setError(null);
-      // Refresh one minute before expiry so a long read never hits a dead URL.
-      clearTimeout(timer.current);
-      timer.current = setTimeout(mint, Math.max(30, access.expires_in - 60) * 1000) as unknown as number;
     } catch (e) {
       setUrl(null);
       setError(
@@ -46,7 +51,9 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
 
   useEffect(() => {
     void mint();
-    return () => clearTimeout(timer.current);
+    return () => {
+      if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
+    };
   }, [releaseId]);
 
   if (error) {
