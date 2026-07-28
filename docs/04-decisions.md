@@ -87,9 +87,8 @@ runs out, no going back.
 Implemented in `features/quiz/Player.tsx`. The per-difficulty seconds live in
 `SECONDS_BY_DIFFICULTY` there.
 
-> Open question worth confirming: the professor said "20 second … till 45
-> minutes". Given the "quick test" framing and the 20-second anchor this was
-> read as **45 seconds**. If he meant minutes, change that constant.
+**Confirmed by the professor on 2026-07-28: seconds, not minutes.** 20 / 30 / 45
+seconds is correct and stays. The question is closed — don't reopen it.
 
 ---
 

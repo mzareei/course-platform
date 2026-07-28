@@ -173,7 +173,27 @@ app is broken.
 
 ---
 
-## 12. Supabase CLI and the SQL editor have different permissions here
+## 12. A status the backend can emit but `StatusPill` doesn't know renders raw
+
+`StatusPill` falls back to the raw state string for any state not in its
+`CLASSES` map. That fallback is silent: no error, no missing-string warning, and
+`verify-i18n` cannot catch it because there is no `t()` call to check.
+
+`student_attempts.status` can be `late` (set in `course-activity-attempt` when
+the submission lands after `ends_at`), and `late` was in neither `CLASSES` nor
+`strings.ts`. Any screen showing attempt statuses would have rendered a bare,
+untranslated "late" to a Spanish-reading professor. Found while building
+Gradebook Tab B, fixed in the same commit.
+
+**Rule:** when you surface a new status column in the UI, grep the edge function
+for every literal it can write (`grep -n 'status:' index.ts`) and confirm each
+one exists in `StatusPill`'s map *and* in `strings.ts`. This is pitfall #3's
+shape — a cross-boundary mismatch the compiler cannot see — with a defensive
+fallback hiding it.
+
+---
+
+## 13. Supabase CLI and the SQL editor have different permissions here
 
 `npx supabase db push` and `npx supabase functions deploy` work. Retrieving the
 service-role key and running arbitrary `INSERT`s through the dashboard SQL

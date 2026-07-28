@@ -227,8 +227,53 @@ export const strings = {
     "Los puntajes llegan automáticamente cuando los estudiantes entregan actividades calificadas."
   ],
   "gradebook.perClassNote": [
-    "Per-class review (pulse answers, quiz stats, and reflection texts in one place) arrives in Phase 4. Adjustments and locking stay in the current course app until then.",
-    "La revisión por clase (respuestas rápidas, estadísticas del quiz y textos de reflexión en un solo lugar) llega en la Fase 4. Los ajustes y el cierre de calificaciones siguen en la aplicación actual del curso por ahora."
+    "Grade adjustments and locking stay in the current course app for now.",
+    "Los ajustes de calificación y el cierre siguen en la aplicación actual del curso por ahora."
+  ],
+
+  // ------------------------------------------------- gradebook · per class
+  "gradebook.tab.perClass": ["Per class", "Por clase"],
+  "gradebook.perClass.pick": ["Which class", "Cuál clase"],
+  "gradebook.perClass.loading": ["Loading this class…", "Cargando esta clase…"],
+  "gradebook.perClass.noSessions": ["No classes yet", "Aún no hay clases"],
+  "gradebook.perClass.noSessionsBody": [
+    "Once you have run a class, everything that happened in it shows up here.",
+    "En cuanto hayas dado una clase, aquí aparece todo lo que ocurrió en ella."
+  ],
+  "gradebook.perClass.questions": ["Questions asked in class", "Preguntas hechas en clase"],
+  "gradebook.perClass.noQuestions": [
+    "No questions were sent to the class during this session.",
+    "No se enviaron preguntas a la clase durante esta sesión."
+  ],
+  "gradebook.perClass.correctOf": [
+    "{correct} of {answered} correct · {enrolled} in the class",
+    "{correct} de {answered} correctas · {enrolled} en la clase"
+  ],
+  "gradebook.perClass.correctMark": ["Correct answer", "Respuesta correcta"],
+  "gradebook.perClass.quiz": ["End-of-class quiz", "Quiz de fin de clase"],
+  "gradebook.perClass.noQuiz": [
+    "No quiz was run in this class.",
+    "No se realizó ningún quiz en esta clase."
+  ],
+  "gradebook.perClass.quizHeadline": [
+    "{submitted} of {started} finished · class average {average}%",
+    "{submitted} de {started} terminaron · promedio del grupo {average}%"
+  ],
+  "gradebook.perClass.reflections": ["Reflections", "Reflexiones"],
+  "gradebook.perClass.noReflections": [
+    "No reflections were submitted for this class.",
+    "No se enviaron reflexiones para esta clase."
+  ],
+  "gradebook.perClass.reflectionCount": [
+    "{count} submitted",
+    "{count} enviadas"
+  ],
+  "gradebook.perClass.words": ["{count} words", "{count} palabras"],
+  "gradebook.col.score": ["Score", "Puntaje"],
+  "gradebook.col.submittedAt": ["Submitted", "Enviado"],
+  "gradebook.perClass.loadFailed": [
+    "Could not load this class.",
+    "No se pudo cargar esta clase."
   ],
 
   // ---------------------------------------------------------------- people
@@ -530,6 +575,7 @@ export const strings = {
   "state.missing": ["Missing", "Sin entregar"],
   "state.excused": ["Excused", "Justificado"],
   "state.submitted": ["Submitted", "Entregado"],
+  "state.late": ["Submitted late", "Entregado tarde"],
   "state.started": ["In progress", "En proceso"],
   "state.active": ["Active", "Activo"],
   "state.inactive": ["Inactive", "Inactivo"],

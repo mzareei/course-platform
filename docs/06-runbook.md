@@ -115,6 +115,23 @@ Do this through the UI, never by typing internal URLs.
 A quiz can be run more than once per class — after closing, the button becomes
 **Start another quiz**.
 
+## Manual test: per-class review (Gradebook Tab B)
+
+Instructor only — test sign-in cannot reach this screen, so it has to be you.
+
+1. Sign in as the instructor → **Gradebook** → the **Per class** tab.
+2. The picker defaults to the most recent class that has actually been held.
+   Choose the session you just ran.
+3. Expect three blocks:
+   - **Questions asked in class** — one bar chart per question, in the order
+     they were pushed, correct answer marked ✓, with "x of y correct · z in the
+     class" underneath.
+   - **End-of-class quiz** — "n of m finished · class average p%", then a row
+     per student with status, score and submission time.
+   - **Reflections** — every submitted paragraph in full, with its word count.
+4. A class where nothing happened should say so in words ("No questions were
+   sent to the class during this session."), never render an empty table.
+
 ## Manual test: the AI pipeline
 
 1. Instructor → **Content** → give a lecture title, choose a PDF →

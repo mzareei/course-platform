@@ -81,11 +81,25 @@ It worked, and only its polling changed since. But the current test session
 already has a reflection submitted, so that branch no longer renders for that
 student. **Flagged rather than claimed.**
 
-### 3. Gradebook Tab B — per-class review
-Still a placeholder message on the Gradebook screen. Should show, for one class:
-pulse answers question by question, quiz stats, and every reflection.
-`course-class-quiz` already has `summary` and `reflections`; most of the backend
-exists.
+### 3. Gradebook Tab B — per-class review — **built, NOT yet seen working**
+Built on 2026-07-28. A **Per class** tab on the Gradebook screen: pick a class
+session, then see every question pushed to the room with its distribution and
+correct answer marked, the quiz attempt table with the class average, and every
+reflection in full.
+
+Backend: a new `rounds` action on `course-pulse` (all rounds of one session,
+batched — `results` is per-round and would have been an N+1). Deployed.
+`summary` and `reflections` on `course-class-quiz` were reused as-is; their
+return shapes were read directly and match the frontend interfaces.
+
+**Verified:** the `rounds` action is live and role-gated (student → 403, bogus
+action → "Unknown action"); typecheck, all three verifiers, and the build pass;
+the student surface is unaffected and console-clean.
+
+**Not verified:** the tab has never been rendered. Gradebook is instructor-only
+and test sign-in refuses instructor accounts, so no agent can reach this screen
+without the professor signing in. **The professor needs to click it before this
+counts as done.**
 
 ### 4. Admin screens
 `course-admin` is built, deployed and tested (create course, invite professor,
@@ -118,12 +132,25 @@ transient error. A claim/lease on the job row would fix it properly.
 
 ---
 
-## Open question for the professor
+## Closed questions
 
-The quiz's per-question timers are **20s easy / 30s medium / 45s hard**. He said
-"20 second … till 45 minutes"; given the "quick test" framing and the 20-second
-anchor this was implemented as **45 seconds**. If he meant minutes, change
-`SECONDS_BY_DIFFICULTY` in `src/features/quiz/Player.tsx`.
+- **Quiz per-question timing** — asked and answered on 2026-07-28: **seconds**.
+  20 / 30 / 45 seconds stays as implemented. Closed; don't reopen it.
+
+---
+
+## A standing constraint on agent testing
+
+Test sign-in refuses instructor accounts by design
+(`course-test-signin/index.ts:128`), and the QA account
+`zarei.1982@gmail.com` is student-only — no TA role. An agent can therefore
+drive the **entire student side** unaided but **cannot reach any instructor
+screen** (Run class, Content, Gradebook, People). Anything instructor-facing
+needs the professor signed in at `m.zareei@tec.mx` with an emailed code.
+
+Plan around this: build instructor features knowing the last mile of
+verification is the professor's, and say so plainly rather than implying a
+screen was seen working.
 
 ---
 

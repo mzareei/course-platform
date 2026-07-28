@@ -124,6 +124,24 @@ export function pulseResults(round_id: string) {
   return callFn<PulseResults>("course-pulse", { action: "results", round_id });
 }
 
+/** One row per question asked during a finished class, in the order asked. */
+export interface PulseRoundReview {
+  round_id: string;
+  state: string;
+  opened_at: string;
+  points: number;
+  text: string;
+  correct_key: string | null;
+  answered: number;
+  correct: number;
+  enrolled: number;
+  distribution: Array<{ key: string; text: string; count: number }>;
+}
+
+export function classPulseRounds(class_session_id: string) {
+  return callFn<{ rounds: PulseRoundReview[] }>("course-pulse", { action: "rounds", class_session_id });
+}
+
 export function currentPulse(class_session_id: string) {
   return callFn<StudentPulseView>("course-pulse", { action: "current", class_session_id });
 }

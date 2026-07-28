@@ -21,6 +21,7 @@ const CLASSES: Record<string, string> = {
   missing: "warn",
   excused: "hidden",
   submitted: "open",
+  late: "warn",
   started: "scheduled",
   active: "open",
   inactive: "hidden",
