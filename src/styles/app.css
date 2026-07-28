@@ -178,6 +178,15 @@ a { color: var(--primary); }
 }
 .topbar .spacer { flex: 1; }
 
+/* Below ~480px there isn't room for brand + profile name + both toggles +
+   sign out on one line, and wrapping mid-row looks broken rather than
+   responsive — drop the profile name first since it's the least essential. */
+@media (max-width: 480px) {
+  .topbar { flex-wrap: nowrap; gap: 0.4rem; padding: 0.6rem 0.75rem; }
+  .topbar .brand { font-size: 0.9rem; }
+  .topbar .hint { display: none; }
+}
+
 .eyebrow {
   font-size: 0.7rem;
   font-weight: 700;
