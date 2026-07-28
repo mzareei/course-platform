@@ -401,7 +401,6 @@ export const strings = {
   // ---------------------------------------------------------------- quiz
   "quiz.loading": ["Loading the quiz…", "Cargando el quiz…"],
   "quiz.questionN": ["Question {n} of {total}", "Pregunta {n} de {total}"],
-  "quiz.previous": ["Back", "Regresar"],
   "quiz.next": ["Next", "Siguiente"],
   "quiz.submit": ["Submit quiz", "Enviar quiz"],
   "quiz.submitting": ["Submitting…", "Enviando…"],
@@ -411,6 +410,14 @@ export const strings = {
     "Your score is recorded. Your professor will show the class results shortly.",
     "Tu calificación quedó registrada. Tu profesor mostrará los resultados del grupo en un momento."
   ],
+  "quiz.difficulty.easy": ["Easy", "Fácil"],
+  "quiz.difficulty.medium": ["Medium", "Media"],
+  "quiz.difficulty.hard": ["Hard", "Difícil"],
+  "quiz.oneAtATime": [
+    "One question at a time — it moves on automatically when time runs out.",
+    "Una pregunta a la vez — avanza automáticamente cuando se acaba el tiempo."
+  ],
+  "quiz.timeUpAdvancing": ["Time's up — moving on…", "Se acabó el tiempo — avanzando…"],
 
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],
