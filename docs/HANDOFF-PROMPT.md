@@ -8,9 +8,15 @@ I'm Mahdi Zareei, a research professor at Tecnológico de Monterrey. You're
 picking up an in-progress project from a previous AI session. Everything you
 need is documented in the repo — read it before doing anything.
 
+## Open this folder
+
+Start the session in **`~/Documents/GitHub/course-platform`**. You'll also need
+`~/Documents/GitHub/mzareei.github.io` (edge functions and migrations) — just
+use absolute paths for it; you don't need a second session.
+
 ## First, orient yourself
 
-Read these files in order, from `~/Documents/GitHub/course-platform/docs/`:
+Read these files in order, from `docs/`:
 
 1. `00-START-HERE.md`
 2. `01-project-overview.md`
