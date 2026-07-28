@@ -171,6 +171,18 @@ chasing a phantom.
 Confirm with a direct `element.click()` via injected JS before concluding the
 app is broken.
 
+The same applies to *filling* a field. A tool that assigns `input.value`
+directly does not necessarily make Preact see the change, so the component's
+state stays empty and the submit button acts on nothing. Hit again on
+2026-07-28 signing in as the QA student. The combination that works every time:
+
+```js
+const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+set.call(input, "value");
+input.dispatchEvent(new Event("input", { bubbles: true }));
+button.click();
+```
+
 ---
 
 ## 12. A status the backend can emit but `StatusPill` doesn't know renders raw
