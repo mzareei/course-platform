@@ -1,5 +1,11 @@
 # Course Platform
 
+> **Picking this up fresh (human or AI)? Start with [`docs/00-START-HERE.md`](docs/00-START-HERE.md).**
+> The `docs/` folder is the complete, current handoff: project goal, architecture,
+> design system, decision log, status, runbook, and the traps that have already
+> cost hours. [`docs/HANDOFF-PROMPT.md`](docs/HANDOFF-PROMPT.md) can be pasted
+> into a new session to continue the work.
+
 A teaching platform for running interactive university classes: released-per-class
 content, live in-lecture pulse questions, graded end-of-class quizzes, short written
 reflections, and a weighted gradebook — with one dead-simple surface per role.
