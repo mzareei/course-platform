@@ -411,6 +411,64 @@ export const strings = {
     "Your score is recorded. Your professor will show the class results shortly.",
     "Tu calificación quedó registrada. Tu profesor mostrará los resultados del grupo en un momento."
   ],
+  // ---------------------------------------------------------------- content (AI pipeline)
+  "content.eyebrow": ["COURSE MATERIALS", "MATERIAL DEL CURSO"],
+  "content.title": ["Content", "Contenido"],
+  "content.lede": [
+    "Upload a lecture PDF and the platform builds the web deck and its question bank for you. You review everything before students can see any of it.",
+    "Sube el PDF de una clase y la plataforma arma la presentación web y su banco de preguntas. Tú revisas todo antes de que los estudiantes puedan verlo."
+  ],
+  "content.uploadTitle": ["New lecture from a PDF", "Nueva clase desde un PDF"],
+  "content.uploadBody": [
+    "Export your slides to PDF first. Generation takes a few minutes; you can leave this page and come back.",
+    "Exporta tus diapositivas a PDF primero. La generación toma unos minutos; puedes salir de esta página y volver."
+  ],
+  "content.lectureTitle": ["Lecture title", "Título de la clase"],
+  "content.lectureTitlePlaceholder": ["Week 4 Lecture 1: Access Control", "Semana 4 Clase 1: Control de Acceso"],
+  "content.pdf": ["Slides (PDF)", "Diapositivas (PDF)"],
+  "content.willBeSlug": ["Web address: /{slug}", "Dirección web: /{slug}"],
+  "content.generate": ["Upload and generate", "Subir y generar"],
+  "content.uploading": ["Uploading…", "Subiendo…"],
+  "content.uploadFailed": ["Could not upload that PDF.", "No se pudo subir ese PDF."],
+  "content.jobsTitle": ["Lectures being built", "Clases en construcción"],
+  "content.loadingJobs": ["Loading…", "Cargando…"],
+  "content.noJobsTitle": ["Nothing generated yet", "Aún no hay nada generado"],
+  "content.noJobsBody": [
+    "Drop your first lecture PDF above to see how it works.",
+    "Sube tu primer PDF de clase arriba para ver cómo funciona."
+  ],
+  "content.status.queued": ["Queued", "En cola"],
+  "content.status.extracting": ["Reading the PDF", "Leyendo el PDF"],
+  "content.status.outlining": ["Planning the lecture", "Planeando la clase"],
+  "content.status.generating_deck": ["Writing slides", "Escribiendo diapositivas"],
+  "content.status.generating_questions": ["Writing questions", "Escribiendo preguntas"],
+  "content.status.assembling": ["Assembling", "Ensamblando"],
+  "content.status.ready_for_review": ["Ready for your review", "Lista para tu revisión"],
+  "content.status.approved": ["Approved", "Aprobada"],
+  "content.status.failed": ["Failed", "Falló"],
+  "content.stepOf": ["Step {step} of {total}", "Paso {step} de {total}"],
+  "content.review": ["Review it", "Revisarla"],
+  "content.cancel": ["Cancel", "Cancelar"],
+  "content.approvedNote": [
+    "Approved — it now appears in your content library as a draft, ready to release for a class.",
+    "Aprobada — ya aparece en tu biblioteca de contenido como borrador, lista para publicarse en una clase."
+  ],
+  "content.reviewTitle": ["Review before students see it", "Revisa antes de que la vean los estudiantes"],
+  "content.reviewBody": [
+    "Check the slides and the questions. Approving makes this a draft in your library — students still see nothing until you release it for a class.",
+    "Revisa las diapositivas y las preguntas. Aprobar la deja como borrador en tu biblioteca — los estudiantes no ven nada hasta que la publiques para una clase."
+  ],
+  "content.close": ["Close", "Cerrar"],
+  "content.deckPreview": ["Deck preview", "Vista previa de la presentación"],
+  "content.loadingQuestions": ["Loading questions…", "Cargando preguntas…"],
+  "content.questionCounts": [
+    "{easy} easy · {medium} medium · {hard} hard",
+    "{easy} fáciles · {medium} medias · {hard} difíciles"
+  ],
+  "content.approve": ["Approve this lecture", "Aprobar esta clase"],
+  "content.approving": ["Approving…", "Aprobando…"],
+  "content.approveFailed": ["Could not approve it.", "No se pudo aprobar."],
+
   "quiz.difficulty.easy": ["Easy", "Fácil"],
   "quiz.difficulty.medium": ["Medium", "Media"],
   "quiz.difficulty.hard": ["Hard", "Difícil"],

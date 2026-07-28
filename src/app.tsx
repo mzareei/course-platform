@@ -12,6 +12,7 @@ import { Grades } from "./screens/student/Grades";
 import { TeachHome } from "./screens/instructor/Home";
 import { Gradebook } from "./screens/instructor/Gradebook";
 import { People } from "./screens/instructor/People";
+import { Content } from "./screens/instructor/Content";
 import { Viewer } from "./screens/Viewer";
 import { Live } from "./screens/student/Live";
 import { RunClass } from "./screens/instructor/RunClass";
@@ -151,15 +152,7 @@ export function App() {
         {teacherSurface ? (
           <Router>
             <Route path="/teach" component={TeachHome} />
-            <Route
-              path="/teach/content"
-              component={() => (
-                <Placeholder
-                  title={t("teach.card.content")}
-                  note={t("teach.placeholder.contentBody")}
-                />
-              )}
-            />
+            <Route path="/teach/content" component={Content} />
             <Route path="/teach/grades" component={Gradebook} />
             <Route path="/teach/people" component={People} />
             <Route
