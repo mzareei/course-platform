@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../../i18n";
 import {
   listJobs, jobStatus, advanceJob, createJob, cancelJob,
-  reviewBundle, approveJob, uploadPdf,
+  reviewBundle, approveJob, uploadPdf, previewUrl,
   IN_FLIGHT, type GenerationJob, type GeneratedQuestion
 } from "../../api/generation";
 
@@ -192,7 +192,11 @@ function JobCard({ job, busy, onCancel, onReview }: {
         </>
       ) : null}
 
-      {job.error ? <p class="error-text">{job.error}</p> : null}
+      {/* A retry that later succeeded leaves its message behind; showing it on a
+          finished job reads as a failure when nothing is wrong. */}
+      {job.error && job.status !== "ready_for_review" && job.status !== "approved"
+        ? <p class="error-text">{job.error}</p>
+        : null}
 
       <div class="row">
         {job.status === "ready_for_review" ? (
@@ -213,14 +217,17 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
   jobId: string; onClose: () => void; onApproved: () => void;
 }) {
   const [questions, setQuestions] = useState<GeneratedQuestion[] | null>(null);
-  const [deckHtml, setDeckHtml] = useState<string | null>(null);
+  const [deckUrl, setDeckUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     reviewBundle(jobId)
-      .then((r) => { setQuestions(r.questions); setDeckHtml(r.deck_html); })
+      .then((r) => setQuestions(r.questions))
       .catch((e: Error) => setError(e.message));
+    previewUrl(jobId)
+      .then((r) => setDeckUrl(`/content?t=${encodeURIComponent(r.token)}`))
+      .catch(() => {});
   }, [jobId]);
 
   async function onApprove() {
@@ -245,13 +252,12 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
       <p class="hint">{t("content.reviewBody")}</p>
       {error ? <p class="error-text" role="alert">{error}</p> : null}
 
-      {deckHtml ? (
+      {deckUrl ? (
         <iframe
           class="viewer-frame"
           style="height: 420px;"
-          srcdoc={deckHtml}
+          src={deckUrl}
           title={t("content.deckPreview")}
-          sandbox="allow-scripts"
         />
       ) : null}
 

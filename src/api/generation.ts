@@ -66,6 +66,15 @@ export function reviewBundle(jobId: string) {
   );
 }
 
+/** A same-origin URL for the deck preview. Must not be rendered with srcdoc:
+ *  that inherits the app's CSP and blocks the deck engine's inline script,
+ *  leaving the deck frozen on slide one. */
+export function previewUrl(jobId: string) {
+  return callFn<{ token: string; expires_in: number }>("course-generation", {
+    action: "preview_url", job_id: jobId
+  });
+}
+
 export function approveJob(jobId: string) {
   return callFn<{ job: GenerationJob }>("course-generation", { action: "approve", job_id: jobId });
 }
