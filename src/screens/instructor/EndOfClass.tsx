@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../../i18n";
 import {
-  startClassQuiz, closeClassQuiz, classQuizStatus,
+  startClassQuiz, closeClassQuiz, classQuizStatus, currentClassQuiz,
   type QuizStatus
 } from "../../api/quiz";
 import { classReflections, type ClassReflection } from "../../api/reflection";
@@ -19,6 +19,15 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const poll = useRef<number | undefined>(undefined);
+
+  // Recover the in-progress or just-closed quiz after a page reload — the
+  // instance id otherwise only lives in this component's own state, so a
+  // refresh would make a running quiz look like it had never been started.
+  useEffect(() => {
+    currentClassQuiz({ class_session_id: sessionId, content_slug: contentSlug })
+      .then((res) => { if (res.instance_id) setInstanceId(res.instance_id); })
+      .catch(() => {});
+  }, [sessionId, contentSlug]);
 
   useEffect(() => {
     clearInterval(poll.current);

@@ -60,6 +60,10 @@ export function startClassQuiz(input: { class_session_id: string; content_slug: 
   return callFn<{ instance_id: string; reused: boolean }>("course-class-quiz", { action: "start", ...input });
 }
 
+export function currentClassQuiz(input: { class_session_id: string; content_slug: string }) {
+  return callFn<{ instance_id: string | null }>("course-class-quiz", { action: "current", ...input });
+}
+
 export function closeClassQuiz(activityInstanceId: string) {
   return callFn<{ instance_id: string; state: string }>("course-class-quiz", { action: "close", activity_instance_id: activityInstanceId });
 }
