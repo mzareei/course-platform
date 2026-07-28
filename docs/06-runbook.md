@@ -138,20 +138,27 @@ Instructor only. **Apply is a real bulk write — test against a throwaway
 section first.**
 
 1. Sign in as the instructor → **People**.
-2. **Import a roster from a spreadsheet** → choose a CSV. A minimal one:
+2. **Import a roster from a spreadsheet** → choose `docs/test-roster-sample.csv`.
+   It is built to exercise the whole preview: Spanish accented headers, a quoted
+   name containing a comma, a blank role that should default to student, and
+   four rows that should each be rejected for a *different* reason (malformed
+   email, non-institutional domain, unknown section, duplicate email).
+   Expect **3 accepted, 4 rejected**.
 
-   ```csv
-   email,name,student_id,section,role
-   a00000001@tec.mx,Ana Ruiz,A00000001,101,student
-   ```
-
-   The section code must already exist on the course, or the row is rejected
-   with "Section code does not exist for this course."
+   **Stopping at the preview writes nothing** — that alone verifies the parser,
+   the header matching and every rejection message.
 3. The preview shows accepted rows and, separately, rejected rows with the
    reason for each. Nothing has been written yet.
 4. **Import n people** → confirm. The roster table below refreshes.
+
+   ⚠️ **There is currently no UI to remove a student from the roster.** The
+   sample file's three valid rows are fake `@tec.mx` addresses that will stay on
+   the roster once applied. If you only want to check the preview, stop at
+   step 3. If you want to exercise the write, prefer a one-row CSV using an
+   address you actually control.
 5. Re-import the same file. Everyone should keep their sign-in — that is the
-   regression guarded by pitfall #13.
+   regression guarded by pitfall #13. (Removing a student is item #6 on the
+   remaining-work list, and this is why it matters.)
 
 Headers are matched loosely: `email`/`correo`, `name`/`nombre`,
 `section`/`grupo`/`sección`, `student_id`/`matrícula`. Only email, name and
