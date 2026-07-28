@@ -161,15 +161,12 @@ export function People() {
                   <td>{person.institutional_email}</td>
                   <td>{person.student_identifier ?? "—"}</td>
                   <td>
-                    {(person.enrollments ?? [])
-                      .map((e) => `${t(`role.${e.role}`)} · ${e.section_code}`)
+                    {(person.sections ?? [])
+                      .map((s) => `${t(`role.${s.role}`)} · ${s.section_code}`)
                       .join(", ") ||
-                      [person.role ? t(`role.${person.role}`) : "", person.section_code]
-                        .filter(Boolean)
-                        .join(" · ") ||
-                      "—"}
+                      (person.course_role ? t(`role.${person.course_role}`) : "—")}
                   </td>
-                  <td><StatusPill state={person.status} /></td>
+                  <td><StatusPill state={person.profile_status ?? person.membership_status ?? ""} /></td>
                 </tr>
               ))}
             </tbody>

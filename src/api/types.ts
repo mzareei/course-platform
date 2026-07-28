@@ -151,15 +151,15 @@ export interface GradebookSummary {
 
 export interface RosterOverview {
   roster: Array<{
-    profile_id?: string;
-    id?: string;
+    profile_id: string;
     full_name: string;
     institutional_email: string;
     student_identifier?: string | null;
-    role?: Role;
-    section_code?: string;
-    status?: string;
-    enrollments?: Array<{ section_code: string; role: Role; status: string }>;
+    claimed?: boolean;
+    profile_status?: string;
+    course_role?: Role;
+    membership_status?: string;
+    sections?: Array<{ section_id: string; section_code: string; section_name?: string; role: Role; status: string }>;
   }>;
   external_access: Array<{
     id: string;
