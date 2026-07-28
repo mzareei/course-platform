@@ -133,9 +133,32 @@ a professor are both writes, so they need you at the keyboard.** Suggested
 first run: invite a TA to `tc2007b` using an address you control, confirm the
 row appears, then remove it again.
 
-### 5. CSV roster import
-People adds one person at a time. Bulk import still lives in the old app.
-`course-roster-management` already has `preview_roster` / `apply_roster`.
+### 5. CSV roster import — **built, parser tested, UI not yet seen working**
+Built on 2026-07-28. `src/components/RosterImport.tsx`, on the People screen:
+choose a CSV, see exactly which rows will be imported and which will be skipped
+and why, then apply behind a confirm. Nothing is written until you have seen the
+preview.
+
+Header matching accepts common English and Spanish spellings (`email` /
+`correo`, `name` / `nombre`, `section` / `grupo` / `sección`, `matrícula`), so a
+professor's own export usually just works. Only email, name and section are
+required; role defaults to student.
+
+**A destructive backend bug was found and fixed on the way in.** See the
+"Roster import used to sign everyone out" note in `07-pitfalls.md` #13 — this is
+the most important thing in this entry.
+
+**Verified:** the CSV parser is covered by a new fourth verifier,
+`tools/verify-csv-roster.mjs` (21 checks: CRLF, Excel BOM, quoted commas,
+quoted newlines, doubled quotes, Spanish and accented headers, padded cells,
+missing-column reporting, header-only files, blank-line handling). It was
+mutation-tested — breaking the row-number offset, the email lowercasing or the
+blank-line filter each makes it fail — so it is a test that can actually fail.
+Typecheck, all four verifiers and the build pass.
+
+**Not verified:** the screen itself, and the preview/apply round trip, which
+need instructor auth. **Import against a throwaway section first** — apply is a
+real bulk write.
 
 ### 6. Grade adjustments and locking
 Backend exists; no UI. Still done in the old app.

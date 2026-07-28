@@ -217,7 +217,46 @@ grepping only for `status` misses every `state` column, and vice versa.
 
 ---
 
-## 13. Supabase CLI and the SQL editor have different permissions here
+## 13. Roster import used to sign every existing student out
+
+**Found 2026-07-28 while building the CSV import UI. Fixed in
+`course-roster-management`, deployed.**
+
+`upsertAcceptedRows` wrote profiles with a plain upsert:
+
+```ts
+.upsert({ ...row, status: "invited" }, { onConflict: "institutional_email" })
+```
+
+`status: "invited"` is correct for somebody new. On conflict it was also written
+over **everybody already on the roster**, flipping active students back to
+`invited`.
+
+That matters because the endpoints serving a live class require an active
+profile — `loadProfileForToken` in `course-pulse` filters `status = 'active'`
+and otherwise throws "No active course profile is linked to this account."
+
+So re-importing a roster mid-semester — a completely normal thing to do in the
+first weeks, as students add and drop — cut off every student who was already
+signed in. It self-heals, but only on the student's *next app boot*, because
+`course-auth-context`'s `loadOrClaimProfile` promotes `invited` → `active`. The
+live screen polls `course-pulse` and never re-calls the auth context, so during
+a class each student would have had to reload before they could answer anything.
+
+Nothing errored on the professor's side. The import would report full success.
+
+**The fix:** status is set on INSERT only. Existing profiles get their name and
+student id refreshed and nothing else — never their status, never their auth
+link.
+
+**Rule:** an upsert's payload is written on the update path too. Any column that
+means "this is a new record" (`status`, `created_by`, `invited_at`) must not be
+in a blind upsert payload. Split it: insert the new ones, update the existing
+ones with only the fields you actually intend to refresh.
+
+---
+
+## 14. Supabase CLI and the SQL editor have different permissions here
 
 `npx supabase db push` and `npx supabase functions deploy` work. Retrieving the
 service-role key and running arbitrary `INSERT`s through the dashboard SQL

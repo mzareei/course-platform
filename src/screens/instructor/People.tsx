@@ -1,10 +1,10 @@
-// I5 People — roster overview + add one person. CSV import preview/apply and
-// external-access management port over next; this screen reads the live roster
-// and supports the most common action (add someone) end to end.
+// I5 People — roster overview, add one person, and CSV roster import.
+// External-access management still ports over from the old app.
 import { useEffect, useState } from "preact/hooks";
 import { callFn } from "../../api/client";
 import type { RosterOverview, Role } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
+import { RosterImport } from "../../components/RosterImport";
 import { context } from "../../state/session";
 import { t } from "../../i18n";
 
@@ -133,6 +133,8 @@ export function People() {
         {notice ? <p class="hint" role="status">{notice}</p> : null}
         {error ? <p class="error-text" role="alert">{error}</p> : null}
       </div>
+
+      <RosterImport onImported={load} />
 
       <h2>{t("people.roster")}</h2>
       {!data ? (

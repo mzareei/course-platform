@@ -378,6 +378,71 @@ export const strings = {
   "people.add": ["Add person", "Agregar persona"],
   "people.added": ["{name} was added to the roster.", "{name} se agregó a la lista."],
   "people.addFailed": ["Could not add this person.", "No se pudo agregar a esta persona."],
+  // ----------------------------------------------- people · CSV roster import
+  "roster.import.title": ["Import a roster from a spreadsheet", "Importar una lista desde una hoja de cálculo"],
+  "roster.import.body": [
+    "Export your class list as CSV and drop it here. Nothing is written until you have seen exactly what will change.",
+    "Exporta tu lista de clase como CSV y súbela aquí. No se guarda nada hasta que veas exactamente qué va a cambiar."
+  ],
+  "roster.import.columns": [
+    "Needs a column for email, name and section. A student id column is optional, and role defaults to student. Common header names in English and Spanish are recognised.",
+    "Necesita una columna de correo, una de nombre y una de grupo. La columna de matrícula es opcional y el rol es estudiante por omisión. Se reconocen los encabezados más comunes en inglés y español."
+  ],
+  "roster.import.choose": ["Choose a CSV file", "Elegir un archivo CSV"],
+  "roster.import.reading": ["Reading the file…", "Leyendo el archivo…"],
+  "roster.import.checking": ["Checking the rows…", "Revisando las filas…"],
+  "roster.import.file": ["{name} · {count} rows", "{name} · {count} filas"],
+  "roster.import.missingColumns": [
+    "Could not find a column for: {columns}. The file's headers were: {headers}",
+    "No se encontró una columna para: {columns}. Los encabezados del archivo fueron: {headers}"
+  ],
+  "roster.import.emptyFile": [
+    "That file has no rows in it.",
+    "Ese archivo no tiene ninguna fila."
+  ],
+  "roster.import.truncated": [
+    "Only the first {max} rows are imported at a time. Split the file and import the rest afterwards.",
+    "Solo se importan {max} filas a la vez. Divide el archivo e importa el resto después."
+  ],
+  "roster.import.summary": [
+    "{accepted} of {total} rows are ready to import.",
+    "{accepted} de {total} filas están listas para importar."
+  ],
+  "roster.import.allGood": [
+    "All {total} rows look good.",
+    "Las {total} filas se ven bien."
+  ],
+  "roster.import.rejected": [
+    "{count} rows will be skipped",
+    "Se omitirán {count} filas"
+  ],
+  "roster.import.rejectedBody": [
+    "Fix them in the spreadsheet and import again — importing now adds only the rows that passed.",
+    "Corrígelas en la hoja de cálculo e importa de nuevo — si importas ahora solo se agregan las filas que pasaron."
+  ],
+  "roster.import.col.row": ["Row", "Fila"],
+  "roster.import.col.problem": ["What is wrong", "Qué está mal"],
+  "roster.import.apply": ["Import {count} people", "Importar {count} personas"],
+  "roster.import.applying": ["Importing…", "Importando…"],
+  "roster.import.confirm": [
+    "Import {count} people into this course? People already on the roster keep their sign-in and their grades — only their name, id and section are refreshed. Do this between classes rather than during one.",
+    "¿Importar {count} personas a este curso? Quienes ya están en la lista conservan su acceso y sus calificaciones — solo se actualizan su nombre, matrícula y grupo. Hazlo entre clases, no durante una."
+  ],
+  "roster.import.done": [
+    "Imported {count} people.",
+    "Se importaron {count} personas."
+  ],
+  "roster.import.doneWithSkips": [
+    "Imported {count} people and skipped {skipped}.",
+    "Se importaron {count} personas y se omitieron {skipped}."
+  ],
+  "roster.import.failed": ["Could not import that roster.", "No se pudo importar esa lista."],
+  "roster.import.startOver": ["Choose a different file", "Elegir otro archivo"],
+  "roster.import.nothingToApply": [
+    "None of these rows can be imported. Fix the problems above and try again.",
+    "Ninguna de estas filas se puede importar. Corrige los problemas de arriba e inténtalo de nuevo."
+  ],
+
   "people.roster": ["Roster", "Lista del curso"],
   "people.loadingRoster": ["Loading the roster…", "Cargando la lista…"],
   "people.emptyTitle": ["Nobody on the roster yet", "Aún no hay nadie en la lista"],

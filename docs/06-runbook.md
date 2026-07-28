@@ -132,6 +132,31 @@ Instructor only — test sign-in cannot reach this screen, so it has to be you.
 4. A class where nothing happened should say so in words ("No questions were
    sent to the class during this session."), never render an empty table.
 
+## Manual test: CSV roster import
+
+Instructor only. **Apply is a real bulk write — test against a throwaway
+section first.**
+
+1. Sign in as the instructor → **People**.
+2. **Import a roster from a spreadsheet** → choose a CSV. A minimal one:
+
+   ```csv
+   email,name,student_id,section,role
+   a00000001@tec.mx,Ana Ruiz,A00000001,101,student
+   ```
+
+   The section code must already exist on the course, or the row is rejected
+   with "Section code does not exist for this course."
+3. The preview shows accepted rows and, separately, rejected rows with the
+   reason for each. Nothing has been written yet.
+4. **Import n people** → confirm. The roster table below refreshes.
+5. Re-import the same file. Everyone should keep their sign-in — that is the
+   regression guarded by pitfall #13.
+
+Headers are matched loosely: `email`/`correo`, `name`/`nombre`,
+`section`/`grupo`/`sección`, `student_id`/`matrícula`. Only email, name and
+section are required.
+
 ## Manual test: platform admin
 
 Platform owners only. The **Admin** tab appears in the instructor nav only if

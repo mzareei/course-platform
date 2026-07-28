@@ -158,11 +158,15 @@ otherwise student. Instructors can still open `/student` explicitly.
 
 ## Verifiers
 
-`npm run verify` runs three scripts in `tools/`, and they run in CI on push:
+`npm run verify` runs every `tools/verify-*.mjs` (the runner auto-discovers
+them), and they run in CI on push:
 
 - `verify-i18n.mjs` — both languages complete, no drifting `{placeholders}`, no
   hardcoded English in screens.
 - `verify-gated-content.mjs` — the content delivery chain is intact.
 - `verify-app-shell.mjs` — app shell invariants.
+- `verify-csv-roster.mjs` — the roster CSV parser against real spreadsheet
+  output. This one imports `src/api/csv.ts` directly, which is why that module
+  imports nothing at all — keep it that way or the verifier stops running.
 
 Treat a verifier failure as a build failure.
