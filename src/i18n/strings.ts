@@ -619,6 +619,56 @@ export const strings = {
     "Upload a lecture PDF and the platform builds the web deck and its question bank for you. You review everything before students can see any of it.",
     "Sube el PDF de una clase y la plataforma arma la presentación web y su banco de preguntas. Tú revisas todo antes de que los estudiantes puedan verlo."
   ],
+  // ------------------------------------------------- content · your library
+  "content.tab.library": ["Your lectures", "Tus clases"],
+  "content.tab.generate": ["Generate from a PDF", "Generar desde un PDF"],
+  "content.library.loading": ["Loading your lectures…", "Cargando tus clases…"],
+  "content.library.loadFailed": ["Could not load your lectures.", "No se pudieron cargar tus clases."],
+  "content.library.emptyTitle": ["Nothing in your library yet", "Aún no hay nada en tu biblioteca"],
+  "content.library.emptyBody": [
+    "Generate a lecture from a PDF and it lands here, alongside anything already uploaded for this course.",
+    "Genera una clase desde un PDF y aparecerá aquí, junto con lo que ya se haya subido para este curso."
+  ],
+  "content.library.count": ["{count} lectures and activities", "{count} clases y actividades"],
+  "content.library.notReleased": [
+    "Not given to any class yet",
+    "Todavía no se ha dado a ninguna clase"
+  ],
+  "content.library.usedIn": ["Given to {count} classes", "Dada a {count} clases"],
+  "content.library.preview": ["Open it", "Abrirla"],
+  "content.library.attach": ["Give it to a class", "Dar a una clase"],
+  "content.library.attaching": ["Adding…", "Agregando…"],
+  "content.library.pickSession": ["Which class", "Cuál clase"],
+  "content.library.attachHint": [
+    "This adds it as a draft — students still see nothing until you release it.",
+    "Esto la agrega como borrador — los estudiantes no ven nada hasta que la publiques."
+  ],
+  "content.library.attached": [
+    "{title} was added to {session} as a draft. Release it when you are ready.",
+    "{title} se agregó a {session} como borrador. Publícala cuando estés listo."
+  ],
+  "content.library.noSessions": [
+    "There are no class sessions to give this to yet.",
+    "Todavía no hay sesiones de clase a las que dársela."
+  ],
+  "content.library.cancel": ["Cancel", "Cancelar"],
+
+  "content.release.publish": ["Release to students", "Publicar a los estudiantes"],
+  "content.release.open": ["Open it during class", "Abrirla durante la clase"],
+  "content.release.reviewOnly": ["Switch to review only", "Cambiar a solo repaso"],
+  "content.release.close": ["Close it", "Cerrarla"],
+  "content.release.working": ["Working…", "Trabajando…"],
+  "content.release.failed": ["Could not change that.", "No se pudo cambiar eso."],
+  "content.release.publishConfirm": [
+    "Release {title} to the students of {session}? They will be able to open it from their Today screen straight away.",
+    "¿Publicar {title} a los estudiantes de {session}? Podrán abrirla desde su pantalla de Hoy de inmediato."
+  ],
+  "content.release.closeConfirm": [
+    "Close {title} for {session}? Students can no longer open it.",
+    "¿Cerrar {title} para {session}? Los estudiantes ya no podrán abrirla."
+  ],
+  "content.release.changed": ["{title} is now {state}.", "{title} ahora está: {state}."],
+
   "content.uploadTitle": ["New lecture from a PDF", "Nueva clase desde un PDF"],
   "content.uploadBody": [
     "Export your slides to PDF first. Generation takes a few minutes; you can leave this page and come back.",

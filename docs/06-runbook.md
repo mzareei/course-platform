@@ -132,6 +132,26 @@ Instructor only — test sign-in cannot reach this screen, so it has to be you.
 4. A class where nothing happened should say so in words ("No questions were
    sent to the class during this session."), never render an empty table.
 
+## Manual test: your lectures and releasing them
+
+Instructor only. **Releasing is a real write — students see it immediately.**
+
+1. Sign in as the instructor → **Content** → **Your lectures** (the default tab).
+2. Every content item for the course should be listed — all 23 decks/missions,
+   not only AI-generated ones. Each says either "Not given to any class yet" or
+   "Given to *n* classes".
+3. **Give it to a class** → pick a class session → confirm. This creates a
+   **draft**; students still see nothing.
+4. The draft appears under the lecture with a *Draft* pill and a **Release to
+   students** button. Click it and confirm.
+5. Check as a student: sign in with the QA account and the lecture should now be
+   on **Today** (if it is attached to today's session) or under **Review**.
+6. To take it back, use **Close it** where offered.
+
+If a lecture you expect is missing from the list, that is a `content_items` gap
+rather than a UI one — check the library payload before assuming the screen is
+wrong.
+
 ## Manual test: CSV roster import
 
 Instructor only. **Apply is a real bulk write — test against a throwaway

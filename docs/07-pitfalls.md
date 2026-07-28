@@ -256,7 +256,37 @@ ones with only the fields you actually intend to refresh.
 
 ---
 
-## 14. Supabase CLI and the SQL editor have different permissions here
+## 14. Seeded test data hides whole missing features
+
+**Found 2026-07-28, and it had been true since the v2 app began.**
+
+The SPA could not release content. The Content screen listed **generation jobs**
+only, so the professor's own 23 decks — sitting in `content_items` since Phase 2
+— were never displayed. And nothing in the SPA called
+`course-release-management` at all, so no release could move from `draft` to
+`released`.
+
+That meant "run a complete class without touching the old apps" was false, and
+the AI pipeline dead-ended: approving a generated lecture creates a *draft*
+release, and the app had no way to publish it.
+
+Every test missed it for one reason: **Week 1 Lecture 1 was already released**,
+seeded outside the app. Every student test walked a path where the content was
+visible, so the missing capability was never exercised. It surfaced only when
+the professor asked a question about something else — where his other lectures
+were.
+
+**Rule:** ask what your fixture data is *pre-satisfying*. If every test starts
+from a state some feature was supposed to produce, that feature is untested and
+may not exist. Walk the lifecycle from empty at least once: no release, no
+roster, no session — not just the happy state someone seeded months ago.
+
+Related: pitfall #1 is the same disease at the routing layer (a feature nobody
+can reach) and #5 at the state layer (a control that disappears).
+
+---
+
+## 15. Supabase CLI and the SQL editor have different permissions here
 
 `npx supabase db push` and `npx supabase functions deploy` work. Retrieving the
 service-role key and running arbitrary `INSERT`s through the dashboard SQL

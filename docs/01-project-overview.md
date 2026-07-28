@@ -59,8 +59,18 @@ The project is finished when all of the following are true:
    (**dress rehearsal — not yet done**).
 6. No teaching content remains in the public repository.
 
-Items 1–4 are essentially met. Items 5 and 6 are outstanding — see
-`05-status.md`.
+Items 2–4 are essentially met. Items 5 and 6 are outstanding.
+
+**Item 1 was wrongly claimed as met until 2026-07-28.** Releasing content was
+never possible from the v2 app: the Content screen listed AI generation jobs
+only, and nothing in the SPA ever called `course-release-management`. Every
+release that existed had been made in the old app or seeded by hand — which is
+exactly why testing never caught it, since the lecture used throughout was
+already released. A **Your lectures** tab now closes this, but it has not yet
+been exercised by the professor. See `05-status.md` item 6.
+
+The general lesson is in `07-pitfalls.md` #14: a capability the test data
+already satisfies is invisible until someone needs it for something new.
 
 ## Explicit non-goals
 

@@ -11,6 +11,7 @@ import {
   reviewBundle, approveJob, uploadPdf, previewUrl,
   IN_FLIGHT, type GenerationJob, type GeneratedQuestion
 } from "../../api/generation";
+import { ContentLibraryView } from "../../components/ContentLibrary";
 
 const POLL_MS = 5000;
 
@@ -28,6 +29,9 @@ export function Content() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
+  // The professor's own lectures come first — the AI pipeline is the newer,
+  // rarer path, not the default one.
+  const [tab, setTab] = useState<"library" | "generate">("library");
   const poll = useRef<number | undefined>(undefined);
 
   function refresh() {
@@ -91,11 +95,26 @@ export function Content() {
 
   return (
     <div class="stack">
-      <div>
-        <p class="eyebrow">{t("content.eyebrow")}</p>
-        <h1>{t("content.title")}</h1>
-        <p class="hint">{t("content.lede")}</p>
+      <div class="row" style="justify-content: space-between; align-items: flex-start;">
+        <div>
+          <p class="eyebrow">{t("content.eyebrow")}</p>
+          <h1>{t("content.title")}</h1>
+        </div>
+        <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">
+          <a href="#" role="tab" aria-current={tab === "library" ? "page" : undefined}
+             onClick={(e) => { e.preventDefault(); setTab("library"); }}>
+            {t("content.tab.library")}
+          </a>
+          <a href="#" role="tab" aria-current={tab === "generate" ? "page" : undefined}
+             onClick={(e) => { e.preventDefault(); setTab("generate"); }}>
+            {t("content.tab.generate")}
+          </a>
+        </div>
       </div>
+
+      {tab === "library" ? <ContentLibraryView /> : (
+      <>
+      <p class="hint">{t("content.lede")}</p>
 
       <div class="card">
         <h2>{t("content.uploadTitle")}</h2>
@@ -159,6 +178,8 @@ export function Content() {
           onApproved={() => { setReviewing(null); void refresh(); }}
         />
       ) : null}
+      </>
+      )}
     </div>
   );
 }
