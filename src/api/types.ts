@@ -78,13 +78,16 @@ export interface CourseContext {
 }
 
 export interface WeightedSummary {
-  weighted_percent?: number;
-  categories?: Array<{
-    name: string;
-    weight_percent: number;
-    average_percent?: number | null;
-    counted_scores?: number;
-    dropped_scores?: number;
+  weighted_course_percent?: number;
+  configured_weight_percent?: number;
+  category_summaries?: Array<{
+    category_id: string;
+    category_name: string;
+    category_weight_percent: number;
+    category_average_percent?: number | null;
+    score_count?: number;
+    kept_score_count?: number;
+    dropped_score_count?: number;
   }>;
 }
 

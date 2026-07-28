@@ -28,7 +28,7 @@ export function Grades() {
   }
 
   const weighted = progress.weighted_summary;
-  const percent = weighted?.weighted_percent;
+  const percent = weighted?.weighted_course_percent;
 
   return (
     <div class="stack">
@@ -42,7 +42,7 @@ export function Grades() {
         <p class="hint">{t("grades.weightedTotal")}</p>
       </div>
 
-      {weighted?.categories?.length ? (
+      {weighted?.category_summaries?.length ? (
         <div class="table-scroll">
           <table class="data">
             <thead>
@@ -53,12 +53,12 @@ export function Grades() {
               </tr>
             </thead>
             <tbody>
-              {weighted.categories.map((cat) => (
+              {weighted.category_summaries.map((cat) => (
                 <tr>
-                  <td>{cat.name}</td>
-                  <td class="num">{cat.weight_percent}%</td>
+                  <td>{cat.category_name}</td>
+                  <td class="num">{cat.category_weight_percent}%</td>
                   <td class="num">
-                    {typeof cat.average_percent === "number" ? `${cat.average_percent.toFixed(1)}%` : "—"}
+                    {typeof cat.category_average_percent === "number" ? `${cat.category_average_percent.toFixed(1)}%` : "—"}
                   </td>
                 </tr>
               ))}
