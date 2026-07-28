@@ -5,7 +5,7 @@ import { callFn } from "./client";
 
 export function submitReflection(input: { class_session_id: string; one_thing: string }) {
   // section_id is optional — the server defaults to the student's own section.
-  return callFn<{ id: string; word_count: number }>("course-exit-ticket", { action: "submit_ticket", ...input });
+  return callFn<{ ticket: { id: string; word_count: number } }>("course-exit-ticket", { action: "submit_ticket", ...input });
 }
 
 export interface ClassReflection {

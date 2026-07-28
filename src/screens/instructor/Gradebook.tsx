@@ -40,7 +40,7 @@ export function Gradebook() {
     if (!students.has(key)) {
       students.set(key, {
         name: score.student_name ?? t("gradebook.col.student"),
-        email: score.student_email ?? "",
+        email: score.institutional_email ?? "",
         scores: new Map()
       });
     }

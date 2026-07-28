@@ -135,11 +135,11 @@ export interface GradebookSummary {
   }>;
   sections: SectionInfo[];
   scores: Array<{
-    id: string;
+    score_id: string;
     gradebook_item_id: string;
     profile_id: string;
     student_name?: string;
-    student_email?: string;
+    institutional_email?: string;
     section_id?: string;
     score_final?: number | null;
     status: string;
