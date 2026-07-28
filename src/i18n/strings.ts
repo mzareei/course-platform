@@ -411,6 +411,23 @@ export const strings = {
     "Your score is recorded. Your professor will show the class results shortly.",
     "Tu calificación quedó registrada. Tu profesor mostrará los resultados del grupo en un momento."
   ],
+  "run.step.end": ["End the class", "Terminar la clase"],
+  "run.step.endBody": [
+    "Closes the class for students: the live screen stops being offered, and any open question or running quiz is closed.",
+    "Cierra la clase para los estudiantes: deja de ofrecerse la pantalla en vivo y se cierra cualquier pregunta abierta o quiz en curso."
+  ],
+  "run.endClass": ["End the class", "Terminar la clase"],
+  "run.endConfirm": [
+    "End the class now? Any open question and any running quiz will be closed, and students will no longer be able to join. Reflections stay open for a few more minutes.",
+    "¿Terminar la clase ahora? Se cerrará cualquier pregunta abierta y cualquier quiz en curso, y los estudiantes ya no podrán unirse. Las reflexiones siguen abiertas unos minutos más."
+  ],
+  "run.ended": ["Class ended", "Clase terminada"],
+  "run.endedBody": [
+    "This class is closed. Reflections submitted during the grace window still appear above.",
+    "Esta clase está cerrada. Las reflexiones enviadas durante el periodo de gracia siguen apareciendo arriba."
+  ],
+  "run.endFailed": ["Could not end the class.", "No se pudo terminar la clase."],
+
   // ---------------------------------------------------------------- content (AI pipeline)
   "content.eyebrow": ["COURSE MATERIALS", "MATERIAL DEL CURSO"],
   "content.title": ["Content", "Contenido"],

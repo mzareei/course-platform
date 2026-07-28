@@ -8,13 +8,15 @@
 // stem or invents distractors. Picking "Which class" + a difficulty (or
 // "Surprise me") draws one question server-side; the same click sends it.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { context } from "../../state/session";
+import { context, refreshContext } from "../../state/session";
 import { t, lang } from "../../i18n";
 import {
   pushPulse, revealPulse, closePulse, pulseResults, listBanks, drawQuestion,
   type PulseRound, type PulseResults, type BankSummary, type DrawnQuestion
 } from "../../api/pulse";
 import { EndOfClass } from "./EndOfClass";
+import { endClassSession } from "../../api/session";
+import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
 
 const POLL_MS = 3000;
 type Difficulty = "easy" | "medium" | "hard";
@@ -160,6 +162,32 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
 
   const remaining = secondsLeft(round?.ends_at);
   const live = round && round.state !== "closed";
+  const ended = session.state === "closed";
+
+  // Ending the class is the one irreversible control on this screen, so it
+  // names its consequences first and then actually tidies up: an open question
+  // and a running quiz are closed too, otherwise they would sit there live
+  // against a class that is over.
+  async function onEndClass() {
+    if (!confirm(t("run.endConfirm"))) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (round && round.state !== "closed") {
+        await closePulse(round.round_id).catch(() => {});
+      }
+      if (bankSlug) {
+        const quiz = await currentClassQuiz({ class_session_id: sessionId!, content_slug: bankSlug }).catch(() => null);
+        if (quiz?.instance_id) await closeClassQuiz(quiz.instance_id).catch(() => {});
+      }
+      await endClassSession(sessionId!);
+      await refreshContext();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("run.endFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div class="stack">
@@ -368,6 +396,20 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       )}
 
       {!live && bankSlug ? <EndOfClass sessionId={sessionId!} contentSlug={bankSlug} /> : null}
+
+      {!live ? (
+        <div class="card">
+          <h2>{t("run.step.end")}</h2>
+          <p class="hint">{ended ? t("run.endedBody") : t("run.step.endBody")}</p>
+          {ended ? (
+            <span class="pill hidden">{t("run.ended")}</span>
+          ) : (
+            <button class="btn danger" type="button" disabled={busy} onClick={onEndClass}>
+              {t("run.endClass")}
+            </button>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
