@@ -14,6 +14,7 @@ import {
   pushPulse, revealPulse, closePulse, pulseResults, listBanks, drawQuestion,
   type PulseRound, type PulseResults, type BankSummary, type DrawnQuestion
 } from "../../api/pulse";
+import { EndOfClass } from "./EndOfClass";
 
 const POLL_MS = 3000;
 type Difficulty = "easy" | "medium" | "hard";
@@ -365,6 +366,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           ) : null}
         </>
       )}
+
+      {!live && bankSlug ? <EndOfClass sessionId={sessionId!} contentSlug={bankSlug} /> : null}
     </div>
   );
 }

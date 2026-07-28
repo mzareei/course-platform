@@ -1,13 +1,18 @@
 // In class — the student's live screen.
 //
-// A pure function of what the server says is happening: waiting → question →
-// recorded → revealed. Students never navigate during class; the screen changes
-// when the professor acts. Options are shuffled per student, so "pick number 2"
-// means nothing to the person next to them.
+// A pure function of what the server says is happening, in the order a class
+// actually runs: waiting → pulse question(s) → end-of-class quiz → reflection
+// → done. Students never navigate during class; the screen changes when the
+// professor's Run Class actions move things forward. Pulse options are
+// shuffled per student (presentation only; the server grades by key), so
+// "pick number 2" means nothing to the person next to them.
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import { context } from "../../state/session";
 import { t } from "../../i18n";
 import { currentPulse, answerPulse, shuffleOptions, type StudentPulseView } from "../../api/pulse";
+import { QuizPlayer } from "../../features/quiz/Player";
+import { Reflection } from "../../features/reflection/Reflection";
 
 const POLL_MS = 3000;
 
@@ -24,6 +29,7 @@ export function Live() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [reflectionDone, setReflectionDone] = useState(false);
   const shownAt = useRef<number>(Date.now());
   const poll = useRef<number | undefined>(undefined);
   const clock = useRef<number | undefined>(undefined);
@@ -95,7 +101,7 @@ export function Live() {
     );
   }
 
-  return (
+  const Shell = ({ children }: { children: ComponentChildren }) => (
     <div class="stack">
       <div class="row" style="justify-content: space-between;">
         <div>
@@ -104,15 +110,15 @@ export function Live() {
         </div>
         <a class="btn quiet" href="/">{t("live.backToToday")}</a>
       </div>
-
       {error ? <p class="error-text" role="alert">{error}</p> : null}
+      {children}
+    </div>
+  );
 
-      {!round ? (
-        <div class="empty-state card">
-          <h3>{t("live.waitingTitle")}</h3>
-          <p>{t("live.waitingBody")}</p>
-        </div>
-      ) : (
+  // 1. A pulse question is on screen — highest priority, matches class rhythm.
+  if (round) {
+    return (
+      <Shell>
         <div class="card">
           <div class="row" style="justify-content: space-between;">
             <p class="eyebrow">{t("live.answer")}</p>
@@ -125,7 +131,6 @@ export function Live() {
 
           <h2 style="font-size: 1.35rem;">{round.text}</h2>
 
-          {/* Revealed: show whether they were right, then the correct option. */}
           {round.state === "revealed" ? (
             <div class="stack">
               {mine ? (
@@ -165,7 +170,56 @@ export function Live() {
             </div>
           )}
         </div>
-      )}
-    </div>
+      </Shell>
+    );
+  }
+
+  // 2. The end-of-class quiz is live — take it.
+  if (view?.quiz.instance_id && view.quiz.state === "live") {
+    return (
+      <Shell>
+        <div class="card">
+          <QuizPlayer activityInstanceId={view.quiz.instance_id} />
+        </div>
+      </Shell>
+    );
+  }
+
+  // 3. The quiz has closed and the reflection isn't in yet — write it.
+  if (view?.quiz.instance_id && view.quiz.state === "closed" && view.reflection && !view.reflection.submitted && !reflectionDone) {
+    return (
+      <Shell>
+        <div class="card">
+          <Reflection
+            classSessionId={sessionId}
+            minWords={view.reflection.min_words}
+            maxWords={view.reflection.max_words}
+            onSubmitted={() => setReflectionDone(true)}
+          />
+        </div>
+      </Shell>
+    );
+  }
+
+  // 4. Reflection submitted, or nothing scheduled yet — done for this class.
+  if (reflectionDone || view?.reflection?.submitted) {
+    return (
+      <Shell>
+        <div class="empty-state card">
+          <h3>{t("live.doneTitle")}</h3>
+          <p>{t("live.doneBody")}</p>
+          <a class="btn" href="/grades">{t("live.viewGrades")}</a>
+        </div>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell>
+      <div class="empty-state card">
+        <h3>{t("live.waitingTitle")}</h3>
+        <p>{t("live.waitingBody")}</p>
+      </div>
+    </Shell>
   );
 }

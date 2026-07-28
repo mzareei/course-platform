@@ -50,6 +50,19 @@ export interface StudentPulseView {
     points_awarded: number | null;
   } | null;
   results: PulseResults | null;
+  // Same poll drives the whole live screen: pulse takes priority, then quiz,
+  // then reflection — the order a class actually runs in.
+  quiz: {
+    instance_id: string | null;
+    state: string | null;
+    ends_at?: string | null;
+    question_count?: number | null;
+  };
+  reflection: {
+    submitted: boolean;
+    min_words: number;
+    max_words: number;
+  };
 }
 
 export function pushPulse(input: {

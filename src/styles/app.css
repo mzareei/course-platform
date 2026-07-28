@@ -490,3 +490,9 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   font-weight: 750;
   color: var(--text-muted);
 }
+
+/* ---------------------------------------------------------------- quiz player */
+.pulse-choice.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}

@@ -342,6 +342,28 @@ export const strings = {
     "Inicia la sesión de clase antes de enviar una pregunta."
   ],
 
+  // ---------------------------------------------------------------- end of class
+  "endOfClass.title": ["End-of-class quiz", "Quiz de fin de clase"],
+  "endOfClass.body": [
+    "A mixed set of easy, medium, and hard questions drawn from today's lecture bank — nothing to type.",
+    "Un conjunto mixto de preguntas fáciles, medias y difíciles tomadas del banco de esta clase — no hay nada que escribir."
+  ],
+  "endOfClass.start": ["Start the quiz", "Iniciar el quiz"],
+  "endOfClass.starting": ["Starting…", "Iniciando…"],
+  "endOfClass.startFailed": ["Could not start the quiz.", "No se pudo iniciar el quiz."],
+  "endOfClass.submittedOf": ["submitted · {started} started", "entregados · {started} iniciados"],
+  "endOfClass.close": ["Close the quiz", "Cerrar el quiz"],
+  "endOfClass.closing": ["Closing…", "Cerrando…"],
+  "endOfClass.closeFailed": ["Could not close the quiz.", "No se pudo cerrar el quiz."],
+  "endOfClass.closed": ["Quiz closed", "Quiz cerrado"],
+  "endOfClass.average": ["Class average: {score}%", "Promedio del grupo: {score}%"],
+  "endOfClass.reflections": ["Reflections", "Reflexiones"],
+  "endOfClass.loadingReflections": ["Loading reflections…", "Cargando reflexiones…"],
+  "endOfClass.noReflectionsYet": [
+    "No reflections submitted yet.",
+    "Aún no se ha enviado ninguna reflexión."
+  ],
+
   // ---------------------------------------------------------------- student live
   "live.title": ["In class", "En clase"],
   "live.eyebrow": ["Live", "En vivo"],
@@ -369,6 +391,42 @@ export const strings = {
   "live.answerFailed": ["Could not record your answer.", "No se pudo registrar tu respuesta."],
   "live.timeUp": ["Time is up for this question", "Se acabó el tiempo de esta pregunta"],
   "live.backToToday": ["Leave class view", "Salir de la vista de clase"],
+  "live.doneTitle": ["That's everything for today", "Eso es todo por hoy"],
+  "live.doneBody": [
+    "Your pulse answers, quiz, and reflection are all in. See you next class.",
+    "Tus respuestas rápidas, el quiz y tu reflexión ya quedaron registrados. Nos vemos en la próxima clase."
+  ],
+  "live.viewGrades": ["View my grades", "Ver mis calificaciones"],
+
+  // ---------------------------------------------------------------- quiz
+  "quiz.loading": ["Loading the quiz…", "Cargando el quiz…"],
+  "quiz.questionN": ["Question {n} of {total}", "Pregunta {n} de {total}"],
+  "quiz.previous": ["Back", "Regresar"],
+  "quiz.next": ["Next", "Siguiente"],
+  "quiz.submit": ["Submit quiz", "Enviar quiz"],
+  "quiz.submitting": ["Submitting…", "Enviando…"],
+  "quiz.answeredOf": ["{answered} of {total} answered", "{answered} de {total} respondidas"],
+  "quiz.done": ["Quiz submitted", "Quiz enviado"],
+  "quiz.doneBody": [
+    "Your score is recorded. Your professor will show the class results shortly.",
+    "Tu calificación quedó registrada. Tu profesor mostrará los resultados del grupo en un momento."
+  ],
+
+  // ---------------------------------------------------------------- reflection
+  "reflection.eyebrow": ["End of class", "Fin de la clase"],
+  "reflection.title": ["What did you learn today?", "¿Qué aprendiste hoy?"],
+  "reflection.prompt": [
+    "Write one paragraph, {min}–{max} words, about what you learned in this class.",
+    "Escribe un párrafo, de {min} a {max} palabras, sobre lo que aprendiste en esta clase."
+  ],
+  "reflection.placeholder": [
+    "Today I learned that…",
+    "Hoy aprendí que…"
+  ],
+  "reflection.wordCount": ["{count} words (need {min}–{max})", "{count} palabras (se necesitan {min}–{max})"],
+  "reflection.submit": ["Submit reflection", "Enviar reflexión"],
+  "reflection.submitting": ["Submitting…", "Enviando…"],
+  "reflection.submitFailed": ["Could not submit your reflection.", "No se pudo enviar tu reflexión."],
 
   // ---------------------------------------------------------------- status pills
   "state.draft": ["Hidden", "Oculto"],
