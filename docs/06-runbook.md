@@ -132,6 +132,25 @@ Instructor only — test sign-in cannot reach this screen, so it has to be you.
 4. A class where nothing happened should say so in words ("No questions were
    sent to the class during this session."), never render an empty table.
 
+## Manual test: platform admin
+
+Platform owners only. The **Admin** tab appears in the instructor nav only if
+you hold an active `platform_owner` membership.
+
+1. Sign in as the owner → **Admin**.
+2. The **Courses** table lists every course with its teaching-staff count.
+3. **Invite a professor** — pick a course, enter a `tec.mx` / `itesm.mx`
+   address, choose Professor or Teaching assistant, invite. The row appears in
+   **Teaching staff** straight away, with the account showing as *Invited*
+   until that person signs in for the first time and claims it.
+4. **Remove** deactivates the membership after a confirm that names the
+   consequences. Platform-owner rows have no Remove button, so you cannot lock
+   yourself out.
+5. Creating a course needs all four fields; the short id is permanent and is
+   what appears in links.
+
+An invite is a real write. Test with an address you control, then remove it.
+
 ## Manual test: the AI pipeline
 
 1. Instructor → **Content** → give a lecture title, choose a PDF →

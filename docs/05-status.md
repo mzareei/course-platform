@@ -101,10 +101,37 @@ and test sign-in refuses instructor accounts, so no agent can reach this screen
 without the professor signing in. **The professor needs to click it before this
 counts as done.**
 
-### 4. Admin screens
-`course-admin` is built, deployed and tested (create course, invite professor,
-list, deactivate) but `/admin` is still a placeholder. Without UI there is no way
-to onboard a second professor — which is the whole point of the AI pipeline.
+### 4. Admin screens — **built, NOT yet seen working**
+Built on 2026-07-28. `src/screens/instructor/Admin.tsx`: the course list with a
+teaching-staff count, a create-a-course form, the teaching-staff table filtered
+by course, an invite form (professor or TA), and removal with a confirm that
+names the consequences.
+
+Two structural bugs were fixed on the way in, both instances of pitfalls that
+are already documented:
+
+- **`/admin` had a route but no nav link.** It was reachable only by typing the
+  URL — pitfall #1, the exact shape of the bug that once shipped a live class
+  students could not join. `InstructorNav` now shows an **Admin** tab, for
+  platform owners only.
+- **The `/admin` route component was an inline arrow inside `App`** — pitfall
+  #4, a new component identity on every render. Now a module-scope `AdminRoute`.
+
+The dead `Placeholder` component and its orphaned strings went with them.
+
+**Verified:** all five `course-admin` actions are refused for a student token
+("This action is restricted to a platform owner" — the owner gate runs before
+the action switch); the `course_memberships` unique constraint that
+`invite_professor`'s `ON CONFLICT` needs is a plain table-level constraint, not
+a partial index, so pitfall #6 does not bite; typecheck, all three verifiers and
+the build pass; the student surface still works end to end (Today, Review and
+Grades all render real data, console clean).
+
+**Not verified:** the screen has never been rendered, for the same reason as
+Tab B — no agent can sign in as an instructor. **Creating a course and inviting
+a professor are both writes, so they need you at the keyboard.** Suggested
+first run: invite a TA to `tc2007b` using an address you control, confirm the
+row appears, then remove it again.
 
 ### 5. CSV roster import
 People adds one person at a time. Bulk import still lives in the old app.

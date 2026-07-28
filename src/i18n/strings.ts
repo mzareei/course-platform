@@ -203,15 +203,89 @@ export const strings = {
     "See exactly what your students see.",
     "Mira exactamente lo que ven tus estudiantes."
   ],
-  "teach.placeholder.contentBody": [
-    "Your weekly materials move here in Phase 2 — hidden until you release them, with the PDF upload zone arriving in Phase 5.",
-    "Tus materiales semanales se mueven aquí en la Fase 2 — ocultos hasta que los publiques, y la carga de PDF llega en la Fase 5."
+
+  // ---------------------------------------------------------------- admin
+  "teach.nav.admin": ["Admin", "Administración"],
+  "admin.eyebrow": ["Platform", "Plataforma"],
+  "admin.title": ["Platform admin", "Administración de la plataforma"],
+  "admin.lede": [
+    "Create a course, then invite the professor who will teach it. They claim the account themselves the first time they sign in with that email — there is nothing to send them.",
+    "Crea un curso y luego invita al profesor que lo impartirá. La cuenta se activa sola la primera vez que esa persona entre con ese correo — no hay nada que enviarle."
   ],
-  "teach.placeholder.adminTitle": ["Platform admin", "Administración de la plataforma"],
-  "teach.placeholder.adminBody": [
-    "Professor and course management arrives in Phase 5.",
-    "La gestión de profesores y cursos llega en la Fase 5."
+  "admin.loading": ["Loading the platform…", "Cargando la plataforma…"],
+  "admin.loadFailed": ["Could not load the platform admin.", "No se pudo cargar la administración."],
+
+  "admin.courses": ["Courses", "Cursos"],
+  "admin.courses.empty": ["No courses yet", "Aún no hay cursos"],
+  "admin.courses.emptyBody": [
+    "Create the first course below, then invite someone to teach it.",
+    "Crea el primer curso abajo y luego invita a alguien a impartirlo."
   ],
+  "admin.col.code": ["Code", "Clave"],
+  "admin.col.title": ["Title", "Título"],
+  "admin.col.term": ["Term", "Periodo"],
+  "admin.col.staff": ["Teaching staff", "Personal docente"],
+
+  "admin.newCourse": ["Create a course", "Crear un curso"],
+  "admin.field.id": ["Short id", "Identificador corto"],
+  "admin.field.idHint": [
+    "Lowercase letters, digits, dot, dash or underscore. Used in links and cannot be changed later — e.g. tc2007b.",
+    "Minúsculas, dígitos, punto, guion o guion bajo. Aparece en los enlaces y no se puede cambiar después — por ejemplo tc2007b."
+  ],
+  "admin.field.code": ["Course code", "Clave del curso"],
+  "admin.field.codeHint": ["As the university writes it — e.g. TC2007B.", "Como la escribe la universidad — por ejemplo TC2007B."],
+  "admin.field.courseTitle": ["Course title", "Título del curso"],
+  "admin.field.term": ["Term", "Periodo"],
+  "admin.field.termHint": ["For example \"Fall 2026\".", "Por ejemplo \"Otoño 2026\"."],
+  "admin.createCourse": ["Create the course", "Crear el curso"],
+  "admin.creating": ["Creating…", "Creando…"],
+  "admin.createdCourse": [
+    "Created {title}. Invite someone to teach it below.",
+    "Se creó {title}. Invita abajo a quien lo impartirá."
+  ],
+
+  "admin.staff": ["Teaching staff", "Personal docente"],
+  "admin.staff.empty": ["Nobody teaches this course yet", "Todavía nadie imparte este curso"],
+  "admin.staff.emptyBody": [
+    "Invite a professor below and they appear here straight away.",
+    "Invita a un profesor abajo y aparecerá aquí de inmediato."
+  ],
+  "admin.col.person": ["Person", "Persona"],
+  "admin.col.role": ["Role", "Rol"],
+  "admin.col.account": ["Account", "Cuenta"],
+  "admin.filter.course": ["Which course", "Cuál curso"],
+  "admin.filter.allCourses": ["Every course", "Todos los cursos"],
+
+  "admin.invite": ["Invite a professor", "Invitar a un profesor"],
+  "admin.field.email": ["Institutional email", "Correo institucional"],
+  "admin.field.emailHint": [
+    "Must be a tec.mx or itesm.mx address, unless an external access grant already exists for it.",
+    "Debe ser una dirección tec.mx o itesm.mx, salvo que ya exista un permiso de acceso externo para ella."
+  ],
+  "admin.field.fullName": ["Full name", "Nombre completo"],
+  "admin.field.fullNameOptional": ["Optional", "Opcional"],
+  "admin.field.role": ["Role", "Rol"],
+  "admin.role.instructor": ["Professor", "Profesor"],
+  "admin.role.teaching_assistant": ["Teaching assistant", "Asistente docente"],
+  "admin.role.platform_owner": ["Platform owner", "Dueño de la plataforma"],
+  "admin.sendInvite": ["Invite them", "Invitar"],
+  "admin.inviting": ["Inviting…", "Invitando…"],
+  "admin.invited": [
+    "{email} can now teach {course}. They get access the first time they sign in with that address.",
+    "{email} ya puede impartir {course}. Tendrá acceso la primera vez que entre con esa dirección."
+  ],
+  "admin.pickCourseFirst": [
+    "Choose a course before inviting someone.",
+    "Elige un curso antes de invitar a alguien."
+  ],
+
+  "admin.remove": ["Remove", "Quitar"],
+  "admin.removing": ["Removing…", "Quitando…"],
+  "admin.removeConfirm": [
+    "Remove {name} from {course}? They lose access to the course immediately, including its gradebook and content. Nothing they have already graded is deleted, and you can invite them again later.",
+    "¿Quitar a {name} de {course}? Perderá el acceso al curso de inmediato, incluidas las calificaciones y el contenido. No se borra nada de lo que ya haya calificado, y puedes volver a invitarle después."
+  ],
+  "admin.removed": ["{name} no longer teaches {course}.", "{name} ya no imparte {course}."],
 
   // ---------------------------------------------------------------- gradebook
   "gradebook.eyebrow": ["Assessment", "Evaluación"],
@@ -580,7 +654,10 @@ export const strings = {
   "state.active": ["Active", "Activo"],
   "state.inactive": ["Inactive", "Inactivo"],
   "state.invited": ["Invited", "Invitado"],
-  "state.revoked": ["Revoked", "Revocado"]
+  "state.revoked": ["Revoked", "Revocado"],
+  "state.completed": ["Completed", "Concluido"],
+  "state.merged": ["Merged account", "Cuenta fusionada"],
+  "state.dropped": ["Dropped", "Dado de baja"]
 } as const;
 
 export type StringKey = keyof typeof strings;

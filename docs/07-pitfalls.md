@@ -197,11 +197,23 @@ the submission lands after `ends_at`), and `late` was in neither `CLASSES` nor
 untranslated "late" to a Spanish-reading professor. Found while building
 Gradebook Tab B, fixed in the same commit.
 
-**Rule:** when you surface a new status column in the UI, grep the edge function
-for every literal it can write (`grep -n 'status:' index.ts`) and confirm each
-one exists in `StatusPill`'s map *and* in `strings.ts`. This is pitfall #3's
-shape — a cross-boundary mismatch the compiler cannot see — with a defensive
-fallback hiding it.
+**Rule:** when you surface a status column in the UI, list every value the
+*schema* allows and confirm each exists in `StatusPill`'s map and in
+`strings.ts`. From `mzareei.github.io/supabase/migrations`:
+
+```bash
+grep -rho "status in ([^)]*)" *.sql | sed "s/status in (//" | tr -d "()'" | tr ',' '\n' | tr -d ' ' | sort -u
+grep -rho "state in ([^)]*)"  *.sql | sed "s/state in (//"  | tr -d "()'" | tr ',' '\n' | tr -d ' ' | sort -u
+```
+
+Running that sweep while building the Admin screen turned up three more silent
+gaps beyond `late`: `completed` (`courses.status`, `course_sections.status`),
+`merged` (`profiles.status` — already reachable from the People screen) and
+`dropped` (`section_enrollments.status`). All four are fixed.
+
+This is pitfall #3's shape — a cross-boundary mismatch the compiler cannot see —
+with a defensive fallback hiding it. Note the two different column names:
+grepping only for `status` misses every `state` column, and vice versa.
 
 ---
 

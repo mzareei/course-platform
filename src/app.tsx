@@ -13,6 +13,7 @@ import { TeachHome } from "./screens/instructor/Home";
 import { Gradebook } from "./screens/instructor/Gradebook";
 import { People } from "./screens/instructor/People";
 import { Content } from "./screens/instructor/Content";
+import { Admin } from "./screens/instructor/Admin";
 import { Viewer } from "./screens/Viewer";
 import { Live } from "./screens/student/Live";
 import { RunClass } from "./screens/instructor/RunClass";
@@ -42,7 +43,10 @@ function InstructorNav() {
     { href: "/teach", label: t("teach.nav.home") },
     { href: "/teach/content", label: t("teach.nav.content") },
     { href: "/teach/grades", label: t("teach.nav.grades") },
-    { href: "/teach/people", label: t("teach.nav.people") }
+    { href: "/teach/people", label: t("teach.nav.people") },
+    // Owners only. Without this link /admin is reachable only by typing the URL,
+    // which is how a whole feature once shipped that no user could get to.
+    ...(isOwner.value ? [{ href: "/admin", label: t("teach.nav.admin") }] : [])
   ];
   return (
     <nav class="nav-tabs" aria-label={t("nav.main")}>
@@ -53,6 +57,12 @@ function InstructorNav() {
       ))}
     </nav>
   );
+}
+
+/** Module scope on purpose — an inline arrow here gets a new component identity
+ *  on every App render and remounts the whole screen. See pitfalls #4. */
+function AdminRoute() {
+  return isOwner.value ? <Admin /> : <TeachHome />;
 }
 
 function Topbar() {
@@ -77,15 +87,6 @@ function Topbar() {
         </button>
       ) : null}
     </header>
-  );
-}
-
-function Placeholder({ title, note }: { title: string; note: string }) {
-  return (
-    <div class="empty-state card">
-      <h3>{title}</h3>
-      <p>{note}</p>
-    </div>
   );
 }
 
@@ -155,19 +156,7 @@ export function App() {
             <Route path="/teach/content" component={Content} />
             <Route path="/teach/grades" component={Gradebook} />
             <Route path="/teach/people" component={People} />
-            <Route
-              path="/admin"
-              component={() =>
-                isOwner.value ? (
-                  <Placeholder
-                    title={t("teach.placeholder.adminTitle")}
-                    note={t("teach.placeholder.adminBody")}
-                  />
-                ) : (
-                  <TeachHome />
-                )
-              }
-            />
+            <Route path="/admin" component={AdminRoute} />
             {/* Instructors can still walk the student surface explicitly. */}
             <Route path="/student" component={Today} />
             <Route path="/teach/run/:sessionId" component={RunClass} />

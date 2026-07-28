@@ -26,7 +26,10 @@ const CLASSES: Record<string, string> = {
   active: "open",
   inactive: "hidden",
   invited: "scheduled",
-  revoked: "hidden"
+  revoked: "hidden",
+  completed: "hidden",
+  merged: "hidden",
+  dropped: "warn"
 };
 
 export function StatusPill({ state, dateHint }: { state?: string; dateHint?: string | null }) {
