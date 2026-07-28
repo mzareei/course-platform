@@ -39,11 +39,22 @@ export function Today() {
   const ctx = context.value;
   if (!ctx) return null;
 
-  const releases = (ctx.releases ?? []).filter((r) =>
-    ["released", "live", "review_only"].includes(r.state)
-  );
-  const liveNow = releases.filter((r) => r.state === "live");
-  const newest = liveNow[0] ?? releases[releases.length - 1];
+  const allReleases = (ctx.releases ?? []).filter((r) => ["released", "live", "review_only"].includes(r.state));
+  // Legacy standalone activities (content_type "activity" pointing at a
+  // supabase_record) have no viewer route of their own — the graded
+  // end-of-class quiz they represent is only ever taken through
+  // "Join class" → /live. Without this filter they render as a dead "#"
+  // link on the card.
+  const releases = allReleases.filter((r) => !(r.content_type === "activity" && r.source_kind === "supabase_record"));
+  // A class is "live" per the class SESSION, not the release row — a
+  // release can sit in "released" state the whole time the session runs.
+  // /live itself (Live.tsx) already keys off session_state; Today must
+  // match it, or "Join class" never appears even mid-class. Checked against
+  // every release tied to the session (not just the display-filtered list)
+  // so a live class is never hidden just because its only release happens
+  // to be the legacy activity type filtered out above.
+  const sessionIsLive = allReleases.some((r) => ["live", "paused"].includes(r.session_state || ""));
+  const newest = releases[releases.length - 1];
 
   return (
     <div class="stack">
@@ -51,7 +62,7 @@ export function Today() {
         <p class="eyebrow">
           {new Date().toLocaleDateString(locale(), { weekday: "long", month: "long", day: "numeric" })}
         </p>
-        <h1>{liveNow.length ? t("today.classLive") : t("today.title")}</h1>
+        <h1>{sessionIsLive ? t("today.classLive") : t("today.title")}</h1>
       </div>
 
       {releases.length === 0 ? (
@@ -82,7 +93,7 @@ export function Today() {
         </div>
       )}
 
-      {liveNow.length ? (
+      {sessionIsLive ? (
         <div class="action-dock">
           <a class="btn primary" href="/live">{t("today.joinClass")}</a>
         </div>

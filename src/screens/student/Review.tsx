@@ -19,9 +19,10 @@ export function Review() {
   const ctx = context.value;
   if (!ctx) return null;
 
-  const reviewable = (ctx.releases ?? []).filter((r) =>
-    ["released", "live", "review_only", "paused"].includes(r.state)
-  );
+  const reviewable = (ctx.releases ?? [])
+    .filter((r) => ["released", "live", "review_only", "paused"].includes(r.state))
+    // Legacy standalone activities have no viewer route — see Today.tsx.
+    .filter((r) => !(r.content_type === "activity" && r.source_kind === "supabase_record"));
 
   const byType = new Map<string, ReleaseItem[]>();
   for (const release of reviewable) {
