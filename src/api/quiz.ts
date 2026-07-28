@@ -60,8 +60,14 @@ export function startClassQuiz(input: { class_session_id: string; content_slug: 
   return callFn<{ instance_id: string; reused: boolean }>("course-class-quiz", { action: "start", ...input });
 }
 
+/** The running quiz (if any) plus the last finished one, kept separate so a
+ *  closed quiz never hides the "start" control — a class can run more than one. */
 export function currentClassQuiz(input: { class_session_id: string; content_slug: string }) {
-  return callFn<{ instance_id: string | null }>("course-class-quiz", { action: "current", ...input });
+  return callFn<{
+    instance_id: string | null;
+    state: string | null;
+    last_closed_instance_id: string | null;
+  }>("course-class-quiz", { action: "current", ...input });
 }
 
 export function closeClassQuiz(activityInstanceId: string) {

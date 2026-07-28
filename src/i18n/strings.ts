@@ -349,6 +349,7 @@ export const strings = {
     "Un conjunto mixto de preguntas fáciles, medias y difíciles tomadas del banco de esta clase — no hay nada que escribir."
   ],
   "endOfClass.start": ["Start the quiz", "Iniciar el quiz"],
+  "endOfClass.startAnother": ["Start another quiz", "Iniciar otro quiz"],
   "endOfClass.starting": ["Starting…", "Iniciando…"],
   "endOfClass.startFailed": ["Could not start the quiz.", "No se pudo iniciar el quiz."],
   "endOfClass.submittedOf": ["submitted · {started} started", "entregados · {started} iniciados"],
