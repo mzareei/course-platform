@@ -16,6 +16,28 @@ import { Reflection } from "../../features/reflection/Reflection";
 
 const POLL_MS = 3000;
 
+// Defined at module scope, not inside Live(), so its identity is stable across
+// the 3s poll re-renders. A component defined inline inside another component
+// gets a fresh function reference every render — Preact then treats each
+// render as a different component type and unmounts/remounts everything
+// inside it, which silently reset the quiz player before it ever finished
+// loading (a real bug caught while testing this).
+function LiveShell({ error, children }: { error: string | null; children: ComponentChildren }) {
+  return (
+    <div class="stack">
+      <div class="row" style="justify-content: space-between;">
+        <div>
+          <p class="eyebrow">{t("live.eyebrow")}</p>
+          <h1>{t("live.title")}</h1>
+        </div>
+        <a class="btn quiet" href="/">{t("live.backToToday")}</a>
+      </div>
+      {error ? <p class="error-text" role="alert">{error}</p> : null}
+      {children}
+    </div>
+  );
+}
+
 export function Live() {
   const ctx = context.value;
   // The live session comes from whatever release is currently live for them.
@@ -101,24 +123,10 @@ export function Live() {
     );
   }
 
-  const Shell = ({ children }: { children: ComponentChildren }) => (
-    <div class="stack">
-      <div class="row" style="justify-content: space-between;">
-        <div>
-          <p class="eyebrow">{t("live.eyebrow")}</p>
-          <h1>{t("live.title")}</h1>
-        </div>
-        <a class="btn quiet" href="/">{t("live.backToToday")}</a>
-      </div>
-      {error ? <p class="error-text" role="alert">{error}</p> : null}
-      {children}
-    </div>
-  );
-
   // 1. A pulse question is on screen — highest priority, matches class rhythm.
   if (round) {
     return (
-      <Shell>
+      <LiveShell error={error}>
         <div class="card">
           <div class="row" style="justify-content: space-between;">
             <p class="eyebrow">{t("live.answer")}</p>
@@ -170,25 +178,25 @@ export function Live() {
             </div>
           )}
         </div>
-      </Shell>
+      </LiveShell>
     );
   }
 
   // 2. The end-of-class quiz is live — take it.
   if (view?.quiz.instance_id && view.quiz.state === "live") {
     return (
-      <Shell>
+      <LiveShell error={error}>
         <div class="card">
           <QuizPlayer activityInstanceId={view.quiz.instance_id} />
         </div>
-      </Shell>
+      </LiveShell>
     );
   }
 
   // 3. The quiz has closed and the reflection isn't in yet — write it.
   if (view?.quiz.instance_id && view.quiz.state === "closed" && view.reflection && !view.reflection.submitted && !reflectionDone) {
     return (
-      <Shell>
+      <LiveShell error={error}>
         <div class="card">
           <Reflection
             classSessionId={sessionId}
@@ -197,29 +205,29 @@ export function Live() {
             onSubmitted={() => setReflectionDone(true)}
           />
         </div>
-      </Shell>
+      </LiveShell>
     );
   }
 
   // 4. Reflection submitted, or nothing scheduled yet — done for this class.
   if (reflectionDone || view?.reflection?.submitted) {
     return (
-      <Shell>
+      <LiveShell error={error}>
         <div class="empty-state card">
           <h3>{t("live.doneTitle")}</h3>
           <p>{t("live.doneBody")}</p>
           <a class="btn" href="/grades">{t("live.viewGrades")}</a>
         </div>
-      </Shell>
+      </LiveShell>
     );
   }
 
   return (
-    <Shell>
+    <LiveShell error={error}>
       <div class="empty-state card">
         <h3>{t("live.waitingTitle")}</h3>
         <p>{t("live.waitingBody")}</p>
       </div>
-    </Shell>
+    </LiveShell>
   );
 }
