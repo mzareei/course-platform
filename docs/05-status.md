@@ -151,36 +151,37 @@ Typecheck, all four verifiers and the build pass.
 
 **Confirmed working by the professor on 2026-07-28.**
 
-### 6. Your own lectures + the release gate — **built 2026-07-28, NOT yet seen working**
+### 6. Your own lectures + the release gate — **built, reworked after feedback, needs re-checking**
 
 **This entry corrects a claim the docs used to make.** `01-project-overview.md`
 said definition-of-success items 1–4 were "essentially met", including *"run a
 complete class without touching the old apps or the database"*. That was not
-true, and the reason was invisible:
+true:
 
-- The Content screen listed **generation jobs only**. The professor's own 23
-  decks were in `content_items` from Phase 2 but nothing in the v2 app ever
-  listed them — `course-content-library` was never called.
-- **The SPA never called `course-release-management` at all.** So the app had no
-  way to move a release from `draft` to `released`. Every release in the system
-  had been made in the old app or seeded by hand — including the one that made
-  Week 1 Lecture 1 visible during all the testing, which is why nobody noticed.
-- That also made the AI pipeline a dead end: approving a generated lecture
-  creates a **draft** release, and nothing in the app could then release it.
+- The Content screen listed **generation jobs only**, so the professor's own 23
+  decks — in `content_items` since Phase 2 — were never displayed.
+- **The SPA never called `course-release-management`**, so no release could move
+  from `draft` to `released`. Every release in the system had been made in the
+  old app or seeded by hand.
+- The AI pipeline therefore dead-ended: approving creates a *draft* release the
+  app could not publish.
 
-Raised by the professor ("I already have all the contents … those should be
-visible in my content"), and it turned out to be the larger of the two problems.
+Nobody caught it because Week 1 Lecture 1 was already released, seeded outside
+the app — see pitfall #14.
 
-Now built: a **Your lectures** tab on Content (the new default; *Generate from a
-PDF* is the second tab), listing every content item with its releases. Per item:
-*Give it to a class* creates a draft release for a chosen session, then *Release
-to students* publishes it. Transitions offered are a plain-language subset of
-what `course-release-management` allows — `scheduled` needs a date picker and
-`live` is deliberately not set from the SPA, since the student app keys off the
-class session rather than the release state (see `04-decisions.md`).
+**Then the first version of the screen was rejected on sight**, and correctly:
+it exposed the state machine (Release / Open during class / Switch to review
+only) and made the class-session picker mandatory, in a course with exactly one
+class session. See pitfalls #15 and #16.
 
-**Verified:** typecheck, all four verifiers, build. **Not verified:** the screen
-itself — needs the professor. The releasing path is a real write.
+**Now:** each item shows one badge — *Students can open it* / *Not available to
+students* — and one primary button, *Make it available* / *Take it back*, with a
+filter across all three. Tying a lecture to a class day is secondary, optional,
+and explains itself. The backend state machine was made navigable in both
+directions so nothing can get stuck.
+
+**Verified:** typecheck, four verifiers, build; both functions still refuse a
+student token. **Not verified:** the reworked screen — needs the professor.
 
 ### 7. Grade adjustments and locking
 Backend exists; no UI. Still done in the old app.

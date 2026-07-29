@@ -286,7 +286,61 @@ can reach) and #5 at the state layer (a control that disappears).
 
 ---
 
-## 15. Supabase CLI and the SQL editor have different permissions here
+## 15. Exposing a state machine is not the same as designing a screen
+
+**Reported by the professor on 2026-07-28, the day after the screen shipped.**
+
+The first *Your lectures* screen put the release state machine on the page
+almost unchanged: "Release to students", "Open it during class", "Switch to
+review only", "Close it", plus a mandatory class-session picker on every item.
+Each button was a legal transition. The screen was still unusable:
+
+- *"I don't get exactly how this works … I click on week 11, it says give it to
+  the class, then it just has one class, Class 1."* The picker was mandatory but
+  the course has exactly one class session, so 22 of 23 lectures could only be
+  tied to a day they have nothing to do with.
+- *"Some things I sometimes see switch to review only, close it. One is closed.
+  I don't know how to open it."* Different items sat in different states, so
+  every card offered a different set of verbs.
+
+Two root causes, and only one of them was the state machine:
+
+1. **The graph was one-way** (pitfall #16 below) so `closed` was a dead end.
+2. **The screen asked the database's question, not the professor's.** He has one
+   question — *can my students open this?* — and `course-auth-context` already
+   answers it: `released | live | paused | review_only | scheduled` are visible,
+   `draft | closed | archived` are not. Five states collapse to one boolean.
+
+The rewrite shows a badge (**Students can open it** / **Not available**) and one
+primary button (**Make it available** / **Take it back**). Tying to a class day
+became secondary, optional, and self-explaining.
+
+**Rule:** count the states your user has to distinguish, not the states the
+schema has. If a screen's buttons change per row because the rows are in
+different internal states, the abstraction has leaked. Design rule #2 in
+`03-design-system.md` says no state-machine vocabulary in the default UI —
+"Switch to review only" broke it, and shipped.
+
+---
+
+## 16. Every state machine needs a way back
+
+Falls straight out of #15, but is worth stating alone because it is easy to
+check and easy to get wrong.
+
+`course-release-management`'s `allowedTransitions` allowed
+`released → live`, `review_only → archived`, `closed → review_only | archived`
+— and nothing back to `released`. Closing a lecture was effectively permanent.
+It looked complete because every state had *an* outgoing edge.
+
+**Rule:** for every state a user can reach by accident, check there is a path
+back to normal. "Has outgoing transitions" is not the same as "is recoverable".
+Terminal states should be rare, deliberate and named as such — here only
+`archived` is.
+
+---
+
+## 17. Supabase CLI and the SQL editor have different permissions here
 
 `npx supabase db push` and `npx supabase functions deploy` work. Retrieving the
 service-role key and running arbitrary `INSERT`s through the dashboard SQL

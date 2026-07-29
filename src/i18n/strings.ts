@@ -629,45 +629,51 @@ export const strings = {
     "Generate a lecture from a PDF and it lands here, alongside anything already uploaded for this course.",
     "Genera una clase desde un PDF y aparecerá aquí, junto con lo que ya se haya subido para este curso."
   ],
+  "content.library.lede": [
+    "Everything in this course. \"Available\" means your students can open it right now from Review — and from Today if you tied it to a class day.",
+    "Todo lo de este curso. \"Disponible\" significa que tus estudiantes pueden abrirlo ahora mismo desde Repasar — y desde Hoy si lo vinculaste a un día de clase."
+  ],
   "content.library.count": ["{count} lectures and activities", "{count} clases y actividades"],
-  "content.library.notReleased": [
-    "Not given to any class yet",
-    "Todavía no se ha dado a ninguna clase"
-  ],
-  "content.library.usedIn": ["Given to {count} classes", "Dada a {count} clases"],
-  "content.library.preview": ["Open it", "Abrirla"],
-  "content.library.attach": ["Give it to a class", "Dar a una clase"],
-  "content.library.attaching": ["Adding…", "Agregando…"],
-  "content.library.pickSession": ["Which class", "Cuál clase"],
-  "content.library.attachHint": [
-    "This adds it as a draft — students still see nothing until you release it.",
-    "Esto la agrega como borrador — los estudiantes no ven nada hasta que la publiques."
-  ],
-  "content.library.attached": [
-    "{title} was added to {session} as a draft. Release it when you are ready.",
-    "{title} se agregó a {session} como borrador. Publícala cuando estés listo."
-  ],
-  "content.library.noSessions": [
-    "There are no class sessions to give this to yet.",
-    "Todavía no hay sesiones de clase a las que dársela."
-  ],
-  "content.library.cancel": ["Cancel", "Cancelar"],
+  "content.library.filterAll": ["All", "Todo"],
+  "content.library.filterAvailable": ["Available to students", "Disponible para estudiantes"],
+  "content.library.filterHidden": ["Not available", "No disponible"],
 
-  "content.release.publish": ["Release to students", "Publicar a los estudiantes"],
-  "content.release.open": ["Open it during class", "Abrirla durante la clase"],
-  "content.release.reviewOnly": ["Switch to review only", "Cambiar a solo repaso"],
-  "content.release.close": ["Close it", "Cerrarla"],
-  "content.release.working": ["Working…", "Trabajando…"],
-  "content.release.failed": ["Could not change that.", "No se pudo cambiar eso."],
-  "content.release.publishConfirm": [
-    "Release {title} to the students of {session}? They will be able to open it from their Today screen straight away.",
-    "¿Publicar {title} a los estudiantes de {session}? Podrán abrirla desde su pantalla de Hoy de inmediato."
+  "content.library.statusAvailable": ["Students can open it", "Los estudiantes pueden abrirlo"],
+  "content.library.statusHidden": ["Not available to students", "No disponible para estudiantes"],
+  "content.library.statusForClass": ["Tied to {session}", "Vinculado a {session}"],
+  "content.library.statusCourseWide": ["Whole course", "Todo el curso"],
+
+  "content.library.makeAvailable": ["Make it available", "Ponerlo disponible"],
+  "content.library.takeBack": ["Take it back", "Quitarlo"],
+  "content.library.working": ["Working…", "Trabajando…"],
+  "content.library.open": ["Open it", "Abrirlo"],
+
+  "content.library.makeAvailableConfirm": [
+    "Make {title} available to your students? They will be able to open it from Review straight away.",
+    "¿Poner {title} a disposición de tus estudiantes? Podrán abrirlo desde Repasar de inmediato."
   ],
-  "content.release.closeConfirm": [
-    "Close {title} for {session}? Students can no longer open it.",
-    "¿Cerrar {title} para {session}? Los estudiantes ya no podrán abrirla."
+  "content.library.takeBackConfirm": [
+    "Take {title} back? Your students can no longer open it. Nothing they have already done is lost, and you can make it available again whenever you want.",
+    "¿Quitar {title}? Tus estudiantes ya no podrán abrirlo. No se pierde nada de lo que ya hayan hecho, y puedes volver a ponerlo disponible cuando quieras."
   ],
-  "content.release.changed": ["{title} is now {state}.", "{title} ahora está: {state}."],
+  "content.library.madeAvailable": ["{title} is now available to your students.", "{title} ya está disponible para tus estudiantes."],
+  "content.library.tookBack": ["{title} is no longer available.", "{title} ya no está disponible."],
+  "content.library.changeFailed": ["Could not change that.", "No se pudo cambiar eso."],
+
+  "content.library.tieToClass": ["Tie it to a class day", "Vincularlo a un día de clase"],
+  "content.library.tieHint": [
+    "Optional. Tying a lecture to a class day makes it appear on that day\u2019s Today screen. Without it the lecture simply sits in Review for the whole course, which is what you want for most material.",
+    "Opcional. Vincular una clase a un día hace que aparezca en la pantalla de Hoy de ese día. Sin eso, la clase queda en Repasar para todo el curso, que es lo que conviene para la mayoría del material."
+  ],
+  "content.library.tieNoSessions": [
+    "You have not set up any class days yet, so there is nothing to tie this to. Material made available without a class day still reaches every student through Review.",
+    "Todavía no has creado días de clase, así que no hay a qué vincularlo. El material disponible sin día de clase igual llega a todos los estudiantes por Repasar."
+  ],
+  "content.library.pickSession": ["Which class day", "Cuál día de clase"],
+  "content.library.tie": ["Tie it", "Vincular"],
+  "content.library.untie": ["Untie it", "Desvincular"],
+  "content.library.tied": ["{title} is now tied to {session}.", "{title} quedó vinculado a {session}."],
+  "content.library.cancel": ["Cancel", "Cancelar"],
 
   "content.uploadTitle": ["New lecture from a PDF", "Nueva clase desde un PDF"],
   "content.uploadBody": [

@@ -54,18 +54,27 @@ export function contentLibrary() {
 }
 
 /**
- * Attach an existing library item to a class session as a DRAFT release.
+ * Create a DRAFT release for a library item.
  *
- * The backend's only entry point for this is save_content_item, which rewrites
- * the item, so every field has to be echoed back — omitting one would blank it.
- * The item is passed in whole for exactly that reason.
+ * Both ids are optional and usually empty: a release with no section and no
+ * class session is course-wide, which is what "available to all my students"
+ * means and what the AI pipeline already produces on approval. Tying a release
+ * to a class session is the narrower case — it makes the lecture belong to one
+ * class day.
+ *
+ * The backend's only entry point is save_content_item, which rewrites the item,
+ * so every field has to be echoed back — omitting one would blank it. That is
+ * why the whole item is passed in.
  */
-export function attachToSession(input: {
+export function createDraftRelease(input: {
   item: ContentItem;
-  section_id: string;
-  class_session_id: string;
+  section_id?: string;
+  class_session_id?: string;
 }) {
-  return callFn<ContentLibrary & { content_item: ContentItem }>("course-content-library", {
+  return callFn<ContentLibrary & {
+    content_item: ContentItem;
+    draft_release: { id: string; state: string } | null;
+  }>("course-content-library", {
     action: "save_content_item",
     content_item: {
       id: input.item.id,
@@ -80,10 +89,36 @@ export function attachToSession(input: {
     },
     release: {
       create_draft_release: true,
-      section_id: input.section_id,
-      class_session_id: input.class_session_id
+      section_id: input.section_id ?? "",
+      class_session_id: input.class_session_id ?? ""
     }
   });
+}
+
+/**
+ * One button, two calls: make a library item openable by students.
+ *
+ * A professor's mental model is "give this to my class", not "create a draft
+ * release then transition it". The draft step exists so generated content
+ * cannot skip review; for a professor's own lecture it is ceremony, so it is
+ * collapsed here rather than exposed.
+ */
+export async function makeAvailable(input: {
+  item: ContentItem;
+  existingRelease?: ReleaseRow;
+  section_id?: string;
+  class_session_id?: string;
+}) {
+  if (input.existingRelease) {
+    return updateReleaseState({
+      release_id: input.existingRelease.release_id,
+      next_state: "released"
+    });
+  }
+  const saved = await createDraftRelease(input);
+  const draft = saved.draft_release;
+  if (!draft?.id) throw new Error("The draft release was not created.");
+  return updateReleaseState({ release_id: draft.id, next_state: "released" });
 }
 
 export interface ReleaseRow {
@@ -130,19 +165,17 @@ export function updateReleaseState(input: {
 }
 
 /**
- * Transitions worth offering a professor, in plain language. The backend allows
- * more (scheduled, live, archived); those either need a date picker or exist
- * only for the old admin pages, and the student app keys off the class session
- * rather than the `live` release state. Anything not listed here is simply not
- * shown as a button.
+ * The states a professor actually needs to tell apart. `course-auth-context`
+ * shows students `released | live | paused | review_only | scheduled` and hides
+ * `draft | closed | archived`, so from where a professor sits there are only
+ * two questions: can my students open this, and can I change that.
+ *
+ * Everything else in the release state machine is real but internal — `live`
+ * and `paused` belong to the old admin pages, and the student app keys off the
+ * class session rather than the release state (see 04-decisions.md).
  */
-export const RELEASE_ACTIONS: Array<{ from: string; to: string; key: string }> = [
-  { from: "draft", to: "released", key: "content.release.publish" },
-  { from: "scheduled", to: "released", key: "content.release.publish" },
-  { from: "released", to: "live", key: "content.release.open" },
-  { from: "live", to: "review_only", key: "content.release.reviewOnly" },
-  { from: "live", to: "closed", key: "content.release.close" },
-  { from: "paused", to: "review_only", key: "content.release.reviewOnly" },
-  { from: "paused", to: "closed", key: "content.release.close" },
-  { from: "closed", to: "review_only", key: "content.release.reviewOnly" }
-];
+export const STUDENT_VISIBLE_STATES = ["released", "live", "paused", "review_only", "scheduled"];
+
+export function studentsCanOpen(state: string) {
+  return STUDENT_VISIBLE_STATES.includes(state);
+}

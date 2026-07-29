@@ -132,25 +132,34 @@ Instructor only — test sign-in cannot reach this screen, so it has to be you.
 4. A class where nothing happened should say so in words ("No questions were
    sent to the class during this session."), never render an empty table.
 
-## Manual test: your lectures and releasing them
+## Manual test: your lectures and making them available
 
-Instructor only. **Releasing is a real write — students see it immediately.**
+Instructor only. **Making something available is a real write — students see it
+immediately.**
 
-1. Sign in as the instructor → **Content** → **Your lectures** (the default tab).
-2. Every content item for the course should be listed — all 23 decks/missions,
-   not only AI-generated ones. Each says either "Not given to any class yet" or
-   "Given to *n* classes".
-3. **Give it to a class** → pick a class session → confirm. This creates a
-   **draft**; students still see nothing.
-4. The draft appears under the lecture with a *Draft* pill and a **Release to
-   students** button. Click it and confirm.
-5. Check as a student: sign in with the QA account and the lecture should now be
-   on **Today** (if it is attached to today's session) or under **Review**.
-6. To take it back, use **Close it** where offered.
+1. Sign in as the instructor → **Content** → **Your lectures** (default tab).
+2. Every content item is listed with one of two badges: **Students can open it**
+   or **Not available to students**. Filter with All / Available / Not available.
+3. **Make it available** → confirm → the badge flips and it says *Whole course*.
+4. Check as a student (QA account): it should appear under **Review**.
+5. **Take it back** → confirm → the badge flips back and it disappears for the
+   student. Then make it available again — that round trip is the regression
+   for pitfall #16.
+6. **Tie it to a class day** is optional and secondary. It only matters if you
+   want the lecture to show on a specific day's Today screen. With no class days
+   set up it says so plainly instead of offering a meaningless list.
 
-If a lecture you expect is missing from the list, that is a `content_items` gap
-rather than a UI one — check the library payload before assuming the screen is
-wrong.
+### What the two concepts actually mean
+
+- **Available** = a `content_release` in a student-visible state, with no class
+  session. It reaches every student through **Review**. This is what you want
+  for nearly all material.
+- **Tied to a class day** = the same release with a `class_session_id`, which is
+  what puts it on that day's **Today** screen.
+
+You currently have one class session, and there is no UI to create more — see
+`05-status.md` item 8. Until that exists, "available" is the useful control and
+tying is mostly not.
 
 ## Manual test: CSV roster import
 
