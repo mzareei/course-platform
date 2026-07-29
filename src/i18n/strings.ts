@@ -92,8 +92,8 @@ export const strings = {
   "today.open": ["Open: {title}", "Abrir: {title}"],
   "today.emptyTitle": ["Nothing released yet", "Aún no hay material publicado"],
   "today.emptyBody": [
-    "When your professor releases materials or starts a class, they appear here. You don't need to do anything else.",
-    "Cuando tu profesor publique material o inicie una clase, aparecerá aquí. No necesitas hacer nada más."
+    "Materials for your class and the link to join a live class appear here.",
+    "Aquí aparecen los materiales de tu clase y el enlace para entrar a una clase en vivo."
   ],
 
   // ---------------------------------------------------------------- content types
@@ -115,13 +115,13 @@ export const strings = {
   "review.eyebrow": ["Self-study", "Estudio independiente"],
   "review.title": ["Review", "Repasar"],
   "review.lede": [
-    "Everything your professor has released stays here for you to revisit.",
-    "Todo lo que tu profesor ha publicado queda aquí para que lo repases."
+    "Materials your professor has made available for review stay here for you to revisit.",
+    "Los materiales que tu profesor ha puesto disponibles para repasar se quedan aquí para que los revises."
   ],
   "review.emptyTitle": ["Nothing to review yet", "Aún no hay nada que repasar"],
   "review.emptyBody": [
-    "Released lectures and practice missions collect here after each class.",
-    "Las clases y misiones publicadas se juntan aquí después de cada sesión."
+    "Lectures, missions, and other openable materials appear here when your professor makes them available.",
+    "Las clases, misiones y otros materiales que se pueden abrir aparecen aquí cuando tu profesor los pone disponibles."
   ],
 
   // ---------------------------------------------------------------- grades
@@ -695,18 +695,19 @@ export const strings = {
     "Sube el PDF de una clase y la plataforma arma la presentación web y su banco de preguntas. Tú revisas todo antes de que los estudiantes puedan verlo."
   ],
   // ------------------------------------------------- content · your library
-  "content.tab.library": ["Your lectures", "Tus clases"],
+  "content.tab.library": ["Materials", "Materiales"],
+  "content.tab.banks": ["Question banks", "Bancos de preguntas"],
   "content.tab.generate": ["Generate from a PDF", "Generar desde un PDF"],
-  "content.library.loading": ["Loading your lectures…", "Cargando tus clases…"],
-  "content.library.loadFailed": ["Could not load your lectures.", "No se pudieron cargar tus clases."],
-  "content.library.emptyTitle": ["Nothing in your library yet", "Aún no hay nada en tu biblioteca"],
+  "content.library.loading": ["Loading materials…", "Cargando materiales…"],
+  "content.library.loadFailed": ["Could not load your materials.", "No se pudieron cargar tus materiales."],
+  "content.library.emptyTitle": ["No materials can be released for review yet", "Aún no hay materiales que se puedan publicar para repasar"],
   "content.library.emptyBody": [
-    "Generate a lecture from a PDF and it lands here, alongside anything already uploaded for this course.",
-    "Genera una clase desde un PDF y aparecerá aquí, junto con lo que ya se haya subido para este curso."
+    "Lectures, missions, case files, and resources with a student delivery route appear here.",
+    "Aquí aparecen las clases, misiones, casos y recursos que tienen una ruta de entrega para estudiantes."
   ],
   "content.library.lede": [
-    "Everything in this course. \"Available\" means your students can open it right now, from Review. Take anything back whenever you want — nothing they have already done is lost.",
-    "Todo lo de este curso. \"Disponible\" significa que tus estudiantes pueden abrirlo ahora mismo, desde Repasar. Puedes quitarlo cuando quieras — no se pierde nada de lo que ya hayan hecho."
+    "Materials here have a student delivery route. \"Available\" means students can open them from Review. Take a material back whenever you want — nothing they have already done is lost.",
+    "Los materiales aquí tienen una ruta de entrega para estudiantes. \"Disponible\" significa que pueden abrirlos desde Repasar. Puedes quitar un material cuando quieras — no se pierde nada de lo que ya hayan hecho."
   ],
   "content.library.countAvailable": [
     "{available} of {total} available to students",
@@ -734,6 +735,15 @@ export const strings = {
   "content.library.madeAvailable": ["{title} is now available to your students.", "{title} ya está disponible para tus estudiantes."],
   "content.library.tookBack": ["{title} is no longer available.", "{title} ya no está disponible."],
   "content.library.changeFailed": ["Could not change that.", "No se pudo cambiar eso."],
+  "content.library.notReviewable": [
+    "Only materials students can open can be made available for review.",
+    "Solo los materiales que los estudiantes pueden abrir se pueden poner disponibles para repasar."
+  ],
+  "content.banks.title": ["Question banks", "Bancos de preguntas"],
+  "content.banks.body": [
+    "Questions are used only during a live class. Question-bank readiness is professor-only.",
+    "Las preguntas se usan solo durante una clase en vivo. La preparación del banco de preguntas es solo para el profesor."
+  ],
 
 
   "content.uploadTitle": ["New lecture from a PDF", "Nueva clase desde un PDF"],

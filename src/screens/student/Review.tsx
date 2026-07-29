@@ -5,6 +5,7 @@ import { t } from "../../i18n";
 import type { StringKey } from "../../i18n/strings";
 import type { ReleaseItem } from "../../api/types";
 import { releaseHref, releaseTarget } from "./Today";
+import { canReleaseToReview } from "../../api/contentVisibility";
 
 const GROUP_KEYS: Record<string, StringKey> = {
   lecture: "group.lectures",
@@ -21,8 +22,7 @@ export function Review() {
 
   const reviewable = (ctx.releases ?? [])
     .filter((r) => ["released", "live", "review_only", "paused"].includes(r.state))
-    // Legacy standalone activities have no viewer route — see Today.tsx.
-    .filter((r) => !(r.content_type === "activity" && r.source_kind === "supabase_record"));
+    .filter((release) => canReleaseToReview(release));
 
   const byType = new Map<string, ReleaseItem[]>();
   for (const release of reviewable) {

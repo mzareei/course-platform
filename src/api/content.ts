@@ -13,6 +13,13 @@
 // but it rewrites the entire content item to do it — which failed on all 23
 // real lectures and would silently blank any field not echoed back.
 import { callFn } from "./client";
+import { canReleaseToReview } from "./contentVisibility";
+
+export class ContentNotReviewableError extends Error {
+  constructor() {
+    super("Content is not reviewable");
+  }
+}
 
 export interface ContentItem {
   id: string;
@@ -87,6 +94,8 @@ export async function makeAvailable(input: {
   section_id?: string;
   class_session_id?: string;
 }) {
+  if (!canReleaseToReview(input.item)) throw new ContentNotReviewableError();
+
   if (input.existingRelease) {
     return updateReleaseState({
       release_id: input.existingRelease.release_id,

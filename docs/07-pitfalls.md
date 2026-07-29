@@ -537,3 +537,20 @@ representation.
 **Rule:** return student sessions and content releases as separate collections.
 Sessions drive Today, QR joining and `/live`; releases drive Review and the
 gated viewer. Never require a content row to discover a live class.
+
+---
+
+## 25. Availability is a delivery promise, not a database state
+
+**Found 2026-07-29 while beginning the coherent class-lifecycle redesign.**
+
+A release can be student-visible in the database even though its content type
+has no route a student can open. Activities and question banks are live-only:
+they are inputs to the live class, not self-study cards. A release control that
+does not account for that distinction creates a successful write followed by a
+product no-op.
+
+**Rule:** classify content by its actual student delivery before exposing it in
+an instructor availability control or a student material list. Only viewer and
+external delivery may enter Review; live-only content belongs to the live class,
+and internal content is never shown to students.

@@ -12,9 +12,10 @@
 // Module scope, per pitfalls #4.
 import { useEffect, useState } from "preact/hooks";
 import {
-  contentLibrary, listReleases, updateReleaseState, makeAvailable, studentsCanOpen,
+  contentLibrary, listReleases, updateReleaseState, makeAvailable, studentsCanOpen, ContentNotReviewableError,
   type ContentItem, type ContentLibrary as Library, type ReleaseRow
 } from "../api/content";
+import { canReleaseToReview } from "../api/contentVisibility";
 import { t } from "../i18n";
 
 type Filter = "all" | "available" | "hidden";
@@ -55,7 +56,9 @@ export function ContentLibraryView() {
     } catch (e) {
       setItemError((current) => ({
         ...current,
-        [itemId]: e instanceof Error ? e.message : t("content.library.changeFailed")
+        [itemId]: e instanceof ContentNotReviewableError
+          ? t("content.library.notReviewable")
+          : e instanceof Error ? e.message : t("content.library.changeFailed")
       }));
     } finally {
       setBusy(null);
@@ -66,7 +69,9 @@ export function ContentLibraryView() {
   if (!library || !releases) {
     return <div class="empty-state"><p>{t("content.library.loading")}</p></div>;
   }
-  if (!library.content_items.length) {
+  const reviewableItems = library.content_items.filter((item) => canReleaseToReview(item));
+
+  if (!reviewableItems.length) {
     return (
       <div class="empty-state card">
         <h3>{t("content.library.emptyTitle")}</h3>
@@ -85,10 +90,10 @@ export function ContentLibraryView() {
   const isAvailable = (item: ContentItem) =>
     (releasesByItem.get(item.id) ?? []).some((r) => studentsCanOpen(r.state));
 
-  const items = library.content_items.filter((item) =>
+  const items = reviewableItems.filter((item) =>
     filter === "all" ? true : filter === "available" ? isAvailable(item) : !isAvailable(item)
   );
-  const availableCount = library.content_items.filter(isAvailable).length;
+  const availableCount = reviewableItems.filter(isAvailable).length;
 
   return (
     <div class="stack">
@@ -98,7 +103,7 @@ export function ContentLibraryView() {
         <span class="hint">
           {t("content.library.countAvailable", {
             available: availableCount,
-            total: library.content_items.length
+            total: reviewableItems.length
           })}
         </span>
         <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">

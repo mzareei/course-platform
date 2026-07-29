@@ -14,6 +14,7 @@ import {
 import { ContentLibraryView } from "../../components/ContentLibrary";
 
 const POLL_MS = 5000;
+type ContentTab = "library" | "banks" | "generate";
 
 function slugify(value: string) {
   return value.trim().toLowerCase()
@@ -31,7 +32,7 @@ export function Content() {
   const [reviewing, setReviewing] = useState<string | null>(null);
   // The professor's own lectures come first — the AI pipeline is the newer,
   // rarer path, not the default one.
-  const [tab, setTab] = useState<"library" | "generate">("library");
+  const [tab, setTab] = useState<ContentTab>("library");
   const poll = useRef<number | undefined>(undefined);
 
   function refresh() {
@@ -105,6 +106,10 @@ export function Content() {
              onClick={(e) => { e.preventDefault(); setTab("library"); }}>
             {t("content.tab.library")}
           </a>
+          <a href="#" role="tab" aria-current={tab === "banks" ? "page" : undefined}
+             onClick={(e) => { e.preventDefault(); setTab("banks"); }}>
+            {t("content.tab.banks")}
+          </a>
           <a href="#" role="tab" aria-current={tab === "generate" ? "page" : undefined}
              onClick={(e) => { e.preventDefault(); setTab("generate"); }}>
             {t("content.tab.generate")}
@@ -112,7 +117,12 @@ export function Content() {
         </div>
       </div>
 
-      {tab === "library" ? <ContentLibraryView /> : (
+      {tab === "library" ? <ContentLibraryView /> : tab === "banks" ? (
+        <div class="empty-state card">
+          <h2>{t("content.banks.title")}</h2>
+          <p>{t("content.banks.body")}</p>
+        </div>
+      ) : (
       <>
       <p class="hint">{t("content.lede")}</p>
 

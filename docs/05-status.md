@@ -97,6 +97,24 @@ Run Class embeds the deck beside context-sensitive controls.
 This work now precedes the real-phone dress rehearsal: the rehearsal should
 exercise the intended lifecycle, not the misleading one.
 
+### 0.1 Content delivery semantics — **DONE, verifier-covered**
+
+Built 2026-07-29 as the first coherent-lifecycle increment. `studentDelivery()`
+now classifies content by both content type and source: storage-backed lectures,
+missions, case files, and resources use the gated viewer; approved external
+materials open externally; activities and question banks are live-only; all
+other shapes remain internal. `canReleaseToReview()` is used by the instructor
+library and both student content consumers, so the professor is never offered
+an availability control for something students cannot actually open.
+
+Today is temporarily limited to releases assigned to a class session while the
+next increment moves it fully to the session collection. Review now contains
+only viewer or external materials. The Content screen labels its reviewable
+materials and has a professor-only Question banks placeholder that makes the
+live-only rule explicit. `tools/verify-content-semantics.mjs` locks the
+classification contract; typecheck, all verifiers, and the production build
+pass.
+
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
 platform, all driven by automation on one machine. Run one complete class.

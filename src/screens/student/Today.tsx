@@ -5,6 +5,7 @@ import { StatusPill } from "../../components/StatusPill";
 import { t, locale } from "../../i18n";
 import type { StringKey } from "../../i18n/strings";
 import type { ReleaseItem } from "../../api/types";
+import { canReleaseToReview } from "../../api/contentVisibility";
 
 export function releaseHref(release: ReleaseItem): string {
   // Storage-backed content opens inside the app through the gated viewer.
@@ -39,21 +40,22 @@ export function Today() {
   const ctx = context.value;
   if (!ctx) return null;
 
-  const allReleases = (ctx.releases ?? []).filter((r) => ["released", "live", "review_only"].includes(r.state));
-  // Legacy standalone activities (content_type "activity" pointing at a
-  // supabase_record) have no viewer route of their own — the graded
-  // end-of-class quiz they represent is only ever taken through
-  // "Join class" → /live. Without this filter they render as a dead "#"
-  // link on the card.
-  const releases = allReleases.filter((r) => !(r.content_type === "activity" && r.source_kind === "supabase_record"));
+  // Task 2 will make Today session-driven. Until the context returns student
+  // sessions independently, do not let whole-course Review materials appear
+  // here: only releases assigned to a class session belong on Today.
+  const classReleases = (ctx.releases ?? [])
+    .filter((r) => ["released", "live", "review_only"].includes(r.state))
+    .filter((r) => Boolean(r.class_session_id));
+  // A card needs a real delivery route. Activities and question banks remain
+  // live-only even when their release record is visible to the student shell.
+  const releases = classReleases.filter((release) => canReleaseToReview(release));
   // A class is "live" per the class SESSION, not the release row — a
   // release can sit in "released" state the whole time the session runs.
   // /live itself (Live.tsx) already keys off session_state; Today must
   // match it, or "Join class" never appears even mid-class. Checked against
-  // every release tied to the session (not just the display-filtered list)
-  // so a live class is never hidden just because its only release happens
-  // to be the legacy activity type filtered out above.
-  const sessionIsLive = allReleases.some((r) => ["live", "paused"].includes(r.session_state || ""));
+  // every class-session release (not just displayable material), so a live
+  // class is never hidden because its only associated record is live-only.
+  const sessionIsLive = classReleases.some((r) => ["live", "paused"].includes(r.session_state || ""));
   const newest = releases[releases.length - 1];
 
   return (
