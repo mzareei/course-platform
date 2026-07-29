@@ -207,11 +207,23 @@ causes, both fixed (pitfall #18):
   `course-release-management` now has a `create_release` action that makes a
   draft release and touches nothing else.
 
-**Verified:** typecheck, four verifiers, build; `create_release` is deployed and
-refuses a student token; every guard was read out of the handler rather than
-inferred from a signature. **Still not verified in the UI** — this screen has
-shipped wrong three times without instructor eyes on it. That is the actual
-lesson of this entry, and it is a process problem, not a code one.
+**VERIFIED IN THE UI on 2026-07-28, end to end**, driving the professor's own
+signed-in Chrome:
+
+1. Content → Your lectures lists all **27** items.
+2. *Make it available* on Week 11 → badge flips to "Students can open it", no
+   error.
+3. QA student's Review shows it as *Disponible*.
+4. Student opens it → `/view/<release_id>` → iframe `src="/content?t=…"` (the
+   correct gated chain, not `srcdoc`) → token path
+   `courses/tc2007b/items/week-11-lecture/deck.html`.
+5. The deck renders **49 slides** and the counter reads `1 / 49` — the engine
+   initialised. Arrow keys advance it to `3 / 49`, so it is genuinely alive,
+   which is the direct test for pitfall #2.
+6. *Take it back* → student loses it → *Make it available* again succeeds. That
+   round trip is the regression for pitfalls #16 and #17.
+
+No console errors at any step.
 
 ### 7. Grade adjustments and locking
 Backend exists; no UI. Still done in the old app.

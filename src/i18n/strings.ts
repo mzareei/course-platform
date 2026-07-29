@@ -355,8 +355,8 @@ export const strings = {
   "people.title": ["People", "Personas"],
   "people.addTitle": ["Add one person", "Agregar una persona"],
   "people.addBody": [
-    "For a whole class list, use CSV import (still in the current course app; it ports here next). This form covers late enrollments, guests, and QA accounts.",
-    "Para una lista completa, usa la importación CSV (todavía en la aplicación actual del curso; se traslada aquí después). Este formulario sirve para inscripciones tardías, invitados y cuentas de prueba."
+    "For a whole class list, use the spreadsheet import below. This form covers late enrollments, guests, and QA accounts.",
+    "Para una lista completa, usa la importación desde hoja de cálculo que está abajo. Este formulario sirve para inscripciones tardías, invitados y cuentas de prueba."
   ],
   "people.email": ["Email", "Correo"],
   "people.fullName": ["Full name", "Nombre completo"],
