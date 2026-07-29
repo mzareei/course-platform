@@ -14,7 +14,7 @@
 cd ~/Documents/GitHub/course-platform
 npm run dev        # local dev server
 npm run typecheck  # tsc --noEmit
-npm run verify     # the three verifier scripts — treat failure as a build failure
+npm run verify     # every tools/verify-*.mjs — treat failure as a build failure
 npm run build      # typecheck + vite build
 ```
 
@@ -145,21 +145,17 @@ immediately.**
 5. **Take it back** → confirm → the badge flips back and it disappears for the
    student. Then make it available again — that round trip is the regression
    for pitfall #16.
-6. **Tie it to a class day** is optional and secondary. It only matters if you
-   want the lecture to show on a specific day's Today screen. With no class days
-   set up it says so plainly instead of offering a meaningless list.
+### What "available" means
 
-### What the two concepts actually mean
+**Available** = a `content_release` in a student-visible state
+(`released | live | paused | review_only | scheduled`), with no class session.
+It reaches every student through **Review**, which is what you want for nearly
+all material.
 
-- **Available** = a `content_release` in a student-visible state, with no class
-  session. It reaches every student through **Review**. This is what you want
-  for nearly all material.
-- **Tied to a class day** = the same release with a `class_session_id`, which is
-  what puts it on that day's **Today** screen.
-
-You currently have one class session, and there is no UI to create more — see
-`05-status.md` item 8. Until that exists, "available" is the useful control and
-tying is mostly not.
+A release can also carry a `class_session_id`, which is what puts it on that
+day's **Today** screen. There is no UI for that right now: the control was
+removed on 2026-07-28 because it created a draft and never released it. It
+returns properly now that class days can be created — see `05-status.md`.
 
 ## Manual test: CSV roster import
 
@@ -180,11 +176,10 @@ section first.**
    reason for each. Nothing has been written yet.
 4. **Import n people** → confirm. The roster table below refreshes.
 
-   ⚠️ **There is currently no UI to remove a student from the roster.** The
-   sample file's three valid rows are fake `@tec.mx` addresses that will stay on
-   the roster once applied. If you only want to check the preview, stop at
-   step 3. If you want to exercise the write, prefer a one-row CSV using an
-   address you actually control.
+   The sample file's three valid rows are fake `@tec.mx` addresses. They can be
+   taken off again with **Remove** on each row, which leaves a "Removed" row
+   behind rather than deleting anything. If you only want to check the parser,
+   stop at step 3 — the preview writes nothing.
 5. Re-import the same file. Everyone should keep their sign-in — that is the
    regression guarded by pitfall #13. (Removing a student is item #6 on the
    remaining-work list, and this is why it matters.)
