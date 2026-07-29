@@ -5,9 +5,13 @@
 // it had no way to *release* — every release in the system had been made in the
 // old app. This module closes that.
 //
-// Shapes read off listContentLibrary / saveContentItem in
-// course-content-library and listReleases in course-release-management.
-// See pitfalls #3.
+// Shapes read off listContentLibrary in course-content-library and
+// listReleases / createRelease in course-release-management. See pitfalls #3.
+//
+// Releases are created and moved ONLY through course-release-management.
+// course-content-library's save_content_item can also create a draft release,
+// but it rewrites the entire content item to do it — which failed on all 23
+// real lectures and would silently blank any field not echoed back.
 import { callFn } from "./client";
 
 export interface ContentItem {
@@ -53,55 +57,29 @@ export function contentLibrary() {
   return callFn<ContentLibrary>("course-content-library", {});
 }
 
-/**
- * Create a DRAFT release for a library item.
- *
- * Both ids are optional and usually empty: a release with no section and no
- * class session is course-wide, which is what "available to all my students"
- * means and what the AI pipeline already produces on approval. Tying a release
- * to a class session is the narrower case — it makes the lecture belong to one
- * class day.
- *
- * The backend's only entry point is save_content_item, which rewrites the item,
- * so every field has to be echoed back — omitting one would blank it. That is
- * why the whole item is passed in.
- */
-export function createDraftRelease(input: {
-  item: ContentItem;
+/** Create a draft release without touching the content item. */
+export function createRelease(input: {
+  content_item_id: string;
   section_id?: string;
   class_session_id?: string;
 }) {
-  return callFn<ContentLibrary & {
-    content_item: ContentItem;
-    draft_release: { id: string; state: string } | null;
-  }>("course-content-library", {
-    action: "save_content_item",
-    content_item: {
-      id: input.item.id,
-      content_type: input.item.content_type,
-      slug: input.item.slug,
-      title: input.item.title,
-      summary: input.item.summary,
-      source_kind: input.item.source_kind,
-      source_ref: input.item.source_ref,
-      contains_sensitive_content: input.item.contains_sensitive_content,
-      default_points: input.item.default_points
-    },
-    release: {
-      create_draft_release: true,
-      section_id: input.section_id ?? "",
-      class_session_id: input.class_session_id ?? ""
-    }
+  return callFn<{ release: { id: string; state: string } }>("course-release-management", {
+    action: "create_release",
+    ...input
   });
 }
 
 /**
- * One button, two calls: make a library item openable by students.
+ * One button, at most two calls: make a library item openable by students.
  *
  * A professor's mental model is "give this to my class", not "create a draft
  * release then transition it". The draft step exists so generated content
  * cannot skip review; for a professor's own lecture it is ceremony, so it is
  * collapsed here rather than exposed.
+ *
+ * This deliberately does NOT go through course-content-library's
+ * save_content_item, which rewrites the whole content item as a side effect of
+ * adding a release — see createRelease in course-release-management.
  */
 export async function makeAvailable(input: {
   item: ContentItem;
@@ -115,10 +93,14 @@ export async function makeAvailable(input: {
       next_state: "released"
     });
   }
-  const saved = await createDraftRelease(input);
-  const draft = saved.draft_release;
-  if (!draft?.id) throw new Error("The draft release was not created.");
-  return updateReleaseState({ release_id: draft.id, next_state: "released" });
+  const { release } = await createRelease({
+    content_item_id: input.item.id,
+    section_id: input.section_id,
+    class_session_id: input.class_session_id
+  });
+  if (!release?.id) throw new Error("The release was not created.");
+  if (release.state === "released") return { release };
+  return updateReleaseState({ release_id: release.id, next_state: "released" });
 }
 
 export interface ReleaseRow {

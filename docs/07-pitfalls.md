@@ -382,7 +382,48 @@ only honest on a page with a single action.
 
 ---
 
-## 18. Supabase CLI and the SQL editor have different permissions here
+## 18. A migration widened a constraint; the edge function's copy of it did not
+
+**Broken since Phase 2, surfaced 2026-07-28.**
+
+Migration 0012 moved the decks into the private bucket and widened the
+constraint:
+
+```sql
+check (source_kind in ('static_path', 'supabase_record', 'external_url', 'storage_object'))
+```
+
+`course-content-library` keeps its own copy of that list for validation, and it
+was never updated:
+
+```ts
+const sourceKinds = ["static_path", "supabase_record", "external_url"];
+```
+
+Every real lecture in the course is a `storage_object`, so `save_content_item`
+rejected **all 23** with "A valid source kind is required." It sat broken for
+months because the v2 app had no caller for that function until this month.
+
+**Rule:** an enum written in both SQL and TypeScript is two copies of one fact.
+When a migration touches a `check (... in (...))`, grep the functions for the
+same literals in the same request. `grep -rn "source_kind\|content_type" supabase/functions/`
+costs nothing.
+
+### The bigger fix was to stop calling it
+
+Creating a release went through `save_content_item`, which **rewrites the whole
+content item** as a side effect. So "make this lecture available" revalidated
+every field of the item, and would blank any field the caller forgot to echo
+back. `course-release-management` now has `create_release`, which makes a draft
+release and touches nothing else.
+
+**Rule:** if adding a child row requires a full rewrite of the parent, that is
+the wrong endpoint. Look for — or add — one that owns the thing you are
+actually changing.
+
+---
+
+## 19. Supabase CLI and the SQL editor have different permissions here
 
 `npx supabase db push` and `npx supabase functions deploy` work. Retrieving the
 service-role key and running arbitrary `INSERT`s through the dashboard SQL

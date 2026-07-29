@@ -194,10 +194,24 @@ released it, so it could only ever make content invisible — and it was prematu
 regardless, since there is no UI to create class days, so it offered one
 irrelevant option. It returns with class-day management (item 8).
 
-**Verified:** typecheck, four verifiers, build; both functions still refuse a
-student token; the `reason` guard was read directly out of the handler rather
-than inferred. **Not verified in the UI** — this screen has now shipped wrong
-twice without instructor eyes on it, and that is the real lesson.
+**A third round, same day:** *"it shows red error A valid source kind is
+required."* — the new per-item error surfacing working as intended. Two more
+causes, both fixed (pitfall #18):
+
+- `course-content-library`'s `sourceKinds` allow-list never gained
+  `storage_object`, which migration 0012 added to the `content_items` constraint
+  in Phase 2. Every real lecture is a `storage_object`, so `save_content_item`
+  rejected all 23. Broken for months; the function had no caller until now.
+- More fundamentally, creating a release should never have gone through
+  `save_content_item`, which rewrites the entire content item as a side effect.
+  `course-release-management` now has a `create_release` action that makes a
+  draft release and touches nothing else.
+
+**Verified:** typecheck, four verifiers, build; `create_release` is deployed and
+refuses a student token; every guard was read out of the handler rather than
+inferred from a signature. **Still not verified in the UI** — this screen has
+shipped wrong three times without instructor eyes on it. That is the actual
+lesson of this entry, and it is a process problem, not a code one.
 
 ### 7. Grade adjustments and locking
 Backend exists; no UI. Still done in the old app.
