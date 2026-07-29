@@ -443,6 +443,80 @@ export const strings = {
     "Ninguna de estas filas se puede importar. Corrige los problemas de arriba e inténtalo de nuevo."
   ],
 
+  // ------------------------------------------------------ people · removal
+  "people.remove": ["Remove", "Quitar"],
+  "people.removing": ["Removing…", "Quitando…"],
+  "people.removeConfirm": [
+    "Remove {name} from this course? They lose access immediately. Nothing they have already done is deleted — their work and grades stay, and adding the same email again brings them back. You cannot remove yourself.",
+    "¿Quitar a {name} de este curso? Perderá el acceso de inmediato. No se borra nada de lo que ya hizo — su trabajo y calificaciones se conservan, y si agregas el mismo correo vuelve a entrar. No puedes quitarte a ti."
+  ],
+  "people.removed": ["{name} was removed from the course.", "{name} se quitó del curso."],
+  "people.removeFailed": ["Could not remove this person.", "No se pudo quitar a esta persona."],
+
+  // ------------------------------------------------------ people · sections
+  "sections.title": ["Groups", "Grupos"],
+  "sections.body": [
+    "A group is one set of students who meet together. Class days, live questions and quizzes all belong to a group, so you need at least one before you can schedule anything.",
+    "Un grupo es un conjunto de estudiantes que se reúnen juntos. Los días de clase, las preguntas en vivo y los quizzes pertenecen a un grupo, así que necesitas al menos uno antes de programar algo."
+  ],
+  "sections.col.code": ["Code", "Clave"],
+  "sections.col.name": ["Name", "Nombre"],
+  "sections.col.meets": ["Meets", "Se reúne"],
+  "sections.add": ["Add a group", "Agregar un grupo"],
+  "sections.adding": ["Adding…", "Agregando…"],
+  "sections.code": ["Short code", "Clave corta"],
+  "sections.codeHint": ["How you refer to it — e.g. A, 601, or Tue-Thu.", "Como te refieres a él — por ejemplo A, 601 o Mar-Jue."],
+  "sections.name": ["Name", "Nombre"],
+  "sections.meetingPattern": ["When it meets (optional)", "Cuándo se reúne (opcional)"],
+  "sections.meetingHint": ["For example \"Tue & Thu 10:00\".", "Por ejemplo \"Mar y Jue 10:00\"."],
+  "sections.added": ["Group {code} was created.", "Se creó el grupo {code}."],
+  "sections.saveFailed": ["Could not save that group.", "No se pudo guardar ese grupo."],
+  "sections.retire": ["Retire", "Retirar"],
+  "sections.retireConfirm": [
+    "Retire group {code}? It stops appearing when you schedule a class. Existing class days, grades and students are untouched.",
+    "¿Retirar el grupo {code}? Dejará de aparecer al programar una clase. Los días de clase, calificaciones y estudiantes existentes no se tocan."
+  ],
+  "sections.reactivate": ["Reactivate", "Reactivar"],
+
+  // ---------------------------------------------------------------- schedule
+  "schedule.title": ["Class days", "Días de clase"],
+  "schedule.body": [
+    "One entry per class meeting. You run a class from here, and a lecture can be tied to a class day so it appears on that day's Today screen.",
+    "Una entrada por cada sesión de clase. Desde aquí das clase, y una lección puede vincularse a un día para que aparezca en la pantalla de Hoy de ese día."
+  ],
+  "schedule.loading": ["Loading your class days…", "Cargando tus días de clase…"],
+  "schedule.loadFailed": ["Could not load your class days.", "No se pudieron cargar tus días de clase."],
+  "schedule.emptyTitle": ["No class days yet", "Aún no hay días de clase"],
+  "schedule.emptyBody": [
+    "Add your first class day below. Once one exists you can run a class from Home, and tie lectures to it.",
+    "Agrega tu primer día de clase abajo. En cuanto exista uno podrás dar clase desde Inicio y vincularle lecciones."
+  ],
+  "schedule.noGroups": [
+    "Create a group first — every class day belongs to one.",
+    "Crea primero un grupo — cada día de clase pertenece a uno."
+  ],
+  "schedule.col.when": ["When", "Cuándo"],
+  "schedule.col.what": ["Class", "Clase"],
+  "schedule.col.group": ["Group", "Grupo"],
+  "schedule.add": ["Add a class day", "Agregar un día de clase"],
+  "schedule.adding": ["Adding…", "Agregando…"],
+  "schedule.date": ["Date", "Fecha"],
+  "schedule.classTitle": ["What is this class about", "De qué trata esta clase"],
+  "schedule.titleHint": [
+    "For example \"Week 3: Database Security\". Students see this.",
+    "Por ejemplo \"Semana 3: Seguridad en Bases de Datos\". Los estudiantes lo ven."
+  ],
+  "schedule.group": ["Group", "Grupo"],
+  "schedule.added": ["{title} was added for {date}.", "Se agregó {title} para el {date}."],
+  "schedule.addFailed": ["Could not add that class day.", "No se pudo agregar ese día de clase."],
+  "schedule.cancel": ["Cancel this class", "Cancelar esta clase"],
+  "schedule.cancelConfirm": [
+    "Cancel {title}? It disappears from your schedule and students can no longer join it. Anything already graded stays.",
+    "¿Cancelar {title}? Desaparecerá de tu calendario y los estudiantes ya no podrán entrar. Lo ya calificado se conserva."
+  ],
+  "schedule.cancelled": ["{title} was cancelled.", "Se canceló {title}."],
+  "schedule.run": ["Run this class", "Dar esta clase"],
+
   "people.roster": ["Roster", "Lista del curso"],
   "people.loadingRoster": ["Loading the roster…", "Cargando la lista…"],
   "people.emptyTitle": ["Nobody on the roster yet", "Aún no hay nadie en la lista"],

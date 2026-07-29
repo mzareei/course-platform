@@ -5,6 +5,8 @@ import { callFn } from "../../api/client";
 import type { RosterOverview, Role } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
 import { RosterImport } from "../../components/RosterImport";
+import { Sections } from "../../components/Sections";
+import { Schedule } from "../../components/Schedule";
 import { context } from "../../state/session";
 import { t } from "../../i18n";
 
@@ -24,7 +26,10 @@ export function People() {
   const [sectionCode, setSectionCode] = useState("");
   const [reason, setReason] = useState("");
 
+  const [removing, setRemoving] = useState<string | null>(null);
+
   const sections = context.value?.sections ?? [];
+  const myProfileId = context.value?.profile?.id ?? "";
 
   function load() {
     callFn<RosterOverview>("course-roster-management")
@@ -40,6 +45,22 @@ export function People() {
   const needsReason =
     email.trim() !== "" &&
     !(data?.allowed_domains ?? []).some((d) => email.trim().toLowerCase().endsWith(`@${d}`));
+
+  async function removePerson(profileId: string, fullName: string) {
+    if (!confirm(t("people.removeConfirm", { name: fullName }))) return;
+    setNotice(null);
+    setError(null);
+    setRemoving(profileId);
+    try {
+      await callFn("course-roster-management", { action: "remove_person", profile_id: profileId });
+      setNotice(t("people.removed", { name: fullName }));
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("people.removeFailed"));
+    } finally {
+      setRemoving(null);
+    }
+  }
 
   async function addPerson() {
     setNotice(null);
@@ -136,6 +157,9 @@ export function People() {
 
       <RosterImport onImported={load} />
 
+      <Sections />
+      <Schedule />
+
       <h2>{t("people.roster")}</h2>
       {!data ? (
         <div class="empty-state"><p>{t("people.loadingRoster")}</p></div>
@@ -154,6 +178,7 @@ export function People() {
                 <th>{t("people.col.id")}</th>
                 <th>{t("people.col.roleSection")}</th>
                 <th>{t("grades.status")}</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -169,6 +194,20 @@ export function People() {
                       (person.course_role ? t(`role.${person.course_role}`) : "—")}
                   </td>
                   <td><StatusPill state={person.profile_status ?? person.membership_status ?? ""} /></td>
+                  <td>
+                    {/* The server refuses self-removal and platform owners; hiding
+                        the button for yourself just avoids an avoidable error. */}
+                    {person.profile_id !== myProfileId ? (
+                      <button
+                        class="btn quiet"
+                        type="button"
+                        disabled={removing === person.profile_id}
+                        onClick={() => void removePerson(person.profile_id, person.full_name)}
+                      >
+                        {removing === person.profile_id ? t("people.removing") : t("people.remove")}
+                      </button>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

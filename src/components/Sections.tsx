@@ -1,0 +1,168 @@
+// Groups (course_sections) — create, rename, retire.
+//
+// course-section-management had a save_section action from the first
+// generation and no caller in the v2 app, so a course was stuck with whatever
+// sections were seeded. That blocked a second professor entirely: onboarded
+// through Admin, they would have had nowhere to put their students.
+//
+// "Group" in the UI, `section` in the schema. The schema word means nothing to
+// a professor here, and design rule #2 forbids leaking it.
+//
+// Module scope, per docs/07-pitfalls.md #4.
+import { useEffect, useState } from "preact/hooks";
+import { listSections, saveSection, type CourseSection } from "../api/schedule";
+import { StatusPill } from "./StatusPill";
+import { refreshContext } from "../state/session";
+import { t } from "../i18n";
+
+export function Sections() {
+  const [sections, setSections] = useState<CourseSection[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [meets, setMeets] = useState("");
+
+  async function load() {
+    try {
+      setSections((await listSections()).sections);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("sections.saveFailed"));
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function onAdd() {
+    setError(null);
+    setNotice(null);
+    setBusy("add");
+    try {
+      await saveSection({
+        section_code: code.trim(),
+        section_name: name.trim() || code.trim(),
+        meeting_pattern: meets.trim() || null,
+        status: "active"
+      });
+      setNotice(t("sections.added", { code: code.trim() }));
+      setCode(""); setName(""); setMeets("");
+      await load();
+      await refreshContext();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("sections.saveFailed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onToggle(section: CourseSection) {
+    const retiring = section.status === "active" || section.status === "planned";
+    if (retiring && !confirm(t("sections.retireConfirm", { code: section.section_code }))) return;
+    setError(null);
+    setNotice(null);
+    setBusy(section.id);
+    try {
+      // save_section rewrites the row, so echo every field back or it blanks.
+      await saveSection({
+        section_id: section.id,
+        section_code: section.section_code,
+        section_name: section.section_name,
+        meeting_pattern: section.meeting_pattern,
+        campus: section.campus,
+        status: retiring ? "archived" : "active"
+      });
+      await load();
+      await refreshContext();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("sections.saveFailed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (!sections) return <div class="empty-state"><p>{t("app.loading")}</p></div>;
+
+  return (
+    <div class="stack">
+      <div>
+        <h2>{t("sections.title")}</h2>
+        <p class="hint">{t("sections.body")}</p>
+      </div>
+
+      {notice ? <p class="hint" role="status">{notice}</p> : null}
+      {error ? <p class="error-text" role="alert">{error}</p> : null}
+
+      {sections.length ? (
+        <div class="table-scroll">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>{t("sections.col.code")}</th>
+                <th>{t("sections.col.name")}</th>
+                <th>{t("sections.col.meets")}</th>
+                <th>{t("grades.status")}</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {sections.map((section) => {
+                const live = section.status === "active" || section.status === "planned";
+                return (
+                  <tr>
+                    <td>{section.section_code}</td>
+                    <td>{section.section_name}</td>
+                    <td>{section.meeting_pattern || "—"}</td>
+                    <td><StatusPill state={section.status} /></td>
+                    <td>
+                      <button
+                        class="btn quiet"
+                        type="button"
+                        disabled={busy === section.id}
+                        onClick={() => void onToggle(section)}
+                      >
+                        {live ? t("sections.retire") : t("sections.reactivate")}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      <div class="card">
+        <h3>{t("sections.add")}</h3>
+        <div class="grid-2">
+          <label class="field">
+            {t("sections.code")}
+            <input type="text" value={code}
+                   onInput={(e) => setCode((e.target as HTMLInputElement).value)} />
+            <span class="hint">{t("sections.codeHint")}</span>
+          </label>
+          <label class="field">
+            {t("sections.name")}
+            <input type="text" value={name}
+                   onInput={(e) => setName((e.target as HTMLInputElement).value)} />
+          </label>
+          <label class="field">
+            {t("sections.meetingPattern")}
+            <input type="text" value={meets}
+                   onInput={(e) => setMeets((e.target as HTMLInputElement).value)} />
+            <span class="hint">{t("sections.meetingHint")}</span>
+          </label>
+        </div>
+        <div class="row">
+          <button class="btn primary" type="button"
+                  disabled={busy === "add" || !code.trim()} onClick={onAdd}>
+            {busy === "add" ? t("sections.adding") : t("sections.add")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
