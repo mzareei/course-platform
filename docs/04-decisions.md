@@ -189,3 +189,33 @@ The `assets/course-materials/information-security/` apps (classroom, teacher,
 progress, portfolio, exit-ticket, review-coach, …) are untouched, unlinked, and
 never built upon. Migrating them was judged not worth the risk; they will be
 replaced by redirects in Phase 6.
+
+---
+
+### During-lecture questions are embedded, pre-generated checkpoints
+
+**Decided with the professor on 2026-07-29.**
+
+A pulse question must test only material students have already seen. The
+generation pipeline divides the deck into concept segments, generates questions
+with source-slide metadata, and inserts approximately four checkpoints into a
+40-slide lecture.
+
+Reaching a checkpoint prepares its question inside the deck. The professor
+sends, reveals, and resumes without leaving the presentation. The system never
+calls a model live during class: network latency and unpredictable output have
+no place in front of a room.
+
+The end-of-class quiz remains separate and may cover the full lecture.
+
+---
+
+### QR joining is now in scope
+
+The QR join code was previously deferred. The professor reopened it on
+2026-07-29 as part of embedded lecture checkpoints: a checkpoint on the
+projector must let a student join from a phone immediately.
+
+The QR identifies the class session, not the individual question. A student
+signs in once and returns to the same class; later pulse questions, the final
+quiz, and reflection arrive on the already-open live screen.

@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-29
 
 Phases 1–5 are complete and deployed. Phase 6 (cleanup) has not started, and
 several capabilities still live only in the old app.
@@ -68,6 +68,34 @@ Everything below was exercised through the real UI, not by calling endpoints.
 ---
 
 ## Remaining work, in priority order
+
+### 0. Coherent class lifecycle redesign — **DESIGNED, not implemented**
+
+The professor exercised the product on 2026-07-29 and found that the individual
+features do not yet form a coherent teaching workflow:
+
+- Week 1 Quiz can be marked "Students can open it", while Today and Review
+  intentionally filter that legacy activity because it has no standalone
+  player. The write succeeds and nothing appears to students.
+- Reflections belong to a live class session, but the Content screen makes the
+  quiz look like independent released content.
+- Home's "No sessions planned" state does not lead to scheduling; class days
+  are buried inside People.
+- Run Class and the lecture deck are separate screens.
+- Existing decks still contain links to retired Home, Mission, Quiz, and Exit
+  pages.
+- Pulse questions can be drawn from concepts that have not yet been taught.
+- View as student is not a faithful student shell.
+
+The product design is approved in
+`docs/superpowers/specs/2026-07-29-coherent-class-lifecycle-design.md`.
+Key decisions: quizzes remain live-only; question banks become
+professor-only; Classes becomes a first-class screen; a 40-slide lecture gets
+approximately four pre-generated concept checkpoints; QR joining returns; and
+Run Class embeds the deck beside context-sensitive controls.
+
+This work now precedes the real-phone dress rehearsal: the rehearsal should
+exercise the intended lifecycle, not the misleading one.
 
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
@@ -273,10 +301,10 @@ them. Confirmed the Remove button is absent on your own row.
 - Gen-1 apps stay frozen.
 
 ### 10. Deferred by the professor's own choice
-- **QR join code** — `class_sessions.join_code` exists, no UI. Students
-  currently reach class through Today.
 - **Projector view** — separate big-screen window for pulse results.
-- **Mid-slide questions inside the deck** — explicitly "the last thing we do".
+
+QR joining and mid-lecture deck checkpoints moved into the approved lifecycle
+redesign on 2026-07-29.
 
 ### 11. Known wrinkle worth fixing eventually
 The generation worker self-chains *and* the Content screen nudges `advance`, so

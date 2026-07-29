@@ -59,18 +59,23 @@ The project is finished when all of the following are true:
    (**dress rehearsal — not yet done**).
 6. No teaching content remains in the public repository.
 
-Items 2–4 are essentially met. Items 5 and 6 are outstanding.
+Items 2–4 are essentially met. Items 1, 5 and 6 are outstanding.
 
-**Item 1 was wrongly claimed as met until 2026-07-28.** Releasing content was
-never possible from the v2 app: the Content screen listed AI generation jobs
-only, and nothing in the SPA ever called `course-release-management`. Every
-release that existed had been made in the old app or seeded by hand — which is
-exactly why testing never caught it, since the lecture used throughout was
-already released. A **Your lectures** tab now closes this, but it has not yet
-been exercised by the professor. See `05-status.md` item 6.
+**Item 1 has twice been wrongly claimed as met.** The first missing piece,
+found on 2026-07-28, was content release: the Content screen listed AI
+generation jobs only, and nothing in the SPA called
+`course-release-management`. The **Your lectures** tab now releases real
+lectures correctly.
 
-The general lesson is in `07-pitfalls.md` #14: a capability the test data
-already satisfies is invisible until someone needs it for something new.
+The professor's next real pass on 2026-07-29 exposed the larger lifecycle gap:
+a legacy quiz can be marked available even though every student screen hides
+it; scheduling is buried in People; the lecture deck and Run Class are separate;
+and pulse questions are not constrained to material already taught. The
+approved repair is in
+`docs/superpowers/specs/2026-07-29-coherent-class-lifecycle-design.md`.
+
+The general lessons are in `07-pitfalls.md` #14 and #23: test the producer and
+consumer together, from an empty lifecycle.
 
 ## Explicit non-goals
 

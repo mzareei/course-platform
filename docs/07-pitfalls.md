@@ -486,3 +486,54 @@ testing; this is the same rule one layer in.
 service-role key and running arbitrary `INSERT`s through the dashboard SQL
 editor may be blocked by tooling policy. Prefer the app's own endpoints, or
 `npx supabase storage cp`, over hand-writing rows.
+
+---
+
+## 23. A successful write can be a product no-op
+
+**Reported by the professor on 2026-07-29.**
+
+Content showed **Week 1 Quiz: Security Foundations** with the same availability
+control as a lecture. Making it available succeeded: a release row moved to a
+student-visible state.
+
+Both student screens then deliberately filtered the item:
+
+```ts
+r.content_type === "activity" && r.source_kind === "supabase_record"
+```
+
+That filter was individually reasonable—the activity has no standalone viewer
+and otherwise becomes a dead `#` link. Together, the two screens formed a
+contradiction: the instructor was promised "Students can open it" while every
+student consumer was designed never to show it.
+
+The same leaked abstraction made reflection confusing. Reflection belongs to a
+class session after its live quiz closes; it does not belong to a released quiz
+card.
+
+**Rule:** before exposing a create, publish, release, or availability action,
+trace the result through every intended consumer. A successful database
+transition is not evidence of a usable feature. If the consumer has to filter
+the result out, the producer must not offer the action.
+
+This is pitfall #14 from the opposite direction: #14 had a consumer whose
+producer did not exist; this had a producer whose consumer intentionally did
+not exist.
+
+---
+
+## 24. Sessions and content releases answer different questions
+
+The student Today and Live screens locate a class session by searching content
+release rows for `class_session_id` and `session_state`. This couples "is class
+happening?" to "was some content released for it?"
+
+It already caused the original missing Join class failure when the wrong
+release state was checked. It remains fragile even after that fix: a valid
+scheduled class with no associated release has no independent student
+representation.
+
+**Rule:** return student sessions and content releases as separate collections.
+Sessions drive Today, QR joining and `/live`; releases drive Review and the
+gated viewer. Never require a content row to discover a live class.
