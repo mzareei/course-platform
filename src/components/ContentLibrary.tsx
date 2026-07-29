@@ -1,41 +1,35 @@
 // Your lectures — everything in this course, and whether students can open it.
 //
-// The first version of this screen exposed the release state machine almost
-// directly: "Release to students", "Open it during class", "Switch to review
-// only", plus a mandatory class-session picker. The professor's reaction on
-// 2026-07-28 is the specification for this rewrite — he could not tell what
-// "give it to a class" meant, the picker offered one nonsensical option, and a
-// closed item had no way back.
+// Two rewrites in, the shape that survives is: one badge, one button, no
+// vocabulary from the release state machine. See docs/07-pitfalls.md #15.
 //
-// So this screen answers only the two questions he actually has:
-//   1. Can my students open this?  -> Make it available / Take it back
-//   2. Does it belong to one class day?  -> optional, secondary, explained
+// "Tie it to a class day" was removed on 2026-07-28, one day after it shipped.
+// It created a draft release and never released it, so it could only ever make
+// content invisible — and it was premature anyway: there is no UI to create
+// class days, so it offered a single irrelevant option. It comes back with
+// class-day management (05-status.md item 8).
 //
-// Module scope, per docs/07-pitfalls.md #4.
+// Module scope, per pitfalls #4.
 import { useEffect, useState } from "preact/hooks";
 import {
-  contentLibrary, listReleases, updateReleaseState, makeAvailable, createDraftRelease,
-  studentsCanOpen,
+  contentLibrary, listReleases, updateReleaseState, makeAvailable, studentsCanOpen,
   type ContentItem, type ContentLibrary as Library, type ReleaseRow
 } from "../api/content";
-import { t, locale } from "../i18n";
+import { t } from "../i18n";
 
 type Filter = "all" | "available" | "hidden";
-
-function dateLabel(value: string) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString(locale(), { month: "short", day: "numeric" });
-}
 
 export function ContentLibraryView() {
   const [library, setLibrary] = useState<Library | null>(null);
   const [releases, setReleases] = useState<ReleaseRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Keyed by item id: a failure has to appear next to the button that caused
+  // it. A single error line at the top of a 23-item list reads as "nothing
+  // happened", which is exactly how a hard failure went unnoticed.
+  const [itemError, setItemError] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
-  const [tying, setTying] = useState<string | null>(null);
-  const [pickedSession, setPickedSession] = useState("");
 
   async function load() {
     try {
@@ -43,7 +37,7 @@ export function ContentLibraryView() {
       setLibrary(lib);
       setReleases(rel.releases);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("content.library.loadFailed"));
+      setLoadError(e instanceof Error ? e.message : t("content.library.loadFailed"));
     }
   }
 
@@ -51,21 +45,24 @@ export function ContentLibraryView() {
     void load();
   }, []);
 
-  async function run(key: string, work: () => Promise<void>) {
-    setError(null);
+  async function run(itemId: string, work: () => Promise<void>) {
     setNotice(null);
-    setBusy(key);
+    setItemError((current) => ({ ...current, [itemId]: "" }));
+    setBusy(itemId);
     try {
       await work();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("content.library.changeFailed"));
+      setItemError((current) => ({
+        ...current,
+        [itemId]: e instanceof Error ? e.message : t("content.library.changeFailed")
+      }));
     } finally {
       setBusy(null);
     }
   }
 
-  if (error && !library) return <p class="error-text" role="alert">{error}</p>;
+  if (loadError && !library) return <p class="error-text" role="alert">{loadError}</p>;
   if (!library || !releases) {
     return <div class="empty-state"><p>{t("content.library.loading")}</p></div>;
   }
@@ -85,14 +82,13 @@ export function ContentLibraryView() {
     releasesByItem.set(release.content_item_id, list);
   }
 
-  // One item is "available" if any of its releases is in a student-visible
-  // state. Everything else is a detail the professor should not have to hold.
   const isAvailable = (item: ContentItem) =>
     (releasesByItem.get(item.id) ?? []).some((r) => studentsCanOpen(r.state));
 
   const items = library.content_items.filter((item) =>
     filter === "all" ? true : filter === "available" ? isAvailable(item) : !isAvailable(item)
   );
+  const availableCount = library.content_items.filter(isAvailable).length;
 
   return (
     <div class="stack">
@@ -100,7 +96,10 @@ export function ContentLibraryView() {
 
       <div class="row" style="justify-content: space-between; align-items: center;">
         <span class="hint">
-          {t("content.library.count", { count: library.content_items.length })}
+          {t("content.library.countAvailable", {
+            available: availableCount,
+            total: library.content_items.length
+          })}
         </span>
         <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">
           {(["all", "available", "hidden"] as Filter[]).map((value) => (
@@ -117,15 +116,15 @@ export function ContentLibraryView() {
       </div>
 
       {notice ? <p class="hint" role="status">{notice}</p> : null}
-      {error ? <p class="error-text" role="alert">{error}</p> : null}
 
       {items.map((item) => {
         const mine = releasesByItem.get(item.id) ?? [];
         const open = mine.find((r) => studentsCanOpen(r.state));
         const available = Boolean(open);
-        // Prefer an existing release row over creating a second one.
-        const reusable = open ?? mine[0];
-        const tied = mine.find((r) => r.class_session_id);
+        // Reuse the newest existing row rather than accumulating releases.
+        const reusable = open ?? [...mine].sort((a, b) =>
+          String(b.updated_at).localeCompare(String(a.updated_at)))[0];
+        const failure = itemError[item.id];
 
         return (
           <div class="card stack">
@@ -138,17 +137,9 @@ export function ContentLibraryView() {
                       ? t("content.library.statusAvailable")
                       : t("content.library.statusHidden")}
                   </span>
-                  {" "}
-                  {tied
-                    ? t("content.library.statusForClass", {
-                        session: `${tied.class_session_title} · ${dateLabel(tied.planned_date)}`
-                      })
-                    : available
-                      ? t("content.library.statusCourseWide")
-                      : ""}
                 </p>
               </div>
-              <div class="row" style="flex: 0 0 auto; gap: 0.4rem;">
+              <div class="row" style="flex: 0 0 auto;">
                 {available ? (
                   <button
                     class="btn quiet"
@@ -158,7 +149,11 @@ export function ContentLibraryView() {
                       if (!open) return;
                       if (!confirm(t("content.library.takeBackConfirm", { title: item.title }))) return;
                       void run(item.id, async () => {
-                        await updateReleaseState({ release_id: open.release_id, next_state: "closed" });
+                        await updateReleaseState({
+                          release_id: open.release_id,
+                          next_state: "closed",
+                          reason: "Taken back from the Content screen."
+                        });
                         setNotice(t("content.library.tookBack", { title: item.title }));
                       });
                     }}
@@ -183,76 +178,7 @@ export function ContentLibraryView() {
                 )}
               </div>
             </div>
-
-            {tying === item.id ? (
-              <div class="stack" style="gap: 0.4rem;">
-                <p class="hint">{t("content.library.tieHint")}</p>
-                {library.sessions.length ? (
-                  <>
-                    <label class="field">
-                      {t("content.library.pickSession")}
-                      <select
-                        value={pickedSession}
-                        onChange={(e) => setPickedSession((e.target as HTMLSelectElement).value)}
-                      >
-                        <option value="">—</option>
-                        {library.sessions.map((session) => (
-                          <option value={session.id}>
-                            {session.title} · {dateLabel(session.planned_date)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div class="row">
-                      <button
-                        class="btn"
-                        type="button"
-                        disabled={!pickedSession || busy === item.id}
-                        onClick={() => {
-                          const session = library.sessions.find((s) => s.id === pickedSession);
-                          if (!session) return;
-                          void run(item.id, async () => {
-                            await createDraftRelease({
-                              item,
-                              section_id: session.section_id,
-                              class_session_id: session.id
-                            });
-                            setNotice(t("content.library.tied", { title: item.title, session: session.title }));
-                            setTying(null);
-                            setPickedSession("");
-                          });
-                        }}
-                      >
-                        {busy === item.id ? t("content.library.working") : t("content.library.tie")}
-                      </button>
-                      <button class="btn quiet" type="button"
-                              onClick={() => { setTying(null); setPickedSession(""); }}>
-                        {t("content.library.cancel")}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p class="hint">{t("content.library.tieNoSessions")}</p>
-                    <div class="row">
-                      <button class="btn quiet" type="button" onClick={() => setTying(null)}>
-                        {t("content.library.cancel")}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div class="row">
-                <button
-                  class="btn quiet"
-                  type="button"
-                  onClick={() => { setTying(item.id); setPickedSession(""); }}
-                >
-                  {t("content.library.tieToClass")}
-                </button>
-              </div>
-            )}
+            {failure ? <p class="error-text" role="alert">{failure}</p> : null}
           </div>
         );
       })}

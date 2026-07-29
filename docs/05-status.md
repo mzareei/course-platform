@@ -176,12 +176,28 @@ class session. See pitfalls #15 and #16.
 
 **Now:** each item shows one badge — *Students can open it* / *Not available to
 students* — and one primary button, *Make it available* / *Take it back*, with a
-filter across all three. Tying a lecture to a class day is secondary, optional,
-and explains itself. The backend state machine was made navigable in both
-directions so nothing can get stuck.
+filter across all three. The backend state machine was made navigable in both
+directions.
+
+**Then it was reported broken again the same day**, and correctly: *"when I
+click on make it available, nothing actually happens."* Two causes, both now
+fixed — see pitfall #17:
+
+- `update_state` **requires** a `reason` when reopening a `closed` release. The
+  client typed it optional and never sent one, so take-back worked and
+  make-available threw every time.
+- The resulting error rendered at the top of a 23-item list, so a hard failure
+  looked like a no-op. Errors are now keyed by item and render in the card.
+
+**"Tie it to a class day" was removed.** It created a draft release and never
+released it, so it could only ever make content invisible — and it was premature
+regardless, since there is no UI to create class days, so it offered one
+irrelevant option. It returns with class-day management (item 8).
 
 **Verified:** typecheck, four verifiers, build; both functions still refuse a
-student token. **Not verified:** the reworked screen — needs the professor.
+student token; the `reason` guard was read directly out of the handler rather
+than inferred. **Not verified in the UI** — this screen has now shipped wrong
+twice without instructor eyes on it, and that is the real lesson.
 
 ### 7. Grade adjustments and locking
 Backend exists; no UI. Still done in the old app.

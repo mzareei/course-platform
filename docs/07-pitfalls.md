@@ -340,7 +340,49 @@ Terminal states should be rare, deliberate and named as such — here only
 
 ---
 
-## 17. Supabase CLI and the SQL editor have different permissions here
+## 17. An optional-looking parameter the backend conditionally requires
+
+**Shipped broken and reported the same day, 2026-07-28.**
+
+`course-release-management`'s `update_state` takes a `reason`. It is optional
+for almost every transition — and mandatory for exactly one:
+
+```ts
+if (currentState === "closed" && !input.reason) {
+  throw new Error("A reason is required when reopening a closed release.");
+}
+```
+
+The client typed it `reason?: string` and never sent one. The result was a
+screen that worked in one direction only:
+
+- **Take it back** (`released → closed`) — no reason needed. Worked.
+- **Make it available** (`closed → released`) — threw every single time.
+
+So the professor could hide content and never get it back, which is the same
+symptom as pitfall #16 and had already been "fixed" once at the transition-graph
+level. The graph was fine. A second, invisible guard sat behind it.
+
+**Rule:** grep the whole handler for `throw` before wiring a call, not just the
+part that looks like validation. A conditional requirement reads as optional in
+every signature, every interface and every type check. This is pitfall #3's
+family — the contract that TypeScript cannot see — but about *requiredness*
+rather than field names.
+
+### And why it looked like nothing happened at all
+
+The error was caught and rendered — at the top of a list of 23 lectures, far
+from the button that caused it. From the professor's side: *"I click on make it
+available, nothing actually happens."* A hard failure was indistinguishable from
+a no-op.
+
+**Rule:** an error belongs next to the control that produced it. Errors are now
+keyed by item id and render inside the card. A single page-level error line is
+only honest on a page with a single action.
+
+---
+
+## 18. Supabase CLI and the SQL editor have different permissions here
 
 `npx supabase db push` and `npx supabase functions deploy` work. Retrieving the
 service-role key and running arbitrary `INSERT`s through the dashboard SQL

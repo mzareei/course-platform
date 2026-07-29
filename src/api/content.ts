@@ -153,6 +153,17 @@ export function listReleases() {
   return callFn<ReleaseList>("course-release-management", {});
 }
 
+/**
+ * `reason` is not optional in practice. course-release-management refuses to
+ * reopen a closed release without one:
+ *
+ *     if (currentState === "closed" && !input.reason) throw ...
+ *
+ * Sending nothing meant "Make it available" failed every time on anything the
+ * professor had previously taken back, while "Take it back" worked — because
+ * closing needs no reason. Always send one; it lands in `release_events.reason`
+ * and is audit text, not user-facing.
+ */
 export function updateReleaseState(input: {
   release_id: string;
   next_state: string;
@@ -160,7 +171,8 @@ export function updateReleaseState(input: {
 }) {
   return callFn<{ release: ReleaseRow }>("course-release-management", {
     action: "update_state",
-    ...input
+    ...input,
+    reason: input.reason || `Set to ${input.next_state} from the Content screen.`
   });
 }
 
