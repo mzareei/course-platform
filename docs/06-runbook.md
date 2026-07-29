@@ -250,3 +250,25 @@ prefer the app's own endpoints where possible.
 - **Instructor test sign-in fails:** by design.
 - **A generated job shows an error but says "Ready for your review":** a retry
   that later succeeded. The UI now hides it and `approve` clears it.
+
+## Manual test: groups, class days, and removing people
+
+All instructor-only, all on the **People** screen.
+
+1. **Groups** → *Add a group* with a short code (e.g. `B`). It appears in the
+   table as Active, and immediately becomes selectable when adding a class day.
+   *Retire* takes it out of that picker without touching anything existing.
+2. **Class days** → pick a date, a group, and a title → *Add a class day*.
+   Confirm three things, because each has broken before:
+   - the row shows the date **you picked** (pitfall #19),
+   - it also appears on **Home** under Upcoming sessions,
+   - *Run this class* opens Run Class with the question-bank picker — the href
+     must be a UUID, not `/teach/run/undefined` (pitfall #3).
+3. **Cancel this class** on a planned day removes it from both lists.
+4. **Remove** on a roster row: the person's badge becomes **Removed**, their
+   group disappears, and the button goes away. Their work and grades are
+   untouched, and adding the same email again brings them back.
+   There is no Remove button on your own row, and the server refuses it anyway.
+
+Test removal with a throwaway address rather than a real student — removal is
+reversible but leaves a "Removed" row behind, and there is no hard delete.

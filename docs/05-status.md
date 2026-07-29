@@ -151,7 +151,7 @@ Typecheck, all four verifiers and the build pass.
 
 **Confirmed working by the professor on 2026-07-28.**
 
-### 6. Your own lectures + the release gate — **built, reworked after feedback, needs re-checking**
+### 6. Your own lectures + the release gate — **DONE, verified in the browser**
 
 **This entry corrects a claim the docs used to make.** `01-project-overview.md`
 said definition-of-success items 1–4 were "essentially met", including *"run a
@@ -228,15 +228,43 @@ No console errors at any step.
 ### 7. Grade adjustments and locking
 Backend exists; no UI. Still done in the old app.
 
-### 8. Removing people, and managing sections
-Two roster holes found on 2026-07-28 while writing test instructions:
+### 8. Groups, class days, and removing people — **DONE, verified in the browser**
 
-- **There is no way to remove or deactivate a student.** The People screen only
-  adds. This makes a mistaken roster import unfixable through the UI.
-- **There is no way to create, rename or retire a section.**
-  `course-section-management` exists but the SPA never calls it. Sections can
-  only be assigned to, never managed, so a second group cannot be set up — which
-  matters the moment another professor is onboarded through Admin.
+Built and verified 2026-07-28. All three were holes where the backend existed
+and the v2 app had no caller, and together they blocked onboarding a second
+professor: invited through Admin, they could create neither a group nor a class
+day, so they had nowhere to put anyone.
+
+- **Groups** (`components/Sections.tsx`) — create, rename, retire, reactivate.
+  "Group" in the UI, `section` in the schema; the schema word means nothing to a
+  professor and design rule #2 forbids leaking it.
+- **Class days** (`components/Schedule.tsx`) — add one per class meeting, cancel
+  a planned one, run it. New backend action `create_session`, which assigns the
+  sequence number server-side because `class_sessions` has
+  `unique (section_id, sequence_number)`.
+- **Remove a person** (People roster) — new backend action `remove_person`.
+  Not a delete: memberships go `inactive`, section enrolments go `dropped`, so
+  work and grades survive and re-adding the same email brings the person back.
+  Refuses self-removal and platform owners.
+
+Both panels call `refreshContext()` afterwards, since Home and the student Today
+screen read `teacher_sessions` from the auth context.
+
+**Verified end to end in the professor's browser:** created a class day, watched
+it appear in the schedule *and* on Home, opened Run Class from it and got the
+question-bank picker, then cancelled it. Added a throwaway person and removed
+them. Confirmed the Remove button is absent on your own row.
+
+**Three bugs were found by doing that, none of which reading would have caught:**
+
+1. *Run this class* linked to `/teach/run/undefined` — `listSessions` returns
+   `session_id`, not `id` (pitfall #3, made again while building this).
+2. Home showed the class day one day early — a bare `YYYY-MM-DD` parses as UTC
+   midnight (pitfall #19). `formatDay()` in `src/i18n/index.ts` is now the one
+   place that knows this.
+3. A removed person looked untouched, because the status cell preferred
+   `profile_status` — which removal deliberately does not change — over
+   `membership_status` (pitfall #20).
 
 ### 9. Phase 6 cleanup
 - Strip lecture/mission content from the public `mzareei.github.io` repo.

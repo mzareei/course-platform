@@ -423,7 +423,64 @@ actually changing.
 
 ---
 
-## 19. Supabase CLI and the SQL editor have different permissions here
+## 19. A date-only column parses as UTC midnight
+
+`planned_date` and friends come back as `YYYY-MM-DD`. `new Date("2026-08-04")`
+is parsed as **UTC midnight**, so anywhere west of Greenwich — Monterrey
+included — it renders as the 3rd.
+
+A class day created for Aug 4 showed as `8/3/2026` on Home. Both Home and
+Gradebook did this; the bug was old and invisible because nobody had created a
+session in a while.
+
+**Rule:** never `new Date(value)` on a date-only string. Use `formatDay()` in
+`src/i18n/index.ts`, which pins to local noon — safely inside the intended day
+for every timezone on earth.
+
+---
+
+## 20. "Removed" that the UI reads off the wrong status
+
+`remove_person` deactivates the **membership** and deliberately leaves
+`profiles.status` alone, so the person keeps their account and their work.
+
+The People roster rendered `profile_status ?? membership_status`. Since
+`profile_status` is still `invited` or `active`, it always won — so a removed
+person's row was **identical** to before: same group, same badge, same live
+Remove button. The call succeeded, the toast appeared, nothing looked different.
+
+**Rule:** when two status columns describe different things, name which question
+the screen is asking. This column asks "are they on this course", which is
+membership, not profile. A `??` chain between two unrelated fields is a bug
+waiting for one of them to be non-null.
+
+Same family as #12 and #17: the failure is silent and looks like a no-op.
+
+---
+
+## 21. Verify against the bundle that is actually loaded
+
+While confirming a fix, the page kept showing old behaviour after a deploy that
+had definitely landed. The cause was mundane: an in-page `location.href = …`
+navigation was served from cache, so the tab was still running the previous
+bundle.
+
+Ten minutes went into re-reading correct code.
+
+**Rule:** when a fix "doesn't work" after deploying, check what is loaded before
+you check what you wrote:
+
+```js
+[...document.querySelectorAll('script[src]')].map(s => s.src.split('/').pop())
+```
+
+Compare it to the hash `vite build` printed. A cache-busting query string forces
+a real fetch. The runbook already says to confirm the deploy hash *before*
+testing; this is the same rule one layer in.
+
+---
+
+## 22. Supabase CLI and the SQL editor have different permissions here
 
 `npx supabase db push` and `npx supabase functions deploy` work. Retrieving the
 service-role key and running arbitrary `INSERT`s through the dashboard SQL
