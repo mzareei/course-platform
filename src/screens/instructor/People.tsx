@@ -189,15 +189,25 @@ export function People() {
                   <td>{person.student_identifier ?? "—"}</td>
                   <td>
                     {(person.sections ?? [])
+                      .filter((s) => s.status !== "dropped")
                       .map((s) => `${t(`role.${s.role}`)} · ${s.section_code}`)
                       .join(", ") ||
                       (person.course_role ? t(`role.${person.course_role}`) : "—")}
                   </td>
-                  <td><StatusPill state={person.profile_status ?? person.membership_status ?? ""} /></td>
+                  <td>
+                    {/* Removal deactivates the *membership*; it deliberately does
+                        not touch profile_status, so showing profile_status alone
+                        makes a removed person look untouched. On-the-course wins. */}
+                    {person.membership_status && person.membership_status !== "active" ? (
+                      <span class="pill warn">{t("people.removedLabel")}</span>
+                    ) : (
+                      <StatusPill state={person.profile_status ?? person.membership_status ?? ""} />
+                    )}
+                  </td>
                   <td>
                     {/* The server refuses self-removal and platform owners; hiding
                         the button for yourself just avoids an avoidable error. */}
-                    {person.profile_id !== myProfileId ? (
+                    {person.profile_id !== myProfileId && person.membership_status === "active" ? (
                       <button
                         class="btn quiet"
                         type="button"

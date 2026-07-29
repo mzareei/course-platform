@@ -445,6 +445,7 @@ export const strings = {
 
   // ------------------------------------------------------ people · removal
   "people.remove": ["Remove", "Quitar"],
+  "people.removedLabel": ["Removed", "Quitado"],
   "people.removing": ["Removing…", "Quitando…"],
   "people.removeConfirm": [
     "Remove {name} from this course? They lose access immediately. Nothing they have already done is deleted — their work and grades stay, and adding the same email again brings them back. You cannot remove yourself.",
