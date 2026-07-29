@@ -65,3 +65,21 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
 export function locale(): string {
   return lang.value === "es" ? "es-MX" : "en-US";
 }
+
+/**
+ * Format a calendar date that has no time component (`planned_date` and
+ * friends, which Postgres returns as `YYYY-MM-DD`).
+ *
+ * `new Date("2026-08-04")` parses as **UTC midnight**, so anywhere west of
+ * Greenwich — including Monterrey — it renders as the 3rd. Pinning to local
+ * noon puts it safely inside the intended day for every timezone on earth.
+ * Always use this for a bare date; `new Date(value)` is wrong.
+ */
+export function formatDay(
+  value?: string | null,
+  options: Intl.DateTimeFormatOptions = {}
+): string {
+  const text = String(value || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return "—";
+  return new Date(`${text}T12:00:00`).toLocaleDateString(locale(), options);
+}

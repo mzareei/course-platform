@@ -9,7 +9,7 @@ import { context } from "../../state/session";
 import { classPulseRounds, type PulseRoundReview } from "../../api/pulse";
 import { classQuizSummary, type QuizAttemptSummary } from "../../api/quiz";
 import { classReflections, type ClassReflection } from "../../api/reflection";
-import { t, locale } from "../../i18n";
+import { t, locale, formatDay } from "../../i18n";
 
 const SUBMITTED_STATES = ["submitted", "late"];
 
@@ -92,7 +92,7 @@ function PerClassReview() {
         >
           {sessions.map((s) => (
             <option value={s.session_id}>
-              {s.planned_date ? `${new Date(s.planned_date).toLocaleDateString(locale())} · ` : ""}
+              {s.planned_date ? `${formatDay(s.planned_date)} · ` : ""}
               {s.title || `#${s.sequence_number}`}
               {s.section_code ? ` · ${s.section_code}` : ""}
             </option>

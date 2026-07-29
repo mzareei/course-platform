@@ -44,7 +44,9 @@ export function saveSection(input: {
 }
 
 export interface ClassSession {
-  id: string;
+  /** listSessions returns `session_id`, not `id` — the two are not the same
+   *  field and the compiler cannot tell you. See pitfalls #3. */
+  session_id: string;
   course_id: string;
   section_id: string;
   sequence_number: number;

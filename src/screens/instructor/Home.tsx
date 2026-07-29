@@ -1,7 +1,7 @@
 // I1 Teach Home — the instructor landing: today's session front and center.
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
-import { t, locale } from "../../i18n";
+import { t, formatDay } from "../../i18n";
 
 export function TeachHome() {
   const ctx = context.value;
@@ -69,7 +69,7 @@ export function TeachHome() {
                 <tr>
                   <td class="num">{s.sequence_number}</td>
                   <td>{s.title ?? "—"}</td>
-                  <td>{s.planned_date ? new Date(s.planned_date).toLocaleDateString(locale()) : "—"}</td>
+                  <td>{formatDay(s.planned_date)}</td>
                   <td>{s.section_code || "—"}</td>
                   <td><StatusPill state={s.state} /></td>
                   <td><a class="btn quiet" href={`/teach/run/${s.session_id}`}>{t("run.title")}</a></td>

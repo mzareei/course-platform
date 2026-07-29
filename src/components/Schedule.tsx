@@ -13,18 +13,11 @@ import {
 } from "../api/schedule";
 import { StatusPill } from "./StatusPill";
 import { refreshContext } from "../state/session";
-import { t, locale } from "../i18n";
+import { t, formatDay } from "../i18n";
 
 const RUNNABLE = ["planned", "open", "live", "paused", "continued"];
 
-function dateLabel(value: string) {
-  if (!value) return "—";
-  // A bare YYYY-MM-DD parses as UTC midnight; pin it to noon so a negative
-  // timezone offset cannot show the previous day.
-  return new Date(`${value}T12:00:00`).toLocaleDateString(locale(), {
-    weekday: "short", month: "short", day: "numeric"
-  });
-}
+const dayLabel = (v: string) => formatDay(v, { weekday: "short", month: "short", day: "numeric" });
 
 export function Schedule() {
   const [sessions, setSessions] = useState<ClassSession[] | null>(null);
@@ -64,7 +57,7 @@ export function Schedule() {
         title: title.trim(),
         planned_date: date
       });
-      setNotice(t("schedule.added", { title: session.title, date: dateLabel(session.planned_date) }));
+      setNotice(t("schedule.added", { title: session.title, date: dayLabel(session.planned_date) }));
       setTitle("");
       setDate("");
       await load();
@@ -82,9 +75,9 @@ export function Schedule() {
     if (!confirm(t("schedule.cancelConfirm", { title: session.title }))) return;
     setError(null);
     setNotice(null);
-    setBusy(session.id);
+    setBusy(session.session_id);
     try {
-      await cancelSession(session.id);
+      await cancelSession(session.session_id);
       setNotice(t("schedule.cancelled", { title: session.title }));
       await load();
       await refreshContext();
@@ -136,14 +129,14 @@ export function Schedule() {
                 const section = sectionById.get(session.section_id);
                 return (
                   <tr>
-                    <td>{dateLabel(session.planned_date)}</td>
+                    <td>{dayLabel(session.planned_date)}</td>
                     <td>{session.title}</td>
                     <td>{section?.section_code ?? session.section_code ?? "—"}</td>
                     <td><StatusPill state={session.state} /></td>
                     <td>
                       <div class="row" style="gap: 0.3rem;">
                         {RUNNABLE.includes(session.state) ? (
-                          <a class="btn quiet" href={`/teach/run/${session.id}`}>
+                          <a class="btn quiet" href={`/teach/run/${session.session_id}`}>
                             {t("schedule.run")}
                           </a>
                         ) : null}
@@ -151,7 +144,7 @@ export function Schedule() {
                           <button
                             class="btn quiet"
                             type="button"
-                            disabled={busy === session.id}
+                            disabled={busy === session.session_id}
                             onClick={() => void onCancel(session)}
                           >
                             {t("schedule.cancel")}
