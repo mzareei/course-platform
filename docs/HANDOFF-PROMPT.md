@@ -45,37 +45,70 @@ Two repos, you need both:
 
 Supabase project ref: `ojmbupftdikwmlqvibwt`. `ANTHROPIC_API_KEY` is set.
 
+Both repos were fully committed and pushed, nothing outstanding, as of
+2026-07-29. Confirm with `git status` yourself before trusting that — it's the
+first thing worth checking, not an assumption to inherit.
+
 ## Where things stand
 
-Phases 1–5 are complete and verified live: content gating, live in-class
-questions, the timed end-of-class quiz, reflections, grading, full EN/ES
-bilingual support, and the AI PDF-to-deck-and-question-bank pipeline (which has
-been run end to end on real lecture content — it produced a 33-slide bilingual
-deck and 18 questions split 6 easy / 6 medium / 6 hard).
+Phases 1–5 are complete and deployed. Since the version of this prompt you may
+have seen before, a lot of instructor-facing functionality that either didn't
+exist or was quietly broken has been built, found broken, fixed, and this time
+**verified live in a real signed-in browser** rather than just reasoned about.
+Read `05-status.md` in full — it is long and it is the actual source of truth,
+this section is a summary and will drift out of date faster than that file
+does. `07-pitfalls.md` has grown to ~21 entries; several were found in the last
+two days and are directly relevant to anything you touch on these screens.
+
+**Done and verified live (as of 2026-07-29):**
+- The full class flow: deck, live pulse questions, timed quiz, reflection,
+  grading — this was already true
+- Gradebook → **Per class** review (pulse distributions with correct answers,
+  quiz stats, every reflection in full)
+- **Admin** screen: create courses, invite professors/TAs, remove staff
+- **CSV roster import** on People, with bilingual header matching and a
+  preview before any write
+- Content → **Your lectures**: lists all 27 items (decks + missions), and can
+  make one available to students / take it back. This closed a real gap where
+  the app had **no way to release any content at all** — every release that
+  existed had been made in the old app or seeded by hand, which is why testing
+  never caught it (see `07-pitfalls.md` #14, and #17/#18 for the two release
+  bugs found and fixed after that)
+- **Groups** (course sections) and **class days**: create/rename/retire a
+  group, add/cancel a class day, run it from there — this unblocks onboarding
+  a second professor, who previously had nowhere to put their students
+- **Remove a person** from the roster (not a delete — reversible, work and
+  grades survive)
 
 `05-status.md` has the full remaining list in priority order. The top items:
 
 1. A dress rehearsal with real students on real phones (nothing substitutes for
-   this — only test accounts have ever used it)
-2. Re-verify the reflection step on a fresh class session
-3. Gradebook Tab B — per-class review (still a placeholder)
-4. Admin screens — the backend exists, there's no UI, so I can't onboard another
-   professor yet
-5. CSV roster import, then grade adjustments
-6. Phase 6 cleanup — strip lecture content from the public repo, redirect the old
-   app pages, confirm nothing gated leaks
+   this — only test accounts have ever used it). **Still the single highest-
+   value thing outstanding.**
+2. Re-verify the reflection step on a genuinely fresh class session — easier
+   now that class days can actually be created
+3. Grade adjustments and locking — backend exists, no UI
+4. Phase 6 cleanup — strip lecture content from the public repo, redirect the
+   old app pages, confirm nothing gated leaks. This is success criterion #6.
+5. A known low-priority wrinkle: the AI generation worker can race itself on a
+   cold start (self-healing, writes a confusing transient error)
 
 ## How I want you to work
 
 - **Keep going without stopping to ask.** Make the reasonable call and tell me
   what you decided. I'll redirect you if it's wrong.
-- **Test through the real entry points.** Sign in as a student and click from the
-  Today screen. A previous session tested by navigating straight to internal
-  routes, and shipped a build where students literally could not join a live
-  class. If you're typing an internal URL to reach a feature, you're not testing
-  it.
-- **Don't tell me something works until you've seen it work in the UI.** I test
-  for real and I'll find it.
+- **Test through the real entry points, in an actual browser, yourself.** Sign
+  in as a student and click from the Today screen. A previous session tested by
+  navigating straight to internal routes, and shipped a build where students
+  literally could not join a live class. More recently (2026-07-28/29), three
+  bugs in a row shipped on the same instructor screen because it was reasoned
+  about instead of opened in a browser — I had to find each one myself and say
+  so before it got fixed properly. **I have Chrome MCP browser tools available
+  and I expect you to use them on my already-signed-in session** for anything
+  instructor-facing, not just student flows. If you're typing an internal URL,
+  or you're only reading code and not clicking anything, you are not testing it.
+- **Don't tell me something works until you've seen it work in the UI, yourself,
+  in that session.** I test for real and I'll find it if you didn't.
 - **Be honest about what's verified vs. assumed.** Say plainly when something is
   broken or unverified.
 - **Keep the docs current.** When you finish something or learn something
@@ -85,7 +118,9 @@ deck and 18 questions split 6 easy / 6 medium / 6 hard).
 ## Test accounts
 
 - Instructor (me): `m.zareei@tec.mx` — emailed 6-digit code. Test sign-in is
-  deliberately refused for instructors.
+  deliberately refused for instructors, by design, so you cannot script your way
+  into this account. Either drive my already-signed-in Chrome session if your
+  environment gives you that, or ask me to sign in and drive it together.
 - QA student: `zarei.1982@gmail.com` — use the "Sign in without email (testing)"
   button
 - Second student: `test.student@tec.mx` — same
@@ -107,13 +142,14 @@ The project is finished when:
 5. A full class has run on real student phones without intervention.
 6. No teaching content remains in the public repository.
 
-Items 1–4 are essentially met. 5 and 6 are the outstanding ones.
+Items 1–4 are met, including releasing content, as of 2026-07-28. 5 and 6 are
+the outstanding ones — that's genuinely what's left for "done."
 
-## One open question you can just ask me
+## Already answered — don't re-ask
 
-The end-of-class quiz currently times each question at 20s (easy) / 30s (medium)
-/ 45s (hard). I once said "20 seconds up to 45 minutes" — the previous session
-read that as 45 *seconds*. Confirm with me, and if I meant minutes, change
-`SECONDS_BY_DIFFICULTY` in `src/features/quiz/Player.tsx`.
+The quiz's per-question timing (20s easy / 30s medium / 45s hard) was a real
+open question in earlier versions of this project. **I confirmed on 2026-07-28
+it's seconds, correctly implemented, and closed.** Don't raise it again; see
+`04-decisions.md` if you want the record.
 
 Start by reading the docs, then tell me what you plan to do first.
