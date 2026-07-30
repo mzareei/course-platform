@@ -554,3 +554,17 @@ product no-op.
 an instructor availability control or a student material list. Only viewer and
 external delivery may enter Review; live-only content belongs to the live class,
 and internal content is never shown to students.
+
+---
+
+## 26. A lecture picker is not authorization
+
+A class-day form may offer only lectures from the current course, but the
+browser payload is still caller-controlled. Accepting its `content_item_id`
+without checking it would let a crafted request associate another course's item,
+or a quiz bank/activity that cannot be presented as the class lecture.
+
+**Rule:** validate associations again at the edge-function boundary. For class
+sessions, the selected item must exist, belong to the requested course, and have
+`content_type = 'lecture'`. The browser's filtered select is usability; the
+edge function is the data-integrity boundary.

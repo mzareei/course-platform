@@ -13,6 +13,7 @@ import { t } from "../../i18n";
 import { currentPulse, answerPulse, shuffleOptions, type StudentPulseView } from "../../api/pulse";
 import { QuizPlayer } from "../../features/quiz/Player";
 import { Reflection } from "../../features/reflection/Reflection";
+import { joinedClassSessionId } from "../../api/session";
 
 const POLL_MS = 3000;
 
@@ -40,11 +41,10 @@ function LiveShell({ error, children }: { error: string | null; children: Compon
 
 export function Live() {
   const ctx = context.value;
-  // The live session comes from whatever release is currently live for them.
-  const sessionId = (ctx?.releases ?? []).find(
-    (r) => r.class_session_id && ["live", "paused"].includes(r.session_state || "")
-  )?.class_session_id
-    ?? (ctx?.releases ?? []).find((r) => r.class_session_id)?.class_session_id
+  const sessionId = ctx?.student_sessions.find(
+    (session) => ["live", "paused"].includes(session.state)
+  )?.session_id
+    ?? joinedClassSessionId()
     ?? null;
 
   const [view, setView] = useState<StudentPulseView | null>(null);

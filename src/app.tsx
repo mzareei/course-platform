@@ -12,6 +12,7 @@ import { Grades } from "./screens/student/Grades";
 import { TeachHome } from "./screens/instructor/Home";
 import { Gradebook } from "./screens/instructor/Gradebook";
 import { People } from "./screens/instructor/People";
+import { Classes } from "./screens/instructor/Classes";
 import { Content } from "./screens/instructor/Content";
 import { Admin } from "./screens/instructor/Admin";
 import { Viewer } from "./screens/Viewer";
@@ -41,6 +42,7 @@ function InstructorNav() {
   const { path } = useLocation();
   const items = [
     { href: "/teach", label: t("teach.nav.home") },
+    { href: "/teach/classes", label: t("teach.nav.classes") },
     { href: "/teach/content", label: t("teach.nav.content") },
     { href: "/teach/grades", label: t("teach.nav.grades") },
     { href: "/teach/people", label: t("teach.nav.people") },
@@ -153,6 +155,7 @@ export function App() {
         {teacherSurface ? (
           <Router>
             <Route path="/teach" component={TeachHome} />
+            <Route path="/teach/classes" component={Classes} />
             <Route path="/teach/content" component={Content} />
             <Route path="/teach/grades" component={Gradebook} />
             <Route path="/teach/people" component={People} />

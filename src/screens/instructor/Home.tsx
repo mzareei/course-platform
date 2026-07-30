@@ -50,6 +50,7 @@ export function TeachHome() {
         <div class="empty-state card">
           <h3>{t("teach.noSessionsTitle")}</h3>
           <p>{t("teach.noSessionsBody")}</p>
+          <a class="btn primary" href="/teach/classes">{t("classes.schedule")}</a>
         </div>
       ) : (
         <div class="table-scroll">

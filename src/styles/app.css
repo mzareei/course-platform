@@ -215,6 +215,19 @@ a { color: var(--primary); }
 .hint { color: var(--text-muted); font-size: 0.9rem; }
 .error-text { color: var(--danger); font-size: 0.9rem; }
 
+.classes-screen > .stack + .stack {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.student-session-card {
+  border-color: var(--primary-soft-border);
+}
+.student-session-card.live {
+  border-color: var(--primary);
+  border-width: 2px;
+}
+
 /* ---------------------------------------------------------------- buttons */
 .btn {
   appearance: none;

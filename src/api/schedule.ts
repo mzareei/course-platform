@@ -55,6 +55,12 @@ export interface ClassSession {
   actual_start_at?: string | null;
   actual_end_at?: string | null;
   state: string;
+  join_code: string;
+  content_item_id: string | null;
+  content_slug: string | null;
+  content_title: string | null;
+  source_kind: string | null;
+  source_ref: string | null;
   section_code?: string;
   section_name?: string;
 }
@@ -70,6 +76,7 @@ export function createSession(input: {
   title: string;
   /** YYYY-MM-DD. */
   planned_date: string;
+  content_item_id?: string;
 }) {
   return callFn<{ session: ClassSession; sessions: ClassSession[] }>(
     "course-session-management",

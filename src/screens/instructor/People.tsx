@@ -5,8 +5,6 @@ import { callFn } from "../../api/client";
 import type { RosterOverview, Role } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
 import { RosterImport } from "../../components/RosterImport";
-import { Sections } from "../../components/Sections";
-import { Schedule } from "../../components/Schedule";
 import { context } from "../../state/session";
 import { t } from "../../i18n";
 
@@ -156,9 +154,6 @@ export function People() {
       </div>
 
       <RosterImport onImported={load} />
-
-      <Sections />
-      <Schedule />
 
       <h2>{t("people.roster")}</h2>
       {!data ? (

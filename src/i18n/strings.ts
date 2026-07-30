@@ -89,11 +89,13 @@ export const strings = {
   "today.title": ["Today", "Hoy"],
   "today.classLive": ["Class is live", "La clase está en curso"],
   "today.joinClass": ["Join class", "Entrar a la clase"],
-  "today.open": ["Open: {title}", "Abrir: {title}"],
-  "today.emptyTitle": ["Nothing released yet", "Aún no hay material publicado"],
+  "today.nextClass": ["Next class", "Próxima clase"],
+  "today.sessionDetails": ["{date} · Group {code}", "{date} · Grupo {code}"],
+  "today.lecture": ["Lecture: {title}", "Lección: {title}"],
+  "today.emptyTitle": ["No class scheduled yet", "Aún no hay una clase programada"],
   "today.emptyBody": [
-    "Materials for your class and the link to join a live class appear here.",
-    "Aquí aparecen los materiales de tu clase y el enlace para entrar a una clase en vivo."
+    "Your next class appears here as soon as your professor schedules it.",
+    "Tu próxima clase aparecerá aquí en cuanto tu profesor la programe."
   ],
 
   // ---------------------------------------------------------------- content types
@@ -153,6 +155,7 @@ export const strings = {
 
   // ---------------------------------------------------------------- instructor nav
   "teach.nav.home": ["Home", "Inicio"],
+  "teach.nav.classes": ["Classes", "Clases"],
   "teach.nav.content": ["Content", "Contenido"],
   "teach.nav.grades": ["Gradebook", "Calificaciones"],
   "teach.nav.people": ["People", "Personas"],
@@ -203,6 +206,15 @@ export const strings = {
     "See exactly what your students see.",
     "Mira exactamente lo que ven tus estudiantes."
   ],
+
+  // ---------------------------------------------------------------- classes
+  "classes.eyebrow": ["Course setup", "Configuración del curso"],
+  "classes.title": ["Classes", "Clases"],
+  "classes.body": [
+    "Set up groups, then schedule each class day with the lecture you plan to teach.",
+    "Configura los grupos y después programa cada día de clase con la lección que planeas impartir."
+  ],
+  "classes.schedule": ["Schedule a class", "Programar una clase"],
 
   // ---------------------------------------------------------------- admin
   "teach.nav.admin": ["Admin", "Administración"],
@@ -499,6 +511,7 @@ export const strings = {
   "schedule.col.when": ["When", "Cuándo"],
   "schedule.col.what": ["Class", "Clase"],
   "schedule.col.group": ["Group", "Grupo"],
+  "schedule.col.lecture": ["Lecture", "Lección"],
   "schedule.add": ["Add a class day", "Agregar un día de clase"],
   "schedule.adding": ["Adding…", "Agregando…"],
   "schedule.date": ["Date", "Fecha"],
@@ -508,6 +521,13 @@ export const strings = {
     "Por ejemplo \"Semana 3: Seguridad en Bases de Datos\". Los estudiantes lo ven."
   ],
   "schedule.group": ["Group", "Grupo"],
+  "schedule.lecture": ["Lecture (optional)", "Lección (opcional)"],
+  "schedule.lectureNone": ["No lecture yet", "Aún sin lección"],
+  "schedule.lectureHint": [
+    "Choosing a lecture connects its deck and question bank to this class.",
+    "Elegir una lección conecta su presentación y banco de preguntas con esta clase."
+  ],
+  "schedule.noLecture": ["Not chosen", "Sin elegir"],
   "schedule.added": ["{title} was added for {date}.", "Se agregó {title} para el {date}."],
   "schedule.addFailed": ["Could not add that class day.", "No se pudo agregar ese día de clase."],
   "schedule.cancel": ["Cancel this class", "Cancelar esta clase"],

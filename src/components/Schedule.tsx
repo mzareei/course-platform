@@ -8,9 +8,12 @@
 // Module scope, per docs/07-pitfalls.md #4.
 import { useEffect, useState } from "preact/hooks";
 import {
-  listSessions, createSession, cancelSession, listSections,
+  listSessions, cancelSession, listSections,
   type ClassSession, type CourseSection
 } from "../api/schedule";
+import { createClass } from "../api/classes";
+import { contentLibrary, type ContentItem } from "../api/content";
+import { canReleaseToReview } from "../api/contentVisibility";
 import { StatusPill } from "./StatusPill";
 import { refreshContext } from "../state/session";
 import { t, formatDay } from "../i18n";
@@ -22,6 +25,7 @@ const dayLabel = (v: string) => formatDay(v, { weekday: "short", month: "short",
 export function Schedule() {
   const [sessions, setSessions] = useState<ClassSession[] | null>(null);
   const [sections, setSections] = useState<CourseSection[] | null>(null);
+  const [lectures, setLectures] = useState<ContentItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -29,12 +33,19 @@ export function Schedule() {
   const [date, setDate] = useState("");
   const [title, setTitle] = useState("");
   const [sectionId, setSectionId] = useState("");
+  const [contentItemId, setContentItemId] = useState("");
 
   async function load() {
     try {
-      const [s, sec] = await Promise.all([listSessions(), listSections()]);
+      const [s, sec, library] = await Promise.all([listSessions(), listSections(), contentLibrary()]);
       setSessions(s.sessions);
       setSections(sec.sections);
+      setLectures(
+        library.content_items
+          .filter(canReleaseToReview)
+          .filter((item) => item.content_type === "lecture")
+          .sort((a, b) => a.title.localeCompare(b.title))
+      );
       setSectionId((current) =>
         current || sec.sections.find((x) => x.status === "active")?.id || sec.sections[0]?.id || ""
       );
@@ -52,14 +63,16 @@ export function Schedule() {
     setNotice(null);
     setBusy("add");
     try {
-      const { session } = await createSession({
+      const { session } = await createClass({
         section_id: sectionId,
         title: title.trim(),
-        planned_date: date
+        planned_date: date,
+        content_item_id: contentItemId || undefined
       });
       setNotice(t("schedule.added", { title: session.title, date: dayLabel(session.planned_date) }));
       setTitle("");
       setDate("");
+      setContentItemId("");
       await load();
       // Home and the student Today screen both read teacher_sessions from the
       // auth context, so a new class day is invisible until that is refetched.
@@ -89,7 +102,7 @@ export function Schedule() {
   }
 
   if (error && !sessions) return <p class="error-text" role="alert">{error}</p>;
-  if (!sessions || !sections) {
+  if (!sessions || !sections || !lectures) {
     return <div class="empty-state"><p>{t("schedule.loading")}</p></div>;
   }
 
@@ -120,6 +133,7 @@ export function Schedule() {
                 <th>{t("schedule.col.when")}</th>
                 <th>{t("schedule.col.what")}</th>
                 <th>{t("schedule.col.group")}</th>
+                <th>{t("schedule.col.lecture")}</th>
                 <th>{t("grades.status")}</th>
                 <th />
               </tr>
@@ -132,6 +146,7 @@ export function Schedule() {
                     <td>{dayLabel(session.planned_date)}</td>
                     <td>{session.title}</td>
                     <td>{section?.section_code ?? session.section_code ?? "—"}</td>
+                    <td>{session.content_title || t("schedule.noLecture")}</td>
                     <td><StatusPill state={session.state} /></td>
                     <td>
                       <div class="row" style="gap: 0.3rem;">
@@ -185,6 +200,27 @@ export function Schedule() {
                     <option value={s.id}>{s.section_name || s.section_code}</option>
                   ))}
                 </select>
+              </label>
+              <label class="field">
+                {t("schedule.lecture")}
+                <select
+                  value={contentItemId}
+                  onChange={(e) => {
+                    const nextId = (e.target as HTMLSelectElement).value;
+                    const previousTitle = lectures.find((item) => item.id === contentItemId)?.title || "";
+                    const nextTitle = lectures.find((item) => item.id === nextId)?.title || "";
+                    setContentItemId(nextId);
+                    setTitle((current) =>
+                      !current.trim() || current === previousTitle ? nextTitle : current
+                    );
+                  }}
+                >
+                  <option value="">{t("schedule.lectureNone")}</option>
+                  {lectures.map((lecture) => (
+                    <option value={lecture.id}>{lecture.title}</option>
+                  ))}
+                </select>
+                <span class="hint">{t("schedule.lectureHint")}</span>
               </label>
               <label class="field" style="grid-column: 1 / -1;">
                 {t("schedule.classTitle")}

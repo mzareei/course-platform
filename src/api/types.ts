@@ -65,6 +65,25 @@ export interface TeacherSession {
   title?: string;
   planned_date?: string | null;
   state: string;
+  join_code: string;
+  content_item_id: string | null;
+  content_slug: string | null;
+  content_title: string | null;
+  source_kind: string | null;
+  source_ref: string | null;
+}
+
+export interface StudentSession {
+  session_id: string;
+  section_id: string;
+  section_code: string;
+  title: string;
+  planned_date: string;
+  state: string;
+  join_code: string;
+  content_item_id: string | null;
+  content_slug: string | null;
+  content_title: string | null;
 }
 
 export interface CourseContext {
@@ -73,6 +92,7 @@ export interface CourseContext {
   memberships: Membership[];
   sections: SectionInfo[];
   releases: ReleaseItem[];
+  student_sessions: StudentSession[];
   teacher_sessions?: TeacherSession[];
   roster_status: "missing_profile" | "active" | "not_enrolled";
 }

@@ -69,7 +69,7 @@ Everything below was exercised through the real UI, not by calling endpoints.
 
 ## Remaining work, in priority order
 
-### 0. Coherent class lifecycle redesign — **DESIGNED, not implemented**
+### 0. Coherent class lifecycle redesign — **IN PROGRESS**
 
 The professor exercised the product on 2026-07-29 and found that the individual
 features do not yet form a coherent teaching workflow:
@@ -114,6 +114,28 @@ materials and has a professor-only Question banks placeholder that makes the
 live-only rule explicit. `tools/verify-content-semantics.mjs` locks the
 classification contract; typecheck, all verifiers, and the production build
 pass.
+
+### 0.2 First-class class sessions and Classes — **DONE locally, deployment and browser verification pending**
+
+Built 2026-07-29 as the second coherent-lifecycle increment. Class sessions and
+content releases are now separate collections in `course-auth-context`.
+Students receive their active-section sessions even when no content release
+exists, and Today plus Live discover class state only from that session
+collection.
+
+The instructor navigation now has **Classes**, which owns Groups and Class days;
+People is roster-only. Scheduling can associate an optional reviewable lecture,
+prefills the student-facing title, and records the lecture directly on the
+session. A dedicated `start_session` transition moves `planned | open |
+continued` to `live` with the start timestamp in the same update and writes one
+state-change audit event.
+
+`tools/verify-class-sessions.mjs` locks the student-session context, the
+session-driven Today/Live paths, and the Classes route. The verifier was captured
+RED before implementation and GREEN afterwards. Frontend typecheck passes.
+Remote migration/function checks and the real instructor/student entry-point
+test remain to be recorded before this increment can be described as verified
+live.
 
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
