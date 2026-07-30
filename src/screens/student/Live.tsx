@@ -10,10 +10,18 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { context } from "../../state/session";
 import { t } from "../../i18n";
+import { ApiError } from "../../api/client";
 import { currentPulse, answerPulse, shuffleOptions, type StudentPulseView } from "../../api/pulse";
 import { QuizPlayer } from "../../features/quiz/Player";
 import { Reflection } from "../../features/reflection/Reflection";
-import { joinedClassSessionId } from "../../api/session";
+import {
+  clearJoinedClassSession,
+  joinedClassSessionId
+} from "../../api/session";
+import {
+  fallbackLiveSessionId,
+  selectLiveSessionId
+} from "../../features/join/sessionState";
 
 const POLL_MS = 3000;
 
@@ -41,11 +49,10 @@ function LiveShell({ error, children }: { error: string | null; children: Compon
 
 export function Live() {
   const ctx = context.value;
-  const sessionId = ctx?.student_sessions.find(
-    (session) => ["live", "paused"].includes(session.state)
-  )?.session_id
-    ?? joinedClassSessionId()
-    ?? null;
+  const studentSessions = ctx?.student_sessions ?? [];
+  const [sessionId, setSessionId] = useState<string | null>(() =>
+    selectLiveSessionId(studentSessions, joinedClassSessionId())
+  );
 
   const [view, setView] = useState<StudentPulseView | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,10 +74,28 @@ export function Live() {
         return next;
       });
     } catch (e) {
+      const joinedSessionId = joinedClassSessionId();
+      if (
+        joinedSessionId === sessionId &&
+        e instanceof ApiError &&
+        [400, 403, 404].includes(e.status)
+      ) {
+        clearJoinedClassSession();
+        setView(null);
+        setError(null);
+        setSessionId(fallbackLiveSessionId(studentSessions, sessionId));
+        return;
+      }
       // Keep the last known state on a network blip rather than blanking the screen.
       if (!view) setError(e instanceof Error ? e.message : null);
     }
   }
+
+  useEffect(() => {
+    if (!sessionId) {
+      setSessionId(selectLiveSessionId(studentSessions, joinedClassSessionId()));
+    }
+  }, [sessionId, studentSessions]);
 
   useEffect(() => {
     void refresh();

@@ -22,6 +22,14 @@ export function rememberJoinedClassSession(sessionId: string): void {
   }
 }
 
+export function clearJoinedClassSession(): void {
+  try {
+    localStorage.removeItem(JOINED_SESSION_KEY);
+  } catch {
+    // Without storage there is no persisted session to clear.
+  }
+}
+
 export function endClassSession(sessionId: string, reason?: string) {
   return callFn<{ session: { id: string; state: string; actual_end_at?: string | null } }>(
     "course-session-management",

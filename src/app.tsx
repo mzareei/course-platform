@@ -93,6 +93,20 @@ function Topbar() {
   );
 }
 
+function JoinRouteShell() {
+  return (
+    <LocationProvider>
+      <Topbar />
+      <main class="shell">
+        <Router>
+          <Route path="/join/:joinCode" component={JoinClass} />
+          <Route default component={SignIn} />
+        </Router>
+      </main>
+    </LocationProvider>
+  );
+}
+
 export function App() {
   if (booting.value) {
     return (
@@ -105,17 +119,14 @@ export function App() {
   }
 
   if (!session.value) {
-    return (
-      <LocationProvider>
-        <Topbar />
-        <main class="shell">
-          <Router>
-            <Route path="/join/:joinCode" component={JoinClass} />
-            <Route default component={SignIn} />
-          </Router>
-        </main>
-      </LocationProvider>
-    );
+    return <JoinRouteShell />;
+  }
+
+  // Joining must reach its own authenticated authorization boundary before
+  // course-context and roster gates so missing/unenrolled users get the
+  // join-specific access explanation and consume any stored auth return.
+  if (location.pathname.startsWith("/join/")) {
+    return <JoinRouteShell />;
   }
 
   if (contextError.value) {
