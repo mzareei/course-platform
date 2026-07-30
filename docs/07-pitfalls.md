@@ -862,3 +862,19 @@ using a session-only list makes it easy to write against the wrong student.
 `class_session_id` and `profile_id`; its history loads the session then filters
 to that profile. People may load the profile-wide history, but students must
 never import or call the private-notes API.
+
+---
+
+## 38. Auth-context sections are the signed-in person's enrollments, not all groups
+
+The first Manage members link passed a correct group UUID, but People resolved
+its label and Add person choices from `course-auth-context.sections`. That
+collection intentionally contains only the signed-in person's section
+enrollments. An instructor who was not enrolled in the target group therefore
+saw a raw UUID and an empty group picker.
+
+**Rule:** course administration screens load authoritative groups from
+`course-section-management`. Treat auth-context sections only as identity and
+access context. Moving a student between groups must also be one transactional
+server operation: course-scope the target, preserve old enrollments as dropped,
+reactivate the target and course membership, and audit the before/target IDs.

@@ -8,7 +8,7 @@ type SessionEditorProps = {
   session: ClassSession;
   sections: CourseSection[];
   lectures: ContentItem[];
-  onSaved: () => void;
+  onSaved: (saved: ClassSession) => void;
   onCancel: () => void;
 };
 
@@ -26,14 +26,14 @@ export function SessionEditor({ session, sections, lectures, onSaved, onCancel }
     setError(null);
     setSaving(true);
     try {
-      await updateClass({
+      const { session: saved } = await updateClass({
         session_id: session.session_id,
         section_id: sectionId,
         title: title.trim(),
         planned_date: plannedDate,
         content_item_id: contentItemId || null
       });
-      onSaved();
+      onSaved(saved);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("schedule.saveFailed"));
     } finally {

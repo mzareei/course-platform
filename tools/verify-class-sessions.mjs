@@ -16,6 +16,7 @@ const today = readFileSync("src/screens/student/Today.tsx", "utf8");
 const live = readFileSync("src/screens/student/Live.tsx", "utf8");
 const app = readFileSync("src/app.tsx", "utf8");
 const classesApi = readFileSync("src/api/classes.ts", "utf8");
+const rosterApi = readFileSync("src/api/roster.ts", "utf8");
 const studentNotesApi = readFileSync("src/api/studentNotes.ts", "utf8");
 const schedule = readFileSync("src/components/Schedule.tsx", "utf8");
 const sections = readFileSync("src/components/Sections.tsx", "utf8");
@@ -104,6 +105,25 @@ assert.match(people, /new URLSearchParams\(location\.search\)\.get\("group"\)/);
 assert.match(people, /GROUP_UUID\.test\(groupParam\)/);
 assert.match(people, /section_id === groupId/);
 assert.match(people, /href="\/teach\/people"/);
+assert.match(people, /listSections\(\)/, "People must load the authoritative course group list");
+assert.doesNotMatch(people, /context\.value\?\.sections/, "People must not treat the instructor's enrollments as course groups");
+assert.doesNotMatch(
+  people,
+  /selectedGroup\?\.(?:section_name|section_code)[\s\S]{0,100}\|\|\s*groupId/,
+  "A group label must never fall back to a raw UUID"
+);
+assert.match(rosterApi, /action:\s*["']assign_person_section["']/);
+assert.match(rosterApi, /profile_id:\s*profileId/);
+assert.match(rosterApi, /section_id:\s*sectionId/);
+assert.match(people, /assignPersonSection/);
+assert.match(people, /people\.changeGroup/);
+assert.match(people, /people\.assignGroup/);
+assert.match(people, /people\.assignToViewingGroup/);
+assert.match(people, /await refreshContext\(\)/);
+assert.match(sessionEditor, /const \{ session: saved \} = await updateClass/);
+assert.match(sessionEditor, /onSaved\(saved\)/);
+assert.match(sectionEditor, /const \{ section: saved \} = await saveSection/);
+assert.match(sectionEditor, /onSaved\(saved\)/);
 
 if (originalLocalStorage) {
   Object.defineProperty(globalThis, "localStorage", originalLocalStorage);

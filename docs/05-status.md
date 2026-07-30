@@ -451,7 +451,11 @@ day, so they had nowhere to put anyone.
 - **Groups** (`components/Sections.tsx`) — create, edit, retire, reactivate,
   and hand off directly to that group's filtered People roster. Group saves
   echo every persisted field so optional meeting and campus metadata are never
-  cleared accidentally.
+  cleared accidentally. The 2026-07-30 browser follow-up replaced the
+  enrollment-scoped auth-context group list with the authoritative section
+  endpoint and added transactional student group moves. The filtered view can
+  move a current member out or assign another active student into the group;
+  prior enrollment rows remain as dropped history.
   "Group" in the UI, `section` in the schema; the schema word means nothing to a
   professor and design rule #2 forbids leaking it.
 - **Class days** (`components/Schedule.tsx`) — add one per class meeting, edit

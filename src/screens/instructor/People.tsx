@@ -1,12 +1,18 @@
 // I5 People — roster overview, add one person, and CSV roster import.
 // External-access management still ports over from the old app.
 import { useEffect, useState } from "preact/hooks";
-import { callFn } from "../../api/client";
 import type { RosterOverview, Role } from "../../api/types";
+import { listSections, type CourseSection } from "../../api/schedule";
+import {
+  addRosterPerson,
+  assignPersonSection,
+  listRoster,
+  removeRosterPerson
+} from "../../api/roster";
 import { StatusPill } from "../../components/StatusPill";
 import { RosterImport } from "../../components/RosterImport";
 import { StudentNoteHistory } from "../../components/StudentNoteHistory";
-import { context } from "../../state/session";
+import { context, refreshContext } from "../../state/session";
 import { t } from "../../i18n";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
@@ -17,8 +23,61 @@ function canHaveStudentNotes(person: RosterPerson) {
   return person.course_role === "student" || (person.sections ?? []).some((section) => section.role === "student");
 }
 
+function currentStudentSectionId(person: RosterPerson) {
+  return (person.sections ?? []).find(
+    (section) => section.role === "student" && section.status === "active"
+  )?.section_id || "";
+}
+
+function GroupAssignment({
+  person,
+  groups,
+  assigning,
+  onAssign
+}: {
+  person: RosterPerson;
+  groups: CourseSection[];
+  assigning: boolean;
+  onAssign: (sectionId: string) => void;
+}) {
+  const currentSectionId = currentStudentSectionId(person);
+  const [sectionId, setSectionId] = useState(currentSectionId);
+  const availableGroups = groups.filter((group) => ["planned", "active"].includes(group.status));
+
+  return (
+    <div class="stack">
+      <label class="field">
+        {t("people.group")}
+        <select
+          value={sectionId}
+          disabled={assigning}
+          onChange={(event) => setSectionId((event.target as HTMLSelectElement).value)}
+        >
+          <option value="">{t("people.chooseGroup")}</option>
+          {availableGroups.map((group) => (
+            <option value={group.id}>{group.section_name || group.section_code}</option>
+          ))}
+        </select>
+      </label>
+      <button
+        class="btn quiet"
+        type="button"
+        disabled={assigning || !sectionId || sectionId === currentSectionId}
+        onClick={() => onAssign(sectionId)}
+      >
+        {assigning
+          ? t("people.assigningGroup")
+          : currentSectionId
+            ? t("people.changeGroup")
+            : t("people.assignGroup")}
+      </button>
+    </div>
+  );
+}
+
 export function People() {
   const [data, setData] = useState<RosterOverview | null>(null);
+  const [groups, setGroups] = useState<CourseSection[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -32,24 +91,36 @@ export function People() {
   const [reason, setReason] = useState("");
 
   const [removing, setRemoving] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState<string | null>(null);
+  const [profileToAssign, setProfileToAssign] = useState("");
   const [selectedNoteProfile, setSelectedNoteProfile] = useState<RosterPerson | null>(null);
 
-  const sections = context.value?.sections ?? [];
   const myProfileId = context.value?.profile?.id ?? "";
   const groupParam = new URLSearchParams(location.search).get("group");
-  const groupId = groupParam && GROUP_UUID.test(groupParam) ? groupParam : null;
-  const selectedGroup = groupId ? sections.find((section) => section.id === groupId) : null;
+  const requestedGroupId = groupParam && GROUP_UUID.test(groupParam) ? groupParam : null;
+  const selectedGroup = requestedGroupId
+    ? groups?.find((group) => group.id === requestedGroupId) ?? null
+    : null;
+  const groupId = selectedGroup?.id ?? null;
 
-  function load() {
-    callFn<RosterOverview>("course-roster-management")
-      .then((d) => {
-        setData(d);
-        if (!sectionCode && sections[0]) setSectionCode(sections[0].section_code);
-      })
-      .catch((e: Error) => setError(e.message));
+  async function load() {
+    try {
+      const [rosterData, sectionData] = await Promise.all([listRoster(), listSections()]);
+      setData(rosterData);
+      setGroups(sectionData.sections);
+      setSectionCode((current) => {
+        if (sectionData.sections.some((group) => group.section_code === current)) return current;
+        const available = sectionData.sections.find((group) => ["planned", "active"].includes(group.status));
+        return available?.section_code || "";
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("people.loadFailed"));
+    }
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const needsReason =
     email.trim() !== "" &&
@@ -57,6 +128,16 @@ export function People() {
   const roster = groupId
     ? (data?.roster ?? []).filter((person) => (person.sections ?? []).some(({ section_id }) => section_id === groupId))
     : (data?.roster ?? []);
+  const studentsOutsideGroup = groupId
+    ? (data?.roster ?? []).filter((person, index, rows) =>
+        person.course_role === "student" &&
+        person.membership_status === "active" &&
+        person.profile_status === "active" &&
+        person.profile_id !== myProfileId &&
+        currentStudentSectionId(person) !== groupId &&
+        rows.findIndex((candidate) => candidate.profile_id === person.profile_id) === index
+      )
+    : [];
 
   async function removePerson(profileId: string, fullName: string) {
     if (!confirm(t("people.removeConfirm", { name: fullName }))) return;
@@ -64,9 +145,9 @@ export function People() {
     setError(null);
     setRemoving(profileId);
     try {
-      await callFn("course-roster-management", { action: "remove_person", profile_id: profileId });
+      await removeRosterPerson(profileId);
       setNotice(t("people.removed", { name: fullName }));
-      load();
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("people.removeFailed"));
     } finally {
@@ -79,22 +160,42 @@ export function People() {
     setError(null);
     setBusy(true);
     try {
-      await callFn("course-roster-management", {
-        action: "add_person",
+      const result = await addRosterPerson({
         institutional_email: email.trim().toLowerCase(),
         full_name: name.trim(),
         student_identifier: studentId.trim() || undefined,
         role,
         section_code: sectionCode,
-        reason: needsReason ? reason.trim() : undefined
+        external_access_reason: needsReason ? reason.trim() : undefined
       });
+      if (!result.added) throw new Error(result.reason || t("people.addFailed"));
       setNotice(t("people.added", { name: name.trim() || email.trim() }));
       setEmail(""); setName(""); setStudentId(""); setReason("");
-      load();
+      await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("people.addFailed"));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function assignGroup(person: RosterPerson, sectionId: string) {
+    setNotice(null);
+    setError(null);
+    setAssigning(person.profile_id);
+    try {
+      await assignPersonSection(person.profile_id, sectionId);
+      const group = groups?.find((candidate) => candidate.id === sectionId);
+      setNotice(t("people.groupAssigned", {
+        name: person.full_name,
+        group: group?.section_name || group?.section_code || t("people.group")
+      }));
+      await load();
+      await refreshContext();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("people.assignGroupFailed"));
+    } finally {
+      setAssigning(null);
     }
   }
 
@@ -124,7 +225,7 @@ export function People() {
           <label class="field">
             {t("people.section")}
             <select value={sectionCode} onChange={(e) => setSectionCode((e.target as HTMLSelectElement).value)}>
-              {sections.map((s) => (
+              {(groups ?? []).filter((group) => ["planned", "active"].includes(group.status)).map((s) => (
                 <option value={s.section_code}>{s.section_name || s.section_code}</option>
               ))}
             </select>
@@ -167,16 +268,57 @@ export function People() {
         {error ? <p class="error-text" role="alert">{error}</p> : null}
       </div>
 
-      <RosterImport onImported={load} />
+      <RosterImport onImported={() => void load()} />
 
       <h2>{t("people.roster")}</h2>
-      {groupId ? (
-        <div class="row">
-          <span class="pill scheduled">
-            {t("people.viewingGroup", { group: selectedGroup?.section_name || selectedGroup?.section_code || groupId })}
-          </span>
-          <a class="btn quiet" href="/teach/people">{t("people.clearGroup")}</a>
-        </div>
+      {selectedGroup ? (
+        <>
+          <div class="row">
+            <span class="pill scheduled">
+              {t("people.viewingGroup", { group: selectedGroup.section_name || selectedGroup.section_code })}
+            </span>
+            <a class="btn quiet" href="/teach/people">{t("people.clearGroup")}</a>
+          </div>
+          <div class="card stack">
+            <h3>
+              {t("people.assignToViewingGroup", {
+                group: selectedGroup.section_name || selectedGroup.section_code
+              })}
+            </h3>
+            {studentsOutsideGroup.length ? (
+              <div class="row">
+                <label class="field">
+                  {t("people.student")}
+                  <select
+                    value={profileToAssign}
+                    disabled={Boolean(assigning)}
+                    onChange={(event) => setProfileToAssign((event.target as HTMLSelectElement).value)}
+                  >
+                    <option value="">{t("people.chooseStudent")}</option>
+                    {studentsOutsideGroup.map((person) => (
+                      <option value={person.profile_id}>{person.full_name}</option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  class="btn quiet"
+                  type="button"
+                  disabled={Boolean(assigning) || !profileToAssign}
+                  onClick={() => {
+                    const person = studentsOutsideGroup.find((candidate) => candidate.profile_id === profileToAssign);
+                    if (!person) return;
+                    setProfileToAssign("");
+                    void assignGroup(person, selectedGroup.id);
+                  }}
+                >
+                  {assigning ? t("people.assigningGroup") : t("people.assignGroup")}
+                </button>
+              </div>
+            ) : (
+              <p class="hint">{t("people.noStudentsToAssign")}</p>
+            )}
+          </div>
+        </>
       ) : null}
       {!data ? (
         <div class="empty-state"><p>{t("people.loadingRoster")}</p></div>
@@ -194,6 +336,7 @@ export function People() {
                 <th>{t("people.email")}</th>
                 <th>{t("people.col.id")}</th>
                 <th>{t("people.col.roleSection")}</th>
+                <th>{t("people.group")}</th>
                 <th>{t("grades.status")}</th>
                 <th>{t("studentNotes.title")}</th>
                 <th />
@@ -201,7 +344,7 @@ export function People() {
             </thead>
             <tbody>
               {roster.map((person) => (
-                <tr>
+                <tr key={person.profile_id}>
                   <td>{person.full_name}</td>
                   <td>{person.institutional_email}</td>
                   <td>{person.student_identifier ?? "—"}</td>
@@ -211,6 +354,19 @@ export function People() {
                       .map((s) => `${t(`role.${s.role}`)} · ${s.section_code}`)
                       .join(", ") ||
                       (person.course_role ? t(`role.${person.course_role}`) : "—")}
+                  </td>
+                  <td>
+                    {person.course_role === "student" &&
+                    person.membership_status === "active" &&
+                    person.profile_status === "active" &&
+                    person.profile_id !== myProfileId ? (
+                      <GroupAssignment
+                        person={person}
+                        groups={groups ?? []}
+                        assigning={assigning === person.profile_id}
+                        onAssign={(sectionId) => void assignGroup(person, sectionId)}
+                      />
+                    ) : "—"}
                   </td>
                   <td>
                     {/* Removal deactivates the *membership*; it deliberately does

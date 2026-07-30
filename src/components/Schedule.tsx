@@ -197,7 +197,7 @@ export function Schedule() {
                             session={session}
                             sections={sections}
                             lectures={lectures}
-                            onSaved={() => void onSessionSaved(session)}
+                            onSaved={(saved) => void onSessionSaved(saved)}
                             onCancel={() => setEditingSessionId(null)}
                           />
                         </td>

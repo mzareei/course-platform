@@ -5,7 +5,7 @@
 // Shapes below were read off validateRosterRows / applyRoster in
 // supabase/functions/course-roster-management/index.ts. See pitfalls #3.
 import { callFn } from "./client";
-import type { Role } from "./types";
+import type { Role, RosterOverview } from "./types";
 import type { RosterRow } from "./csv";
 
 export { parseCsv, rosterFromCsv, MAX_ROSTER_ROWS } from "./csv";
@@ -41,6 +41,47 @@ export interface RosterApplyResult extends RosterPreview {
 }
 
 export const ROSTER_ROLES: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
+
+export function listRoster() {
+  return callFn<RosterOverview>("course-roster-management");
+}
+
+export function addRosterPerson(input: {
+  institutional_email: string;
+  full_name: string;
+  student_identifier?: string;
+  role: Role;
+  section_code: string;
+  external_access_reason?: string;
+}) {
+  return callFn<{ added: boolean; reason?: string }>("course-roster-management", {
+    action: "add_person",
+    ...input
+  });
+}
+
+export function removeRosterPerson(profileId: string) {
+  return callFn<{ removed: boolean; roster: RosterOverview["roster"] }>(
+    "course-roster-management",
+    { action: "remove_person", profile_id: profileId }
+  );
+}
+
+export function assignPersonSection(profileId: string, sectionId: string) {
+  return callFn<{
+    assignment: {
+      profile_id: string;
+      before_section_ids: string[];
+      target_section_id: string;
+      target_section_code: string;
+    };
+    roster: RosterOverview["roster"];
+  }>("course-roster-management", {
+    action: "assign_person_section",
+    profile_id: profileId,
+    section_id: sectionId
+  });
+}
 
 export function previewRoster(rows: RosterRow[]) {
   return callFn<RosterPreview>("course-roster-management", { action: "preview_roster", rows });

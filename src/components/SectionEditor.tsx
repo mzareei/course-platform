@@ -4,7 +4,7 @@ import { t } from "../i18n";
 
 type SectionEditorProps = {
   section: CourseSection;
-  onSaved: () => void;
+  onSaved: (saved: CourseSection) => void;
   onCancel: () => void;
 };
 
@@ -32,7 +32,7 @@ export function SectionEditor({ section, onSaved, onCancel }: SectionEditorProps
     setError(null);
     setSaving(true);
     try {
-      await saveSection({
+      const { section: saved } = await saveSection({
         section_id: section.id,
         section_code: code.trim(),
         section_name: name.trim(),
@@ -40,7 +40,7 @@ export function SectionEditor({ section, onSaved, onCancel }: SectionEditorProps
         campus: campus.trim() || null,
         status
       });
-      onSaved();
+      onSaved(saved);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("sections.saveFailed"));
     } finally {

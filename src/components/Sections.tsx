@@ -156,7 +156,7 @@ export function Sections() {
                         <td colSpan={5}>
                           <SectionEditor
                             section={section}
-                            onSaved={() => void onSectionSaved(section)}
+                            onSaved={(saved) => void onSectionSaved(saved)}
                             onCancel={() => setEditingSectionId(null)}
                           />
                         </td>
