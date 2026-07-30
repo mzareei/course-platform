@@ -17,6 +17,11 @@ const live = readFileSync("src/screens/student/Live.tsx", "utf8");
 const app = readFileSync("src/app.tsx", "utf8");
 const classesApi = readFileSync("src/api/classes.ts", "utf8");
 const studentNotesApi = readFileSync("src/api/studentNotes.ts", "utf8");
+const schedule = readFileSync("src/components/Schedule.tsx", "utf8");
+const sections = readFileSync("src/components/Sections.tsx", "utf8");
+const sessionEditor = readFileSync("src/components/SessionEditor.tsx", "utf8");
+const sectionEditor = readFileSync("src/components/SectionEditor.tsx", "utf8");
+const people = readFileSync("src/screens/instructor/People.tsx", "utf8");
 
 assert.match(types, /student_sessions\??:\s*StudentSession\[\]/);
 assert.match(today, /ctx\.student_sessions/);
@@ -73,6 +78,32 @@ assert.match(studentNotesApi, /action:\s*["']list_session["']/);
 assert.match(studentNotesApi, /action:\s*["']list_student["']/);
 assert.match(studentNotesApi, /action:\s*["']create["']/);
 assert.match(studentNotesApi, /action:\s*["']resolve["']/);
+
+// A class can only be corrected before it has actually begun. This prevents a
+// professor from changing the group, date, or lecture under students mid-class.
+assert.match(schedule, /const EDITABLE_SESSION_STATES = \["planned", "open", "continued"\]/);
+assert.match(schedule, /session\.actual_start_at == null/);
+assert.match(schedule, /<SessionEditor/);
+assert.match(sessionEditor, /updateClass/);
+assert.match(sessionEditor, /content_item_id:\s*contentItemId \|\| null/);
+
+// save_section replaces its row, so the inline editor must echo every persisted
+// field instead of accidentally erasing the optional group metadata.
+assert.match(sections, /<SectionEditor/);
+assert.match(sectionEditor, /saveSection/);
+assert.match(sectionEditor, /section_code:\s*code\.trim\(\)/);
+assert.match(sectionEditor, /section_name:\s*name\.trim\(\)/);
+assert.match(sectionEditor, /meeting_pattern:\s*meetingPattern\.trim\(\) \|\| null/);
+assert.match(sectionEditor, /campus:\s*campus\.trim\(\) \|\| null/);
+assert.match(sectionEditor, /status/);
+assert.match(sections, /href=\{`\/teach\/people\?group=\$\{section\.id\}`\}/);
+
+// Group links must be safe to share and easy to leave: accept only a UUID and
+// render a clear route without the query parameter.
+assert.match(people, /new URLSearchParams\(location\.search\)\.get\("group"\)/);
+assert.match(people, /GROUP_UUID\.test\(groupParam\)/);
+assert.match(people, /section_id === groupId/);
+assert.match(people, /href="\/teach\/people"/);
 
 if (originalLocalStorage) {
   Object.defineProperty(globalThis, "localStorage", originalLocalStorage);

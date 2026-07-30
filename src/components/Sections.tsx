@@ -12,6 +12,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { listSections, saveSection, type CourseSection } from "../api/schedule";
 import { StatusPill } from "./StatusPill";
+import { SectionEditor } from "./SectionEditor";
 import { refreshContext } from "../state/session";
 import { t } from "../i18n";
 
@@ -20,6 +21,7 @@ export function Sections() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
 
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -84,6 +86,13 @@ export function Sections() {
     }
   }
 
+  async function onSectionSaved(section: CourseSection) {
+    setEditingSectionId(null);
+    setNotice(t("sections.saved", { code: section.section_code }));
+    await load();
+    await refreshContext();
+  }
+
   if (!sections) return <div class="empty-state"><p>{t("app.loading")}</p></div>;
 
   return (
@@ -112,22 +121,48 @@ export function Sections() {
               {sections.map((section) => {
                 const live = section.status === "active" || section.status === "planned";
                 return (
-                  <tr>
-                    <td>{section.section_code}</td>
-                    <td>{section.section_name}</td>
-                    <td>{section.meeting_pattern || "—"}</td>
-                    <td><StatusPill state={section.status} /></td>
-                    <td>
-                      <button
-                        class="btn quiet"
-                        type="button"
-                        disabled={busy === section.id}
-                        onClick={() => void onToggle(section)}
-                      >
-                        {live ? t("sections.retire") : t("sections.reactivate")}
-                      </button>
-                    </td>
-                  </tr>
+                  <>
+                    <tr>
+                      <td>{section.section_code}</td>
+                      <td>{section.section_name}</td>
+                      <td>{section.meeting_pattern || "—"}</td>
+                      <td><StatusPill state={section.status} /></td>
+                      <td>
+                        <div class="row" style="gap: 0.3rem;">
+                          <button
+                            class="btn quiet"
+                            type="button"
+                            disabled={busy === section.id}
+                            onClick={() => setEditingSectionId(section.id)}
+                          >
+                            {t("sections.edit")}
+                          </button>
+                          <a class="btn quiet" href={`/teach/people?group=${section.id}`}>
+                            {t("sections.members")}
+                          </a>
+                          <button
+                            class="btn quiet"
+                            type="button"
+                            disabled={busy === section.id}
+                            onClick={() => void onToggle(section)}
+                          >
+                            {live ? t("sections.retire") : t("sections.reactivate")}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {editingSectionId === section.id ? (
+                      <tr>
+                        <td colSpan={5}>
+                          <SectionEditor
+                            section={section}
+                            onSaved={() => void onSectionSaved(section)}
+                            onCancel={() => setEditingSectionId(null)}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </>
                 );
               })}
             </tbody>

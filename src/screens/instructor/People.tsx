@@ -9,6 +9,7 @@ import { context } from "../../state/session";
 import { t } from "../../i18n";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
+const GROUP_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function People() {
   const [data, setData] = useState<RosterOverview | null>(null);
@@ -28,6 +29,9 @@ export function People() {
 
   const sections = context.value?.sections ?? [];
   const myProfileId = context.value?.profile?.id ?? "";
+  const groupParam = new URLSearchParams(location.search).get("group");
+  const groupId = groupParam && GROUP_UUID.test(groupParam) ? groupParam : null;
+  const selectedGroup = groupId ? sections.find((section) => section.id === groupId) : null;
 
   function load() {
     callFn<RosterOverview>("course-roster-management")
@@ -43,6 +47,9 @@ export function People() {
   const needsReason =
     email.trim() !== "" &&
     !(data?.allowed_domains ?? []).some((d) => email.trim().toLowerCase().endsWith(`@${d}`));
+  const roster = groupId
+    ? (data?.roster ?? []).filter((person) => (person.sections ?? []).some(({ section_id }) => section_id === groupId))
+    : (data?.roster ?? []);
 
   async function removePerson(profileId: string, fullName: string) {
     if (!confirm(t("people.removeConfirm", { name: fullName }))) return;
@@ -156,12 +163,20 @@ export function People() {
       <RosterImport onImported={load} />
 
       <h2>{t("people.roster")}</h2>
+      {groupId ? (
+        <div class="row">
+          <span class="pill scheduled">
+            {t("people.viewingGroup", { group: selectedGroup?.section_name || selectedGroup?.section_code || groupId })}
+          </span>
+          <a class="btn quiet" href="/teach/people">{t("people.clearGroup")}</a>
+        </div>
+      ) : null}
       {!data ? (
         <div class="empty-state"><p>{t("people.loadingRoster")}</p></div>
-      ) : data.roster.length === 0 ? (
+      ) : roster.length === 0 ? (
         <div class="empty-state card">
           <h3>{t("people.emptyTitle")}</h3>
-          <p>{t("people.emptyBody")}</p>
+          <p>{groupId ? t("people.groupEmpty") : t("people.emptyBody")}</p>
         </div>
       ) : (
         <div class="table-scroll">
@@ -177,7 +192,7 @@ export function People() {
               </tr>
             </thead>
             <tbody>
-              {data.roster.map((person) => (
+              {roster.map((person) => (
                 <tr>
                   <td>{person.full_name}</td>
                   <td>{person.institutional_email}</td>

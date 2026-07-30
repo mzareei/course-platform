@@ -15,10 +15,12 @@ import { createClass } from "../api/classes";
 import { contentLibrary, type ContentItem } from "../api/content";
 import { canReleaseToReview } from "../api/contentVisibility";
 import { StatusPill } from "./StatusPill";
+import { SessionEditor } from "./SessionEditor";
 import { refreshContext } from "../state/session";
 import { t, formatDay } from "../i18n";
 
 const RUNNABLE = ["planned", "open", "live", "paused", "continued"];
+const EDITABLE_SESSION_STATES = ["planned", "open", "continued"];
 
 const dayLabel = (v: string) => formatDay(v, { weekday: "short", month: "short", day: "numeric" });
 
@@ -29,6 +31,7 @@ export function Schedule() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
   const [date, setDate] = useState("");
   const [title, setTitle] = useState("");
@@ -101,6 +104,13 @@ export function Schedule() {
     }
   }
 
+  async function onSessionSaved(session: ClassSession) {
+    setEditingSessionId(null);
+    setNotice(t("schedule.saved", { title: session.title }));
+    await load();
+    await refreshContext();
+  }
+
   if (error && !sessions) return <p class="error-text" role="alert">{error}</p>;
   if (!sessions || !sections || !lectures) {
     return <div class="empty-state"><p>{t("schedule.loading")}</p></div>;
@@ -141,33 +151,59 @@ export function Schedule() {
             <tbody>
               {visible.map((session) => {
                 const section = sectionById.get(session.section_id);
+                const editable =
+                  EDITABLE_SESSION_STATES.includes(session.state) && session.actual_start_at == null;
                 return (
-                  <tr>
-                    <td>{dayLabel(session.planned_date)}</td>
-                    <td>{session.title}</td>
-                    <td>{section?.section_code ?? session.section_code ?? "—"}</td>
-                    <td>{session.content_title || t("schedule.noLecture")}</td>
-                    <td><StatusPill state={session.state} /></td>
-                    <td>
-                      <div class="row" style="gap: 0.3rem;">
-                        {RUNNABLE.includes(session.state) ? (
-                          <a class="btn quiet" href={`/teach/run/${session.session_id}`}>
-                            {t("schedule.run")}
-                          </a>
-                        ) : null}
-                        {session.state === "planned" ? (
-                          <button
-                            class="btn quiet"
-                            type="button"
-                            disabled={busy === session.session_id}
-                            onClick={() => void onCancel(session)}
-                          >
-                            {t("schedule.cancel")}
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
+                  <>
+                    <tr>
+                      <td>{dayLabel(session.planned_date)}</td>
+                      <td>{session.title}</td>
+                      <td>{section?.section_code ?? session.section_code ?? "—"}</td>
+                      <td>{session.content_title || t("schedule.noLecture")}</td>
+                      <td><StatusPill state={session.state} /></td>
+                      <td>
+                        <div class="row" style="gap: 0.3rem;">
+                          {RUNNABLE.includes(session.state) ? (
+                            <a class="btn quiet" href={`/teach/run/${session.session_id}`}>
+                              {t("schedule.run")}
+                            </a>
+                          ) : null}
+                          {editable ? (
+                            <button
+                              class="btn quiet"
+                              type="button"
+                              onClick={() => setEditingSessionId(session.session_id)}
+                            >
+                              {t("schedule.edit")}
+                            </button>
+                          ) : null}
+                          {session.state === "planned" ? (
+                            <button
+                              class="btn quiet"
+                              type="button"
+                              disabled={busy === session.session_id}
+                              onClick={() => void onCancel(session)}
+                            >
+                              {t("schedule.cancel")}
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                    {editingSessionId === session.session_id ? (
+                      <tr>
+                        <td colSpan={6}>
+                          <SessionEditor
+                            session={session}
+                            sections={sections}
+                            lectures={lectures}
+                            onSaved={() => void onSessionSaved(session)}
+                            onCancel={() => setEditingSessionId(null)}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </>
                 );
               })}
             </tbody>

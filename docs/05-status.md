@@ -437,11 +437,15 @@ and the v2 app had no caller, and together they blocked onboarding a second
 professor: invited through Admin, they could create neither a group nor a class
 day, so they had nowhere to put anyone.
 
-- **Groups** (`components/Sections.tsx`) — create, rename, retire, reactivate.
+- **Groups** (`components/Sections.tsx`) — create, edit, retire, reactivate,
+  and hand off directly to that group's filtered People roster. Group saves
+  echo every persisted field so optional meeting and campus metadata are never
+  cleared accidentally.
   "Group" in the UI, `section` in the schema; the schema word means nothing to a
   professor and design rule #2 forbids leaking it.
-- **Class days** (`components/Schedule.tsx`) — add one per class meeting, cancel
-  a planned one, run it. New backend action `create_session`, which assigns the
+- **Class days** (`components/Schedule.tsx`) — add one per class meeting, edit
+  an unstarted planned/open/continued class (including replacing its lecture),
+  cancel a planned one, run it. New backend action `create_session`, which assigns the
   sequence number server-side because `class_sessions` has
   `unique (section_id, sequence_number)`.
 - **Remove a person** (People roster) — new backend action `remove_person`.
