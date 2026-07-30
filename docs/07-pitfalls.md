@@ -592,3 +592,27 @@ authentication recovery changes.
 The QR itself identifies only the class session. Encoding a question or pulse
 round would force students to rescan during class and couple joining to content
 that expires within seconds.
+
+---
+
+## 28. An outline is not a slide coordinate system
+
+Questions used to be generated from the extracted lecture outline while the
+deck was generated in a separate step. That works for a topic-level bank, but
+it cannot answer the live-class question that matters: *has this exact material
+already appeared on a finalized teaching slide?*
+
+Guessing slide ranges from the outline would create metadata that looks precise
+and is impossible to verify. Generating questions before slide numbering also
+lets a later deck rewrite move the cited idea beyond its supposed checkpoint.
+
+**Rule:** finalize and sequentially number the teaching slides first, then give
+that exact JSON to question generation. Require every question to cite only
+slides at or before its checkpoint, validate the range against the cited
+numbers, and reject the whole bank before any insert when coverage is wrong.
+
+The database range check is a last line of defence, not the quality gate. It
+cannot prove that a cited slide contains the answer or that a bank has 18
+questions, a 6/6/6 balance, 3–5 checkpoints and two candidates per checkpoint.
+Those invariants live in one shared backend validator used by every generated
+insert path.

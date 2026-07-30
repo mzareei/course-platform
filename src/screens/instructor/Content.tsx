@@ -12,6 +12,7 @@ import {
   IN_FLIGHT, type GenerationJob, type GeneratedQuestion
 } from "../../api/generation";
 import { ContentLibraryView } from "../../components/ContentLibrary";
+import { QuestionBanks } from "../../components/QuestionBanks";
 
 const POLL_MS = 5000;
 type ContentTab = "library" | "banks" | "generate";
@@ -118,10 +119,7 @@ export function Content() {
       </div>
 
       {tab === "library" ? <ContentLibraryView /> : tab === "banks" ? (
-        <div class="empty-state card">
-          <h2>{t("content.banks.title")}</h2>
-          <p>{t("content.banks.body")}</p>
-        </div>
+        <QuestionBanks />
       ) : (
       <>
       <p class="hint">{t("content.lede")}</p>
@@ -313,6 +311,19 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
                   {t(`quiz.difficulty.${question.difficulty}` as "quiz.difficulty.easy")}
                 </span>
               </div>
+              {question.source_slide_start !== null
+                && question.source_slide_end !== null
+                && question.checkpoint_after_slide !== null ? (
+                  <p class="hint">
+                    {t("content.questionCheckpoint", {
+                      start: question.source_slide_start,
+                      end: question.source_slide_end,
+                      checkpoint: question.checkpoint_after_slide
+                    })}
+                  </p>
+                ) : (
+                  <p class="error-text">{t("content.questionCheckpointMissing")}</p>
+                )}
               <div class="stack" style="gap: 0.25rem;">
                 {question.question_options
                   .slice()

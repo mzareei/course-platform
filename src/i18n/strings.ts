@@ -809,7 +809,51 @@ export const strings = {
     "Questions are used only during a live class. Question-bank readiness is professor-only.",
     "Las preguntas se usan solo durante una clase en vivo. La preparación del banco de preguntas es solo para el profesor."
   ],
-
+  "content.banks.loading": ["Loading question banks…", "Cargando bancos de preguntas…"],
+  "content.banks.loadFailed": [
+    "Could not load the question banks.",
+    "No se pudieron cargar los bancos de preguntas."
+  ],
+  "content.banks.emptyTitle": ["No question banks yet", "Aún no hay bancos de preguntas"],
+  "content.banks.emptyBody": [
+    "Generate a lecture from a PDF to create its questions automatically.",
+    "Genera una clase desde un PDF para crear sus preguntas automáticamente."
+  ],
+  "content.banks.lede": [
+    "Questions stay professor-only and are used only during a live class. Each bank shows whether its questions are balanced and ready at the right teaching checkpoints.",
+    "Las preguntas son solo para el profesor y se usan únicamente durante una clase en vivo. Cada banco muestra si están equilibradas y listas en los puntos de control correctos."
+  ],
+  "content.banks.total": [
+    "{count} generated questions",
+    "{count} preguntas generadas"
+  ],
+  "content.banks.ready": ["Ready for class", "Listo para la clase"],
+  "content.banks.needsAttention": ["Needs attention", "Necesita atención"],
+  "content.banks.checkpointCount": [
+    "{count} checkpoints",
+    "{count} puntos de control"
+  ],
+  "content.banks.checkpoint": [
+    "Checkpoint {number} · after slide {slide}",
+    "Punto de control {number} · después de la diapositiva {slide}"
+  ],
+  "content.banks.candidates": [
+    "{count} candidate questions",
+    "{count} preguntas candidatas"
+  ],
+  "content.banks.missingMetadata": [
+    "This earlier bank is not mapped to teaching slides yet. Prepare its checkpoints before using it during class.",
+    "Este banco anterior aún no está vinculado con las diapositivas de clase. Prepara sus puntos de control antes de usarlo durante la clase."
+  ],
+  "content.banks.prepare": ["Prepare checkpoints", "Preparar puntos de control"],
+  "content.banks.invalidMetadata": [
+    "This bank needs exactly 18 questions, a 6/6/6 difficulty balance, 3–5 checkpoints, and at least 2 candidates at each checkpoint.",
+    "Este banco necesita exactamente 18 preguntas, un equilibrio de dificultad 6/6/6, de 3 a 5 puntos de control y al menos 2 candidatas en cada punto."
+  ],
+  "content.banks.readyBody": [
+    "Every question is mapped to a teaching checkpoint.",
+    "Cada pregunta está vinculada con un punto de control de la clase."
+  ],
 
   "content.uploadTitle": ["New lecture from a PDF", "Nueva clase desde un PDF"],
   "content.uploadBody": [
@@ -857,6 +901,14 @@ export const strings = {
   "content.questionCounts": [
     "{easy} easy · {medium} medium · {hard} hard",
     "{easy} fáciles · {medium} medias · {hard} difíciles"
+  ],
+  "content.questionCheckpoint": [
+    "Source slides {start}–{end} · available after slide {checkpoint}",
+    "Diapositivas fuente {start}–{end} · disponible después de la diapositiva {checkpoint}"
+  ],
+  "content.questionCheckpointMissing": [
+    "This question is not mapped to a teaching checkpoint yet.",
+    "Esta pregunta aún no está vinculada con un punto de control de la clase."
   ],
   "content.approve": ["Approve this lecture", "Aprobar esta clase"],
   "content.approving": ["Approving…", "Aprobando…"],

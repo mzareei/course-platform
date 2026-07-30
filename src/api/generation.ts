@@ -31,6 +31,11 @@ export interface GeneratedQuestion {
   prompt: string;
   prompt_es: string | null;
   difficulty: "easy" | "medium" | "hard";
+  segment_key: string | null;
+  source_slide_numbers: number[];
+  source_slide_start: number | null;
+  source_slide_end: number | null;
+  checkpoint_after_slide: number | null;
   status: string;
   question_options: GeneratedOption[];
 }

@@ -360,6 +360,34 @@ them. Confirmed the Remove button is absent on your own row.
    `profile_status` — which removal deliberately does not change — over
    `membership_status` (pitfall #20).
 
+### Coherent lifecycle: generated slide checkpoints — **IMPLEMENTED LOCALLY, NOT DEPLOYED**
+
+Built 2026-07-29 across both repositories. Newly generated banks now carry a
+stable concept segment, cited finalized slide numbers, a source range, and the
+exact slide after which each question may be asked.
+
+- Generated slides have sequential one-based `slide_number` values.
+- Question generation receives the finalized slide JSON, not the earlier
+  outline, and is rejected unless it produces exactly 18 questions, exactly
+  6/6/6 by difficulty, 3–5 checkpoints for a normal 18–50-slide lecture, and at
+  least two candidates at every checkpoint.
+- One shared backend validator guards the worker and `import_bank`; both
+  persistence paths write the same five columns.
+- `list_banks`, `draw_question`, and generation `review_bundle` return the
+  checkpoint fields their consumers use. The Question banks tab now shows
+  balance, coverage and legacy-bank warnings. It has no release action:
+  question banks remain professor-only inputs to a live class.
+- Legacy banks are deliberately left untouched. Their **Prepare checkpoints**
+  control is present only when metadata is missing; the following lifecycle
+  increment wires the backfill action.
+
+**Local evidence:** the checkpoint verifier passed, frontend typecheck passed,
+all seven frontend verifiers passed, and the production build passed. Migration
+`0021_slide_checkpoints.sql` and the three changed functions have **not** been
+applied or deployed from this isolated task. No live generation was run because
+there was no disposable instructor-authenticated fixture, and this increment
+must not overwrite an existing private deck.
+
 ### 9. Phase 6 cleanup
 - Strip lecture/mission content from the public `mzareei.github.io` repo.
 - Point the syllabus at the new app; turn old Gen-2 app pages into redirects.
