@@ -397,6 +397,41 @@ export const strings = {
     "No se pudo cargar esta clase."
   ],
 
+  // ---------------------------------------------------------- student notes
+  "studentNotes.title": ["Private notes", "Notas privadas"],
+  "studentNotes.pickStudent": ["Choose a student", "Elige un estudiante"],
+  "studentNotes.pickStudentBody": [
+    "Choose a student to add a private note for this class and review their notes from it.",
+    "Elige un estudiante para agregar una nota privada de esta clase y revisar sus notas de ella."
+  ],
+  "studentNotes.noStudents": [
+    "No students are enrolled in this class group.",
+    "No hay estudiantes inscritos en el grupo de esta clase."
+  ],
+  "studentNotes.for": ["Notes for {name}", "Notas de {name}"],
+  "studentNotes.text": ["Private note", "Nota privada"],
+  "studentNotes.textPlaceholder": [
+    "Record an observation, agreement, or next step.",
+    "Registra una observación, acuerdo o siguiente paso."
+  ],
+  "studentNotes.textRequired": ["Write a note before saving it.", "Escribe una nota antes de guardarla."],
+  "studentNotes.needsFollowUp": ["Needs follow-up", "Requiere seguimiento"],
+  "studentNotes.add": ["Add note", "Agregar nota"],
+  "studentNotes.adding": ["Adding note…", "Agregando nota…"],
+  "studentNotes.createFailed": ["Could not add this note.", "No se pudo agregar esta nota."],
+  "studentNotes.history": ["Note history", "Historial de notas"],
+  "studentNotes.loading": ["Loading notes…", "Cargando notas…"],
+  "studentNotes.none": ["No private notes yet.", "Aún no hay notas privadas."],
+  "studentNotes.loadFailed": ["Could not load these notes.", "No se pudieron cargar estas notas."],
+  "studentNotes.details": ["On {date} · {author} · {time}", "{date} · {author} · {time}"],
+  "studentNotes.unknownAuthor": ["Unknown author", "Autor desconocido"],
+  "studentNotes.resolve": ["Resolve follow-up", "Resolver seguimiento"],
+  "studentNotes.resolving": ["Resolving…", "Resolviendo…"],
+  "studentNotes.resolved": ["Follow-up resolved", "Seguimiento resuelto"],
+  "studentNotes.resolveFailed": ["Could not resolve this follow-up.", "No se pudo resolver este seguimiento."],
+  "studentNotes.open": ["Notes", "Notas"],
+  "studentNotes.close": ["Close notes", "Cerrar notas"],
+
   // ---------------------------------------------------------------- people
   "people.eyebrow": ["Administration", "Administración"],
   "people.title": ["People", "Personas"],

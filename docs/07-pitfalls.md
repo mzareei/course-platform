@@ -849,3 +849,16 @@ but could not reliably accept the native dialog through browser control.
 button and renders the consequences beside it; the second click performs the
 write. This is easier to test, clearer on projector and phone screens, and does
 not depend on browser-owned modal behavior.
+
+---
+
+## 37. Private student notes need both the class and the profile scope
+
+A profile-wide history is useful in People, but it is not a per-class record.
+Showing it unfiltered in Gradebook silently mixes notes from other class days;
+using a session-only list makes it easy to write against the wrong student.
+
+**Rule:** a Gradebook note composer always receives the selected
+`class_session_id` and `profile_id`; its history loads the session then filters
+to that profile. People may load the profile-wide history, but students must
+never import or call the private-notes API.

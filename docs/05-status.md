@@ -271,6 +271,17 @@ The latest deployed frontend bundle is `index-CkfQNyoZ.js` from commit
 `bb3a1eb`. Backend `main` is `aa15490`; migrations 0020–0023 and all nine
 coherent-lifecycle functions are deployed.
 
+### 0.7 Private class notes — **IMPLEMENTED LOCALLY; AWAITING DEPLOYMENT**
+
+Instructors can append private notes for an exact class session and enrolled
+student from Gradebook → Per class. Notes can be marked for follow-up; the
+original text remains immutable and only an open follow-up exposes Resolve.
+People opens the same profile-scoped history across all class sessions. The
+note API is deliberately absent from student screens. The composer, history,
+and a dedicated verifier are in the frontend; typecheck and production build
+pass. Deploy and exercise the instructor workflow after the corresponding
+`course-student-notes` function is available in production.
+
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
 platform, all driven by automation on one machine. Run one complete class.

@@ -5,11 +5,17 @@ import { callFn } from "../../api/client";
 import type { RosterOverview, Role } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
 import { RosterImport } from "../../components/RosterImport";
+import { StudentNoteHistory } from "../../components/StudentNoteHistory";
 import { context } from "../../state/session";
 import { t } from "../../i18n";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
 const GROUP_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type RosterPerson = RosterOverview["roster"][number];
+
+function canHaveStudentNotes(person: RosterPerson) {
+  return person.course_role === "student" || (person.sections ?? []).some((section) => section.role === "student");
+}
 
 export function People() {
   const [data, setData] = useState<RosterOverview | null>(null);
@@ -26,6 +32,7 @@ export function People() {
   const [reason, setReason] = useState("");
 
   const [removing, setRemoving] = useState<string | null>(null);
+  const [selectedNoteProfile, setSelectedNoteProfile] = useState<RosterPerson | null>(null);
 
   const sections = context.value?.sections ?? [];
   const myProfileId = context.value?.profile?.id ?? "";
@@ -188,6 +195,7 @@ export function People() {
                 <th>{t("people.col.id")}</th>
                 <th>{t("people.col.roleSection")}</th>
                 <th>{t("grades.status")}</th>
+                <th>{t("studentNotes.title")}</th>
                 <th />
               </tr>
             </thead>
@@ -203,6 +211,17 @@ export function People() {
                       .map((s) => `${t(`role.${s.role}`)} · ${s.section_code}`)
                       .join(", ") ||
                       (person.course_role ? t(`role.${person.course_role}`) : "—")}
+                  </td>
+                  <td>
+                    {canHaveStudentNotes(person) ? (
+                      <button
+                        class="btn quiet"
+                        type="button"
+                        onClick={() => setSelectedNoteProfile(person)}
+                      >
+                        {t("studentNotes.open")}
+                      </button>
+                    ) : "—"}
                   </td>
                   <td>
                     {/* Removal deactivates the *membership*; it deliberately does
@@ -234,6 +253,18 @@ export function People() {
           </table>
         </div>
       )}
+
+      {selectedNoteProfile ? (
+        <section class="card stack">
+          <div class="row" style="justify-content: space-between;">
+            <h2>{t("studentNotes.for", { name: selectedNoteProfile.full_name })}</h2>
+            <button class="btn quiet" type="button" onClick={() => setSelectedNoteProfile(null)}>
+              {t("studentNotes.close")}
+            </button>
+          </div>
+          <StudentNoteHistory profileId={selectedNoteProfile.profile_id} />
+        </section>
+      ) : null}
 
       {data?.external_access?.length ? (
         <>

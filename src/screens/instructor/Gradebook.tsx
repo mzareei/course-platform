@@ -3,8 +3,10 @@
 // arrives.
 import { useEffect, useState } from "preact/hooks";
 import { callFn } from "../../api/client";
-import type { GradebookSummary } from "../../api/types";
+import type { GradebookSummary, RosterOverview } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
+import { StudentNoteComposer } from "../../components/StudentNoteComposer";
+import { StudentNoteHistory } from "../../components/StudentNoteHistory";
 import { context } from "../../state/session";
 import { classPulseRounds, type PulseRoundReview } from "../../api/pulse";
 import { classQuizSummary, type QuizAttemptSummary } from "../../api/quiz";
@@ -39,7 +41,24 @@ function PerClassReview() {
   const [rounds, setRounds] = useState<PulseRoundReview[] | null>(null);
   const [attempts, setAttempts] = useState<QuizAttemptSummary[] | null>(null);
   const [reflections, setReflections] = useState<ClassReflection[] | null>(null);
+  const [roster, setRoster] = useState<RosterOverview["roster"] | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [noteRefreshKey, setNoteRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    callFn<RosterOverview>("course-roster-management")
+      .then(({ roster: loadedRoster }) => {
+        if (!cancelled) setRoster(loadedRoster);
+      })
+      .catch(() => {
+        if (!cancelled) setRoster([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -67,6 +86,10 @@ function PerClassReview() {
     };
   }, [sessionId]);
 
+  useEffect(() => {
+    setSelectedStudentId("");
+  }, [sessionId]);
+
   if (!sessions.length) {
     return (
       <div class="empty-state card">
@@ -81,6 +104,13 @@ function PerClassReview() {
   const average = scored.length
     ? Math.round(scored.reduce((sum, a) => sum + Number(a.score_percent), 0) / scored.length)
     : 0;
+  const selectedSession = sessions.find((session) => session.session_id === sessionId);
+  const sessionStudents = (roster ?? []).filter((person) =>
+    (person.sections ?? []).some((section) =>
+      section.section_id === selectedSession?.section_id && section.role === "student"
+    )
+  );
+  const selectedStudent = sessionStudents.find((student) => student.profile_id === selectedStudentId);
 
   return (
     <div class="stack">
@@ -106,6 +136,46 @@ function PerClassReview() {
         <div class="empty-state"><p>{t("gradebook.perClass.loading")}</p></div>
       ) : (
         <>
+          <section class="card stack">
+            <h2>{t("studentNotes.title")}</h2>
+            {roster === null ? (
+              <p class="hint" role="status">{t("studentNotes.loading")}</p>
+            ) : !sessionStudents.length ? (
+              <p class="hint">{t("studentNotes.noStudents")}</p>
+            ) : (
+              <>
+                <label class="field" style="max-width: 26rem;">
+                  {t("studentNotes.pickStudent")}
+                  <select
+                    value={selectedStudentId}
+                    onChange={(e) => setSelectedStudentId((e.target as HTMLSelectElement).value)}
+                  >
+                    <option value="">{t("studentNotes.pickStudent")}</option>
+                    {sessionStudents.map((student) => (
+                      <option value={student.profile_id}>{student.full_name}</option>
+                    ))}
+                  </select>
+                </label>
+                {selectedStudent ? (
+                  <div class="stack">
+                    <h3>{t("studentNotes.for", { name: selectedStudent.full_name })}</h3>
+                    <StudentNoteComposer
+                      classSessionId={sessionId}
+                      profileId={selectedStudentId}
+                      onCreated={() => setNoteRefreshKey((key) => key + 1)}
+                    />
+                    <h3>{t("studentNotes.history")}</h3>
+                    <StudentNoteHistory
+                      classSessionId={sessionId}
+                      profileId={selectedStudentId}
+                      refreshKey={noteRefreshKey}
+                    />
+                  </div>
+                ) : <p class="hint">{t("studentNotes.pickStudentBody")}</p>}
+              </>
+            )}
+          </section>
+
           <section class="card stack">
             <h2>{t("gradebook.perClass.questions")}</h2>
             {!rounds.length ? (
@@ -167,6 +237,7 @@ function PerClassReview() {
                         <th>{t("grades.status")}</th>
                         <th>{t("gradebook.col.score")}</th>
                         <th>{t("gradebook.col.submittedAt")}</th>
+                        <th />
                       </tr>
                     </thead>
                     <tbody>
@@ -178,6 +249,15 @@ function PerClassReview() {
                             {typeof attempt.score_percent === "number" ? `${Math.round(attempt.score_percent)}%` : "—"}
                           </td>
                           <td class="num">{timeOf(attempt.submitted_at)}</td>
+                          <td>
+                            <button
+                              class="btn quiet"
+                              type="button"
+                              onClick={() => setSelectedStudentId(attempt.profile_id)}
+                            >
+                              {t("studentNotes.open")}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
