@@ -110,6 +110,26 @@ assert.equal(
   false,
   "additional executable values must be rejected"
 );
+const hiddenExecutableMessage = { ...validDeckMessages[0] };
+Object.defineProperty(hiddenExecutableMessage, "execute", {
+  enumerable: false,
+  value() {}
+});
+assert.equal(
+  isDeckMessage(hiddenExecutableMessage, sameOrigin),
+  false,
+  "hidden executable values must be rejected"
+);
+const hiddenUnknownMessage = { ...validDeckMessages[0] };
+Object.defineProperty(hiddenUnknownMessage, "internal", {
+  enumerable: false,
+  value: "unexpected"
+});
+assert.equal(
+  isDeckMessage(hiddenUnknownMessage, sameOrigin),
+  false,
+  "hidden unknown values must be rejected"
+);
 let getterExecuted = false;
 const accessorMessage = {
   version: 1,

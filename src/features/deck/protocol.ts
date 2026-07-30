@@ -37,15 +37,17 @@ function safeMessageRecord(value: unknown): MessageRecord | null {
   if (!value || typeof value !== "object") return null;
   const prototype = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) return null;
-  if (Object.getOwnPropertySymbols(value).length > 0) return null;
 
-  const keys = Object.keys(value);
+  const ownKeys = Reflect.ownKeys(value);
+  if (ownKeys.some((key) => typeof key !== "string")) return null;
+  const keys = Object.getOwnPropertyNames(value);
   const descriptors = Object.getOwnPropertyDescriptors(value);
   const safe = keys.every((key) => {
     const descriptor = descriptors[key];
     return (
       descriptor !== undefined
       && Object.prototype.hasOwnProperty.call(descriptor, "value")
+      && descriptor.enumerable
       && typeof descriptor.value !== "function"
     );
   });
@@ -53,7 +55,7 @@ function safeMessageRecord(value: unknown): MessageRecord | null {
 }
 
 function hasExactKeys(value: MessageRecord, expectedKeys: string[]): boolean {
-  const keys = Object.keys(value).sort();
+  const keys = Object.getOwnPropertyNames(value).sort();
   const expected = [...expectedKeys].sort();
   return (
     keys.length === expected.length

@@ -652,6 +652,19 @@ must require `event.source === parent`. Validate the version and exact plain-dat
 shape before reading message fields so accessors or extra executable values are
 never invoked.
 
+`Object.keys` is not an exact-shape check: it omits non-enumerable own
+properties, including a hidden executable or unknown value. Enumerate every own
+key with `Reflect.ownKeys`, reject symbols, and inspect every property descriptor
+before reading values. Require enumerable data descriptors and then compare all
+own string names with the protocol's exact key set.
+
+The editable deck engine lives in the backend repository, so its frontend
+contract verifier has a second failure mode: a missing sibling checkout can
+look like "nothing to inspect." Missing source is a verifier failure, never a
+skip. CI must explicitly check out the backend and pass
+`COURSE_PLATFORM_BACKEND_ROOT`; keep backend-owned workflow enforcement too so
+neither repository can silently drift.
+
 Keyboard intent belongs in the same protocol. A key event focused inside the
 iframe does not bubble to the parent window. Checkpoint Space therefore emits a
 generic `deck.checkpoint_action`; it must not claim `send` or `reveal`, because

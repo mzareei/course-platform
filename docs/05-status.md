@@ -388,6 +388,9 @@ exact slide after which each question may be asked.
 - Generated decks expose a version-1 same-origin bridge. Every message is
   origin-, source-, version-, and shape-checked; the parent hook accepts messages
   only from its own iframe and sends only to `window.location.origin`.
+- Exact-shape validation enumerates every own key and inspects its descriptor;
+  non-enumerable, symbol, accessor, executable and unknown properties are
+  rejected in both directions instead of disappearing from `Object.keys`.
 - At a checkpoint, Right Arrow reports a skip before moving and Space is
   reports one generic parent action without moving. Run Class remains
   authoritative and interprets that intent as send or reveal from its current
@@ -397,6 +400,11 @@ exact slide after which each question may be asked.
   `deck-assets.ts` is regenerated and a verifier checks exact source parity.
   That verifier now runs in a path-scoped backend CI workflow, where the
   editable source actually lives.
+- Frontend gated-content verification fails closed when that editable backend
+  source cannot be inspected. Frontend CI explicitly checks out
+  `mzareei/mzareei.github.io` and passes its path through
+  `COURSE_PLATFORM_BACKEND_ROOT`; local verification may use the documented
+  sibling checkout but cannot silently skip the contract.
 
 **Local evidence:** a disposable same-origin parent harness loaded generated
 fixture HTML through `/content?t=fixture` and captured `deck.ready`,
