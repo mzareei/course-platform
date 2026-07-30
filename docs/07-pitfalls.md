@@ -878,3 +878,7 @@ saw a raw UUID and an empty group picker.
 access context. Moving a student between groups must also be one transactional
 server operation: course-scope the target, preserve old enrollments as dropped,
 reactivate the target and course membership, and audit the before/target IDs.
+Because roster responses retain dropped history and can include enrollments
+from other courses, a current member must match the exact group with
+`role = student` and `status = active`; current-group detection must also
+require the enrollment's section ID to be in the authoritative group set.

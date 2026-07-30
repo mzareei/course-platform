@@ -455,7 +455,9 @@ day, so they had nowhere to put anyone.
   enrollment-scoped auth-context group list with the authoritative section
   endpoint and added transactional student group moves. The filtered view can
   move a current member out or assign another active student into the group;
-  prior enrollment rows remain as dropped history.
+  prior enrollment rows remain as dropped history and are excluded from
+  current-member filtering. Current-group detection is limited to active
+  student enrollments whose section belongs to this course.
   "Group" in the UI, `section` in the schema; the schema word means nothing to a
   professor and design rule #2 forbids leaking it.
 - **Class days** (`components/Schedule.tsx`) — add one per class meeting, edit

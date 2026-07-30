@@ -10,6 +10,10 @@ import {
   fallbackLiveSessionId,
   selectLiveSessionId
 } from "../src/features/join/sessionState.ts";
+import {
+  currentCourseStudentSectionId,
+  hasActiveStudentEnrollment
+} from "../src/features/roster/sectionMembership.ts";
 
 const types = readFileSync("src/api/types.ts", "utf8");
 const today = readFileSync("src/screens/student/Today.tsx", "utf8");
@@ -72,6 +76,49 @@ assert.equal(selectLiveSessionId(liveSessions, null), "other-live");
 assert.equal(fallbackLiveSessionId(liveSessions, "stale-id"), "other-live");
 assert.equal(fallbackLiveSessionId(liveSessions, "other-live"), "joined-target");
 
+const groupA = "11111111-1111-4111-8111-111111111111";
+const groupB = "22222222-2222-4222-8222-222222222222";
+const otherCourseGroup = "33333333-3333-4333-8333-333333333333";
+assert.equal(
+  hasActiveStudentEnrollment([
+    { section_id: groupA, role: "student", status: "dropped" }
+  ], groupA),
+  false,
+  "dropped enrollment history must not keep a person in the filtered group"
+);
+assert.equal(
+  hasActiveStudentEnrollment([
+    { section_id: groupA, role: "observer", status: "active" }
+  ], groupA),
+  false,
+  "a non-student enrollment must not count as current group membership"
+);
+assert.equal(
+  hasActiveStudentEnrollment([
+    { section_id: groupA, role: "student", status: "active" }
+  ], groupA),
+  true
+);
+assert.equal(
+  currentCourseStudentSectionId(
+    [
+      { section_id: otherCourseGroup, role: "student", status: "active" },
+      { section_id: groupA, role: "student", status: "dropped" },
+      { section_id: groupB, role: "student", status: "active" }
+    ],
+    new Set([groupA, groupB])
+  ),
+  groupB,
+  "current assignment must ignore active student enrollments from another course"
+);
+assert.equal(
+  currentCourseStudentSectionId(
+    [{ section_id: otherCourseGroup, role: "student", status: "active" }],
+    new Set([groupA, groupB])
+  ),
+  ""
+);
+
 assert.match(classesApi, /action:\s*["']update_session["']/);
 assert.match(classesApi, /course-session-management/);
 assert.match(studentNotesApi, /course-student-notes/);
@@ -103,9 +150,12 @@ assert.match(sections, /href=\{`\/teach\/people\?group=\$\{section\.id\}`\}/);
 // render a clear route without the query parameter.
 assert.match(people, /new URLSearchParams\(location\.search\)\.get\("group"\)/);
 assert.match(people, /GROUP_UUID\.test\(groupParam\)/);
-assert.match(people, /section_id === groupId/);
 assert.match(people, /href="\/teach\/people"/);
 assert.match(people, /listSections\(\)/, "People must load the authoritative course group list");
+assert.match(people, /new Set\(\(groups \?\? \[\]\)\.map\(\(group\) => group\.id\)\)/);
+assert.match(people, /hasActiveStudentEnrollment\(person\.sections, groupId\)/);
+assert.match(people, /currentCourseStudentSectionId\(person\.sections, courseGroupIds\)/);
+assert.match(people, /!data \|\| !groups/, "assignment controls must not mount before authoritative groups load");
 assert.doesNotMatch(people, /context\.value\?\.sections/, "People must not treat the instructor's enrollments as course groups");
 assert.doesNotMatch(
   people,

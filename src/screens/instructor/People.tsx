@@ -12,6 +12,10 @@ import {
 import { StatusPill } from "../../components/StatusPill";
 import { RosterImport } from "../../components/RosterImport";
 import { StudentNoteHistory } from "../../components/StudentNoteHistory";
+import {
+  currentCourseStudentSectionId,
+  hasActiveStudentEnrollment
+} from "../../features/roster/sectionMembership";
 import { context, refreshContext } from "../../state/session";
 import { t } from "../../i18n";
 
@@ -23,24 +27,20 @@ function canHaveStudentNotes(person: RosterPerson) {
   return person.course_role === "student" || (person.sections ?? []).some((section) => section.role === "student");
 }
 
-function currentStudentSectionId(person: RosterPerson) {
-  return (person.sections ?? []).find(
-    (section) => section.role === "student" && section.status === "active"
-  )?.section_id || "";
-}
-
 function GroupAssignment({
   person,
   groups,
+  courseGroupIds,
   assigning,
   onAssign
 }: {
   person: RosterPerson;
   groups: CourseSection[];
+  courseGroupIds: ReadonlySet<string>;
   assigning: boolean;
   onAssign: (sectionId: string) => void;
 }) {
-  const currentSectionId = currentStudentSectionId(person);
+  const currentSectionId = currentCourseStudentSectionId(person.sections, courseGroupIds);
   const [sectionId, setSectionId] = useState(currentSectionId);
   const availableGroups = groups.filter((group) => ["planned", "active"].includes(group.status));
 
@@ -102,6 +102,7 @@ export function People() {
     ? groups?.find((group) => group.id === requestedGroupId) ?? null
     : null;
   const groupId = selectedGroup?.id ?? null;
+  const courseGroupIds = new Set((groups ?? []).map((group) => group.id));
 
   async function load() {
     try {
@@ -126,7 +127,7 @@ export function People() {
     email.trim() !== "" &&
     !(data?.allowed_domains ?? []).some((d) => email.trim().toLowerCase().endsWith(`@${d}`));
   const roster = groupId
-    ? (data?.roster ?? []).filter((person) => (person.sections ?? []).some(({ section_id }) => section_id === groupId))
+    ? (data?.roster ?? []).filter((person) => hasActiveStudentEnrollment(person.sections, groupId))
     : (data?.roster ?? []);
   const studentsOutsideGroup = groupId
     ? (data?.roster ?? []).filter((person, index, rows) =>
@@ -134,7 +135,7 @@ export function People() {
         person.membership_status === "active" &&
         person.profile_status === "active" &&
         person.profile_id !== myProfileId &&
-        currentStudentSectionId(person) !== groupId &&
+        currentCourseStudentSectionId(person.sections, courseGroupIds) !== groupId &&
         rows.findIndex((candidate) => candidate.profile_id === person.profile_id) === index
       )
     : [];
@@ -320,7 +321,7 @@ export function People() {
           </div>
         </>
       ) : null}
-      {!data ? (
+      {!data || !groups ? (
         <div class="empty-state"><p>{t("people.loadingRoster")}</p></div>
       ) : roster.length === 0 ? (
         <div class="empty-state card">
@@ -363,6 +364,7 @@ export function People() {
                       <GroupAssignment
                         person={person}
                         groups={groups ?? []}
+                        courseGroupIds={courseGroupIds}
                         assigning={assigning === person.profile_id}
                         onAssign={(sectionId) => void assignGroup(person, sectionId)}
                       />
