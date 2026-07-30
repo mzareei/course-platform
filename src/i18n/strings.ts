@@ -846,6 +846,18 @@ export const strings = {
     "Este banco anterior aún no está vinculado con las diapositivas de clase. Prepara sus puntos de control antes de usarlo durante la clase."
   ],
   "content.banks.prepare": ["Prepare checkpoints", "Preparar puntos de control"],
+  "content.banks.preparing": [
+    "Preparing checkpoints…",
+    "Preparando puntos de control…"
+  ],
+  "content.banks.prepared": [
+    "Prepared {checkpointCount} checkpoints and mapped {questionCount} questions.",
+    "Se prepararon {checkpointCount} puntos de control y se vincularon {questionCount} preguntas."
+  ],
+  "content.banks.prepareFailed": [
+    "Could not prepare checkpoints for this bank. Its card has not been marked ready.",
+    "No se pudieron preparar los puntos de control de este banco. Su tarjeta no se marcó como lista."
+  ],
   "content.banks.invalidMetadata": [
     "This bank needs exactly 18 questions, a 6/6/6 difficulty balance, 3–5 checkpoints, and at least 2 candidates at each checkpoint.",
     "Este banco necesita exactamente 18 preguntas, un equilibrio de dificultad 6/6/6, de 3 a 5 puntos de control y al menos 2 candidatas en cada punto."

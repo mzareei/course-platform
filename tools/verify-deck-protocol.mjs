@@ -206,6 +206,15 @@ assert.equal(questionBankReadiness(invalidBank), "invalid");
 assert.equal(canPrepareCheckpoints(invalidBank), false);
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const bankUiSource = readFileSync(
+  path.join(root, "src/components/QuestionBanks.tsx"),
+  "utf8"
+);
+assert.match(
+  bankUiSource,
+  /activeRoles\.value\.some\(\(role\) =>\s*role === "platform_owner" \|\| role === "instructor"/,
+  "teaching assistants must not receive an enabled instructor-only preparation action"
+);
 const hookSource = readFileSync(
   path.join(root, "src/features/deck/useDeckBridge.ts"),
   "utf8"

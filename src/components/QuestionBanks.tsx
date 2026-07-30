@@ -1,6 +1,8 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   listBanks,
+  prepareLegacyCheckpoints,
+  type BackfillResult,
   type CheckpointBankSummary,
   type CheckpointCoverage
 } from "../api/checkpoints";
@@ -9,6 +11,7 @@ import {
   questionBankReadiness
 } from "../features/deck/bankReadiness";
 import { t } from "../i18n";
+import { activeRoles } from "../state/session";
 
 export function QuestionBanks() {
   const [banks, setBanks] = useState<CheckpointBankSummary[] | null>(null);
@@ -50,7 +53,30 @@ export function QuestionBanks() {
 
 function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
   const readiness = questionBankReadiness(bank);
-  const ready = readiness === "ready";
+  const instructorCanPrepare = activeRoles.value.some((role) =>
+    role === "platform_owner" || role === "instructor"
+  );
+  const preparable = instructorCanPrepare
+    && bank.checkpoint_coverage.length === 0
+    && canPrepareCheckpoints(bank);
+  const [preparing, setPreparing] = useState(false);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
+  const [prepared, setPrepared] = useState<BackfillResult | null>(null);
+  const ready = readiness === "ready" || prepared !== null;
+  const checkpointCount = prepared?.checkpoint_count
+    ?? bank.checkpoint_coverage.length;
+
+  async function prepare() {
+    setPreparing(true);
+    setPrepareError(null);
+    try {
+      setPrepared(await prepareLegacyCheckpoints(bank.content_item_id));
+    } catch {
+      setPrepareError(t("content.banks.prepareFailed"));
+    } finally {
+      setPreparing(false);
+    }
+  }
 
   return (
     <article class="card">
@@ -69,7 +95,7 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
       </div>
 
       <p class="hint">
-        {t("content.banks.checkpointCount", { count: bank.checkpoint_coverage.length })}
+        {t("content.banks.checkpointCount", { count: checkpointCount })}
       </p>
 
       {bank.checkpoint_coverage.length ? (
@@ -84,11 +110,27 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
         </div>
       ) : null}
 
-      {canPrepareCheckpoints(bank) ? (
+      {prepared ? (
+        <div class="card muted" role="status">
+          <p style="margin: 0;">
+            {t("content.banks.prepared", {
+              checkpointCount: prepared.checkpoint_count,
+              questionCount: prepared.mapped_question_count
+            })}
+          </p>
+        </div>
+      ) : preparable ? (
         <>
           <p class="error-text" role="alert">{t("content.banks.missingMetadata")}</p>
-          <button class="btn" type="button" disabled>
-            {t("content.banks.prepare")}
+          <button
+            class="btn"
+            type="button"
+            disabled={preparing}
+            onClick={prepare}
+          >
+            {preparing
+              ? t("content.banks.preparing")
+              : t("content.banks.prepare")}
           </button>
         </>
       ) : !ready ? (
@@ -96,6 +138,10 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
       ) : (
         <p class="hint">{t("content.banks.readyBody")}</p>
       )}
+
+      {prepareError ? (
+        <p class="error-text" role="alert">{prepareError}</p>
+      ) : null}
     </article>
   );
 }

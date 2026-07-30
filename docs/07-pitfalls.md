@@ -670,3 +670,37 @@ iframe does not bubble to the parent window. Checkpoint Space therefore emits a
 generic `deck.checkpoint_action`; it must not claim `send` or `reveal`, because
 only the parent owns the current live-round state and may decide which action is
 valid.
+
+---
+
+## 30. A legacy deck rewrite can destroy the only working copy
+
+Checkpoint preparation has to modify two systems: question metadata in Postgres
+and the lecture HTML at its existing private Storage path. Replacing the HTML
+before Claude output and the whole 18-question mapping are validated would turn
+one bad model response, malformed source range, or database failure into a
+broken class deck.
+
+**Rule:** finish every read and every fallible pure step first: authorize the
+instructor; require a private `storage_object` lecture and one active bank;
+download and extract the ordered teaching slides; load all unchanged questions
+and options; make the single metadata-only model call; validate exact question
+ids, 6/6/6 balance, 3–5 checkpoints, source ranges and two candidates per
+checkpoint; then build and re-read the transformed HTML. Only after all of that
+may the five metadata columns be updated. Upload to the same private path last.
+
+Legacy decks carry lecture-specific inline CSS and JavaScript in addition to the
+old shared engine. Do not rebuild the slide bodies and do not replace every
+`<style>` or `<script>` tag. Identify only the old shared assets, reuse
+`DECK_STYLE` and `DECK_SCRIPT`, and preserve the custom blocks. Use callback
+replacements for HTML transformations: replacement strings interpret `$&`,
+`$1`, ``$` `` and `$'`, so an innocent asset literal can silently corrupt a
+deck. Re-extract the result and require the same teaching-slide count, text and
+order before any write.
+
+Postgres and Storage do not share a transaction. The required Storage-last
+ordering protects the existing deck from authentication, model, validation and
+database failures; an upload failure after metadata updates can still require
+operator recovery. Treat the success response—not the earlier metadata
+updates—as the completion boundary, pilot one lecture, preview it through
+`/content?t=…`, and never batch the remaining decks blindly.

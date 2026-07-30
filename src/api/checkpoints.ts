@@ -12,6 +12,7 @@ export type CheckpointCoverage = {
 
 export type CheckpointBankSummary = {
   bank_id: string;
+  content_item_id: string;
   title: string;
   content_slug: string;
   content_title: string;
@@ -28,6 +29,24 @@ export type CheckpointBankSummary = {
 export function listBanks() {
   return callFn<{ banks: CheckpointBankSummary[] }>("course-question-bank", {
     action: "list_banks"
+  });
+}
+
+export type BackfillResult = {
+  content_item_id: string;
+  question_bank_id: string;
+  storage_path: string;
+  teaching_slide_count: number;
+  checkpoint_count: number;
+  mapped_question_count: number;
+};
+
+export function prepareLegacyCheckpoints(
+  contentItemId: string
+): Promise<BackfillResult> {
+  return callFn<BackfillResult>("course-checkpoint-backfill", {
+    action: "prepare",
+    content_item_id: contentItemId
   });
 }
 

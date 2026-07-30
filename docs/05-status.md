@@ -377,9 +377,28 @@ exact slide after which each question may be asked.
   checkpoint fields their consumers use. The Question banks tab now shows
   balance, coverage and legacy-bank warnings. It has no release action:
   question banks remain professor-only inputs to a live class.
-- Legacy banks are deliberately left untouched. Their **Prepare checkpoints**
-  control is present only when metadata is missing; the following lifecycle
-  increment wires the backfill action.
+- Legacy banks now have a local-only preparation path. **Prepare checkpoints**
+  appears only when every active question is truly missing checkpoint metadata,
+  calls an instructor-authenticated edge function with the real content-item id,
+  and reports checkpoint/question counts or a per-bank error in the same card.
+  Invalid or partially mapped banks never receive the action.
+- The backfill accepts only a private `storage_object` lecture with exactly one
+  active 18-question bank. It downloads the existing single-file HTML, extracts
+  the teaching slides in order, loads the unchanged questions and options, and
+  makes one structured Claude call that returns metadata only. Exact question-id
+  coverage, 6/6/6 balance, 3–5 checkpoints, every source range, and at least two
+  candidates per checkpoint are validated before the first write.
+- The legacy transformer preserves teaching-slide count, text and order; adds
+  stable `data-teaching-slide` coordinates; removes only the retired
+  Home/Mission/Quiz/Exit anchors; keeps custom lecture CSS/JavaScript and all
+  language, theme, overview, help, fullscreen and slide controls; and replaces
+  the old presenter engine with the existing `DECK_STYLE` / `DECK_SCRIPT`
+  assets. All HTML substitutions use callback replacements so asset text such
+  as `$&` cannot be interpreted as a replacement token.
+- Database writes update only the five checkpoint metadata columns. The
+  same-path private Storage upload is the final operation, so authentication,
+  model, transform, validation or database failures cannot overwrite the
+  working deck.
 - The deterministic assembler now inserts a bilingual checkpoint section
   immediately after each matching teaching slide. Teaching-slide numbers remain
   stable even though the presentation gains additional physical slides.
@@ -424,6 +443,22 @@ Migration `0021_slide_checkpoints.sql` and the changed functions have **not**
 been applied or deployed from this isolated task. No live generation was run
 because there was no disposable instructor-authenticated fixture, and this
 increment must not overwrite an existing private deck.
+
+The new `course-checkpoint-backfill` function is also **not deployed**, and no
+real private deck or bank was prepared. Managed approval for shared
+backend/Storage mutation was explicitly rejected, so the runtime sequence
+remains pending: apply the checkpoint migration and deploy the changed
+functions only after authorization; prepare Week 1 Lecture 1 first; confirm all
+45 teaching slides remain, 3–5 checkpoints exist, retired anchors are gone and
+arrow navigation still works; then continue one lecture at a time with the same
+preview and coverage checks. Do not batch this backfill.
+
+**Local backfill evidence:** `tools/verify-checkpoint-decks.mjs` was captured
+RED against the required four-slide legacy fixture, then GREEN. It exercises
+the real transformer, preserves custom inline assets containing `$&`, verifies
+the checkpoint falls after slide 3 without renumbering teaching slides, and
+source-checks instructor/private/active-bank gates, current asset reuse, no
+prompt/option mutations, pre-write validation and same-path Storage ordering.
 
 ### 9. Phase 6 cleanup
 - Strip lecture/mission content from the public `mzareei.github.io` repo.
