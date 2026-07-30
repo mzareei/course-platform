@@ -1,6 +1,7 @@
 // Verifies the Phase 1 app-shell contract: role-shaped surfaces, sign-in flow,
 // plain-language status labels, and the security posture (no service keys).
 import { readFileSync, existsSync } from "node:fs";
+import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -93,6 +94,58 @@ for (const rel of ["src/config.ts", "src/api/client.ts", "src/auth/auth.ts"]) {
 // The one-primary-action dock exists for students
 requireMarker("src/styles/app.css", "action-dock", "bottom-anchored primary action");
 requireMarker("src/screens/student/Today.tsx", "action-dock", "Today has exactly one primary action");
+
+// Run Class is one cockpit around the session's selected lecture. The deck and
+// checkpoint panel must stay together, and starting must use the atomic session
+// transition rather than a client-authored state update.
+const runClassSource = read("src/screens/instructor/RunClass.tsx");
+assert.match(runClassSource, /<InstructorDeck/);
+assert.match(runClassSource, /<CheckpointPanel/);
+assert.doesNotMatch(runClassSource, /<option value="hard">[^]*<option value="hard">/);
+assert.match(runClassSource, /startClassSession/);
+assert.match(runClassSource, /pushBankQuestion\(\{/);
+assert.match(runClassSource, /question_id:\s*question\.question_id/);
+assert.match(
+  runClassSource,
+  /checkpoint_after_slide:\s*checkpoint\.afterSlide/
+);
+assert.doesNotMatch(runClassSource, /t\("run\.pickLecture"\)/);
+assert.match(
+  runClassSource,
+  /const requestSequence = \+\+checkpointDrawSequence\.current/
+);
+assert.match(
+  runClassSource,
+  /if \(requestSequence !== checkpointDrawSequence\.current\) return/
+);
+assert.match(
+  runClassSource,
+  /checkpointDrawSequence\.current \+= 1;\s*const failedAction/
+);
+assert.match(
+  runClassSource,
+  /const operationSequence = checkpointLifecycleSequence\.current/
+);
+assert.match(
+  runClassSource,
+  /if \(operationSequence !== checkpointLifecycleSequence\.current\) \{\s*await closePulse\(round\.round_id\)/
+);
+assert.match(
+  runClassSource,
+  /checkpointLifecycleSequence\.current \+= 1;\s*checkpointDrawSequence\.current \+= 1/
+);
+
+const instructorDeckSource = read("src/features/deck/InstructorDeck.tsx");
+assert.match(instructorDeckSource, /requestInstructorContent\(contentItemId\)/);
+assert.match(
+  instructorDeckSource,
+  /src=\{`\/content\?t=\$\{encodeURIComponent\(token\)\}`\}/
+);
+assert.match(
+  instructorDeckSource,
+  /sandbox="allow-scripts allow-same-origin"/
+);
+assert.doesNotMatch(instructorDeckSource, /\bsrcdoc\b|\bblob:|allow-popups/);
 
 if (failures.length) {
   console.error("App shell verification failed:");

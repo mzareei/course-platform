@@ -665,6 +665,120 @@ export const strings = {
     "The QR code could not be generated. Students can use the link or class code instead.",
     "No se pudo generar el código QR. Los estudiantes pueden usar el enlace o el código de clase."
   ],
+  "run.start.title": ["Ready to teach", "Todo listo para dar clase"],
+  "run.start.body": [
+    "Preview the lecture and QR, then start the class when students are ready to join.",
+    "Revisa la presentación y el QR; inicia la clase cuando el grupo esté listo para entrar."
+  ],
+  "run.start.unavailable": [
+    "This class cannot be started from its current state.",
+    "Esta clase no se puede iniciar en su estado actual."
+  ],
+  "run.start": ["Start class", "Iniciar clase"],
+  "run.starting": ["Starting class…", "Iniciando la clase…"],
+  "run.startFailed": ["Could not start the class.", "No se pudo iniciar la clase."],
+  "run.loadingBanksFailed": [
+    "Could not load this lecture's question bank.",
+    "No se pudo cargar el banco de preguntas de esta clase."
+  ],
+  "run.deck.opening": [
+    "Opening the private lecture deck…",
+    "Abriendo la presentación privada…"
+  ],
+  "run.deck.openFailed": [
+    "Could not open the private lecture deck.",
+    "No se pudo abrir la presentación privada."
+  ],
+  "run.deck.unavailable": [
+    "Lecture deck unavailable",
+    "Presentación no disponible"
+  ],
+  "run.deck.noLecture": [
+    "No lecture selected for this class",
+    "No hay una presentación elegida para esta clase"
+  ],
+  "run.deck.noLectureBody": [
+    "The class can still start, but checkpoints and the final quiz need a lecture selected on the class day.",
+    "La clase puede iniciar, pero los puntos de control y el quiz final necesitan una presentación elegida en el día de clase."
+  ],
+  "run.deck.openClasses": ["Open Classes", "Abrir Clases"],
+  "run.checkpoint.eyebrow": ["Lecture checkpoint", "Punto de control"],
+  "run.checkpoint.title": ["Live question controls", "Controles de la pregunta en vivo"],
+  "run.checkpoint.afterSlide": [
+    "After slide {slide}",
+    "Después de la diapositiva {slide}"
+  ],
+  "run.checkpoint.teaching": [
+    "Continue the lecture in the deck.",
+    "Continúa la clase en la presentación."
+  ],
+  "run.checkpoint.next": [
+    "The next prepared question appears after slide {slide}.",
+    "La siguiente pregunta preparada aparece después de la diapositiva {slide}."
+  ],
+  "run.checkpoint.finalReached": [
+    "All prepared teaching checkpoints are complete.",
+    "Se completaron todos los puntos de control preparados."
+  ],
+  "run.checkpoint.loading": [
+    "Choosing a question for the checkpoint after slide {slide}…",
+    "Eligiendo una pregunta para el punto después de la diapositiva {slide}…"
+  ],
+  "run.checkpoint.source": [
+    "Slides {start}–{end}",
+    "Diapositivas {start}–{end}"
+  ],
+  "run.checkpoint.skip": ["Skip this checkpoint", "Omitir este punto"],
+  "run.checkpoint.continue": ["Continue lecture", "Continuar la clase"],
+  "run.checkpoint.closeContinue": [
+    "Close and continue",
+    "Cerrar y continuar"
+  ],
+  "run.checkpoint.spaceHint": [
+    "Press Space in the deck to send. Right Arrow skips.",
+    "Presiona Espacio en la presentación para enviar. Flecha derecha omite."
+  ],
+  "run.checkpoint.spaceRevealHint": [
+    "Press Space in the deck to show the answer.",
+    "Presiona Espacio en la presentación para mostrar la respuesta."
+  ],
+  "run.checkpoint.arrowHint": [
+    "Press Right Arrow in the deck to continue.",
+    "Presiona Flecha derecha en la presentación para continuar."
+  ],
+  "run.checkpoint.manualBody": [
+    "Use the prepared checkpoint list while deck controls are unavailable.",
+    "Usa la lista de puntos preparados mientras los controles de la presentación no estén disponibles."
+  ],
+  "run.checkpoint.manualSelect": [
+    "Choose the current checkpoint",
+    "Elige el punto de control actual"
+  ],
+  "run.checkpoint.choose": ["Choose a checkpoint…", "Elige un punto…"],
+  "run.checkpoint.option": [
+    "After slide {slide} · {count} questions",
+    "Después de la diapositiva {slide} · {count} preguntas"
+  ],
+  "run.checkpoint.bridgeFailed": [
+    "The lecture deck controls did not connect.",
+    "Los controles de la presentación no se conectaron."
+  ],
+  "run.checkpoint.noQuestion": [
+    "No question is ready for this checkpoint.",
+    "No hay una pregunta lista para este punto de control."
+  ],
+  "run.checkpoint.mismatch": [
+    "The question did not match this slide checkpoint.",
+    "La pregunta no correspondió a este punto de la presentación."
+  ],
+  "run.checkpoint.noBank": [
+    "This lecture has no ready checkpoint bank. The deck still works, but live questions and the final quiz are unavailable.",
+    "Esta presentación no tiene un banco de puntos listo. La presentación funciona, pero las preguntas en vivo y el quiz final no están disponibles."
+  ],
+  "run.checkpoint.openContent": [
+    "Check the question bank",
+    "Revisar el banco de preguntas"
+  ],
 
   // ---------------------------------------------------------------- end of class
   "endOfClass.title": ["End-of-class quiz", "Quiz de fin de clase"],

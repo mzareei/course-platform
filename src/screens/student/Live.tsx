@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { context } from "../../state/session";
-import { t } from "../../i18n";
+import { t, lang } from "../../i18n";
 import { ApiError } from "../../api/client";
 import { currentPulse, answerPulse, shuffleOptions, type StudentPulseView } from "../../api/pulse";
 import { QuizPlayer } from "../../features/quiz/Player";
@@ -110,6 +110,7 @@ export function Live() {
   const round = view?.round ?? null;
   const mine = view?.my_answer ?? null;
   const profileId = ctx?.profile?.id ?? "anon";
+  const useSpanish = lang.value === "es";
 
   const displayOptions = useMemo(
     () => (round ? shuffleOptions(round.options, `${round.round_id}:${profileId}`) : []),
@@ -162,7 +163,9 @@ export function Live() {
             ) : null}
           </div>
 
-          <h2 style="font-size: 1.35rem;">{round.text}</h2>
+          <h2 style="font-size: 1.35rem;">
+            {(useSpanish && round.text_es) || round.text}
+          </h2>
 
           {round.state === "revealed" ? (
             <div class="stack">
@@ -178,7 +181,9 @@ export function Live() {
               {round.options
                 .filter((option) => option.key === round.correct_key)
                 .map((option) => (
-                  <div class="pulse-choice correct">{option.text}</div>
+                  <div class="pulse-choice correct">
+                    {(useSpanish && option.text_es) || option.text}
+                  </div>
                 ))}
             </div>
           ) : mine ? (
@@ -195,7 +200,7 @@ export function Live() {
                   disabled={busy || remaining <= 0}
                   onClick={() => submit(option.key)}
                 >
-                  {option.text}
+                  {(useSpanish && option.text_es) || option.text}
                 </button>
               ))}
               {busy ? <p class="hint">{t("live.sending")}</p> : null}

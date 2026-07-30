@@ -11,6 +11,7 @@ import {
 export interface PulseOption {
   key: string;
   text: string;
+  text_es?: string | null;
 }
 
 export interface PulseRound {
@@ -22,6 +23,7 @@ export interface PulseRound {
   opened_at: string;
   ends_at: string;
   text: string;
+  text_es?: string | null;
   options: PulseOption[];
   /** Null until the instructor reveals — the server strips it. */
   correct_key: string | null;
@@ -80,10 +82,31 @@ export function pushPulse(input: {
   return callFn<{ round: PulseRound }>("course-pulse", { action: "push", ...input });
 }
 
+export function pushBankQuestion(input: {
+  class_session_id: string;
+  question_id: string;
+  checkpoint_after_slide: number;
+  time_limit_seconds?: number;
+  points?: number;
+}) {
+  return callFn<{ round: PulseRound }>("course-pulse", {
+    action: "push",
+    ...input
+  });
+}
+
 // ---------------------------------------------------------------- question bank
 export type BankSummary = CheckpointBankSummary;
 export type DrawnQuestion = CheckpointQuestion;
 export { drawQuestion, listBanks };
+
+export function drawCheckpointQuestion(input: {
+  content_slug: string;
+  checkpoint_after_slide: number;
+  exclude_keys?: string[];
+}) {
+  return drawQuestion(input);
+}
 
 export function revealPulse(round_id: string) {
   return callFn<{ round: PulseRound } & PulseResults>("course-pulse", { action: "reveal", round_id });

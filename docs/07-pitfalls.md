@@ -735,3 +735,39 @@ idempotently removes/recreates checkpoint sections in the current deck, uploads
 again, and marks `ready`—it never calls the model again. Treat `ready`, not the
 earlier metadata update, as the completion boundary; pilot one lecture, preview
 it through `/content?t=…`, and never batch the remaining decks blindly.
+
+---
+
+## 31. Private instructor viewing and live question identity are separate gates
+
+An instructor needs to preview and present the session's selected lecture even
+when students have no release. Reusing the student `request_url` path makes a
+release an accidental prerequisite; creating a release as a workaround changes
+student access merely because the professor opened Run Class.
+
+**Rule:** instructor deck access starts from `content_item_id`, loads that item
+first, derives its course from the stored row, requires an active teaching role
+in that course, requires a private `storage_object`, and mints the existing
+short-lived content token. It never reads or writes `content_releases`.
+Presentation still goes through same-origin `/content?t=…`; instructor status
+does not make `srcdoc`, `blob:`, public Storage, or popup permissions safe.
+
+A `question_id` is not enough authorization for a live pulse. Without a
+server-side join through the question bank, a stale or modified browser can send
+a valid question from a later checkpoint or a different lecture while still
+receiving a perfectly valid snapshotted round.
+
+**Rule:** when a checkpoint pulse is pushed, the server reloads the active
+question, its active bank, and the class session. Require the session state to
+be exactly `live`, require `session.content_item_id` to equal
+`bank.content_item_id`, and require the stored `checkpoint_after_slide` to equal
+the requested checkpoint before closing another round or inserting anything.
+Snapshot prompt and options only after those checks; never accept a
+client-authored snapshot for the checkpoint path.
+
+Deck keyboard events are presentation intent, not server authority. Space may
+mean Send only while the parent is `ready`, and Reveal only while it is `open`.
+Right Arrow can emit both checkpoint-skipped and slide-changed while resuming;
+the parent must transition its panel state before the follow-up event so it does
+not close or resume twice. Keep exact state-transition and protocol-mismatch
+tests for both paths.

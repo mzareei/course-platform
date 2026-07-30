@@ -64,6 +64,26 @@ export function contentLibrary() {
   return callFn<ContentLibrary>("course-content-library", {});
 }
 
+/**
+ * Mint a private lecture token for the instructor cockpit. This is deliberately
+ * content-item based: it checks teaching staff membership on the server and
+ * never creates or consults a student release.
+ */
+export function requestInstructorContent(contentItemId: string): Promise<{
+  token: string;
+  expires_in: number;
+  content: { id: string; title: string; slug: string };
+}> {
+  return callFn<{
+    token: string;
+    expires_in: number;
+    content: { id: string; title: string; slug: string };
+  }>("course-content-access", {
+    action: "request_instructor_url",
+    content_item_id: contentItemId
+  });
+}
+
 /** Create a draft release without touching the content item. */
 export function createRelease(input: {
   content_item_id: string;

@@ -7,6 +7,11 @@ import {
   canResumeCheckpointPreparation,
   questionBankReadiness
 } from "../src/features/deck/bankReadiness.ts";
+import {
+  checkpointQuestionMatches,
+  resolveCheckpointActionSequence,
+  spaceIntentForCheckpoint
+} from "../src/features/live/checkpointState.ts";
 
 const sameOrigin = "https://course.example.test";
 Object.defineProperty(globalThis, "location", {
@@ -227,6 +232,80 @@ assert.equal(
 assert.equal(questionBankReadiness(invalidBank), "invalid");
 assert.equal(canPrepareCheckpoints(invalidBank), false);
 assert.equal(canResumeCheckpointPreparation(invalidBank), false);
+
+const checkpointQuestion = {
+  question_id: "question-one",
+  generation_key: "cia-triad-easy",
+  difficulty: "easy",
+  segment_key: "cia-triad",
+  source_slide_numbers: [1, 2],
+  source_slide_start: 1,
+  source_slide_end: 2,
+  checkpoint_after_slide: 2,
+  prompt: "Which property prevents unauthorized disclosure?",
+  prompt_es: "¿Qué propiedad evita la divulgación no autorizada?",
+  explanation: null,
+  explanation_es: null,
+  options: []
+};
+assert.equal(
+  checkpointQuestionMatches({ key: "cia-triad", afterSlide: 2 }, checkpointQuestion),
+  true
+);
+assert.equal(
+  checkpointQuestionMatches({ key: "cia-triad", afterSlide: 3 }, checkpointQuestion),
+  false,
+  "a question from a different slide checkpoint must never be sendable"
+);
+assert.equal(
+  checkpointQuestionMatches({ key: "different-segment", afterSlide: 2 }, checkpointQuestion),
+  false,
+  "a question from a different concept segment must never be sendable"
+);
+assert.equal(
+  spaceIntentForCheckpoint({ type: "ready", question: checkpointQuestion }),
+  "send",
+  "Space sends only a prepared checkpoint question"
+);
+assert.equal(
+  spaceIntentForCheckpoint({
+    type: "open",
+    round: { round_id: "round-one" },
+    results: null
+  }),
+  "reveal",
+  "Space reveals only the currently open round"
+);
+for (const state of [
+  { type: "idle" },
+  { type: "loading", checkpoint: 2 },
+  {
+    type: "revealed",
+    round: { round_id: "round-one" },
+    results: { round_id: "round-one" }
+  },
+  { type: "error", checkpoint: 2, message: "No question ready" }
+]) {
+  assert.equal(
+    spaceIntentForCheckpoint(state),
+    null,
+    `Space must have no implicit action from ${state.type}`
+  );
+}
+assert.deepEqual(
+  resolveCheckpointActionSequence(4, null),
+  { sequence: 0, shouldHandle: false },
+  "a reloaded deck resets the parent action sequence"
+);
+assert.deepEqual(
+  resolveCheckpointActionSequence(0, { key: "cia-triad", sequence: 1 }),
+  { sequence: 1, shouldHandle: true }
+);
+assert.deepEqual(
+  resolveCheckpointActionSequence(1, { key: "cia-triad", sequence: 1 }),
+  { sequence: 1, shouldHandle: false },
+  "a duplicate action sequence must remain a no-op"
+);
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bankUiSource = readFileSync(

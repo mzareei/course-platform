@@ -115,7 +115,7 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   const running = Boolean(instanceId);
 
   return (
-    <div class="card">
+    <section class="card checkpoint-final-quiz">
       <h2>{t("endOfClass.title")}</h2>
       <p class="hint">{t("endOfClass.body")}</p>
       {error ? <p class="error-text" role="alert">{error}</p> : null}
@@ -166,6 +166,6 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

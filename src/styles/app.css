@@ -447,6 +447,126 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   background: var(--surface-1);
 }
 
+/* ---------------------------------------------------------------- run class cockpit */
+.run-class-shell {
+  width: min(1480px, calc(100vw - 2rem));
+  align-self: center;
+}
+.run-class-header,
+.checkpoint-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.run-class-header h1 { margin: 0; }
+.run-cockpit,
+.run-prelive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+.run-deck-column { min-width: 0; }
+.run-control-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.run-deck-frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: min(68dvh, 720px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+.run-deck-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.run-join-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+.run-join-card.compact {
+  padding: 0.8rem;
+}
+.run-join-card.compact h2 {
+  font-size: 1rem;
+}
+.run-join-card a {
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+.run-join-qr {
+  flex: 0 0 auto;
+}
+.run-join-qr img {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--text-onfill);
+}
+.checkpoint-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-color: var(--border-strong);
+}
+.checkpoint-options,
+.checkpoint-results {
+  gap: 0.35rem;
+}
+.checkpoint-options .pulse-choice {
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.9rem;
+}
+.checkpoint-manual {
+  padding: 0.75rem;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+}
+.checkpoint-no-bank,
+.checkpoint-final-action {
+  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+}
+.checkpoint-final-quiz {
+  border-color: var(--primary);
+}
+
+@media (max-width: 960px) {
+  .run-class-shell {
+    width: 100%;
+  }
+  .run-cockpit,
+  .run-prelive-grid {
+    grid-template-columns: 1fr;
+  }
+  .run-deck-frame {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .run-join-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .run-join-card.compact {
+    flex-direction: row;
+  }
+}
+
 /* ---------------------------------------------------------------- language toggle */
 .lang-toggle {
   font-family: var(--font-mono);

@@ -187,6 +187,45 @@ migration was applied, no edge function was deployed, and no real Storage object
 was changed. Apply migration 0022, deploy both affected functions, and pilot one
 lecture through `/content?t=…` before calling this verified live.
 
+### 0.5 Unified Run Class cockpit — **DONE locally; backend deployment and signed-in two-browser flow pending**
+
+Built 2026-07-29 as the instructor-facing lifecycle increment. A scheduled
+session's selected lecture now opens privately inside Run Class beside one
+checkpoint panel; the obsolete lecture/bank and difficulty controls are gone.
+Before live, the professor sees the real deck, session QR, and the atomic
+**Start class** action. During live teaching, the same deck and QR remain in a
+two-column cockpit with the action appropriate to the current checkpoint.
+
+Instructor deck access is content-item based and teacher-gated. It mints the
+existing short-lived content token without creating or consulting a student
+release, and the iframe loads only `/content?t=…` with scripts and same-origin
+enabled—never `srcdoc`, `blob:`, popups, or a public Storage URL.
+
+At a deck checkpoint, Run Class draws from that exact slide boundary. Sending
+passes only `question_id` plus `checkpoint_after_slide`; `course-pulse` reloads
+the active question and bank, then refuses the push unless the session is
+exactly `live`, the session lecture matches the bank content item, and the
+stored question checkpoint matches the request. Prompt and bilingual option
+text are still snapshotted into the round. Space remains a generic deck intent:
+the parent alone maps `ready → send` and `open → reveal`. Right Arrow remains
+deck navigation; the parent closes any round once the deck reports it resumed.
+If the bridge does not connect, the panel exposes the bank's validated
+checkpoint coverage as a manual selector.
+
+The final quiz is absent from the active panel until the last prepared teaching
+point is reached or the professor explicitly opens it. The existing sequential
+20/30/45-second student quiz and automatic reflection transition remain
+unchanged; student pulse rendering now uses the bilingual bank snapshot.
+
+`tools/verify-app-shell.mjs`, `tools/verify-deck-protocol.mjs`, and backend
+`tools/verify-live-checkpoint-security.mjs` cover cockpit composition, gated
+iframe rules, parent-authoritative Space intent, client protocol mismatch
+rejection, and server lecture/checkpoint identity enforcement. No function was
+deployed and no live session or content object was changed. Apply pending
+migrations and deploy `course-content-access` plus `course-pulse` only after
+authorization, then record the signed-in instructor/student lifecycle from
+Today through reflection before describing the cockpit as verified live.
+
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
 platform, all driven by automation on one machine. Run one complete class.
