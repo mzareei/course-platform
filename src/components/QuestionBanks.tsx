@@ -4,6 +4,10 @@ import {
   type CheckpointBankSummary,
   type CheckpointCoverage
 } from "../api/checkpoints";
+import {
+  canPrepareCheckpoints,
+  questionBankReadiness
+} from "../features/deck/bankReadiness";
 import { t } from "../i18n";
 
 export function QuestionBanks() {
@@ -45,19 +49,8 @@ export function QuestionBanks() {
 }
 
 function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
-  const coveredCandidates = bank.checkpoint_coverage.reduce(
-    (total, checkpoint) => total + checkpoint.candidate_count,
-    0
-  );
-  const missingMetadata = coveredCandidates !== bank.total;
-  const balanced = bank.total === 18
-    && bank.by_difficulty.easy === 6
-    && bank.by_difficulty.medium === 6
-    && bank.by_difficulty.hard === 6;
-  const validCoverage = bank.checkpoint_coverage.length >= 3
-    && bank.checkpoint_coverage.length <= 5
-    && bank.checkpoint_coverage.every((checkpoint) => checkpoint.candidate_count >= 2);
-  const ready = !missingMetadata && balanced && validCoverage;
+  const readiness = questionBankReadiness(bank);
+  const ready = readiness === "ready";
 
   return (
     <article class="card">
@@ -91,7 +84,7 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
         </div>
       ) : null}
 
-      {missingMetadata ? (
+      {canPrepareCheckpoints(bank) ? (
         <>
           <p class="error-text" role="alert">{t("content.banks.missingMetadata")}</p>
           <button class="btn" type="button" disabled>

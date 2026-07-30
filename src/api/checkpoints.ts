@@ -19,6 +19,9 @@ export type CheckpointBankSummary = {
   updated_at: string;
   total: number;
   by_difficulty: { easy: number; medium: number; hard: number };
+  checkpoint_metadata_status: "missing" | "valid" | "invalid";
+  checkpoint_metadata_present: number;
+  checkpoint_metadata_valid: number;
   checkpoint_coverage: CheckpointCoverage[];
 };
 
