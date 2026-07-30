@@ -15,6 +15,8 @@ const types = readFileSync("src/api/types.ts", "utf8");
 const today = readFileSync("src/screens/student/Today.tsx", "utf8");
 const live = readFileSync("src/screens/student/Live.tsx", "utf8");
 const app = readFileSync("src/app.tsx", "utf8");
+const classesApi = readFileSync("src/api/classes.ts", "utf8");
+const studentNotesApi = readFileSync("src/api/studentNotes.ts", "utf8");
 
 assert.match(types, /student_sessions\??:\s*StudentSession\[\]/);
 assert.match(today, /ctx\.student_sessions/);
@@ -63,6 +65,14 @@ assert.equal(selectLiveSessionId(liveSessions, "joined-target"), "joined-target"
 assert.equal(selectLiveSessionId(liveSessions, null), "other-live");
 assert.equal(fallbackLiveSessionId(liveSessions, "stale-id"), "other-live");
 assert.equal(fallbackLiveSessionId(liveSessions, "other-live"), "joined-target");
+
+assert.match(classesApi, /action:\s*["']update_session["']/);
+assert.match(classesApi, /course-session-management/);
+assert.match(studentNotesApi, /course-student-notes/);
+assert.match(studentNotesApi, /action:\s*["']list_session["']/);
+assert.match(studentNotesApi, /action:\s*["']list_student["']/);
+assert.match(studentNotesApi, /action:\s*["']create["']/);
+assert.match(studentNotesApi, /action:\s*["']resolve["']/);
 
 if (originalLocalStorage) {
   Object.defineProperty(globalThis, "localStorage", originalLocalStorage);
