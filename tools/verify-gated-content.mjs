@@ -11,6 +11,14 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
+const explicitBackendRoot = Boolean(process.env.COURSE_PLATFORM_BACKEND_ROOT);
+const backendRoot = explicitBackendRoot
+  ? path.resolve(process.env.COURSE_PLATFORM_BACKEND_ROOT)
+  : path.resolve(root, "../mzareei.github.io");
+const deckScriptPath = path.join(
+  backendRoot,
+  "supabase/functions/_shared/templates/deck-script.js"
+);
 
 const read = (rel) => readFileSync(path.join(root, rel), "utf8");
 const requireFile = (rel) => {
@@ -23,6 +31,26 @@ const requireMarker = (rel, marker, why) => {
 
 for (const rel of ["src/screens/Viewer.tsx", "functions/content.ts", "public/_headers"]) {
   requireFile(rel);
+}
+
+if (!existsSync(deckScriptPath) && explicitBackendRoot) {
+  failures.push(
+    "Missing editable deck engine source. Set COURSE_PLATFORM_BACKEND_ROOT "
+    + "when the backend is not checked out as ../mzareei.github.io."
+  );
+} else if (existsSync(deckScriptPath)) {
+  const deckScript = readFileSync(deckScriptPath, "utf8");
+  if (!deckScript.includes("parent.postMessage")) {
+    failures.push("deck-script.js must notify its same-origin parent with postMessage");
+  }
+  if (
+    /https?:\/\//i.test(deckScript)
+    || /\b(?:window\.)?location\.href\s*=/i.test(deckScript)
+    || /\bwindow\.open\s*\(/i.test(deckScript)
+    || /<a\b/i.test(deckScript)
+  ) {
+    failures.push("deck-script.js must not contain legacy course URLs or navigation anchors");
+  }
 }
 
 // The viewer goes through the gate, then the same-origin proxy.

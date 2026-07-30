@@ -360,7 +360,7 @@ them. Confirmed the Remove button is absent on your own row.
    `profile_status` — which removal deliberately does not change — over
    `membership_status` (pitfall #20).
 
-### Coherent lifecycle: generated slide checkpoints — **IMPLEMENTED LOCALLY, NOT DEPLOYED**
+### Coherent lifecycle: generated slide checkpoints and deck bridge — **IMPLEMENTED LOCALLY, NOT DEPLOYED**
 
 Built 2026-07-29 across both repositories. Newly generated banks now carry a
 stable concept segment, cited finalized slide numbers, a source range, and the
@@ -380,13 +380,42 @@ exact slide after which each question may be asked.
 - Legacy banks are deliberately left untouched. Their **Prepare checkpoints**
   control is present only when metadata is missing; the following lifecycle
   increment wires the backfill action.
+- The deterministic assembler now inserts a bilingual checkpoint section
+  immediately after each matching teaching slide. Teaching-slide numbers remain
+  stable even though the presentation gains additional physical slides.
+  Reused concept-segment labels receive deterministic position-qualified deck
+  keys, so metadata accepted by the bank validator cannot strand assembly.
+- Generated decks expose a version-1 same-origin bridge. Every message is
+  origin-, source-, version-, and shape-checked; the parent hook accepts messages
+  only from its own iframe and sends only to `window.location.origin`.
+- At a checkpoint, Right Arrow reports a skip before moving and Space is
+  reports one generic parent action without moving. Run Class remains
+  authoritative and interprets that intent as send or reveal from its current
+  state. Ordinary slide navigation and fragment reveal behavior remain
+  unchanged.
+- The editable skeleton, style and script remain the only deck-template source;
+  `deck-assets.ts` is regenerated and a verifier checks exact source parity.
+  That verifier now runs in a path-scoped backend CI workflow, where the
+  editable source actually lives.
 
-**Local evidence:** the checkpoint verifier passed, frontend typecheck passed,
-all seven frontend verifiers passed, and the production build passed. Migration
-`0021_slide_checkpoints.sql` and the three changed functions have **not** been
-applied or deployed from this isolated task. No live generation was run because
-there was no disposable instructor-authenticated fixture, and this increment
-must not overwrite an existing private deck.
+**Local evidence:** a disposable same-origin parent harness loaded generated
+fixture HTML through `/content?t=fixture` and captured `deck.ready`,
+`deck.slide_changed`, `deck.checkpoint_entered`, and
+`deck.checkpoint_skipped`. It confirmed skip-before-navigation, checkpoint Space
+staying put, parent ready/resume, ordinary fragment reveal, overview, help,
+language, and theme. The fullscreen control invoked `requestFullscreen`, but
+the controlled browser denied fullscreen permission, so actual fullscreen entry
+remains pending alongside verification through a live `/content` token.
+
+The backend verifier also executes the real embedded deck script in a
+deterministic DOM harness. It confirms that checkpoint Space emits exactly one
+`deck.checkpoint_action` to `location.origin` without moving, and that Right
+Arrow orders `deck.checkpoint_skipped` before `deck.slide_changed`.
+
+Migration `0021_slide_checkpoints.sql` and the changed functions have **not**
+been applied or deployed from this isolated task. No live generation was run
+because there was no disposable instructor-authenticated fixture, and this
+increment must not overwrite an existing private deck.
 
 ### 9. Phase 6 cleanup
 - Strip lecture/mission content from the public `mzareei.github.io` repo.

@@ -165,6 +165,8 @@ Deck-to-parent messages:
 - `deck.slide_changed`
 - `deck.checkpoint_entered`
 - `deck.checkpoint_skipped`
+- `deck.checkpoint_action` — generic Space intent; the parent decides send vs.
+  reveal from its authoritative state
 
 Parent-to-deck messages:
 

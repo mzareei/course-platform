@@ -866,7 +866,8 @@ export type DeckToParentMessage =
   | { version: 1; type: "deck.ready"; slide: number }
   | { version: 1; type: "deck.slide_changed"; slide: number; teaching_slide: number | null }
   | { version: 1; type: "deck.checkpoint_entered"; checkpoint_key: string; after_slide: number }
-  | { version: 1; type: "deck.checkpoint_skipped"; checkpoint_key: string };
+  | { version: 1; type: "deck.checkpoint_skipped"; checkpoint_key: string }
+  | { version: 1; type: "deck.checkpoint_action"; checkpoint_key: string };
 
 export type ParentToDeckMessage =
   | { version: 1; type: "checkpoint.question_ready"; checkpoint_key: string }
@@ -942,8 +943,10 @@ parent-to-deck messages only when `event.origin === location.origin`,
 `event.source === parent`, and `version === 1`.
 
 At a checkpoint, Right Arrow emits `deck.checkpoint_skipped` before navigating.
-Space is reserved for the parent-controlled Send/Reveal action and does not
-advance. Ordinary slides keep current keyboard behavior.
+Space emits the generic `deck.checkpoint_action` intent and does not advance.
+The parent remains authoritative and decides whether that intent means Send or
+Reveal from its current checkpoint state. Ordinary slides keep current keyboard
+behavior.
 
 - [ ] **Step 4: Add parent validation and hook**
 
@@ -958,6 +961,7 @@ keys, non-integer slides, and additional executable values.
   slide: number | null;
   teachingSlide: number | null;
   checkpoint: { key: string; afterSlide: number } | null;
+  checkpointAction: { key: string; sequence: number } | null;
   send(message: ParentToDeckMessage): void;
   bridgeError: string | null;
 }
@@ -1268,7 +1272,8 @@ bank selector because the scheduled session already supplies the lecture.
 Keyboard handling:
 
 - ordinary arrows remain inside the iframe;
-- checkpoint Space sends or reveals;
+- checkpoint Space arrives as `deck.checkpoint_action`; the parent sends or
+  reveals according to its authoritative `CheckpointUiState`;
 - checkpoint Right Arrow skips or resumes;
 - Escape never ends a class.
 

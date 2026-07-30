@@ -1,3 +1,122 @@
+export const DECK_PROTOCOL_VERSION = 1;
+
+export type DeckToParentMessage =
+  | { version: 1; type: "deck.ready"; slide: number }
+  | {
+    version: 1;
+    type: "deck.slide_changed";
+    slide: number;
+    teaching_slide: number | null;
+  }
+  | {
+    version: 1;
+    type: "deck.checkpoint_entered";
+    checkpoint_key: string;
+    after_slide: number;
+  }
+  | {
+    version: 1;
+    type: "deck.checkpoint_skipped";
+    checkpoint_key: string;
+  }
+  | {
+    version: 1;
+    type: "deck.checkpoint_action";
+    checkpoint_key: string;
+  };
+
+export type ParentToDeckMessage =
+  | { version: 1; type: "checkpoint.question_ready"; checkpoint_key: string }
+  | { version: 1; type: "checkpoint.question_sent"; checkpoint_key: string }
+  | { version: 1; type: "checkpoint.answer_revealed"; checkpoint_key: string }
+  | { version: 1; type: "checkpoint.resume"; checkpoint_key: string };
+
+type MessageRecord = Record<string, unknown>;
+
+function safeMessageRecord(value: unknown): MessageRecord | null {
+  if (!value || typeof value !== "object") return null;
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return null;
+  if (Object.getOwnPropertySymbols(value).length > 0) return null;
+
+  const keys = Object.keys(value);
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  const safe = keys.every((key) => {
+    const descriptor = descriptors[key];
+    return (
+      descriptor !== undefined
+      && Object.prototype.hasOwnProperty.call(descriptor, "value")
+      && typeof descriptor.value !== "function"
+    );
+  });
+  return safe ? value as MessageRecord : null;
+}
+
+function hasExactKeys(value: MessageRecord, expectedKeys: string[]): boolean {
+  const keys = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  return (
+    keys.length === expected.length
+    && keys.every((key, index) => key === expected[index])
+  );
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) > 0;
+}
+
+function isCheckpointKey(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function isDeckMessage(
+  value: unknown,
+  origin: string
+): value is DeckToParentMessage {
+  if (origin !== location.origin) return false;
+  const candidate = safeMessageRecord(value);
+  if (!candidate) return false;
+  if (candidate.version !== DECK_PROTOCOL_VERSION || typeof candidate.type !== "string") {
+    return false;
+  }
+
+  switch (candidate.type) {
+    case "deck.ready":
+      return (
+        hasExactKeys(candidate, ["version", "type", "slide"])
+        && isPositiveInteger(candidate.slide)
+      );
+    case "deck.slide_changed":
+      return (
+        hasExactKeys(candidate, ["version", "type", "slide", "teaching_slide"])
+        && isPositiveInteger(candidate.slide)
+        && (
+          candidate.teaching_slide === null
+          || isPositiveInteger(candidate.teaching_slide)
+        )
+      );
+    case "deck.checkpoint_entered":
+      return (
+        hasExactKeys(candidate, [
+          "version",
+          "type",
+          "checkpoint_key",
+          "after_slide"
+        ])
+        && isCheckpointKey(candidate.checkpoint_key)
+        && isPositiveInteger(candidate.after_slide)
+      );
+    case "deck.checkpoint_skipped":
+    case "deck.checkpoint_action":
+      return (
+        hasExactKeys(candidate, ["version", "type", "checkpoint_key"])
+        && isCheckpointKey(candidate.checkpoint_key)
+      );
+    default:
+      return false;
+  }
+}
+
 export type CheckpointQuestion = {
   question_id: string;
   generation_key: string;

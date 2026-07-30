@@ -616,3 +616,44 @@ cannot prove that a cited slide contains the answer or that a bank has 18
 questions, a 6/6/6 balance, 3–5 checkpoints and two candidates per checkpoint.
 Those invariants live in one shared backend validator used by every generated
 insert path.
+
+---
+
+## 29. Inserting a checkpoint creates two slide coordinate systems
+
+A generated lecture now has **teaching slides** and **physical presentation
+slides**. If a checkpoint is inserted after teaching slide 15, it becomes the
+next physical slide in the deck, but it must not turn the former teaching slide
+16 into teaching slide 17. Question citations and checkpoint coverage were
+validated against the finalized teaching slides before assembly; renumbering
+them afterwards would silently invalidate that contract.
+
+The browser still needs the physical position for its counter and navigation,
+while Run Class needs the stable teaching position to decide what material has
+been covered.
+
+**Rule:** never derive teaching position from a generated deck section's DOM
+index. Give every teaching section its original `data-teaching-slide`, leave
+checkpoint sections without one, and send both physical `slide` and nullable
+`teaching_slide` over the bridge. Insert checkpoints by matching
+`after_slide`, not by splicing array offsets.
+
+`segment_key` identifies a concept, but it is not guaranteed to identify one
+physical checkpoint: the same concept label may legally appear at more than one
+`after_slide`. A deck key must therefore be derived from the segment and its
+position when the segment repeats. Rejecting that shape only during assembly is
+too late—the validated questions have already been cached, so every retry would
+reuse the same unassemblable data.
+
+The same bridge also has two identity boundaries: origin and window. Checking
+only `event.origin` lets any same-origin frame impersonate the deck. The parent
+must additionally require `event.source === iframe.contentWindow`; the deck
+must require `event.source === parent`. Validate the version and exact plain-data
+shape before reading message fields so accessors or extra executable values are
+never invoked.
+
+Keyboard intent belongs in the same protocol. A key event focused inside the
+iframe does not bubble to the parent window. Checkpoint Space therefore emits a
+generic `deck.checkpoint_action`; it must not claim `send` or `reveal`, because
+only the parent owns the current live-round state and may decide which action is
+valid.

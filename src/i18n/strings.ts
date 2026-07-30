@@ -939,6 +939,16 @@ export const strings = {
   "reflection.submitting": ["Submitting…", "Enviando…"],
   "reflection.submitFailed": ["Could not submit your reflection.", "No se pudo enviar tu reflexión."],
 
+  // ---------------------------------------------------------------- deck bridge
+  "deck.bridgeInvalid": [
+    "The lecture deck sent an invalid control message.",
+    "La presentación envió un mensaje de control no válido."
+  ],
+  "deck.bridgeUnavailable": [
+    "The lecture deck controls are not ready yet.",
+    "Los controles de la presentación todavía no están listos."
+  ],
+
   // ---------------------------------------------------------------- status pills
   "state.draft": ["Hidden", "Oculto"],
   "state.scheduled": ["Scheduled", "Programado"],
