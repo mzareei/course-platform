@@ -82,8 +82,8 @@ Functions, Node verifier scripts.
 
 ### Backend files created
 
-- `supabase/migrations/0019_class_session_content.sql`
-- `supabase/migrations/0020_slide_checkpoints.sql`
+- `supabase/migrations/0020_class_session_content.sql`
+- `supabase/migrations/0021_slide_checkpoints.sql`
 - `supabase/functions/course-session-join/index.ts`
 - `supabase/functions/course-checkpoint-backfill/index.ts`
 - `supabase/functions/_shared/checkpoints.ts`
@@ -256,7 +256,7 @@ git commit -m "fix: separate live questions from review content"
 
 **Files:**
 
-- Create: `supabase/migrations/0019_class_session_content.sql`
+- Create: `supabase/migrations/0020_class_session_content.sql`
 - Modify: `supabase/functions/course-auth-context/index.ts`
 - Modify: `supabase/functions/course-session-management/index.ts`
 - Create: `src/api/classes.ts`
@@ -324,7 +324,7 @@ Run `node tools/verify-class-sessions.mjs`; expect FAIL.
 
 - [ ] **Step 2: Add the additive migration**
 
-Create backend `supabase/migrations/0019_class_session_content.sql`:
+Create backend `supabase/migrations/0020_class_session_content.sql`:
 
 ```sql
 alter table class_sessions
@@ -448,7 +448,7 @@ returns `state: "live"`.
 Backend:
 
 ```bash
-git add supabase/migrations/0019_class_session_content.sql \
+git add supabase/migrations/0020_class_session_content.sql \
   supabase/functions/course-auth-context/index.ts \
   supabase/functions/course-session-management/index.ts
 git commit -m "feat: make class sessions independent of releases"
@@ -616,7 +616,7 @@ git commit -m "feat: add QR class joining"
 
 **Files:**
 
-- Create: `supabase/migrations/0020_slide_checkpoints.sql`
+- Create: `supabase/migrations/0021_slide_checkpoints.sql`
 - Create: `supabase/functions/_shared/checkpoints.ts`
 - Modify: `supabase/functions/course-generation-worker/schemas.ts`
 - Modify: `supabase/functions/course-generation-worker/index.ts`
@@ -686,9 +686,9 @@ console.log("verify-deck-protocol: OK");
 
 Run it and confirm failure until validation exists.
 
-- [ ] **Step 2: Create migration 0020**
+- [ ] **Step 2: Create migration 0021**
 
-Create `supabase/migrations/0020_slide_checkpoints.sql`:
+Create `supabase/migrations/0021_slide_checkpoints.sql`:
 
 ```sql
 alter table questions
@@ -821,7 +821,7 @@ npm run build
 Backend:
 
 ```bash
-git add supabase/migrations/0020_slide_checkpoints.sql \
+git add supabase/migrations/0021_slide_checkpoints.sql \
   supabase/functions/_shared/checkpoints.ts \
   supabase/functions/course-generation-worker/schemas.ts \
   supabase/functions/course-generation-worker/index.ts \
