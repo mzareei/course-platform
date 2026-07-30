@@ -806,3 +806,46 @@ server-side, so a client failure cannot strand the class lifecycle.
 Keyboard repeat is a separate edge: ignore `keydown.repeat` in the generated
 deck. Otherwise one held Space can send and immediately reveal after the parent
 state changes between repeated events.
+
+---
+
+## 34. A model's concept label is not checkpoint identity
+
+The first real legacy-bank preparation put multiple questions at the same slide
+boundary but supplied a different `segment_key` for each. The mapping was
+semantically useful, yet the validator counted 18 one-question checkpoints and
+rejected it. A retry produced six valid shared boundaries—still one above the
+product's 3–5 range.
+
+**Rule:** checkpoint identity is the authored slide boundary. Before validating,
+give every question at one boundary the same canonical key. If a model returns
+more than five boundaries, merge the closest adjacent boundary into the later
+one; that preserves the rule that every cited source slide has already been
+taught. Keep the 3–5 and minimum-candidate validators after normalization.
+
+---
+
+## 35. Supabase extension functions are not in a `public`-only search path
+
+The atomic class starter used `gen_random_bytes` while declaring
+`set search_path = public`. Supabase installs pgcrypto in `extensions`, so the
+function failed at runtime with “function gen_random_bytes(integer) does not
+exist” even though the migration applied cleanly.
+
+**Rule:** a `security definer` function should keep a restricted trusted search
+path, but it must include every trusted schema it intentionally uses. For
+pgcrypto here that is `public, extensions` (migration 0023). Exercise each new
+RPC through its real edge-function caller after applying it.
+
+---
+
+## 36. Destructive confirmations should be in-app state, not `window.confirm`
+
+Native dialogs block browser automation and offer poor styling, translation,
+and consequence layout. The full production rehearsal reached the end of class
+but could not reliably accept the native dialog through browser control.
+
+**Rule:** first click changes the action to an explicit bilingual confirmation
+button and renders the consequences beside it; the second click performs the
+write. This is easier to test, clearer on projector and phone screens, and does
+not depend on browser-owned modal behavior.

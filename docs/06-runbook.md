@@ -97,22 +97,26 @@ Do this through the UI, never by typing internal URLs.
 
 1. With no future session, **Instructor Home → Schedule a class**. In
    **Classes**, create a group if needed and schedule the class with its lecture.
-2. Home → **Run class** → verify the private deck and QR → **Start class**.
-3. **Student** (fresh second browser) starts from Today or scans the QR. The
+2. Content → **Question banks**. If the selected legacy lecture says
+   **Needs attention**, run **Prepare checkpoints** and wait for **Ready for
+   class** before presenting it.
+3. Home → **Run class** → verify the private deck and QR → **Start class**.
+4. **Student** (fresh second browser) starts from Today or scans the QR. The
    **Join class** action must be reachable without typing `/live`.
-4. Advance the deck to an authored checkpoint. Space sends the prepared
+5. Advance the deck to an authored checkpoint. Space sends the prepared
    question; the student answers; Space reveals; Right Arrow closes it and
    resumes the deck. Complete two checkpoints and skip one.
-5. Reload Run Class while a question is open and confirm the same round is
+6. Reload Run Class while a question is open and confirm the same round is
    restored. Hold Space once and confirm it does not send then reveal.
-6. At the end, **Start the quiz**. Student gets questions one at a time,
+7. At the end, **Start the quiz**. Student gets questions one at a time,
    each timed, auto-advancing.
-7. **Instructor** → watch submitted count → **Close the quiz** → class average.
-8. **Student** → reflection (50–100 words) → submit.
-9. **Instructor** → the reflection appears under Reflections.
-10. **Instructor** → **End the class** (this closes the session — only do it when
+8. **Instructor** → watch submitted count → **Close the quiz** → class average.
+9. **Student** → reflection (50–100 words) → submit.
+10. **Instructor** → the reflection appears under Reflections.
+11. **Instructor** → **End the class**, read the in-app consequence text, then
+   **Confirm: end the class**. This closes the session — only do it when
    you're finished testing, since it stops "Join class" appearing).
-11. Check Gradebook → **Per class**, then **View as student** and navigate
+12. Check Gradebook → **Per class**, then **View as student** and navigate
     Today → Review → Grades. Week 1 Quiz must never appear in Review.
 
 Rehearse the student side at 375×812 and 430×932, and the instructor cockpit at

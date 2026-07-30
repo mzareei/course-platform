@@ -69,7 +69,7 @@ Everything below was exercised through the real UI, not by calling endpoints.
 
 ## Remaining work, in priority order
 
-### 0. Coherent class lifecycle redesign — **IN PROGRESS**
+### 0. Coherent class lifecycle redesign — **DEPLOYED AND VERIFIED IN PRODUCTION**
 
 The professor exercised the product on 2026-07-29 and found that the individual
 features do not yet form a coherent teaching workflow:
@@ -94,8 +94,9 @@ professor-only; Classes becomes a first-class screen; a 40-slide lecture gets
 approximately four pre-generated concept checkpoints; QR joining returns; and
 Run Class embeds the deck beside context-sensitive controls.
 
-This work now precedes the real-phone dress rehearsal: the rehearsal should
-exercise the intended lifecycle, not the misleading one.
+The redesign is live and its full instructor/student lifecycle has been
+rehearsed through separate production browser sessions. A real-phone classroom
+dress rehearsal remains the next operational milestone.
 
 ### 0.1 Content delivery semantics — **DONE, verifier-covered**
 
@@ -115,7 +116,7 @@ live-only rule explicit. `tools/verify-content-semantics.mjs` locks the
 classification contract; typecheck, all verifiers, and the production build
 pass.
 
-### 0.2 First-class class sessions and Classes — **DONE locally, deployment and browser verification pending**
+### 0.2 First-class class sessions and Classes — **DEPLOYED AND VERIFIED**
 
 Built 2026-07-29 as the second coherent-lifecycle increment. Class sessions and
 content releases are now separate collections in `course-auth-context`.
@@ -133,11 +134,13 @@ state-change audit event.
 `tools/verify-class-sessions.mjs` locks the student-session context, the
 session-driven Today/Live paths, and the Classes route. The verifier was captured
 RED before implementation and GREEN afterwards. Frontend typecheck passes.
-Remote migration/function checks and the real instructor/student entry-point
-test remain to be recorded before this increment can be described as verified
-live.
+Migrations 0020 and 0023 and the affected functions are live. On 2026-07-29 the
+production empty state led from Home → Schedule a class → Classes; the
+instructor created “Deployment rehearsal — Week 1”, opened it from Home, and
+started it successfully. Migration 0023 is the production-discovered fix that
+adds Supabase's trusted `extensions` schema to the atomic starter's search path.
 
-### 0.3 QR class joining — **DONE locally; join function deployed, browser matrix pending**
+### 0.3 QR class joining — **DEPLOYED; ENROLLED STUDENT PATH VERIFIED**
 
 Built 2026-07-29 as the third coherent-lifecycle increment. Run Class now shows
 a real QR code before and during class. It encodes only the session URL
@@ -163,7 +166,7 @@ prepare a live class. Do not describe QR joining as browser-verified until the
 signed-in enrolled, signed-out return, unenrolled, invalid-code, and
 closed-session paths have all been exercised through the UI.
 
-### 0.4 Existing-deck checkpoint preparation — **DONE locally; migration, deployment, and pilot pending**
+### 0.4 Existing-deck checkpoint preparation — **DEPLOYED; WEEK 1 PILOT VERIFIED**
 
 Built 2026-07-29 as the recoverable legacy-content increment. The instructor-only
 Content action maps each existing 18-question bank to 3–5 teaching checkpoints
@@ -181,13 +184,16 @@ sections inside teaching slides, and removes bare-relative, parent-relative,
 root-relative, and absolute Home/Mission/Quiz/Exit controls with query/hash
 variants while preserving unrelated navigation.
 
-Backend `tools/verify-checkpoint-decks.mjs`, frontend
-`tools/verify-deck-protocol.mjs`, and frontend typecheck pass locally. No
-migration was applied, no edge function was deployed, and no real Storage object
-was changed. Apply migration 0022, deploy both affected functions, and pilot one
-lecture through `/content?t=…` before calling this verified live.
+Migration 0022 and the backfill function are live. Week 1 Lecture 1 was prepared
+in production: 45 teaching slides became a 50-section deck with five embedded
+checkpoints; all 18 existing questions were mapped; and Home, Mission, Quiz,
+and Exit disappeared while language, theme, overview, help, fullscreen, and
+slide controls remained. The production pilot also found and fixed model output
+that used a different concept key per question and returned six adjacent
+boundaries. The server now groups all candidates at one slide boundary and
+merges the closest adjacent boundaries when more than five are returned.
 
-### 0.5 Unified Run Class cockpit — **DONE locally; backend deployment and signed-in two-browser flow pending**
+### 0.5 Unified Run Class cockpit — **DEPLOYED AND VERIFIED END TO END**
 
 Built 2026-07-29 as the instructor-facing lifecycle increment. A scheduled
 session's selected lecture now opens privately inside Run Class beside one
@@ -223,13 +229,31 @@ iframe rules, parent-authoritative Space intent, client protocol mismatch
 rejection, server lecture/checkpoint identity enforcement, reload recovery,
 conditional reveal/close transitions, repeated-key suppression, and token
 refresh at the current slide. A session close now closes every open or revealed
-pulse on the server first. No function was
-deployed and no live session or content object was changed. Apply pending
-migrations and deploy `course-content-access` plus `course-pulse` only after
-authorization, then record the signed-in instructor/student lifecycle from
-Today through reflection before describing the cockpit as verified live.
+pulse on the server first.
 
-### 0.6 Faithful student preview — **DONE locally; browser verification pending**
+Production rehearsal evidence (session
+`65803c87-f4b8-4dfe-a53f-6608ba8637d4`, closed):
+
+- Instructor Home → Run class → Start class loaded the cleaned 50-section deck
+  and QR in the single cockpit.
+- A question authored after teaching slide 15 was prepared from slides 11–11,
+  sent, received by a separately signed-in QA student from Today → Join class,
+  revealed, restored after an instructor reload, and closed.
+- The timed 12-question quiz arrived automatically; QA Test Student submitted
+  11 answers and received 18.2%.
+- Closing the quiz automatically opened reflection. A 58-word reflection was
+  submitted, appeared in the instructor feed, and the student completion screen
+  confirmed pulse/quiz/reflection were recorded.
+- The class was closed using the bilingual two-step in-app confirmation.
+- Gradebook → Per class showed the pulse distribution, 1 of 1 quiz finished
+  with an 18% class average, and the full 58-word reflection.
+
+The rehearsal intentionally records 0 pulse answers because the 60-second pulse
+expired while the separate student browser was reconnected. Delivery, expiry,
+reveal, recovery, close, quiz, reflection, and gradebook persistence were all
+observed through the production UI.
+
+### 0.6 Faithful student preview — **DEPLOYED AND VERIFIED**
 
 The instructor preview now exposes all three real student destinations:
 `/student`, `/student/review`, and `/student/grades`. Each route renders the
@@ -237,9 +261,15 @@ same screen component and the same `StudentShell` bottom navigation used by a
 student. Instructor tabs are removed during preview and a visible exit returns
 to `/teach`.
 
-Frontend typecheck, all eight verifiers, and the production build pass. The
-preview still needs to be exercised after the Cloudflare deployment at phone
-widths before it is described as verified live.
+The production preview was exercised at 375×812 and 430×932. Today, Review, and
+My Grades used `/student/*` links, the instructor navigation was absent, and the
+exit returned to `/teach`. Review contained Week 1 Lecture 1 and did not contain
+Week 1 Quiz. The projector cockpit was checked at 1440px width with a 977×549
+deck iframe and no horizontal overflow.
+
+The latest deployed frontend bundle is `index-CkfQNyoZ.js` from commit
+`bb3a1eb`. Backend `main` is `aa15490`; migrations 0020–0023 and all nine
+coherent-lifecycle functions are deployed.
 
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
@@ -248,10 +278,10 @@ platform, all driven by automation on one machine. Run one complete class.
 Watch for: concurrent answer bursts, phones sleeping mid-quiz, students joining
 late, flaky campus wifi.
 
-### 2. Re-verify the reflection step on a fresh class session
-It worked, and only its polling changed since. But the current test session
-already has a reflection submitted, so that branch no longer renders for that
-student. **Flagged rather than claimed.**
+### 2. Re-verify the reflection step on a fresh class session — **DONE**
+The 2026-07-29 production rehearsal used a fresh class session. Closing the quiz
+opened reflection automatically; the QA student submitted 58 words; the
+instructor feed and Gradebook both displayed the saved response.
 
 ### 3. Gradebook Tab B — per-class review — **DONE, verified by the professor**
 Built on 2026-07-28. A **Per class** tab on the Gradebook screen: pick a class
