@@ -11,7 +11,9 @@
 ## Global Constraints
 
 - Projector privacy is enforced in server response shapes, not CSS.
-- Both routes require instructor-capable authentication; only Controller writes.
+- Both routes require instructor-capable authentication. Only Controller actions
+  may write control revisions, requested slides, or classroom phases; Projector
+  may write only acknowledgements, checkpoint reports, and last-seen telemetry.
 - The deck always loads through `/content?t=...`.
 - Revisions are monotonic and idempotent.
 - Existing pulse recovery remains authoritative.
@@ -87,9 +89,12 @@ Run: `node tools/verify-projector-safety.mjs`
 
 - [ ] **Step 3: Implement authorization and revision writes**
 
-All actions require teacher role; only instructor/platform owner may write.
-`request_slide` atomically increments revision. `acknowledge_slide` accepts only
-the current-or-newer requested revision and never changes the target.
+All actions require teacher role. Controller control actions require
+instructor/platform-owner role; projector acknowledgement, checkpoint, and
+heartbeat actions may be sent by any teacher role but cannot modify control
+revisions, requested slides, or classroom phases. `request_slide` atomically
+increments revision. `acknowledge_slide` accepts only the current-or-newer
+requested revision and never changes the target.
 `projector_current` returns:
 
 ```ts
@@ -187,7 +192,7 @@ git commit -m "feat: add presentation synchronization client"
 **Files:**
 - Create: `src/screens/instructor/Projector.tsx`
 - Create: `src/features/presentation/ProjectorPulse.tsx`
-- Modify: `src/App.tsx`
+- Modify: `src/app.tsx`
 - Modify: `src/i18n/strings.ts`
 - Modify: `src/styles/app.css`
 - Modify: `tools/verify-app-shell.mjs`
@@ -218,7 +223,7 @@ without correctness until server state is revealed.
 npm run typecheck
 npm run verify
 npm run build
-git add src/screens/instructor/Projector.tsx src/features/presentation/ProjectorPulse.tsx src/App.tsx src/i18n/strings.ts src/styles/app.css tools/verify-app-shell.mjs tools/verify-projector-safety.mjs
+git add src/screens/instructor/Projector.tsx src/features/presentation/ProjectorPulse.tsx src/app.tsx src/i18n/strings.ts src/styles/app.css tools/verify-app-shell.mjs tools/verify-projector-safety.mjs
 git commit -m "feat: add safe classroom projector"
 ```
 
