@@ -17,6 +17,8 @@ export type CheckpointBankSummary = {
   content_slug: string;
   content_title: string;
   content_type: string;
+  checkpoint_preparation_state: "none" | "pending_upload" | "ready";
+  checkpoint_preparation_updated_at: string | null;
   updated_at: string;
   total: number;
   by_difficulty: { easy: number; medium: number; hard: number };
@@ -39,6 +41,7 @@ export type BackfillResult = {
   teaching_slide_count: number;
   checkpoint_count: number;
   mapped_question_count: number;
+  preparation_state: "ready";
 };
 
 export function prepareLegacyCheckpoints(

@@ -829,6 +829,7 @@ export const strings = {
   ],
   "content.banks.ready": ["Ready for class", "Listo para la clase"],
   "content.banks.needsAttention": ["Needs attention", "Necesita atención"],
+  "content.banks.uploadPending": ["Upload pending", "Carga pendiente"],
   "content.banks.checkpointCount": [
     "{count} checkpoints",
     "{count} puntos de control"
@@ -850,6 +851,13 @@ export const strings = {
     "Preparing checkpoints…",
     "Preparando puntos de control…"
   ],
+  "content.banks.pendingUpload": [
+    "The question mapping is saved, but the updated lecture deck still needs to be uploaded. Resume without generating the questions again.",
+    "La vinculación de preguntas está guardada, pero aún falta cargar la clase actualizada. Reanuda sin volver a generar las preguntas."
+  ],
+  "content.banks.resume": ["Resume upload", "Reanudar carga"],
+  "content.banks.retry": ["Retry upload", "Reintentar carga"],
+  "content.banks.resuming": ["Resuming upload…", "Reanudando la carga…"],
   "content.banks.prepared": [
     "Prepared {checkpointCount} checkpoints and mapped {questionCount} questions.",
     "Se prepararon {checkpointCount} puntos de control y se vincularon {questionCount} preguntas."

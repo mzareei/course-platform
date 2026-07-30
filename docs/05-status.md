@@ -163,6 +163,30 @@ prepare a live class. Do not describe QR joining as browser-verified until the
 signed-in enrolled, signed-out return, unenrolled, invalid-code, and
 closed-session paths have all been exercised through the UI.
 
+### 0.4 Existing-deck checkpoint preparation — **DONE locally; migration, deployment, and pilot pending**
+
+Built 2026-07-29 as the recoverable legacy-content increment. The instructor-only
+Content action maps each existing 18-question bank to 3–5 teaching checkpoints
+without rewriting prompts, options, or question status. Migration 0022 adds the
+durable `none | pending_upload | ready` preparation state and two service-role
+RPCs: the first atomically commits all five metadata fields for the full bank
+with `pending_upload`; the second acknowledges readiness only after the same-path
+private deck upload succeeds.
+
+An interrupted upload or readiness acknowledgement is now recoverable from the
+Content card. The pending action rebuilds the mapping from persisted metadata,
+re-transforms the current deck, uploads, and finalizes without another model
+call. The pure deck transformer is retry-idempotent, structurally rejects nested
+sections inside teaching slides, and removes bare-relative, parent-relative,
+root-relative, and absolute Home/Mission/Quiz/Exit controls with query/hash
+variants while preserving unrelated navigation.
+
+Backend `tools/verify-checkpoint-decks.mjs`, frontend
+`tools/verify-deck-protocol.mjs`, and frontend typecheck pass locally. No
+migration was applied, no edge function was deployed, and no real Storage object
+was changed. Apply migration 0022, deploy both affected functions, and pilot one
+lecture through `/content?t=…` before calling this verified live.
+
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
 platform, all driven by automation on one machine. Run one complete class.

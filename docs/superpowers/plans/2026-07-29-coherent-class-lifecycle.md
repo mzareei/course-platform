@@ -1021,13 +1021,17 @@ git commit -m "feat: add a validated deck checkpoint bridge"
 **Files:**
 
 - Create: `supabase/functions/course-checkpoint-backfill/index.ts`
+- Create: `supabase/migrations/0022_checkpoint_preparation_state.sql`
 - Modify: `supabase/config.toml`
 - Modify: `supabase/functions/_shared/checkpoint-deck.ts`
+- Modify: `supabase/functions/course-question-bank/index.ts`
 - Create: `tools/verify-checkpoint-decks.mjs`
 - Modify: `src/api/checkpoints.ts`
 - Modify: `src/components/QuestionBanks.tsx`
+- Modify: `src/features/deck/bankReadiness.ts`
 - Modify: `src/i18n/strings.ts`
 - Test: backend `tools/verify-checkpoint-decks.mjs`
+- Test: frontend `tools/verify-deck-protocol.mjs`
 - Modify: `docs/05-status.md`
 - Modify: `docs/07-pitfalls.md`
 
@@ -1041,6 +1045,7 @@ type BackfillResult = {
   teaching_slide_count: number;
   checkpoint_count: number;
   mapped_question_count: number;
+  preparation_state: "ready";
 };
 
 export function prepareLegacyCheckpoints(contentItemId: string):
@@ -1055,7 +1060,13 @@ transformer:
 
 - preserves four teaching slides;
 - removes the four legacy destinations;
+- removes bare-relative, parent-relative, root-relative and absolute
+  Home/Mission/Quiz/Exit variants, including query/hash suffixes, while
+  preserving unrelated controls;
 - inserts one checkpoint after slide 3;
+- rejects a teaching slide containing a nested `<section>` instead of letting a
+  non-structural regex truncate it;
+- can re-transform an already upgraded deck without duplicating checkpoints;
 - uses a function replacement, never a raw replacement string.
 
 - [ ] **Step 2: Implement deterministic HTML transformation**
@@ -1091,24 +1102,36 @@ leaving language, theme, overview, help, fullscreen, and slide controls.
 6. makes one Claude tool call that maps each question to source slides and
    selects 3–5 checkpoint boundaries, without rewriting prompt/options;
 7. validates at least two candidates per checkpoint;
-8. updates only metadata columns on `questions`;
+8. calls `begin_question_bank_checkpoint_preparation` once; migration 0022
+   atomically updates all five metadata columns for the complete bank and marks
+   the bank `pending_upload`, without changing prompts, options, or lifecycle
+   status;
 9. removes legacy navigation, injects checkpoints and current deck assets;
 10. uploads to the same private storage path only after all validation passes;
-11. returns `BackfillResult`.
+11. calls `complete_question_bank_checkpoint_preparation` to mark the bank
+    `ready`;
+12. returns `BackfillResult`.
 
 The function imports `DECK_SCRIPT` and `DECK_STYLE` from
 `../course-generation-worker/deck-assets.ts` and passes them into the pure
 transformer; it does not keep a third copy of the deck engine.
 
-Because the storage write is last, a failed model mapping leaves the working
-deck untouched.
+Because the storage content write follows the atomic pending transition, a
+failed model mapping leaves the working deck untouched. An upload failure or a
+failure to acknowledge readiness leaves `pending_upload` durable. A retry
+reconstructs the mapping from the five persisted metadata columns, re-transforms
+the current deck idempotently, uploads it, and finalizes the bank without a
+second model call.
 
 - [ ] **Step 4: Wire the Content action**
 
-QuestionBanks shows **Prepare checkpoints** only when
-`checkpoint_coverage.length === 0`. The resulting success card states the
-number of checkpoints and mapped questions. Errors render inside that bank
-card.
+QuestionBanks shows **Prepare checkpoints** only for a completely missing
+legacy mapping. `list_banks` also returns
+`checkpoint_preparation_state: none | pending_upload | ready`; a valid pending
+bank alone receives the bilingual **Resume upload** / **Retry upload** action.
+The card refreshes durable state after failures so an interrupted first attempt
+immediately becomes resumable. Generated-ready, legacy, pending, and invalid
+banks remain distinct.
 
 - [ ] **Step 5: Deploy and backfill one pilot**
 
@@ -1116,8 +1139,10 @@ card.
 npx supabase functions deploy course-checkpoint-backfill
 ```
 
-Run Week 1 Lecture 1 first. Verify 45 teaching slides remain, checkpoint count
-is 3–5, old links are absent, and arrows still navigate.
+Apply migration 0022 before deploying the functions. Run Week 1 Lecture 1 first.
+Verify 45 teaching slides remain, checkpoint count is 3–5, every legacy URL
+variant is absent, and arrows still navigate. Interrupt one pilot after the
+pending transition and verify Content resumes without another model call.
 
 - [ ] **Step 6: Backfill the remaining lecture banks**
 
@@ -1130,8 +1155,10 @@ Backend:
 
 ```bash
 git add supabase/functions/course-checkpoint-backfill/index.ts \
-  supabase/functions/_shared/checkpoint-deck.ts supabase/config.toml \
-  tools/verify-checkpoint-decks.mjs
+  supabase/functions/_shared/checkpoint-deck.ts \
+  supabase/functions/course-question-bank/index.ts \
+  supabase/migrations/0022_checkpoint_preparation_state.sql \
+  supabase/config.toml tools/verify-checkpoint-decks.mjs
 git commit -m "feat: prepare existing decks for live checkpoints"
 ```
 
@@ -1139,7 +1166,8 @@ Frontend:
 
 ```bash
 git add src/api/checkpoints.ts src/components/QuestionBanks.tsx \
-  src/i18n/strings.ts docs/05-status.md docs/07-pitfalls.md
+  src/features/deck/bankReadiness.ts src/i18n/strings.ts \
+  tools/verify-deck-protocol.mjs docs/05-status.md docs/07-pitfalls.md
 git commit -m "feat: prepare legacy question banks from Content"
 ```
 

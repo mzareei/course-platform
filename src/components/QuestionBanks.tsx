@@ -8,6 +8,7 @@ import {
 } from "../api/checkpoints";
 import {
   canPrepareCheckpoints,
+  canResumeCheckpointPreparation,
   questionBankReadiness
 } from "../features/deck/bankReadiness";
 import { t } from "../i18n";
@@ -17,9 +18,15 @@ export function QuestionBanks() {
   const [banks, setBanks] = useState<CheckpointBankSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  async function refreshBanks() {
+    const { banks: rows } = await listBanks();
+    setBanks(rows);
+    setError(null);
+    return rows;
+  }
+
   useEffect(() => {
-    listBanks()
-      .then(({ banks: rows }) => setBanks(rows))
+    refreshBanks()
       .catch((reason: unknown) => {
         setError(reason instanceof Error ? reason.message : t("content.banks.loadFailed"));
       });
@@ -46,12 +53,24 @@ export function QuestionBanks() {
         <h2>{t("content.banks.title")}</h2>
         <p class="hint">{t("content.banks.lede")}</p>
       </div>
-      {banks.map((bank) => <QuestionBankCard key={bank.bank_id} bank={bank} />)}
+      {banks.map((bank) => (
+        <QuestionBankCard
+          key={bank.bank_id}
+          bank={bank}
+          onRefresh={refreshBanks}
+        />
+      ))}
     </div>
   );
 }
 
-function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
+function QuestionBankCard({
+  bank,
+  onRefresh
+}: {
+  bank: CheckpointBankSummary;
+  onRefresh: () => Promise<CheckpointBankSummary[]>;
+}) {
   const readiness = questionBankReadiness(bank);
   const instructorCanPrepare = activeRoles.value.some((role) =>
     role === "platform_owner" || role === "instructor"
@@ -59,10 +78,13 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
   const preparable = instructorCanPrepare
     && bank.checkpoint_coverage.length === 0
     && canPrepareCheckpoints(bank);
+  const resumable = instructorCanPrepare
+    && canResumeCheckpointPreparation(bank);
   const [preparing, setPreparing] = useState(false);
   const [prepareError, setPrepareError] = useState<string | null>(null);
   const [prepared, setPrepared] = useState<BackfillResult | null>(null);
   const ready = readiness === "ready" || prepared !== null;
+  const pending = readiness === "pending";
   const checkpointCount = prepared?.checkpoint_count
     ?? bank.checkpoint_coverage.length;
 
@@ -71,8 +93,22 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
     setPrepareError(null);
     try {
       setPrepared(await prepareLegacyCheckpoints(bank.content_item_id));
+      try {
+        await onRefresh();
+      } catch {
+        // The successful response already proves readiness; refresh is best effort.
+      }
     } catch {
       setPrepareError(t("content.banks.prepareFailed"));
+      try {
+        const refreshed = await onRefresh();
+        const durableBank = refreshed.find((row) => row.bank_id === bank.bank_id);
+        if (durableBank && questionBankReadiness(durableBank) === "ready") {
+          setPrepareError(null);
+        }
+      } catch {
+        // Keep the card-level action error when durable-state refresh also fails.
+      }
     } finally {
       setPreparing(false);
     }
@@ -90,7 +126,11 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
           </p>
         </div>
         <span class={`pill ${ready ? "live" : "warn"}`}>
-          {ready ? t("content.banks.ready") : t("content.banks.needsAttention")}
+          {ready
+            ? t("content.banks.ready")
+            : pending
+              ? t("content.banks.uploadPending")
+              : t("content.banks.needsAttention")}
         </span>
       </div>
 
@@ -119,6 +159,24 @@ function QuestionBankCard({ bank }: { bank: CheckpointBankSummary }) {
             })}
           </p>
         </div>
+      ) : pending ? (
+        <>
+          <p class="error-text" role="alert">{t("content.banks.pendingUpload")}</p>
+          {resumable ? (
+            <button
+              class="btn"
+              type="button"
+              disabled={preparing}
+              onClick={prepare}
+            >
+              {preparing
+                ? t("content.banks.resuming")
+                : prepareError
+                  ? t("content.banks.retry")
+                  : t("content.banks.resume")}
+            </button>
+          ) : null}
+        </>
       ) : preparable ? (
         <>
           <p class="error-text" role="alert">{t("content.banks.missingMetadata")}</p>

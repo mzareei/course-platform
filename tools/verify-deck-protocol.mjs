@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   canPrepareCheckpoints,
+  canResumeCheckpointPreparation,
   questionBankReadiness
 } from "../src/features/deck/bankReadiness.ts";
 
@@ -184,26 +185,48 @@ const coverage = [5, 10, 15].map((slide) => ({
 }));
 const legacyBank = {
   ...balanced,
+  checkpoint_preparation_state: "none",
   checkpoint_metadata_status: "missing",
   checkpoint_coverage: []
 };
 const readyBank = {
   ...balanced,
+  checkpoint_preparation_state: "none",
   checkpoint_metadata_status: "valid",
   checkpoint_coverage: coverage
 };
+const pendingBank = {
+  ...readyBank,
+  checkpoint_preparation_state: "pending_upload"
+};
 const invalidBank = {
   ...balanced,
+  checkpoint_preparation_state: "none",
   checkpoint_metadata_status: "invalid",
   checkpoint_coverage: []
 };
 
 assert.equal(questionBankReadiness(legacyBank), "legacy");
 assert.equal(canPrepareCheckpoints(legacyBank), true);
+assert.equal(canResumeCheckpointPreparation(legacyBank), false);
 assert.equal(questionBankReadiness(readyBank), "ready");
 assert.equal(canPrepareCheckpoints(readyBank), false);
+assert.equal(canResumeCheckpointPreparation(readyBank), false);
+assert.equal(questionBankReadiness(pendingBank), "pending");
+assert.equal(canPrepareCheckpoints(pendingBank), false);
+assert.equal(canResumeCheckpointPreparation(pendingBank), true);
+assert.equal(
+  questionBankReadiness({
+    ...pendingBank,
+    checkpoint_metadata_status: "invalid",
+    checkpoint_coverage: []
+  }),
+  "invalid",
+  "a corrupt pending bank must fail closed instead of exposing Resume"
+);
 assert.equal(questionBankReadiness(invalidBank), "invalid");
 assert.equal(canPrepareCheckpoints(invalidBank), false);
+assert.equal(canResumeCheckpointPreparation(invalidBank), false);
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bankUiSource = readFileSync(
@@ -214,6 +237,30 @@ assert.match(
   bankUiSource,
   /activeRoles\.value\.some\(\(role\) =>\s*role === "platform_owner" \|\| role === "instructor"/,
   "teaching assistants must not receive an enabled instructor-only preparation action"
+);
+assert.match(
+  bankUiSource,
+  /canResumeCheckpointPreparation\(bank\)/,
+  "only a validated durable pending state may expose the Resume action"
+);
+assert.match(
+  bankUiSource,
+  /t\("content\.banks\.(?:resume|retry)"\)/,
+  "the pending bank action must use bilingual Resume/Retry copy"
+);
+assert.match(
+  bankUiSource,
+  /await onRefresh\(\)/,
+  "the card must refresh durable state after a failed upload or finalization"
+);
+const checkpointApiSource = readFileSync(
+  path.join(root, "src/api/checkpoints.ts"),
+  "utf8"
+);
+assert.match(
+  checkpointApiSource,
+  /checkpoint_preparation_state:\s*"none" \| "pending_upload" \| "ready"/,
+  "the frontend contract must model the durable preparation state"
 );
 const hookSource = readFileSync(
   path.join(root, "src/features/deck/useDeckBridge.ts"),

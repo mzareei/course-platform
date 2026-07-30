@@ -687,7 +687,12 @@ download and extract the ordered teaching slides; load all unchanged questions
 and options; make the single metadata-only model call; validate exact question
 ids, 6/6/6 balance, 3–5 checkpoints, source ranges and two candidates per
 checkpoint; then build and re-read the transformed HTML. Only after all of that
-may the five metadata columns be updated. Upload to the same private path last.
+may one transaction update all five metadata columns for all 18 questions and
+mark the bank `pending_upload`. Never loop through 18 independent updates: row
+10 can fail after rows 1–9 have committed, leaving metadata that is neither
+legacy nor usable. The transaction must not touch prompts, options, or question
+lifecycle status. Upload to the same private path only after that durable
+pending boundary.
 
 Legacy decks carry lecture-specific inline CSS and JavaScript in addition to the
 old shared engine. Do not rebuild the slide bodies and do not replace every
@@ -698,9 +703,26 @@ replacements for HTML transformations: replacement strings interpret `$&`,
 deck. Re-extract the result and require the same teaching-slide count, text and
 order before any write.
 
+`<section\b...>.*?</section>` is not a structural slide parser. A nested
+`<section>` inside teaching content makes that expression stop at the inner
+closing tag, after which injection can splice the rest of the teaching slide in
+the wrong place. Scan balanced section tags and fail closed when a teaching
+slide participates in nesting. The fidelity check must use those structural
+boundaries too, not the same blind regex as the transformer.
+
+Legacy navigation is not consistently absolute. Historical decks contain bare
+relative, `../` parent-relative, root-relative, and absolute Home, Mission,
+Quiz, and Exit links, with query strings and fragments. Match normalized path
+suffixes only on `ui-btn` anchors and keep a fixture matrix for every form;
+otherwise a cleanup can report success while leaving the exact link students
+click.
+
 Postgres and Storage do not share a transaction. The required Storage-last
 ordering protects the existing deck from authentication, model, validation and
-database failures; an upload failure after metadata updates can still require
-operator recovery. Treat the success response—not the earlier metadata
-updates—as the completion boundary, pilot one lecture, preview it through
-`/content?t=…`, and never batch the remaining decks blindly.
+database failures, but upload or final-readiness failures must leave a durable
+`pending_upload`, not an ambiguous partial bank. Content exposes Resume/Retry
+only for that state. The retry reads the persisted full-bank metadata,
+idempotently removes/recreates checkpoint sections in the current deck, uploads
+again, and marks `ready`—it never calls the model again. Treat `ready`, not the
+earlier metadata update, as the completion boundary; pilot one lecture, preview
+it through `/content?t=…`, and never batch the remaining decks blindly.
