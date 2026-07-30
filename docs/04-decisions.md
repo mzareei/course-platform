@@ -253,7 +253,7 @@ broken navigation and cross-screen content semantics.
 
 ### Closing a class, not assigning its lecture, opens group Review
 
-**Decided 2026-07-30; core path verified, full release matrix still pending.**
+**Decided 2026-07-30; full release matrix verified in production 2026-07-30.**
 
 Attaching a lecture to a planned class is scheduling metadata; it does not grant
 student access. Starting the class makes the session live. Closing it is the
@@ -284,7 +284,7 @@ must return 403. Privacy here is an API boundary, not merely a hidden component.
 
 ### Group assignment follows group lifecycle, not profile sign-in
 
-**Decided after the 2026-07-30 production review.**
+**Decided after review and verified in production 2026-07-30.**
 
 Only `planned` and `active` groups may receive a student. `completed` and
 `archived` groups remain visible as history but expose no assignment control,
@@ -294,3 +294,8 @@ A student's profile may still be `invited` before first sign-in. That must not
 block an instructor from placing them in the correct group. Assignment accepts
 `active | invited` student profiles, while preserving the course, student-role,
 self-assignment, and conflicting-staff-role checks.
+
+The production proof assigned an invited profile before first sign-in, then
+archived the target group. The historical-group People view removed that target
+from assignment controls, and a pre-staged authenticated request was refused
+without changing the student's existing enrollment.

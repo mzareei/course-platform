@@ -300,13 +300,14 @@ student afterwards.
    to prove the replacement persisted.
 5. Edit the group's meeting metadata and confirm the server-returned value is
    visible after save.
-6. Before start, use **Make available now** for the attached lecture, confirm
-   the whole-course Review scope from both students, then **Remove from Review**.
-   The class assignment must remain unchanged.
+6. Before close, use **Make available now** for the attached lecture, confirm
+   the whole-course Review scope as required for the rehearsal, then **Remove
+   from Review**. The class assignment must remain unchanged.
 7. Run the class and Start class. Return to Classes: the live row must not offer
-   Edit. Also call authenticated `update_session` directly with the session's
-   unchanged fields; it must refuse because `actual_start_at` exists and must
-   not mutate the row. As QA Test Student, start at Today and use Join class.
+   Edit. Also send an authenticated `update_session` from a stale editor with a
+   recognizable sentinel change; it must refuse because `actual_start_at`
+   exists, and a fresh row must prove the sentinel was not stored. As QA Test
+   Student, start at Today and use Join class.
 8. End the class with the two-step in-app confirmation. Reload the QA student's
    context and confirm the attached lecture appears as **Review only**.
 9. Sign in as Test Student. The QA group's lecture must be absent from Review.
@@ -323,3 +324,8 @@ student afterwards.
 
 Closed class sessions and resolved notes are append-only operational history;
 do not delete them to make a rehearsal look clean.
+
+The 2026-07-30 follow-up completed this matrix on production bundle
+`index-B-nhKDB6.js`. It also proved the archived-group server refusal through a
+pre-staged authenticated People action, so the check exercised the real UI
+entry point and the backend guard in one request.

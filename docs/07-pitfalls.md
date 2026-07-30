@@ -936,7 +936,14 @@ visible for audit and roster review, but render an explicit bilingual
 non-assignable explanation instead of controls.
 
 Do not rewrite a migration that has reached production. Migration 0025 is
-deployed history; migration 0026 must replace the function with the stronger
+deployed history; migration 0026 replaced the function with the stronger
 contract. Return stable error codes from the edge function so People can show
 localized guidance, while safely extracting the useful `message` field from
 plain Supabase error objects for logs and diagnostics.
+
+The production follow-up proved both sides of the boundary. An invited profile
+was assigned before first sign-in. After the target group was archived, the
+filtered People view withheld the target and explained reactivation, while a
+pre-staged authenticated assignment returned the localized
+`group_not_assignable` guidance and left the student's existing group
+unchanged.
