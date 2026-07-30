@@ -934,20 +934,45 @@ export const strings = {
   "content.library.statusAvailable": ["Students can open it", "Los estudiantes pueden abrirlo"],
   "content.library.statusHidden": ["Not available to students", "No disponible para estudiantes"],
 
-  "content.library.makeAvailable": ["Make it available", "Ponerlo disponible"],
-  "content.library.takeBack": ["Take it back", "Quitarlo"],
+  "content.library.makeAvailable": ["Make available now", "Ponerlo disponible ahora"],
+  "content.library.removeFromReview": ["Remove from Review", "Quitar de Repasar"],
+  "content.library.assignToClass": ["Assign to a class", "Asignar a una clase"],
+  "content.library.assignClassPlaceholder": [
+    "Choose an unstarted class",
+    "Elige una clase que no haya comenzado"
+  ],
+  "content.library.assignmentOption": [
+    "{date} · Group {group} · {title} · {lecture}",
+    "{date} · Grupo {group} · {title} · {lecture}"
+  ],
+  "content.library.noLecture": ["No lecture assigned", "Sin clase asignada"],
+  "content.library.plannedAssignments": ["Planned classes", "Clases programadas"],
+  "content.library.plannedAssignment": [
+    "{date} · Group {group} · {title}",
+    "{date} · Grupo {group} · {title}"
+  ],
+  "content.library.groupReview": ["Group {group} Review", "Repaso del grupo {group}"],
+  "content.library.wholeCourseReview": ["Whole course Review", "Repaso de todo el curso"],
   "content.library.working": ["Working…", "Trabajando…"],
 
   "content.library.makeAvailableConfirm": [
-    "Make {title} available to your students? They will be able to open it from Review straight away.",
-    "¿Poner {title} a disposición de tus estudiantes? Podrán abrirlo desde Repasar de inmediato."
+    "Make {title} available to the whole course now? Students will be able to open it from Review straight away.",
+    "¿Poner {title} a disposición de todo el curso ahora? Podrán abrirlo desde Repasar de inmediato."
   ],
-  "content.library.takeBackConfirm": [
-    "Take {title} back? Your students can no longer open it. Nothing they have already done is lost, and you can make it available again whenever you want.",
-    "¿Quitar {title}? Tus estudiantes ya no podrán abrirlo. No se pierde nada de lo que ya hayan hecho, y puedes volver a ponerlo disponible cuando quieras."
+  "content.library.assignConfirm": [
+    "Assign {lecture} to {title}? This replaces the lecture currently planned for that class.",
+    "¿Asignar {lecture} a {title}? Esto reemplaza la clase planeada actualmente para esa sesión."
+  ],
+  "content.library.removeFromReviewConfirm": [
+    "Remove {title} from {scope}? Students in that scope can no longer open it. Nothing they have already done is lost.",
+    "¿Quitar {title} de {scope}? Los estudiantes de ese alcance ya no podrán abrirlo. No se pierde nada de lo que ya hayan hecho."
   ],
   "content.library.madeAvailable": ["{title} is now available to your students.", "{title} ya está disponible para tus estudiantes."],
-  "content.library.tookBack": ["{title} is no longer available.", "{title} ya no está disponible."],
+  "content.library.assigned": ["{lecture} is assigned to {title}.", "{lecture} se asignó a {title}."],
+  "content.library.removedFromReview": [
+    "{title} is no longer available in {scope}.",
+    "{title} ya no está disponible en {scope}."
+  ],
   "content.library.changeFailed": ["Could not change that.", "No se pudo cambiar eso."],
   "content.library.notReviewable": [
     "Only materials students can open can be made available for review.",
