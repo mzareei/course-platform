@@ -277,3 +277,37 @@ All instructor-only, all on the **People** screen.
 
 Test removal with a throwaway address rather than a real student — removal is
 reversible but leaves a "Removed" row behind, and there is no hard delete.
+
+## Release rehearsal: class editing, group Review, and private notes
+
+Use an instructor session plus the two test students in separate browser
+origins. These steps make real writes; use a disposable group and restore the
+student afterwards.
+
+1. Before deploying a roster function that calls a new RPC, run
+   `npx supabase migration list --linked`. Apply every reviewed pending
+   migration before deploying the dependent function.
+2. Confirm the production alias serves the new hashed bundle, not only the
+   deployment-specific Pages URL.
+3. Classes → create a disposable active group. Manage members → assign QA Test
+   Student and confirm the filtered row shows the new group.
+4. Create a class day with **No lecture yet**. Edit it to attach one reviewable
+   lecture, save, then edit again to replace it with another.
+5. Edit the group's meeting metadata and confirm the server-returned value is
+   visible after save.
+6. Run the class and Start class. Return to Classes: the live row must not offer
+   Edit. As QA Test Student, start at Today and use Join class.
+7. End the class with the two-step in-app confirmation. Reload the QA student's
+   context and confirm the attached lecture appears as **Review only**.
+8. Sign in as Test Student. The QA group's lecture must be absent from Review.
+9. Instructor → Gradebook → Per class → choose the class and QA Test Student.
+   Add a unique private note with Needs follow-up, then Resolve follow-up.
+10. With a QA-student token, call `course-auth-context` and
+    `course-student-progress`: neither response may contain the note text.
+    `course-student-notes` must return 403 and no note content.
+11. Cleanup: remove the disposable group Review release, move the QA student
+    back to their original group, restore any temporarily changed group fields,
+    and retire the disposable group. Recheck the real production group.
+
+Closed class sessions and resolved notes are append-only operational history;
+do not delete them to make a rehearsal look clean.

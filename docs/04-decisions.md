@@ -248,3 +248,34 @@ Review, and Grades components and bottom navigation used by a student. The
 instructor navigation is absent while previewing, and a visible exit returns to
 `/teach`. A one-page imitation is not an acceptable preview because it hides
 broken navigation and cross-screen content semantics.
+
+---
+
+### Closing a class, not assigning its lecture, opens group Review
+
+**Decided and verified in production 2026-07-30.**
+
+Attaching a lecture to a planned class is scheduling metadata; it does not grant
+student access. Starting the class makes the session live. Closing it is the
+single atomic boundary that marks the session closed and creates or reopens one
+`review_only` release scoped to that class's group and session.
+
+This keeps three facts separate: what the professor plans to teach, what is
+currently live, and what a particular group may review afterwards. Whole-course
+Review remains an explicit Content action. Removing one group-scoped Review
+release must never remove another group's or the whole-course release.
+
+---
+
+### Private class notes are append-only instructor records
+
+**Decided and verified in production 2026-07-30.**
+
+A note belongs to one class session and one enrolled student. Creating another
+note appends history; resolving follow-up changes only resolution metadata and
+never rewrites the observation. Gradebook shows the session-scoped view and
+People may show the profile-wide history.
+
+The notes edge function is instructor-only. Student auth context, progress, and
+screen code do not contain note data, and a student call to the notes function
+must return 403. Privacy here is an API boundary, not merely a hidden component.

@@ -267,20 +267,45 @@ exit returned to `/teach`. Review contained Week 1 Lecture 1 and did not contain
 Week 1 Quiz. The projector cockpit was checked at 1440px width with a 977×549
 deck iframe and no horizontal overflow.
 
-The latest deployed frontend bundle is `index-CkfQNyoZ.js` from commit
-`bb3a1eb`. Backend `main` is `aa15490`; migrations 0020–0023 and all nine
-coherent-lifecycle functions are deployed.
+The latest deployed frontend bundle is `index-CI1XsMIz.js` from commit
+`9017d2e`. Backend `main` is `3742c1a`; migrations 0020–0025 and the class
+management, roster management, and student-notes functions are deployed.
 
-### 0.7 Private class notes — **IMPLEMENTED LOCALLY; AWAITING DEPLOYMENT**
+### 0.7 Class management and private notes — **DEPLOYED AND VERIFIED IN PRODUCTION**
 
 Instructors can append private notes for an exact class session and enrolled
 student from Gradebook → Per class. Notes can be marked for follow-up; the
 original text remains immutable and only an open follow-up exposes Resolve.
 People opens the same profile-scoped history across all class sessions. The
-note API is deliberately absent from student screens. The composer, history,
-and a dedicated verifier are in the frontend; typecheck and production build
-pass. Deploy and exercise the instructor workflow after the corresponding
-`course-student-notes` function is available in production.
+note API is deliberately absent from student screens and rejects student tokens.
+
+The 2026-07-30 production rehearsal used QA group `QA730E`, class session
+`460a2cfb-bdfb-4e41-8577-21336195789e`, and class code `98ZXF8UV`:
+
+- The instructor assigned QA Test Student through the group-filtered People
+  screen, created a class with no lecture, attached Week 1 Lecture 1, then
+  replaced it with Week 1 Lecture 2.
+- The group edit round trip persisted all fields. Starting the class changed it
+  to Live; Classes no longer offered Edit after `actual_start_at` existed.
+- QA Test Student reached the class from Today → Join class. Closing it used the
+  in-app two-step confirmation and produced a group-scoped `review_only`
+  release. QA Test Student saw Week 1 Lecture 2; Test Student, in another group,
+  did not.
+- Gradebook → Per class created a follow-up note and resolved it. Real
+  QA-student edge calls returned auth context 200 and progress 200 without the
+  note; `course-student-notes` returned 403 without note content.
+
+Cleanup removed the QA Review release, restored QA Test Student to Section A,
+restored Section A to Archived, restored the QA group's edited details, and
+retired the QA group. The closed QA class and resolved note remain as deliberate
+audit/history rows. Production group `TC2007B-401` stayed unchanged and Active.
+
+The release gate found two deployment issues before completion. Strict Deno
+checking exposed inferred-`unknown` rows in all three management functions; the
+fixes are behavior-preserving type narrowing. The first assignment then failed
+because the roster function had been deployed before migration
+`0025_assign_student_section.sql`; applying the pending migration supplied its
+transactional RPC and the same UI action passed.
 
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the

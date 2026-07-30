@@ -882,3 +882,39 @@ Because roster responses retain dropped history and can include enrollments
 from other courses, a current member must match the exact group with
 `role = student` and `status = active`; current-group detection must also
 require the enrollment's section ID to be in the authoritative group set.
+
+---
+
+## 39. Deploy a new RPC migration before the edge function that calls it
+
+The roster-management function deployed successfully and passed Deno checks,
+but its first production group assignment returned the generic fallback
+“Unable to manage roster.” The function was current; production's migration
+ledger showed `0025` only on the local side. Its
+`assign_student_section_atomic` RPC therefore did not exist remotely.
+
+**Rule:** when an edge-function release depends on a new migration, inspect
+`npx supabase migration list --linked`, apply the reviewed migration, and only
+then deploy the function. A successful function deployment proves packaging,
+not that its database contract exists. Exercise the new RPC through the real UI
+immediately after deployment.
+
+Supabase errors are plain objects often enough that `error instanceof Error`
+may discard their useful message. User-facing fallbacks should stay safe, but
+deployment diagnostics need the function logs or linked migration ledger rather
+than assuming a generic message identifies the cause.
+
+---
+
+## 40. Student auth context is a snapshot, not a release subscription
+
+Closing a class created the correct group-scoped Review release, but the
+already-open student shell initially showed its pre-close release list.
+Reloading refreshed `course-auth-context`, after which the lecture appeared as
+**Review only** for the assigned QA student and remained absent for a student in
+another group.
+
+**Rule:** tests that mutate releases from a separate instructor session must
+refresh the student context before judging access. Do not mistake a stale
+in-memory context for a missing release, and do not add client-side inferred
+access as a workaround. The edge response remains the authority.
