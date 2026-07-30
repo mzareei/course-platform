@@ -713,7 +713,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     try {
       await startClassSession(sessionId!);
       await refreshContext();
-    } catch {
+    } catch (cause) {
+      console.error("Starting class failed", cause);
       setError(t("run.startFailed"));
     } finally {
       setBusy(false);
