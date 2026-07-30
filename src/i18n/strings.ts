@@ -423,6 +423,10 @@ export const strings = {
   "studentNotes.loading": ["Loading notes…", "Cargando notas…"],
   "studentNotes.none": ["No private notes yet.", "Aún no hay notas privadas."],
   "studentNotes.loadFailed": ["Could not load these notes.", "No se pudieron cargar estas notas."],
+  "studentNotes.rosterLoadFailed": [
+    "Could not load the class roster for notes.",
+    "No se pudo cargar la lista del grupo para las notas."
+  ],
   "studentNotes.details": ["On {date} · {author} · {time}", "{date} · {author} · {time}"],
   "studentNotes.unknownAuthor": ["Unknown author", "Autor desconocido"],
   "studentNotes.resolve": ["Resolve follow-up", "Resolver seguimiento"],

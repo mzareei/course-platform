@@ -27,9 +27,15 @@ assert.match(gradebook, /StudentNoteComposer/);
 assert.match(gradebook, /StudentNoteHistory/);
 assert.match(gradebook, /classSessionId=\{sessionId\}/);
 assert.match(gradebook, /profileId=\{selectedStudentId\}/);
+assert.match(gradebook, /const \[rosterError, setRosterError\] = useState<string \| null>\(null\)/);
+assert.match(gradebook, /setRosterError\(e\.message \|\| t\("studentNotes\.rosterLoadFailed"\)\)/);
+assert.doesNotMatch(gradebook, /setRoster\(\[\]\)/);
+assert.match(gradebook, /rosterError \? \(\s*<p class="error-text" role="alert">\{rosterError\}<\/p>/);
 
 assert.match(people, /StudentNoteHistory/);
 assert.match(people, /profileId=\{selectedNoteProfile\.profile_id\}/);
+const rosterRow = people.slice(people.indexOf("{roster.map((person) => ("));
+assert.ok(rosterRow.indexOf("<StatusPill") < rosterRow.indexOf('t("studentNotes.open")'));
 
 function studentScreenFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

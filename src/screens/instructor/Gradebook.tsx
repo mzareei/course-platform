@@ -42,6 +42,7 @@ function PerClassReview() {
   const [attempts, setAttempts] = useState<QuizAttemptSummary[] | null>(null);
   const [reflections, setReflections] = useState<ClassReflection[] | null>(null);
   const [roster, setRoster] = useState<RosterOverview["roster"] | null>(null);
+  const [rosterError, setRosterError] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [noteRefreshKey, setNoteRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -50,10 +51,13 @@ function PerClassReview() {
     let cancelled = false;
     callFn<RosterOverview>("course-roster-management")
       .then(({ roster: loadedRoster }) => {
-        if (!cancelled) setRoster(loadedRoster);
+        if (!cancelled) {
+          setRoster(loadedRoster);
+          setRosterError(null);
+        }
       })
-      .catch(() => {
-        if (!cancelled) setRoster([]);
+      .catch((e: Error) => {
+        if (!cancelled) setRosterError(e.message || t("studentNotes.rosterLoadFailed"));
       });
     return () => {
       cancelled = true;
@@ -138,7 +142,9 @@ function PerClassReview() {
         <>
           <section class="card stack">
             <h2>{t("studentNotes.title")}</h2>
-            {roster === null ? (
+            {rosterError ? (
+              <p class="error-text" role="alert">{rosterError}</p>
+            ) : roster === null ? (
               <p class="hint" role="status">{t("studentNotes.loading")}</p>
             ) : !sessionStudents.length ? (
               <p class="hint">{t("studentNotes.noStudents")}</p>
