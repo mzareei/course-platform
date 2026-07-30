@@ -19,6 +19,12 @@ export const strings = {
   "app.switchToSpanish": ["Ver en español", "Ver en español"],
   "app.switchToEnglish": ["View in English", "View in English"],
   "app.contextError.title": ["We couldn't load your course", "No pudimos cargar tu curso"],
+  "student.preview.title": ["Student view.", "Vista de estudiante."],
+  "student.preview.body": [
+    "You are seeing the same Today, Review, and Grades screens as a student.",
+    "Estás viendo las mismas pantallas de Hoy, Repaso y Calificaciones que un estudiante."
+  ],
+  "student.preview.exit": ["Exit student view", "Salir de vista de estudiante"],
 
   // ---------------------------------------------------------------- sign in
   "signIn.eyebrow": ["Course Platform", "Plataforma del Curso"],
@@ -689,6 +695,10 @@ export const strings = {
     "Could not open the private lecture deck.",
     "No se pudo abrir la presentación privada."
   ],
+  "run.deck.refreshWarning": [
+    "The deck is still available, but its access refresh failed. We will retry automatically.",
+    "La presentación sigue disponible, pero falló la renovación del acceso. Lo intentaremos de nuevo automáticamente."
+  ],
   "run.deck.unavailable": [
     "Lecture deck unavailable",
     "Presentación no disponible"
@@ -762,6 +772,10 @@ export const strings = {
   "run.checkpoint.bridgeFailed": [
     "The lecture deck controls did not connect.",
     "Los controles de la presentación no se conectaron."
+  ],
+  "run.checkpoint.recoverFailed": [
+    "The current live question could not be restored. Retry before continuing the lecture.",
+    "No se pudo restaurar la pregunta en vivo actual. Vuelve a intentarlo antes de continuar la clase."
   ],
   "run.checkpoint.noQuestion": [
     "No question is ready for this checkpoint.",

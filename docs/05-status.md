@@ -220,11 +220,26 @@ unchanged; student pulse rendering now uses the bilingual bank snapshot.
 `tools/verify-app-shell.mjs`, `tools/verify-deck-protocol.mjs`, and backend
 `tools/verify-live-checkpoint-security.mjs` cover cockpit composition, gated
 iframe rules, parent-authoritative Space intent, client protocol mismatch
-rejection, and server lecture/checkpoint identity enforcement. No function was
+rejection, server lecture/checkpoint identity enforcement, reload recovery,
+conditional reveal/close transitions, repeated-key suppression, and token
+refresh at the current slide. A session close now closes every open or revealed
+pulse on the server first. No function was
 deployed and no live session or content object was changed. Apply pending
 migrations and deploy `course-content-access` plus `course-pulse` only after
 authorization, then record the signed-in instructor/student lifecycle from
 Today through reflection before describing the cockpit as verified live.
+
+### 0.6 Faithful student preview — **DONE locally; browser verification pending**
+
+The instructor preview now exposes all three real student destinations:
+`/student`, `/student/review`, and `/student/grades`. Each route renders the
+same screen component and the same `StudentShell` bottom navigation used by a
+student. Instructor tabs are removed during preview and a visible exit returns
+to `/teach`.
+
+Frontend typecheck, all eight verifiers, and the production build pass. The
+preview still needs to be exercised after the Cloudflare deployment at phone
+widths before it is described as verified live.
 
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the

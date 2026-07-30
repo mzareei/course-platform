@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { startClassSession } from "../../api/classes";
 import {
   closePulse,
+  currentPulse,
   drawCheckpointQuestion,
   listBanks,
   pulseResults,
@@ -23,6 +24,7 @@ import { useDeckBridge } from "../../features/deck/useDeckBridge";
 import { CheckpointPanel } from "../../features/live/CheckpointPanel";
 import {
   checkpointQuestionMatches,
+  isCheckpointOperationCurrent,
   resolveCheckpointActionSequence,
   spaceIntentForCheckpoint,
   type ActiveCheckpoint,
@@ -124,12 +126,14 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
 
   const resultsPoll = useRef<number | undefined>(undefined);
   const previousDeckCheckpoint = useRef<ActiveCheckpoint | null>(null);
+  const previousBridgeNavigation = useRef(bridge.navigationSequence);
   const handledCheckpointAction = useRef(0);
   const checkpointDrawSequence = useRef(0);
   const checkpointLifecycleSequence = useRef(0);
   const checkpointOperationInFlight = useRef(false);
   const checkpointContinueInFlight = useRef(false);
   const recovery = useRef<RecoveryAction | null>(null);
+  const recoveredSession = useRef<string | null>(null);
 
   const isLive = session?.state === "live";
   const ended = session?.state === "closed";
@@ -171,6 +175,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     let cancelled = false;
     checkpointLifecycleSequence.current += 1;
     checkpointDrawSequence.current += 1;
+    recoveredSession.current = null;
     recovery.current = null;
     setActiveCheckpoint(null);
     setAskedKeys([]);
@@ -198,17 +203,87 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
             ?.checkpoint_after_slide
         });
       })
-      .catch((cause) => {
+      .catch(() => {
         if (cancelled) return;
         setBanksLoaded(true);
-        setError(
-          cause instanceof Error ? cause.message : t("run.loadingBanksFailed")
-        );
+        setError(t("run.loadingBanksFailed"));
       });
     return () => {
       cancelled = true;
     };
   }, [session?.session_id, session?.content_item_id]);
+
+  // The server is authoritative. A browser reload must recover any question
+  // that students can still see so the instructor can reveal or close it.
+  useEffect(() => {
+    if (
+      !isLive
+      || !banksLoaded
+      || recoveredSession.current === sessionId
+    ) {
+      return;
+    }
+    recoveredSession.current = sessionId || null;
+    const operationSequence = checkpointLifecycleSequence.current;
+    currentPulse(sessionId!)
+      .then(async (view) => {
+        if (
+          !isCheckpointOperationCurrent(
+            operationSequence,
+            checkpointLifecycleSequence.current
+          )
+          || !view.round
+        ) {
+          return;
+        }
+        const afterSlide = Number(view.round.checkpoint_after_slide);
+        if (!Number.isInteger(afterSlide) || afterSlide < 1) return;
+        const segmentKey =
+          String(view.round.segment_key || "").trim()
+          || coverage.find(
+            (item) => item.checkpoint_after_slide === afterSlide
+          )?.segment_key
+          || `checkpoint-${afterSlide}`;
+        const checkpoint = { key: segmentKey, afterSlide };
+        let results = view.results;
+        if (view.round.state === "revealed" && !results) {
+          results = await pulseResults(view.round.round_id).catch(() => null);
+        }
+        if (
+          !isCheckpointOperationCurrent(
+            operationSequence,
+            checkpointLifecycleSequence.current
+          )
+        ) {
+          return;
+        }
+        recovery.current = null;
+        setActiveCheckpoint(checkpoint);
+        if (view.round.state === "revealed" && results) {
+          setCheckpointState({
+            type: "revealed",
+            round: view.round,
+            results
+          });
+        } else {
+          setCheckpointState({
+            type: "open",
+            round: view.round,
+            results
+          });
+        }
+      })
+      .catch(() => {
+        if (
+          isCheckpointOperationCurrent(
+            operationSequence,
+            checkpointLifecycleSequence.current
+          )
+        ) {
+          setError(t("run.checkpoint.recoverFailed"));
+        }
+      });
+  }, [isLive, banksLoaded, sessionId, bank?.bank_id]);
 
   // If the deck never announces readiness, the class remains operable through
   // the exact checkpoint coverage loaded from the bank.
@@ -251,6 +326,11 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   // any server round and retire the panel state without issuing a second deck
   // navigation command.
   useEffect(() => {
+    if (previousBridgeNavigation.current !== bridge.navigationSequence) {
+      previousBridgeNavigation.current = bridge.navigationSequence;
+      previousDeckCheckpoint.current = null;
+      return;
+    }
     const previous = previousDeckCheckpoint.current;
     const current = bridge.checkpoint;
     previousDeckCheckpoint.current = current;
@@ -259,6 +339,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     }
   }, [
     isLive,
+    bridge.navigationSequence,
     bridge.checkpoint?.key,
     bridge.checkpoint?.afterSlide
   ]);
@@ -385,16 +466,13 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           checkpoint_key: checkpoint.key
         });
       }
-    } catch (cause) {
+    } catch {
       if (requestSequence !== checkpointDrawSequence.current) return;
       recovery.current = { type: "draw", checkpoint };
       setCheckpointState({
         type: "error",
         checkpoint: checkpoint.afterSlide,
-        message:
-          cause instanceof Error
-            ? cause.message
-            : t("run.checkpoint.noQuestion")
+        message: t("run.checkpoint.noQuestion")
       });
     }
   }
@@ -443,13 +521,18 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           checkpoint_key: checkpoint.key
         });
       }
-    } catch (cause) {
+    } catch {
+      if (
+        !isCheckpointOperationCurrent(
+          operationSequence,
+          checkpointLifecycleSequence.current
+        )
+      ) return;
       recovery.current = { type: "send", checkpoint, question };
       setCheckpointState({
         type: "error",
         checkpoint: checkpoint.afterSlide,
-        message:
-          cause instanceof Error ? cause.message : t("run.pushFailed")
+        message: t("run.pushFailed")
       });
     } finally {
       checkpointOperationInFlight.current = false;
@@ -488,13 +571,18 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           checkpoint_key: checkpoint.key
         });
       }
-    } catch (cause) {
+    } catch {
+      if (
+        !isCheckpointOperationCurrent(
+          operationSequence,
+          checkpointLifecycleSequence.current
+        )
+      ) return;
       recovery.current = { type: "reveal", checkpoint, round };
       setCheckpointState({
         type: "error",
         checkpoint: checkpoint.afterSlide,
-        message:
-          cause instanceof Error ? cause.message : t("run.pushFailed")
+        message: t("run.pushFailed")
       });
     } finally {
       checkpointOperationInFlight.current = false;
@@ -516,6 +604,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     if (checkpointContinueInFlight.current) return;
     checkpointLifecycleSequence.current += 1;
     checkpointDrawSequence.current += 1;
+    const operationSequence = checkpointLifecycleSequence.current;
     const failedAction = recovery.current;
     const round =
       checkpointState.type === "open"
@@ -531,6 +620,12 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     setError(null);
     try {
       if (round) await closePulse(round.round_id);
+      if (
+        !isCheckpointOperationCurrent(
+          operationSequence,
+          checkpointLifecycleSequence.current
+        )
+      ) return;
       recovery.current = null;
       if (!deckAlreadyResumed && bridge.deckReady) {
         bridge.send({
@@ -544,15 +639,20 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         type: "idle",
         nextCheckpoint: nextCheckpointAfter(checkpoint.afterSlide)
       });
-    } catch (cause) {
+    } catch {
+      if (
+        !isCheckpointOperationCurrent(
+          operationSequence,
+          checkpointLifecycleSequence.current
+        )
+      ) return;
       if (round) {
         recovery.current = { type: "close", checkpoint, round };
       }
       setCheckpointState({
         type: "error",
         checkpoint: checkpoint.afterSlide,
-        message:
-          cause instanceof Error ? cause.message : t("run.pushFailed")
+        message: t("run.pushFailed")
       });
     } finally {
       checkpointContinueInFlight.current = false;
@@ -613,10 +713,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     try {
       await startClassSession(sessionId!);
       await refreshContext();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : t("run.startFailed")
-      );
+    } catch {
+      setError(t("run.startFailed"));
     } finally {
       setBusy(false);
     }
@@ -649,10 +747,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       }
       await endClassSession(sessionId!);
       await refreshContext();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : t("run.endFailed")
-      );
+    } catch {
+      setError(t("run.endFailed"));
     } finally {
       setBusy(false);
     }
@@ -663,6 +759,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       contentItemId={session.content_item_id}
       title={session.content_title || session.title || t("run.title")}
       frameRef={frameRef}
+      slide={bridge.slide}
+      onNavigation={bridge.reset}
     />
   ) : (
     <NoLectureDeck />

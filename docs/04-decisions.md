@@ -219,3 +219,32 @@ projector must let a student join from a phone immediately.
 The QR identifies the class session, not the individual question. A student
 signs in once and returns to the same class; later pulse questions, the final
 quiz, and reflection arrive on the already-open live screen.
+
+---
+
+### Live checkpoint state is recovered from the server
+
+**Decided 2026-07-29 during cockpit hardening.**
+
+The browser is not the source of truth for an open or revealed pulse. Reloading
+Run Class asks `course-pulse current` for the active round and reconstructs the
+checkpoint panel. Reveal is allowed only from `open`; close is allowed from
+`open | revealed`; repeated requests are idempotent, and a stale reveal can
+never reopen a closed round. Ending a session closes every visible pulse on the
+server before closing the session.
+
+Short-lived deck-token refresh reloads `/content?t=…` at the last reported slide
+hash. A failed refresh leaves the working iframe visible and retries, instead of
+blanking the projector.
+
+---
+
+### Instructor student preview uses the real student shell
+
+**Decided 2026-07-29.**
+
+`/student`, `/student/review`, and `/student/grades` render the same Today,
+Review, and Grades components and bottom navigation used by a student. The
+instructor navigation is absent while previewing, and a visible exit returns to
+`/teach`. A one-page imitation is not an acceptable preview because it hides
+broken navigation and cross-screen content semantics.

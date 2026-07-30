@@ -38,6 +38,7 @@ for (const rel of [
   "src/auth/auth.ts",
   "src/state/session.ts",
   "src/styles/app.css",
+  "src/components/StudentShell.tsx",
   "src/screens/SignIn.tsx",
   "src/screens/NotEnrolled.tsx",
   "src/screens/student/Today.tsx",
@@ -61,7 +62,16 @@ requireMarker("src/app.tsx", "roster_status", "not-enrolled accounts must land o
 // Role-shaped surfaces, no role picker
 requireMarker("src/state/session.ts", "platform_owner", "surface routing from memberships");
 requireMarker("src/app.tsx", "InstructorNav", "instructor surface");
-requireMarker("src/app.tsx", "StudentNav", "student surface");
+requireMarker("src/app.tsx", "StudentShell", "student surface");
+requireMarker("src/app.tsx", 'path="/student/review"', "student review preview");
+requireMarker("src/app.tsx", 'path="/student/grades"', "student grades preview");
+requireMarker("src/components/StudentShell.tsx", "preview ? \"/student\"", "preview route prefix");
+requireMarker("src/components/StudentShell.tsx", 'href="/teach"', "preview exit");
+assert.doesNotMatch(
+  read("src/app.tsx"),
+  /\{teacherSurface \? <InstructorNav \/> : null\}/,
+  "the instructor navigation must not wrap student preview"
+);
 
 // Plain-language labels — raw state machine words must never reach the UI.
 // The words themselves live in the bilingual dictionary; the pill only maps
@@ -120,7 +130,7 @@ assert.match(
 );
 assert.match(
   runClassSource,
-  /checkpointDrawSequence\.current \+= 1;\s*const failedAction/
+  /checkpointDrawSequence\.current \+= 1;\s*const operationSequence[\s\S]*?const failedAction/
 );
 assert.match(
   runClassSource,
@@ -139,13 +149,33 @@ const instructorDeckSource = read("src/features/deck/InstructorDeck.tsx");
 assert.match(instructorDeckSource, /requestInstructorContent\(contentItemId\)/);
 assert.match(
   instructorDeckSource,
-  /src=\{`\/content\?t=\$\{encodeURIComponent\(token\)\}`\}/
+  /instructorDeckUrl\(access\.token,\s*slideRef\.current\)/
 );
 assert.match(
   instructorDeckSource,
   /sandbox="allow-scripts allow-same-origin"/
 );
 assert.doesNotMatch(instructorDeckSource, /\bsrcdoc\b|\bblob:|allow-popups/);
+assert.doesNotMatch(
+  instructorDeckSource,
+  /cause instanceof Error \? cause\.message/,
+  "deck access errors shown to the instructor must stay bilingual"
+);
+assert.match(
+  runClassSource,
+  /currentPulse\(sessionId!\)/,
+  "Run Class must recover the server's active pulse after reload"
+);
+assert.match(
+  runClassSource,
+  /isCheckpointOperationCurrent/,
+  "all async checkpoint completions must be lifecycle guarded"
+);
+assert.doesNotMatch(
+  runClassSource,
+  /cause instanceof Error \? cause\.message/,
+  "checkpoint and class errors shown to the instructor must stay bilingual"
+);
 
 if (failures.length) {
   console.error("App shell verification failed:");

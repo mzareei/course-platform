@@ -395,6 +395,26 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
 }
 .bottom-nav a[aria-current="page"] { color: var(--primary); }
 .bottom-nav .glyph { font-size: 1.25rem; line-height: 1; }
+.student-preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-muted);
+}
+.student-preview-banner strong { color: var(--text); }
+
+@media (max-width: 600px) {
+  .student-preview-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
 
 /* ---------------------------------------------------------------- misc */
 .empty-state {
@@ -483,6 +503,28 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-1);
+}
+.run-deck-host {
+  position: relative;
+  min-width: 0;
+}
+.run-deck-host .run-deck-frame { width: 100%; }
+.run-deck-warning {
+  position: absolute;
+  z-index: 4;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92%, 48rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--warning, #d6a52f);
+  border-radius: 0.75rem;
+  background: var(--surface-1);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
 }
 .run-deck-fallback {
   display: flex;

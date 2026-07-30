@@ -19,25 +19,7 @@ import { Viewer } from "./screens/Viewer";
 import { Live } from "./screens/student/Live";
 import { JoinClass } from "./screens/student/JoinClass";
 import { RunClass } from "./screens/instructor/RunClass";
-
-function StudentNav() {
-  const { path } = useLocation();
-  const items = [
-    { href: "/", glyph: "📅", label: t("nav.today") },
-    { href: "/review", glyph: "📚", label: t("nav.review") },
-    { href: "/grades", glyph: "✅", label: t("nav.grades") }
-  ];
-  return (
-    <nav class="bottom-nav" aria-label={t("nav.main")}>
-      {items.map((item) => (
-        <a href={item.href} aria-current={path === item.href ? "page" : undefined}>
-          <span class="glyph" aria-hidden="true">{item.glyph}</span>
-          {item.label}
-        </a>
-      ))}
-    </nav>
-  );
-}
+import { StudentShell } from "./components/StudentShell";
 
 function InstructorNav() {
   const { path } = useLocation();
@@ -66,6 +48,44 @@ function InstructorNav() {
  *  on every App render and remounts the whole screen. See pitfalls #4. */
 function AdminRoute() {
   return isOwner.value ? <Admin /> : <TeachHome />;
+}
+
+function StudentTodayPreview() {
+  return <StudentShell preview><Today /></StudentShell>;
+}
+
+function StudentReviewPreview() {
+  return <StudentShell preview><Review /></StudentShell>;
+}
+
+function StudentGradesPreview() {
+  return <StudentShell preview><Grades /></StudentShell>;
+}
+
+function InstructorSurface() {
+  const { path } = useLocation();
+  const studentPreview =
+    path === "/student" || path.startsWith("/student/");
+
+  return (
+    <>
+      {studentPreview ? null : <InstructorNav />}
+      <Router>
+        <Route path="/teach" component={TeachHome} />
+        <Route path="/teach/classes" component={Classes} />
+        <Route path="/teach/content" component={Content} />
+        <Route path="/teach/grades" component={Gradebook} />
+        <Route path="/teach/people" component={People} />
+        <Route path="/admin" component={AdminRoute} />
+        <Route path="/student" component={StudentTodayPreview} />
+        <Route path="/student/review" component={StudentReviewPreview} />
+        <Route path="/student/grades" component={StudentGradesPreview} />
+        <Route path="/teach/run/:sessionId" component={RunClass} />
+        <Route path="/view/:releaseId" component={Viewer} />
+        <Route default component={TeachHome} />
+      </Router>
+    </>
+  );
 }
 
 function Topbar() {
@@ -166,34 +186,22 @@ export function App() {
     <LocationProvider>
       <Topbar />
       <main class="shell">
-        {teacherSurface ? <InstructorNav /> : null}
         {teacherSurface ? (
-          <Router>
-            <Route path="/teach" component={TeachHome} />
-            <Route path="/teach/classes" component={Classes} />
-            <Route path="/teach/content" component={Content} />
-            <Route path="/teach/grades" component={Gradebook} />
-            <Route path="/teach/people" component={People} />
-            <Route path="/admin" component={AdminRoute} />
-            {/* Instructors can still walk the student surface explicitly. */}
-            <Route path="/student" component={Today} />
-            <Route path="/teach/run/:sessionId" component={RunClass} />
-            <Route path="/view/:releaseId" component={Viewer} />
-            <Route default component={TeachHome} />
-          </Router>
+          <InstructorSurface />
         ) : (
-          <Router>
-            <Route path="/" component={Today} />
-            <Route path="/review" component={Review} />
-            <Route path="/grades" component={Grades} />
-            <Route path="/live" component={Live} />
-            <Route path="/join/:joinCode" component={JoinClass} />
-            <Route path="/view/:releaseId" component={Viewer} />
-            <Route default component={Today} />
-          </Router>
+          <StudentShell preview={false}>
+            <Router>
+              <Route path="/" component={Today} />
+              <Route path="/review" component={Review} />
+              <Route path="/grades" component={Grades} />
+              <Route path="/live" component={Live} />
+              <Route path="/join/:joinCode" component={JoinClass} />
+              <Route path="/view/:releaseId" component={Viewer} />
+              <Route default component={Today} />
+            </Router>
+          </StudentShell>
         )}
       </main>
-      {teacherSurface ? null : <StudentNav />}
     </LocationProvider>
   );
 }

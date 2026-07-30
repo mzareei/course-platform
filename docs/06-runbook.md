@@ -95,22 +95,28 @@ are live at once.
 
 Do this through the UI, never by typing internal URLs.
 
-1. **Instructor** → Home → **Run class** on today's session.
-2. **Ask a quick question** → pick a lecture + difficulty → *Pick a question* →
-   *Send to the class*.
-3. **Student** (fresh session) → Today should read **"Class is live"** with a
-   **Join class** button → tap it → the question appears within a few seconds →
-   answer it.
-4. **Instructor** → vote count updates → *Show the answer* → student sees
-   right/wrong and points → *Close the question*.
-5. **Instructor** → **Start the quiz**. Student gets questions one at a time,
+1. With no future session, **Instructor Home → Schedule a class**. In
+   **Classes**, create a group if needed and schedule the class with its lecture.
+2. Home → **Run class** → verify the private deck and QR → **Start class**.
+3. **Student** (fresh second browser) starts from Today or scans the QR. The
+   **Join class** action must be reachable without typing `/live`.
+4. Advance the deck to an authored checkpoint. Space sends the prepared
+   question; the student answers; Space reveals; Right Arrow closes it and
+   resumes the deck. Complete two checkpoints and skip one.
+5. Reload Run Class while a question is open and confirm the same round is
+   restored. Hold Space once and confirm it does not send then reveal.
+6. At the end, **Start the quiz**. Student gets questions one at a time,
    each timed, auto-advancing.
-6. **Instructor** → watch submitted count → **Close the quiz** → class average.
-7. **Student** → reflection (50–100 words) → submit.
-8. **Instructor** → the reflection appears under Reflections.
-9. **Instructor** → **End the class** (this closes the session — only do it when
+7. **Instructor** → watch submitted count → **Close the quiz** → class average.
+8. **Student** → reflection (50–100 words) → submit.
+9. **Instructor** → the reflection appears under Reflections.
+10. **Instructor** → **End the class** (this closes the session — only do it when
    you're finished testing, since it stops "Join class" appearing).
-10. Check **Gradebook** and the student's **My Grades**.
+11. Check Gradebook → **Per class**, then **View as student** and navigate
+    Today → Review → Grades. Week 1 Quiz must never appear in Review.
+
+Rehearse the student side at 375×812 and 430×932, and the instructor cockpit at
+1440×900.
 
 A quiz can be run more than once per class — after closing, the button becomes
 **Start another quiz**.

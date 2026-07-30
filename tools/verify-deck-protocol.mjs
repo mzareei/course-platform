@@ -12,6 +12,10 @@ import {
   resolveCheckpointActionSequence,
   spaceIntentForCheckpoint
 } from "../src/features/live/checkpointState.ts";
+import {
+  instructorDeckUrl,
+  shouldKeepDeckVisibleAfterRefreshFailure
+} from "../src/features/deck/instructorDeckState.ts";
 
 const sameOrigin = "https://course.example.test";
 Object.defineProperty(globalThis, "location", {
@@ -26,6 +30,21 @@ const {
 } = await import("../src/features/deck/protocol.ts");
 
 assert.equal(DECK_PROTOCOL_VERSION, 1);
+assert.equal(
+  instructorDeckUrl("fresh token", 17),
+  "/content?t=fresh%20token#17",
+  "token rotation must preserve the exact visible deck slide"
+);
+assert.equal(
+  instructorDeckUrl("fresh token", null),
+  "/content?t=fresh%20token",
+  "the first deck load must not invent a slide hash"
+);
+assert.equal(
+  shouldKeepDeckVisibleAfterRefreshFailure("working-token"),
+  true,
+  "a failed refresh must keep the already-loaded deck visible"
+);
 
 const validDeckMessages = [
   { version: 1, type: "deck.ready", slide: 1 },
@@ -251,6 +270,11 @@ const checkpointQuestion = {
 assert.equal(
   checkpointQuestionMatches({ key: "cia-triad", afterSlide: 2 }, checkpointQuestion),
   true
+);
+assert.equal(
+  checkpointQuestionMatches({ key: "cia-triad-2", afterSlide: 2 }, checkpointQuestion),
+  true,
+  "repeated authored segment keys may include their checkpoint slide suffix"
 );
 assert.equal(
   checkpointQuestionMatches({ key: "cia-triad", afterSlide: 3 }, checkpointQuestion),

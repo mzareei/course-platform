@@ -18,8 +18,12 @@ export function checkpointQuestionMatches(
   checkpoint: ActiveCheckpoint,
   question: CheckpointQuestion
 ) {
+  const questionKey = question.segment_key;
+  const authoredKey =
+    checkpoint.key === questionKey
+    || checkpoint.key === `${questionKey}-${checkpoint.afterSlide}`;
   return (
-    checkpoint.key === question.segment_key
+    authoredKey
     && checkpoint.afterSlide === question.checkpoint_after_slide
   );
 }
@@ -45,4 +49,11 @@ export function resolveCheckpointActionSequence(
     sequence: Math.max(handledSequence, action.sequence),
     shouldHandle: action.sequence > handledSequence
   };
+}
+
+export function isCheckpointOperationCurrent(
+  startedAtSequence: number,
+  currentSequence: number
+) {
+  return startedAtSequence === currentSequence;
 }

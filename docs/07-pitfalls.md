@@ -771,3 +771,38 @@ Right Arrow can emit both checkpoint-skipped and slide-changed while resuming;
 the parent must transition its panel state before the follow-up event so it does
 not close or resume twice. Keep exact state-transition and protocol-mismatch
 tests for both paths.
+
+---
+
+## 32. A short-lived deck token must refresh without resetting the lecture
+
+Replacing an iframe token with a fresh `/content?t=…` URL reloads the deck.
+Without carrying forward the last `deck.slide_changed` value as a hash, a
+refresh silently returns a professor to slide 1 in the middle of class. Clearing
+the iframe when token minting briefly fails is worse: a transient network error
+blanks the projector even though the existing document still works.
+
+**Rule:** mint the replacement token, append the last known slide hash, then
+swap the iframe source. Reset the parent bridge for that deliberate navigation.
+If refresh fails, keep the existing source visible, show a bilingual warning,
+and retry. Only the initial load may render the unavailable fallback.
+
+---
+
+## 33. Pulse transitions must be conditional and reload-recoverable
+
+A reveal response can arrive after Right Arrow has already closed the round.
+An unconditional update then changes `closed → revealed`, resurrecting a
+question students should have left. Likewise, keeping the active round only in
+component state makes a browser reload forget a question still open on every
+student phone.
+
+**Rule:** reveal updates only `open`; close updates only `open | revealed`;
+same-target retries are idempotent; stale transitions fail without changing
+state. Run Class recovers the current round from the server, including its
+segment and checkpoint slide. Ending a session also closes all visible pulses
+server-side, so a client failure cannot strand the class lifecycle.
+
+Keyboard repeat is a separate edge: ignore `keydown.repeat` in the generated
+deck. Otherwise one held Space can send and immediately reveal after the parent
+state changes between repeated events.

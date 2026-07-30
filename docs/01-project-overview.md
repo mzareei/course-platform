@@ -67,11 +67,12 @@ generation jobs only, and nothing in the SPA called
 `course-release-management`. The **Your lectures** tab now releases real
 lectures correctly.
 
-The professor's next real pass on 2026-07-29 exposed the larger lifecycle gap:
-a legacy quiz can be marked available even though every student screen hides
-it; scheduling is buried in People; the lecture deck and Run Class are separate;
-and pulse questions are not constrained to material already taught. The
-approved repair is in
+The professor's next real pass on 2026-07-29 exposed the larger lifecycle gap.
+The coherent-lifecycle implementation now makes quizzes live-only, moves
+scheduling into Classes, presents the private lecture inside Run Class, limits
+pulse questions to authored slide checkpoints, and gives instructors a faithful
+Today/Review/Grades student preview. Production deployment and the full
+two-browser rehearsal are the remaining proof. The approved design is in
 `docs/superpowers/specs/2026-07-29-coherent-class-lifecycle-design.md`.
 
 The general lessons are in `07-pitfalls.md` #14 and #23: test the producer and

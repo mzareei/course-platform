@@ -23,6 +23,7 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
   const [checkpoint, setCheckpoint] = useState<ActiveCheckpoint | null>(null);
   const [checkpointAction, setCheckpointAction] = useState<CheckpointAction | null>(null);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
+  const [navigationSequence, setNavigationSequence] = useState(0);
 
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
@@ -80,6 +81,16 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
     setBridgeError(null);
   }, [iframeRef]);
 
+  const reset = useCallback(() => {
+    setDeckReady(false);
+    setSlide(null);
+    setTeachingSlide(null);
+    setCheckpoint(null);
+    setCheckpointAction(null);
+    setBridgeError(null);
+    setNavigationSequence((current) => current + 1);
+  }, []);
+
   return {
     deckReady,
     slide,
@@ -87,6 +98,8 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
     checkpoint,
     checkpointAction,
     send,
-    bridgeError
+    bridgeError,
+    navigationSequence,
+    reset
   };
 }

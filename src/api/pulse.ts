@@ -27,6 +27,8 @@ export interface PulseRound {
   options: PulseOption[];
   /** Null until the instructor reveals — the server strips it. */
   correct_key: string | null;
+  segment_key?: string | null;
+  checkpoint_after_slide?: number | null;
 }
 
 export interface PulseResults {
