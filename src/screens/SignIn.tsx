@@ -1,8 +1,12 @@
 import { useState } from "preact/hooks";
 import { config } from "../config";
-import { sendOtp, verifyOtp, testSignIn, isEmailAllowedLocally } from "../auth/auth";
-import { getSession } from "../api/client";
-import { session, refreshContext } from "../state/session";
+import {
+  finishSignIn,
+  sendOtp,
+  verifyOtp,
+  testSignIn,
+  isEmailAllowedLocally
+} from "../auth/auth";
 import { t } from "../i18n";
 
 const COOLDOWN_KEY = "cp.auth-send-cooldown";
@@ -33,11 +37,6 @@ export function SignIn() {
   const [message, setMessage] = useState<{ kind: "info" | "error"; text: string } | null>(null);
 
   const cleaned = email.trim().toLowerCase();
-
-  async function finishSignIn() {
-    session.value = await getSession();
-    await refreshContext();
-  }
 
   async function onSend() {
     setMessage(null);

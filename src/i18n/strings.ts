@@ -98,6 +98,35 @@ export const strings = {
     "Tu próxima clase aparecerá aquí en cuanto tu profesor la programe."
   ],
 
+  // ---------------------------------------------------------------- QR join
+  "join.eyebrow": ["Join class", "Entrar a la clase"],
+  "join.loading.title": ["Opening your class…", "Abriendo tu clase…"],
+  "join.loading.body": [
+    "We're checking the class code and your enrollment.",
+    "Estamos revisando el código de la clase y tu inscripción."
+  ],
+  "join.invalid.title": ["That class code isn't valid", "Ese código de clase no es válido"],
+  "join.invalid.body": [
+    "Scan the QR code on the classroom screen again, or ask your professor for the current code.",
+    "Vuelve a escanear el código QR de la pantalla del salón o pide a tu profesor el código actual."
+  ],
+  "join.closed.title": ["This class is closed", "Esta clase está cerrada"],
+  "join.closed.body": [
+    "The live class has ended, so this join code no longer opens it.",
+    "La clase en vivo terminó, así que este código ya no la abre."
+  ],
+  "join.access.title": ["This class is for another group", "Esta clase es para otro grupo"],
+  "join.access.body": [
+    "You're signed in, but your active enrollment is not in this class group. Ask your professor to check the roster.",
+    "Tu sesión está iniciada, pero tu inscripción activa no pertenece al grupo de esta clase. Pide a tu profesor que revise la lista."
+  ],
+  "join.unknown.title": ["We couldn't open this class", "No pudimos abrir esta clase"],
+  "join.unknown.body": [
+    "Check your connection and scan the classroom QR code again.",
+    "Revisa tu conexión y vuelve a escanear el código QR del salón."
+  ],
+  "join.back": ["Back to Today", "Regresar a Hoy"],
+
   // ---------------------------------------------------------------- content types
   "type.lecture": ["Lecture deck", "Presentación de clase"],
   "type.mission": ["Practice mission", "Misión de práctica"],
@@ -619,6 +648,22 @@ export const strings = {
   "run.startSessionFirst": [
     "Start the class session before sending a question.",
     "Inicia la sesión de clase antes de enviar una pregunta."
+  ],
+  "run.join.eyebrow": ["Student entry", "Entrada de estudiantes"],
+  "run.join.title": ["Scan to join this class", "Escanea para entrar a esta clase"],
+  "run.join.body": [
+    "Students scan once, sign in if needed, and stay on the live class screen for every question, quiz, and reflection.",
+    "Los estudiantes escanean una vez, inician sesión si hace falta y se quedan en la pantalla de clase en vivo para cada pregunta, quiz y reflexión."
+  ],
+  "run.join.code": ["Class code: {code}", "Código de clase: {code}"],
+  "run.join.qrAlt": [
+    "QR code that opens this class",
+    "Código QR que abre esta clase"
+  ],
+  "run.join.qrLoading": ["Building the QR code…", "Generando el código QR…"],
+  "run.join.qrFailed": [
+    "The QR code could not be generated. Students can use the link or class code instead.",
+    "No se pudo generar el código QR. Los estudiantes pueden usar el enlace o el código de clase."
   ],
 
   // ---------------------------------------------------------------- end of class

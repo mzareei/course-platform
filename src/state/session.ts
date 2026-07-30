@@ -44,11 +44,15 @@ export async function refreshContext(): Promise<void> {
   }
 }
 
+export async function refreshSessionAndContext(): Promise<void> {
+  session.value = await getSession();
+  await refreshContext();
+}
+
 export async function boot(): Promise<void> {
   booting.value = true;
   try {
-    session.value = await getSession();
-    if (session.value) await refreshContext();
+    await refreshSessionAndContext();
   } finally {
     booting.value = false;
   }

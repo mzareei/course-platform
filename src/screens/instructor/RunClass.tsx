@@ -8,6 +8,7 @@
 // stem or invents distractors. Picking "Which class" + a difficulty (or
 // "Surprise me") draws one question server-side; the same click sends it.
 import { useEffect, useRef, useState } from "preact/hooks";
+import QRCode from "qrcode";
 import { context, refreshContext } from "../../state/session";
 import { t, lang } from "../../i18n";
 import {
@@ -17,6 +18,7 @@ import {
 import { EndOfClass } from "./EndOfClass";
 import { endClassSession } from "../../api/session";
 import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
+import { canJoinClassSession } from "../../features/join/sessionState";
 
 const POLL_MS = 3000;
 type Difficulty = "easy" | "medium" | "hard";
@@ -34,6 +36,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [results, setResults] = useState<PulseResults | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState(false);
 
   // Bank selection
   const [banks, setBanks] = useState<BankSummary[] | null>(null);
@@ -45,6 +49,22 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [points, setPoints] = useState(1);
 
   const poll = useRef<number | undefined>(undefined);
+  const joinUrl = session ? `${location.origin}/join/${session.join_code}` : "";
+
+  useEffect(() => {
+    if (!joinUrl) return;
+    setQrError(false);
+    QRCode.toDataURL(joinUrl, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 240
+    })
+      .then(setQrDataUrl)
+      .catch(() => {
+        setQrDataUrl(null);
+        setQrError(true);
+      });
+  }, [joinUrl]);
 
   useEffect(() => {
     listBanks()
@@ -163,6 +183,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const remaining = secondsLeft(round?.ends_at);
   const live = round && round.state !== "closed";
   const ended = session.state === "closed";
+  const joinable = canJoinClassSession(session.state);
 
   // Ending the class is the one irreversible control on this screen, so it
   // names its consequences first and then actually tidies up: an open question
@@ -200,6 +221,36 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       </div>
 
       {error ? <p class="error-text" role="alert">{error}</p> : null}
+
+      {joinable ? (
+        <div class="card">
+          <div class="grid-2">
+            <div>
+              <p class="eyebrow">{t("run.join.eyebrow")}</p>
+              <h2>{t("run.join.title")}</h2>
+              <p class="hint">{t("run.join.body")}</p>
+              <p>
+                <strong>{t("run.join.code", { code: session.join_code })}</strong>
+              </p>
+              <a href={joinUrl}>{joinUrl}</a>
+            </div>
+            <div>
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  width="240"
+                  height="240"
+                  alt={t("run.join.qrAlt")}
+                />
+              ) : qrError ? (
+                <p class="error-text" role="alert">{t("run.join.qrFailed")}</p>
+              ) : (
+                <p class="hint" role="status">{t("run.join.qrLoading")}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {!live ? (
         <div class="card">

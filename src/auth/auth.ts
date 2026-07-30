@@ -4,6 +4,8 @@
 import type { Session } from "@supabase/supabase-js";
 import { client, callFnAnon } from "../api/client";
 import { config } from "../config";
+import { consumeAuthReturnPath } from "../features/auth/returnPath";
+import { refreshSessionAndContext } from "../state/session";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -95,6 +97,12 @@ export async function testSignIn(email: string): Promise<Session> {
   });
   if (!payload.otp) throw new Error("Test sign-in did not return a usable token.");
   return verifyOtp(payload.email || email, payload.otp);
+}
+
+export async function finishSignIn(): Promise<void> {
+  await refreshSessionAndContext();
+  const returnPath = consumeAuthReturnPath();
+  if (returnPath) location.href = returnPath;
 }
 
 export async function signOut(): Promise<void> {

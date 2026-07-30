@@ -137,6 +137,32 @@ Remote migration/function checks and the real instructor/student entry-point
 test remain to be recorded before this increment can be described as verified
 live.
 
+### 0.3 QR class joining — **DONE locally; join function deployed, browser matrix pending**
+
+Built 2026-07-29 as the third coherent-lifecycle increment. Run Class now shows
+a real QR code before and during class. It encodes only the session URL
+(`/join/<join_code>`), never a pulse question, so students scan once and remain
+on `/live` for the questions, quiz, and reflection that follow.
+
+The new `course-session-join` edge function validates the JWT, active profile,
+4–12-character alphanumeric code, session state, and active student enrollment
+for the session's group. It creates no enrollment. Signed-out QR visits keep
+only a strict same-origin `/join/<UPPERCASE_CODE>` return path, consume it once
+after code or test sign-in, and also clear it after a magic-link return.
+
+`tools/verify-class-sessions.mjs` covers the return-path allow-list and
+one-time consumption. The verifier was captured RED with the expected
+missing-module failure, then GREEN. The function was syntax-bundled, checked
+to contain no database writes, deployed to Supabase project
+`ojmbupftdikwmlqvibwt`, and a live unauthenticated POST reached the function
+and returned its own HTTP 401 response.
+
+The five authenticated browser cases remain pending because this increment was
+not pushed to Cloudflare Pages and an instructor email code is required to
+prepare a live class. Do not describe QR joining as browser-verified until the
+signed-in enrolled, signed-out return, unenrolled, invalid-code, and
+closed-session paths have all been exercised through the UI.
+
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
 platform, all driven by automation on one machine. Run one complete class.

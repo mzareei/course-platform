@@ -17,6 +17,7 @@ import { Content } from "./screens/instructor/Content";
 import { Admin } from "./screens/instructor/Admin";
 import { Viewer } from "./screens/Viewer";
 import { Live } from "./screens/student/Live";
+import { JoinClass } from "./screens/student/JoinClass";
 import { RunClass } from "./screens/instructor/RunClass";
 
 function StudentNav() {
@@ -108,7 +109,10 @@ export function App() {
       <LocationProvider>
         <Topbar />
         <main class="shell">
-          <SignIn />
+          <Router>
+            <Route path="/join/:joinCode" component={JoinClass} />
+            <Route default component={SignIn} />
+          </Router>
         </main>
       </LocationProvider>
     );
@@ -172,6 +176,7 @@ export function App() {
             <Route path="/review" component={Review} />
             <Route path="/grades" component={Grades} />
             <Route path="/live" component={Live} />
+            <Route path="/join/:joinCode" component={JoinClass} />
             <Route path="/view/:releaseId" component={Viewer} />
             <Route default component={Today} />
           </Router>

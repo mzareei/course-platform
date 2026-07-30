@@ -14,6 +14,14 @@ export function joinedClassSessionId() {
   }
 }
 
+export function rememberJoinedClassSession(sessionId: string): void {
+  try {
+    localStorage.setItem(JOINED_SESSION_KEY, sessionId);
+  } catch {
+    // The refreshed context still carries a live session when storage is blocked.
+  }
+}
+
 export function endClassSession(sessionId: string, reason?: string) {
   return callFn<{ session: { id: string; state: string; actual_end_at?: string | null } }>(
     "course-session-management",

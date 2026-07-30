@@ -568,3 +568,27 @@ or a quiz bank/activity that cannot be presented as the class lecture.
 sessions, the selected item must exist, belong to the requested course, and have
 `content_type = 'lecture'`. The browser's filtered select is usability; the
 edge function is the data-integrity boundary.
+
+---
+
+## 27. Authentication return paths are an open redirect unless allow-listed and consumed
+
+A QR join can begin while the student is signed out, so the app must remember
+where to return after authentication. Storing an arbitrary pathname or URL
+turns that convenience into an open redirect, and leaving even a safe value in
+storage lets an old class hijack a later sign-in.
+
+**Rule:** authentication return storage accepts only
+`/join/<4–12 uppercase alphanumeric characters>`. Reject absolute URLs,
+protocol-relative URLs, and every non-join app route. Remove the storage key
+before interpreting its value, so it is consumed exactly once even when the
+stored value is malformed.
+
+Magic-link sign-in is a second completion path: it boots already authenticated
+and does not call the code/test sign-in completion helper. The signed-in Join
+screen must consume the stored value too. Test both consumption paths whenever
+authentication recovery changes.
+
+The QR itself identifies only the class session. Encoding a question or pulse
+round would force students to rescan during class and couple joining to content
+that expires within seconds.
