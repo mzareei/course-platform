@@ -98,7 +98,8 @@ function QuestionBankCard({
       } catch {
         // The successful response already proves readiness; refresh is best effort.
       }
-    } catch {
+    } catch (cause) {
+      console.error("Checkpoint preparation failed", cause);
       setPrepareError(t("content.banks.prepareFailed"));
       try {
         const refreshed = await onRefresh();
