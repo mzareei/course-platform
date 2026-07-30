@@ -289,23 +289,35 @@ student afterwards.
    migration before deploying the dependent function.
 2. Confirm the production alias serves the new hashed bundle, not only the
    deployment-specific Pages URL.
-3. Classes → create a disposable active group. Manage members → assign QA Test
-   Student and confirm the filtered row shows the new group.
+3. Classes → create a disposable active group. Manage members → assign an
+   **invited** student before their first sign-in and confirm the filtered row
+   shows the new group. Retire another disposable group: its People view must
+   show no assignment control, and a direct authenticated assignment call must
+   return `group_not_assignable` without changing enrollment.
 4. Create a class day with **No lecture yet**. Edit it to attach one reviewable
-   lecture, save, then edit again to replace it with another.
+   lecture and save. Then open **Content**, find a different lecture, and use
+   **Assign to a class** to replace the planned class's lecture. Reload Classes
+   to prove the replacement persisted.
 5. Edit the group's meeting metadata and confirm the server-returned value is
    visible after save.
-6. Run the class and Start class. Return to Classes: the live row must not offer
-   Edit. As QA Test Student, start at Today and use Join class.
-7. End the class with the two-step in-app confirmation. Reload the QA student's
+6. Before start, use **Make available now** for the attached lecture, confirm
+   the whole-course Review scope from both students, then **Remove from Review**.
+   The class assignment must remain unchanged.
+7. Run the class and Start class. Return to Classes: the live row must not offer
+   Edit. Also call authenticated `update_session` directly with the session's
+   unchanged fields; it must refuse because `actual_start_at` exists and must
+   not mutate the row. As QA Test Student, start at Today and use Join class.
+8. End the class with the two-step in-app confirmation. Reload the QA student's
    context and confirm the attached lecture appears as **Review only**.
-8. Sign in as Test Student. The QA group's lecture must be absent from Review.
-9. Instructor → Gradebook → Per class → choose the class and QA Test Student.
+9. Sign in as Test Student. The QA group's lecture must be absent from Review.
+10. Instructor → Gradebook → Per class → choose the class and QA Test Student.
    Add a unique private note with Needs follow-up, then Resolve follow-up.
-10. With a QA-student token, call `course-auth-context` and
+   Open People → the same student's Notes and prove the profile-wide history
+   contains that same resolved note while the class-scoped view remains exact.
+11. With a QA-student token, call `course-auth-context` and
     `course-student-progress`: neither response may contain the note text.
     `course-student-notes` must return 403 and no note content.
-11. Cleanup: remove the disposable group Review release, move the QA student
+12. Cleanup: remove the disposable group Review release, move the QA student
     back to their original group, restore any temporarily changed group fields,
     and retire the disposable group. Recheck the real production group.
 

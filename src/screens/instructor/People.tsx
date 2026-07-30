@@ -2,6 +2,7 @@
 // External-access management still ports over from the old app.
 import { useEffect, useState } from "preact/hooks";
 import type { RosterOverview, Role } from "../../api/types";
+import { ApiError } from "../../api/client";
 import { listSections, type CourseSection } from "../../api/schedule";
 import {
   addRosterPerson,
@@ -16,12 +17,21 @@ import {
   currentCourseStudentSectionId,
   hasActiveStudentEnrollment
 } from "../../features/roster/sectionMembership";
+import {
+  assignmentErrorKey,
+  isAssignableGroupStatus,
+  isAssignableStudentProfileStatus
+} from "../../features/roster/assignment";
 import { context, refreshContext } from "../../state/session";
 import { t } from "../../i18n";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
 const GROUP_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type RosterPerson = RosterOverview["roster"][number];
+
+function assignmentErrorMessage(cause: unknown) {
+  return t(assignmentErrorKey(cause instanceof ApiError ? cause.code : undefined));
+}
 
 function canHaveStudentNotes(person: RosterPerson) {
   return person.course_role === "student" || (person.sections ?? []).some((section) => section.role === "student");
@@ -42,7 +52,7 @@ function GroupAssignment({
 }) {
   const currentSectionId = currentCourseStudentSectionId(person.sections, courseGroupIds);
   const [sectionId, setSectionId] = useState(currentSectionId);
-  const availableGroups = groups.filter((group) => ["planned", "active"].includes(group.status));
+  const availableGroups = groups.filter((group) => isAssignableGroupStatus(group.status));
 
   return (
     <div class="stack">
@@ -102,6 +112,9 @@ export function People() {
     ? groups?.find((group) => group.id === requestedGroupId) ?? null
     : null;
   const groupId = selectedGroup?.id ?? null;
+  const selectedGroupAssignable = Boolean(
+    selectedGroup && isAssignableGroupStatus(selectedGroup.status)
+  );
   const courseGroupIds = new Set((groups ?? []).map((group) => group.id));
 
   async function load() {
@@ -110,8 +123,10 @@ export function People() {
       setData(rosterData);
       setGroups(sectionData.sections);
       setSectionCode((current) => {
-        if (sectionData.sections.some((group) => group.section_code === current)) return current;
-        const available = sectionData.sections.find((group) => ["planned", "active"].includes(group.status));
+        if (sectionData.sections.some(
+          (group) => group.section_code === current && isAssignableGroupStatus(group.status)
+        )) return current;
+        const available = sectionData.sections.find((group) => isAssignableGroupStatus(group.status));
         return available?.section_code || "";
       });
     } catch (cause) {
@@ -129,11 +144,11 @@ export function People() {
   const roster = groupId
     ? (data?.roster ?? []).filter((person) => hasActiveStudentEnrollment(person.sections, groupId))
     : (data?.roster ?? []);
-  const studentsOutsideGroup = groupId
+  const studentsOutsideGroup = groupId && selectedGroupAssignable
     ? (data?.roster ?? []).filter((person, index, rows) =>
         person.course_role === "student" &&
         person.membership_status === "active" &&
-        person.profile_status === "active" &&
+        isAssignableStudentProfileStatus(person.profile_status) &&
         person.profile_id !== myProfileId &&
         currentCourseStudentSectionId(person.sections, courseGroupIds) !== groupId &&
         rows.findIndex((candidate) => candidate.profile_id === person.profile_id) === index
@@ -194,7 +209,7 @@ export function People() {
       await load();
       await refreshContext();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("people.assignGroupFailed"));
+      setError(assignmentErrorMessage(cause));
     } finally {
       setAssigning(null);
     }
@@ -226,7 +241,7 @@ export function People() {
           <label class="field">
             {t("people.section")}
             <select value={sectionCode} onChange={(e) => setSectionCode((e.target as HTMLSelectElement).value)}>
-              {(groups ?? []).filter((group) => ["planned", "active"].includes(group.status)).map((s) => (
+              {(groups ?? []).filter((group) => isAssignableGroupStatus(group.status)).map((s) => (
                 <option value={s.section_code}>{s.section_name || s.section_code}</option>
               ))}
             </select>
@@ -286,7 +301,9 @@ export function People() {
                 group: selectedGroup.section_name || selectedGroup.section_code
               })}
             </h3>
-            {studentsOutsideGroup.length ? (
+            {!selectedGroupAssignable ? (
+              <p class="hint">{t("people.groupNotAssignable")}</p>
+            ) : studentsOutsideGroup.length ? (
               <div class="row">
                 <label class="field">
                   {t("people.student")}
@@ -359,7 +376,7 @@ export function People() {
                   <td>
                     {person.course_role === "student" &&
                     person.membership_status === "active" &&
-                    person.profile_status === "active" &&
+                    isAssignableStudentProfileStatus(person.profile_status) &&
                     person.profile_id !== myProfileId ? (
                       <GroupAssignment
                         person={person}

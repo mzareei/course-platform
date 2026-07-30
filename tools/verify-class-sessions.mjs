@@ -14,12 +14,18 @@ import {
   currentCourseStudentSectionId,
   hasActiveStudentEnrollment
 } from "../src/features/roster/sectionMembership.ts";
+import {
+  assignmentErrorKey,
+  isAssignableGroupStatus,
+  isAssignableStudentProfileStatus
+} from "../src/features/roster/assignment.ts";
 
 const types = readFileSync("src/api/types.ts", "utf8");
 const today = readFileSync("src/screens/student/Today.tsx", "utf8");
 const live = readFileSync("src/screens/student/Live.tsx", "utf8");
 const app = readFileSync("src/app.tsx", "utf8");
 const classesApi = readFileSync("src/api/classes.ts", "utf8");
+const apiClient = readFileSync("src/api/client.ts", "utf8");
 const rosterApi = readFileSync("src/api/roster.ts", "utf8");
 const studentNotesApi = readFileSync("src/api/studentNotes.ts", "utf8");
 const schedule = readFileSync("src/components/Schedule.tsx", "utf8");
@@ -27,6 +33,20 @@ const sections = readFileSync("src/components/Sections.tsx", "utf8");
 const sessionEditor = readFileSync("src/components/SessionEditor.tsx", "utf8");
 const sectionEditor = readFileSync("src/components/SectionEditor.tsx", "utf8");
 const people = readFileSync("src/screens/instructor/People.tsx", "utf8");
+const rosterAssignment = readFileSync("src/features/roster/assignment.ts", "utf8");
+
+assert.equal(isAssignableGroupStatus("planned"), true);
+assert.equal(isAssignableGroupStatus("active"), true);
+assert.equal(isAssignableGroupStatus("completed"), false);
+assert.equal(isAssignableGroupStatus("archived"), false);
+assert.equal(isAssignableStudentProfileStatus("active"), true);
+assert.equal(isAssignableStudentProfileStatus("invited"), true);
+assert.equal(isAssignableStudentProfileStatus("inactive"), false);
+assert.equal(isAssignableStudentProfileStatus(undefined), false);
+assert.equal(assignmentErrorKey("group_not_assignable"), "people.assignGroupUnavailable");
+assert.equal(assignmentErrorKey("student_not_assignable"), "people.assignStudentUnavailable");
+assert.equal(assignmentErrorKey("student_role_required"), "people.assignRoleUnavailable");
+assert.equal(assignmentErrorKey("unexpected"), "people.assignGroupFailed");
 
 assert.match(types, /student_sessions\??:\s*StudentSession\[\]/);
 assert.match(today, /ctx\.student_sessions/);
@@ -152,6 +172,18 @@ assert.match(people, /new URLSearchParams\(location\.search\)\.get\("group"\)/);
 assert.match(people, /GROUP_UUID\.test\(groupParam\)/);
 assert.match(people, /href="\/teach\/people"/);
 assert.match(people, /listSections\(\)/, "People must load the authoritative course group list");
+assert.match(rosterAssignment, /new Set\(\["planned", "active"\]\)/);
+assert.match(
+  people,
+  /selectedGroupAssignable[\s\S]+isAssignableGroupStatus\(selectedGroup\.status\)/,
+  "archived and completed filtered groups must not expose assignment controls"
+);
+assert.match(people, /people\.groupNotAssignable/);
+assert.match(
+  people,
+  /isAssignableStudentProfileStatus\(person\.profile_status\)/,
+  "active and invited students must both be movable before first sign-in"
+);
 assert.match(people, /new Set\(\(groups \?\? \[\]\)\.map\(\(group\) => group\.id\)\)/);
 assert.match(people, /hasActiveStudentEnrollment\(person\.sections, groupId\)/);
 assert.match(people, /currentCourseStudentSectionId\(person\.sections, courseGroupIds\)/);
@@ -169,7 +201,17 @@ assert.match(people, /assignPersonSection/);
 assert.match(people, /people\.changeGroup/);
 assert.match(people, /people\.assignGroup/);
 assert.match(people, /people\.assignToViewingGroup/);
+assert.match(people, /cause instanceof ApiError/);
+assert.match(rosterAssignment, /people\.assignGroupUnavailable/);
+assert.match(rosterAssignment, /people\.assignStudentUnavailable/);
+assert.doesNotMatch(
+  people,
+  /setError\(cause instanceof Error \? cause\.message : t\("people\.assignGroupFailed"\)\)/,
+  "People must localize assignment errors instead of rendering raw backend English"
+);
 assert.match(people, /await refreshContext\(\)/);
+assert.match(apiClient, /error_code\?: string/);
+assert.match(apiClient, /new ApiError\([\s\S]+response\.status[\s\S]+error_code/);
 assert.match(sessionEditor, /const \{ session: saved \} = await updateClass/);
 assert.match(sessionEditor, /onSaved\(saved\)/);
 assert.match(sectionEditor, /const \{ section: saved \} = await saveSection/);

@@ -271,7 +271,7 @@ The latest deployed frontend bundle is `index-CI1XsMIz.js` from commit
 `9017d2e`. Backend `main` is `3742c1a`; migrations 0020–0025 and the class
 management, roster management, and student-notes functions are deployed.
 
-### 0.7 Class management and private notes — **DEPLOYED AND VERIFIED IN PRODUCTION**
+### 0.7 Class management and private notes — **DEPLOYED BASELINE; FOLLOW-UP FIXES LOCAL; MATRIX INCOMPLETE**
 
 Instructors can append private notes for an exact class session and enrolled
 student from Gradebook → Per class. Notes can be marked for follow-up; the
@@ -279,7 +279,7 @@ original text remains immutable and only an open follow-up exposes Resolve.
 People opens the same profile-scoped history across all class sessions. The
 note API is deliberately absent from student screens and rejects student tokens.
 
-The 2026-07-30 production rehearsal used QA group `QA730E`, class session
+The partial 2026-07-30 production rehearsal used QA group `QA730E`, class session
 `460a2cfb-bdfb-4e41-8577-21336195789e`, and class code `98ZXF8UV`:
 
 - The instructor assigned QA Test Student through the group-filtered People
@@ -300,12 +300,35 @@ restored Section A to Archived, restored the QA group's edited details, and
 retired the QA group. The closed QA class and resolved note remain as deliberate
 audit/history rows. Production group `TC2007B-401` stayed unchanged and Active.
 
-The release gate found two deployment issues before completion. Strict Deno
+The release gate found two deployment issues during that partial rehearsal. Strict Deno
 checking exposed inferred-`unknown` rows in all three management functions; the
 fixes are behavior-preserving type narrowing. The first assignment then failed
 because the roster function had been deployed before migration
 `0025_assign_student_section.sql`; applying the pending migration supplied its
 transactional RPC and the same UI action passed.
+
+Review then found two assignment-boundary defects. Production still permits a
+direct RPC assignment into a completed or archived group, and invited students
+are excluded before first sign-in. Local migration
+`0026_guard_student_section_assignment.sql` replaces the deployed RPC without
+rewriting 0025: only `planned | active` groups are targets and
+`active | invited` student profiles are eligible. The local People UI mirrors
+those rules and maps structured server error codes to bilingual messages. These
+fixes are not deployed yet.
+
+Do **not** call the management matrix complete until a safe production
+follow-up proves all of these:
+
+- Replace a planned class's lecture from the **Content** card assignment path,
+  not only from Classes.
+- After the class starts, prove a direct authenticated `update_session` refusal
+  without mutation. The missing real UI Edit action already passed rehearsal.
+- Before close, exercise a whole-course **Make available now → Remove from
+  Review** round trip and confirm it does not change the class assignment.
+- Create and resolve a note in Gradebook's class-scoped history, then open the
+  same note from the student's profile-scoped history in People.
+- Prove completed/archived target refusal in both UI and a direct server call.
+- Prove an invited student can be assigned before first sign-in.
 
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the

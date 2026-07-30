@@ -253,7 +253,7 @@ broken navigation and cross-screen content semantics.
 
 ### Closing a class, not assigning its lecture, opens group Review
 
-**Decided and verified in production 2026-07-30.**
+**Decided 2026-07-30; core path verified, full release matrix still pending.**
 
 Attaching a lecture to a planned class is scheduling metadata; it does not grant
 student access. Starting the class makes the session live. Closing it is the
@@ -279,3 +279,18 @@ People may show the profile-wide history.
 The notes edge function is instructor-only. Student auth context, progress, and
 screen code do not contain note data, and a student call to the notes function
 must return 403. Privacy here is an API boundary, not merely a hidden component.
+
+---
+
+### Group assignment follows group lifecycle, not profile sign-in
+
+**Decided after the 2026-07-30 production review.**
+
+Only `planned` and `active` groups may receive a student. `completed` and
+`archived` groups remain visible as history but expose no assignment control,
+and the transactional RPC rejects them even if a client bypasses the UI.
+
+A student's profile may still be `invited` before first sign-in. That must not
+block an instructor from placing them in the correct group. Assignment accepts
+`active | invited` student profiles, while preserving the course, student-role,
+self-assignment, and conflicting-staff-role checks.

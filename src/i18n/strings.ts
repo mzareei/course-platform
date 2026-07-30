@@ -644,6 +644,22 @@ export const strings = {
   "people.assigningGroup": ["Saving group…", "Guardando grupo…"],
   "people.groupAssigned": ["{name} is now in {group}.", "{name} ahora está en {group}."],
   "people.assignGroupFailed": ["Could not change this student's group.", "No se pudo cambiar el grupo de este estudiante."],
+  "people.assignGroupUnavailable": [
+    "Choose an active or planned group.",
+    "Elige un grupo activo o planificado."
+  ],
+  "people.assignStudentUnavailable": [
+    "Only an active or invited student can be assigned to a group.",
+    "Solo se puede asignar a un grupo un estudiante activo o invitado."
+  ],
+  "people.assignRoleUnavailable": [
+    "Only student accounts can be assigned to a group.",
+    "Solo las cuentas de estudiante se pueden asignar a un grupo."
+  ],
+  "people.groupNotAssignable": [
+    "This group is completed or archived. Reactivate it before assigning students.",
+    "Este grupo está completado o archivado. Reactívalo antes de asignar estudiantes."
+  ],
   "people.assignToViewingGroup": ["Assign a student to {group}", "Asignar un estudiante a {group}"],
   "people.student": ["Student", "Estudiante"],
   "people.chooseStudent": ["Choose a student", "Elige un estudiante"],

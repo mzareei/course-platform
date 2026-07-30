@@ -918,3 +918,25 @@ another group.
 refresh the student context before judging access. Do not mistake a stale
 in-memory context for a missing release, and do not add client-side inferred
 access as a workaround. The edge response remains the authority.
+
+---
+
+## 41. Historical groups and invited students have opposite assignment rules
+
+The first group-move implementation validated course ownership but not group
+status, so a direct call could reactivate enrollment in an archived or completed
+group. Its UI also required `profile_status = active`, which excluded a newly
+invited student precisely when an instructor needs to place them before first
+sign-in.
+
+**Rule:** assignment targets and student eligibility are separate predicates.
+Targets must be `planned | active`; profiles may be `active | invited`.
+Enforce both in the UI and in the transactional RPC. Keep historical groups
+visible for audit and roster review, but render an explicit bilingual
+non-assignable explanation instead of controls.
+
+Do not rewrite a migration that has reached production. Migration 0025 is
+deployed history; migration 0026 must replace the function with the stronger
+contract. Return stable error codes from the edge function so People can show
+localized guidance, while safely extracting the useful `message` field from
+plain Supabase error objects for logs and diagnostics.

@@ -12,9 +12,11 @@ export function client(): SupabaseClient {
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -47,9 +49,11 @@ export async function callFn<T = unknown>(
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    const errorPayload = payload as { error?: string; error_code?: string };
     throw new ApiError(
-      (payload as { error?: string }).error || `The request to ${name} failed.`,
-      response.status
+      errorPayload.error || `The request to ${name} failed.`,
+      response.status,
+      errorPayload.error_code
     );
   }
   return payload as T;
@@ -70,9 +74,11 @@ export async function callFnAnon<T = unknown>(
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    const errorPayload = payload as { error?: string; error_code?: string };
     throw new ApiError(
-      (payload as { error?: string }).error || `The request to ${name} failed.`,
-      response.status
+      errorPayload.error || `The request to ${name} failed.`,
+      response.status,
+      errorPayload.error_code
     );
   }
   return payload as T;
