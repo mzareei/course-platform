@@ -526,6 +526,11 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   background: var(--surface-1);
   box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
 }
+.run-end-confirm {
+  flex-basis: 100%;
+  max-width: 36rem;
+  margin: 0;
+}
 .run-deck-fallback {
   display: flex;
   flex-direction: column;

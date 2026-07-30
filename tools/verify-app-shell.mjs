@@ -176,6 +176,11 @@ assert.doesNotMatch(
   /cause instanceof Error \? cause\.message/,
   "checkpoint and class errors shown to the instructor must stay bilingual"
 );
+assert.doesNotMatch(
+  runClassSource,
+  /\bconfirm\(/,
+  "ending a class must use an accessible in-app confirmation state"
+);
 
 if (failures.length) {
   console.error("App shell verification failed:");

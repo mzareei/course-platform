@@ -120,6 +120,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [showFinalQuiz, setShowFinalQuiz] = useState(false);
   const [bridgeTimedOut, setBridgeTimedOut] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [endConfirming, setEndConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState(false);
@@ -722,7 +723,10 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   }
 
   async function onEndClass() {
-    if (!confirm(t("run.endConfirm"))) return;
+    if (!endConfirming) {
+      setEndConfirming(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -748,6 +752,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       }
       await endClassSession(sessionId!);
       await refreshContext();
+      setEndConfirming(false);
     } catch {
       setError(t("run.endFailed"));
     } finally {
@@ -794,14 +799,21 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
             {t("teach.card.asStudent")}
           </a>
           {isLive ? (
-            <button
-              class="btn danger"
-              type="button"
-              disabled={busy}
-              onClick={onEndClass}
-            >
-              {t("run.endClass")}
-            </button>
+            <>
+              <button
+                class="btn danger"
+                type="button"
+                disabled={busy}
+                onClick={onEndClass}
+              >
+                {endConfirming
+                  ? t("run.endConfirmAction")
+                  : t("run.endClass")}
+              </button>
+              {endConfirming ? (
+                <p class="hint run-end-confirm">{t("run.endConfirm")}</p>
+              ) : null}
+            </>
           ) : null}
           <a class="btn quiet" href="/teach">← {t("run.backToHome")}</a>
         </div>

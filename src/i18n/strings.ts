@@ -873,6 +873,10 @@ export const strings = {
     "End the class now? Any open question and any running quiz will be closed, and students will no longer be able to join. Reflections stay open for a few more minutes.",
     "¿Terminar la clase ahora? Se cerrará cualquier pregunta abierta y cualquier quiz en curso, y los estudiantes ya no podrán unirse. Las reflexiones siguen abiertas unos minutos más."
   ],
+  "run.endConfirmAction": [
+    "Confirm: end the class",
+    "Confirmar: terminar la clase"
+  ],
   "run.ended": ["Class ended", "Clase terminada"],
   "run.endedBody": [
     "This class is closed. Reflections submitted during the grace window still appear above.",
