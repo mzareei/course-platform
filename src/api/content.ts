@@ -199,6 +199,10 @@ export function updateReleaseState(input: {
  */
 export const STUDENT_VISIBLE_STATES = ["released", "live", "paused", "review_only", "scheduled"];
 
-export function studentsCanOpen(state: string) {
-  return STUDENT_VISIBLE_STATES.includes(state);
+export function studentsCanOpen(state: string, opensAt: string | null, now = new Date()) {
+  if (!STUDENT_VISIBLE_STATES.includes(state)) return false;
+  if (state === "scheduled") {
+    return Boolean(opensAt) && new Date(opensAt as string) <= now;
+  }
+  return !opensAt || new Date(opensAt) <= now;
 }

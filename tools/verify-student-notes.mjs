@@ -19,6 +19,13 @@ assert.match(composer, /needs_follow_up/);
 assert.match(history, /listStudentNotes/);
 assert.match(history, /listSessionNotes/);
 assert.match(history, /resolveStudentNote/);
+assert.match(history, /await resolveStudentNote\(noteId\)/);
+assert.match(history, /classSessionId\s*\?\s*listSessionNotes\(classSessionId\)\s*:\s*listStudentNotes\(profileId\)/);
+assert.doesNotMatch(
+  history,
+  /const \{ notes: updatedNotes \} = await resolveStudentNote\(noteId\)/,
+  "profile-wide history must not be replaced by the resolve endpoint's single-session response"
+);
 assert.match(history, /needs_follow_up && !note\.resolved_at/);
 assert.match(history, /author_name/);
 assert.match(history, /session_title/);
@@ -34,6 +41,11 @@ assert.match(gradebook, /rosterError \? \(\s*<p class="error-text" role="alert">
 
 assert.match(people, /StudentNoteHistory/);
 assert.match(people, /profileId=\{selectedNoteProfile\.profile_id\}/);
+assert.match(
+  people,
+  /useEffect\(\(\) => \{\s*setSectionId\(currentSectionId\);\s*\}, \[currentSectionId\]\)/,
+  "group assignment controls must follow refreshed roster props"
+);
 const rosterRow = people.slice(people.indexOf("{roster.map((person) => ("));
 assert.ok(rosterRow.indexOf("<StatusPill") < rosterRow.indexOf('t("studentNotes.open")'));
 

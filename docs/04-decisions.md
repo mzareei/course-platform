@@ -282,6 +282,49 @@ must return 403. Privacy here is an API boundary, not merely a hidden component.
 
 ---
 
+### A group move does not erase a student's class-note history
+
+**Decided after whole-plan composition review 2026-07-30.**
+
+A normal group move preserves the prior student enrollment as `dropped`. That
+historical row remains valid proof that the student belonged to an earlier
+class group. Instructors may therefore add, list, and resolve private notes for
+that earlier class after the move. Profile history starts from the student's
+course-scoped notes, not only the sessions in their current active group.
+
+Current membership still governs live-class participation. Historical
+enrollment is used only for instructor note integrity and never exposes notes
+to a student.
+
+---
+
+### Session numbering and closing are server composition concerns
+
+**Decided after whole-plan composition review 2026-07-30.**
+
+Moving an unstarted class to a group that already has the same class number
+automatically assigns the next available number in that target group. The
+professor is never asked to resolve an internal unique-key collision.
+
+Ending a class is idempotent. The first transaction closes the session, creates
+or reopens its group-scoped Review release, and writes audit history. A retry of
+that already-closed session returns the existing result without duplicating the
+release or audit records, allowing pulse and activity cleanup to finish safely.
+
+---
+
+### Scheduled access is visible only after its opening time
+
+**Decided after whole-plan composition review 2026-07-30.**
+
+The raw `scheduled` database state is not itself evidence that students can
+open a material. Both student access and the instructor Content summary compare
+`opens_at` with the current time. Cancelling scheduled access transitions the
+release back to `draft`; ordinary currently available Review access transitions
+to `closed`.
+
+---
+
 ### Group assignment follows group lifecycle, not profile sign-in
 
 **Decided after review and verified in production 2026-07-30.**

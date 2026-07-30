@@ -947,3 +947,61 @@ filtered People view withheld the target and explained reactivation, while a
 pre-staged authenticated assignment returned the localized
 `group_not_assignable` guidance and left the student's existing group
 unchanged.
+
+---
+
+## 42. Current enrollment is not historical class-note ownership
+
+A student move marks the old group enrollment `dropped`. Note creation,
+profile-history loading, session listing, and follow-up resolution originally
+required the old enrollment to remain active. The move therefore hid earlier
+notes, blocked unresolved follow-up, and one moved student could make the whole
+session-note list fail.
+
+**Rule:** private class-note integrity follows the session's course and the
+student's historical `active | dropped` enrollment in that session's group.
+Profile history starts from course-scoped note rows, not current group sessions.
+Do not batch-fail a session list because a student later moved. Keep the notes
+endpoint instructor-only; historical access does not change student privacy.
+
+---
+
+## 43. A class number belongs to its group
+
+Moving planned Class 1 from Group A to Group B can collide with Group B's own
+Class 1 because the schema key is `(section_id, sequence_number)`. Returning
+“choose another class number” is impossible advice: the interface intentionally
+does not ask professors to manage sequence numbers.
+
+**Rule:** lock the target group inside the atomic session-edit RPC. If the
+incoming number is taken, assign `max(sequence_number) + 1`, persist it in the
+same transaction, audit before/after sequence values, and return the resulting
+row.
+
+---
+
+## 44. Atomic close still needs an idempotent cleanup retry
+
+Closing the session and creating its Review release are atomic, but the edge
+function closes pulse and activity rows afterwards. If that cleanup call fails,
+a retry sees an already-closed session. Rejecting `closed → closed` strands the
+cleanup even though the authoritative close succeeded.
+
+**Rule:** the close RPC returns an already-closed session immediately, before
+writing another release event or audit record. The edge transition guard must
+allow that exact retry, then rerun idempotent pulse/activity cleanup.
+
+---
+
+## 45. Raw `scheduled` is not the same as student-visible
+
+The instructor Content summary treated every `scheduled` row as open even when
+`opens_at` was in the future, while the student auth endpoint correctly hid it.
+The same screen tried to remove scheduled access using `closed`, a transition
+the release state machine rejects deterministically.
+
+**Rule:** compare `opens_at` with the current time when reporting availability.
+Keep future scheduled scope visible as scheduling information, not available
+content. Its explicit bilingual cancellation action uses
+`scheduled → draft`; normal Review removal uses a valid visible-state
+transition to `closed`.

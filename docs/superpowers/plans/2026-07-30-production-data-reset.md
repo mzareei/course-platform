@@ -4,7 +4,7 @@
 
 **Goal:** Remove every historical or QA course-operation record from production while preserving TC2007B teaching assets, the platform owner, and four clean semester groups.
 
-**Architecture:** Migration 0029 installs a locked SQL reset function whose preview mode is read-only and whose execute mode validates one retained owner, fingerprints reusable assets, deletes personal and operational data, recreates the clean group structure, and asserts the final state. After all application QA is complete, migration 0030 invokes that function once and drops it in the same migration transaction; a failed assertion rolls back the reset.
+**Architecture:** Migration 0030 installs a locked SQL reset function whose preview mode is read-only and whose execute mode validates one retained owner, fingerprints reusable assets, deletes personal and operational data, recreates the clean group structure, and asserts the final state. After all application QA is complete, migration 0031 invokes that function once and drops it in the same migration transaction; a failed assertion rolls back the reset.
 
 **Tech Stack:** PostgreSQL/Supabase migrations, Node verifier scripts, Supabase CLI, Vite + Preact production browser rehearsal.
 
@@ -24,7 +24,7 @@
 ### Task 1: Guarded reset function and verifier
 
 **Files:**
-- Create: backend `supabase/migrations/0029_prepare_clean_platform_reset.sql`
+- Create: backend `supabase/migrations/0030_prepare_clean_platform_reset.sql`
 - Create: backend `tools/verify-clean-platform-reset.mjs`
 - Modify: frontend `docs/06-runbook.md`
 - Modify: frontend `docs/07-pitfalls.md`
@@ -37,7 +37,7 @@
 
 - [ ] **Step 1: Write the failing verifier**
 
-Create `tools/verify-clean-platform-reset.mjs`. It must read migration 0029 and
+Create `tools/verify-clean-platform-reset.mjs`. It must read migration 0030 and
 assert all of these literal contracts:
 
 ```js
@@ -86,9 +86,9 @@ Run:
 node tools/verify-clean-platform-reset.mjs
 ```
 
-Expected: failure because migration 0029 does not exist.
+Expected: failure because migration 0030 does not exist.
 
-- [ ] **Step 3: Implement migration 0029**
+- [ ] **Step 3: Implement migration 0030**
 
 Create a `security definer` PL/pgSQL function with:
 
@@ -169,7 +169,7 @@ must be normalized rather than deleted.
 Backend:
 
 ```bash
-git add supabase/migrations/0029_prepare_clean_platform_reset.sql tools/verify-clean-platform-reset.mjs
+git add supabase/migrations/0030_prepare_clean_platform_reset.sql tools/verify-clean-platform-reset.mjs
 git commit -m "feat: prepare guarded production data reset"
 ```
 
@@ -185,13 +185,13 @@ git commit -m "docs: add clean platform reset runbook"
 ### Task 2: Stage, preview, and execute the final reset
 
 **Files:**
-- Create: backend `supabase/migrations/0030_execute_clean_platform_reset.sql`
+- Create: backend `supabase/migrations/0031_execute_clean_platform_reset.sql`
 - Modify: backend `tools/verify-clean-platform-reset.mjs`
 - Create: frontend `.superpowers/sdd/2026-07-30-production-data-reset/reset-report.md` (git-ignored evidence)
 
 **Interfaces:**
 - Consumes: `public.clean_tc2007b_platform(boolean)` from Task 1.
-- Produces: production migration history entry 0030 and no persistent reset function.
+- Produces: production migration history entry 0031 and no persistent reset function.
 
 - [ ] **Step 1: Confirm all feature QA is finished**
 
@@ -213,16 +213,16 @@ Do not record names, emails, student identifiers, answers, grades, or notes.
 
 - [ ] **Step 3: Write the failing execution-migration assertions**
 
-Extend the verifier to require migration 0030 to contain:
+Extend the verifier to require migration 0031 to contain:
 
 ```js
 assert.match(executeSql, /select public\\.clean_tc2007b_platform\\(true\\)/i);
 assert.match(executeSql, /drop function public\\.clean_tc2007b_platform\\(boolean\\)/i);
 ```
 
-Run the verifier and confirm it fails because migration 0030 is absent.
+Run the verifier and confirm it fails because migration 0031 is absent.
 
-- [ ] **Step 4: Create migration 0030**
+- [ ] **Step 4: Create migration 0031**
 
 Create:
 
@@ -241,20 +241,20 @@ drop function public.clean_tc2007b_platform(boolean);
 
 The migration runner's transaction makes the reset and function removal atomic.
 
-- [ ] **Step 5: Verify and commit migration 0030**
+- [ ] **Step 5: Verify and commit migration 0031**
 
 Run:
 
 ```bash
 node tools/verify-clean-platform-reset.mjs
 git diff --check
-git add supabase/migrations/0030_execute_clean_platform_reset.sql tools/verify-clean-platform-reset.mjs
+git add supabase/migrations/0031_execute_clean_platform_reset.sql tools/verify-clean-platform-reset.mjs
 git commit -m "ops: execute clean production data reset"
 ```
 
-- [ ] **Step 6: Push migration 0029 only and preview**
+- [ ] **Step 6: Push migration 0030 only and preview**
 
-Before migration 0030 exists on the pushed branch, apply 0029:
+Before migration 0031 exists on the pushed branch, apply 0030:
 
 ```bash
 npx supabase db push --include-all --yes
@@ -264,7 +264,7 @@ npx supabase db query --linked "select public.clean_tc2007b_platform(false);"
 Compare the returned retained counts/fingerprint with Step 2. Stop if the owner
 count is not exactly one or any retained table is unexpectedly empty.
 
-- [ ] **Step 7: Apply migration 0030**
+- [ ] **Step 7: Apply migration 0031**
 
 Push the reviewed backend commit and run:
 
@@ -272,7 +272,7 @@ Push the reviewed backend commit and run:
 npx supabase db push --include-all --yes
 ```
 
-Expected: migration 0030 applies and emits the count-only completion notice.
+Expected: migration 0031 applies and emits the count-only completion notice.
 Record the exact output in `reset-report.md`.
 
 - [ ] **Step 8: Prove database postconditions**

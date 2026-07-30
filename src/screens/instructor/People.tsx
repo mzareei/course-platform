@@ -54,6 +54,10 @@ function GroupAssignment({
   const [sectionId, setSectionId] = useState(currentSectionId);
   const availableGroups = groups.filter((group) => isAssignableGroupStatus(group.status));
 
+  useEffect(() => {
+    setSectionId(currentSectionId);
+  }, [currentSectionId]);
+
   return (
     <div class="stack">
       <label class="field">

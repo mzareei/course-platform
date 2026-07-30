@@ -1006,6 +1006,7 @@ export const strings = {
 
   "content.library.makeAvailable": ["Make available now", "Ponerlo disponible ahora"],
   "content.library.removeFromReview": ["Remove from Review", "Quitar de Repasar"],
+  "content.library.cancelScheduled": ["Cancel scheduled access", "Cancelar acceso programado"],
   "content.library.assignToClass": ["Assign to a class", "Asignar a una clase"],
   "content.library.assignClassPlaceholder": [
     "Choose an unstarted class",
@@ -1023,6 +1024,10 @@ export const strings = {
   ],
   "content.library.groupReview": ["Group {group} Review", "Repaso del grupo {group}"],
   "content.library.wholeCourseReview": ["Whole course Review", "Repaso de todo el curso"],
+  "content.library.scheduledScope": [
+    "{scope} · opens {date}",
+    "{scope} · se abre el {date}"
+  ],
   "content.library.working": ["Working…", "Trabajando…"],
 
   "content.library.makeAvailableConfirm": [
@@ -1037,11 +1042,19 @@ export const strings = {
     "Remove {title} from {scope}? Students in that scope can no longer open it. Nothing they have already done is lost.",
     "¿Quitar {title} de {scope}? Los estudiantes de ese alcance ya no podrán abrirlo. No se pierde nada de lo que ya hayan hecho."
   ],
+  "content.library.cancelScheduledConfirm": [
+    "Cancel scheduled access to {title} for {scope}? Students will not receive this material at the scheduled time.",
+    "¿Cancelar el acceso programado a {title} para {scope}? Los estudiantes no recibirán este material a la hora programada."
+  ],
   "content.library.madeAvailable": ["{title} is now available to your students.", "{title} ya está disponible para tus estudiantes."],
   "content.library.assigned": ["{lecture} is assigned to {title}.", "{lecture} se asignó a {title}."],
   "content.library.removedFromReview": [
     "{title} is no longer available in {scope}.",
     "{title} ya no está disponible en {scope}."
+  ],
+  "content.library.scheduledCancelled": [
+    "Scheduled access to {title} for {scope} was cancelled.",
+    "Se canceló el acceso programado a {title} para {scope}."
   ],
   "content.library.changeFailed": ["Could not change that.", "No se pudo cambiar eso."],
   "content.library.notReviewable": [

@@ -98,7 +98,7 @@ export function ContentLibraryView() {
   }
 
   const isAvailable = (item: ContentItem) =>
-    (releasesByItem.get(item.id) ?? []).some((r) => studentsCanOpen(r.state));
+    (releasesByItem.get(item.id) ?? []).some((r) => studentsCanOpen(r.state, r.opens_at));
 
   const items = reviewableItems.filter((item) =>
     filter === "all" ? true : filter === "available" ? isAvailable(item) : !isAvailable(item)
@@ -137,7 +137,10 @@ export function ContentLibraryView() {
 
       {items.map((item) => {
         const mine = releasesByItem.get(item.id) ?? [];
-        const effectiveReleases = mine.filter((release) => studentsCanOpen(release.state));
+        const effectiveReleases = mine.filter((release) => studentsCanOpen(release.state, release.opens_at));
+        const manageableReleases = mine.filter((release) =>
+          studentsCanOpen(release.state, release.opens_at) || release.state === "scheduled"
+        );
         const available = effectiveReleases.length > 0;
         const wholeCourseRelease = effectiveReleases.find((release) => release.section_id == null);
         // A group release must never be reopened as the whole-course override.
@@ -230,30 +233,52 @@ export function ContentLibraryView() {
                 ))}
               </div>
             ) : null}
-            {effectiveReleases.length ? (
+            {manageableReleases.length ? (
               <div class="stack" style="gap: 0.4rem;">
-                {effectiveReleases.map((release) => {
+                {manageableReleases.map((release) => {
                   const scope = reviewScope(release);
+                  const scheduled = release.state === "scheduled";
                   return (
                     <div class="row" style="justify-content: space-between; align-items: center;">
-                      <span class="pill open">{scope}</span>
+                      <span class={`pill ${scheduled ? "scheduled" : "open"}`}>
+                        {scheduled
+                          ? t("content.library.scheduledScope", {
+                              scope,
+                              date: formatDay(release.opens_at)
+                            })
+                          : scope}
+                      </span>
                       <button
                         class="btn quiet"
                         type="button"
                         disabled={busy === item.id}
                         onClick={() => {
-                          if (!confirm(t("content.library.removeFromReviewConfirm", { title: item.title, scope }))) return;
+                          const confirmKey = scheduled
+                            ? "content.library.cancelScheduledConfirm"
+                            : "content.library.removeFromReviewConfirm";
+                          if (!confirm(t(confirmKey, { title: item.title, scope }))) return;
                           void run(item.id, async () => {
                             await updateReleaseState({
                               release_id: release.release_id,
-                              next_state: "closed",
-                              reason: "Removed from Review from the Content screen."
+                              next_state: release.state === "scheduled" ? "draft" : "closed",
+                              reason: scheduled
+                                ? "Cancelled scheduled access from the Content screen."
+                                : "Removed from Review from the Content screen."
                             });
-                            setNotice(t("content.library.removedFromReview", { title: item.title, scope }));
+                            setNotice(t(
+                              scheduled
+                                ? "content.library.scheduledCancelled"
+                                : "content.library.removedFromReview",
+                              { title: item.title, scope }
+                            ));
                           });
                         }}
                       >
-                        {busy === item.id ? t("content.library.working") : t("content.library.removeFromReview")}
+                        {busy === item.id
+                          ? t("content.library.working")
+                          : release.state === "scheduled"
+                            ? t("content.library.cancelScheduled")
+                            : t("content.library.removeFromReview")}
                       </button>
                     </div>
                   );

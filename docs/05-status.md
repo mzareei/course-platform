@@ -338,6 +338,34 @@ Cleanup restored Student Name to A and QA Test Student to TC2007B-401, archived
 A and QA730E, removed the temporary whole-course Review release, and left the
 new QA class Closed. TC2007B-401 remained unchanged and Active.
 
+#### Final composition hardening — **IMPLEMENTED LOCALLY, PENDING DEPLOYMENT**
+
+Whole-plan review found four cross-feature composition defects plus two UI
+state-refresh defects. The fixes are implemented test-first in additive
+migration `0027_class_management_composition_fixes.sql` and the existing
+management functions/components:
+
+- Private note creation, session listing, profile history, and follow-up
+  resolution use historical `active | dropped` student enrollment, so a normal
+  group move does not erase earlier class records or make one moved student's
+  note fail the whole session list.
+- Moving an unstarted class into a group with the same sequence number chooses
+  and returns that group's next number atomically.
+- Repeating End class on an already-closed session returns the existing closed
+  result without another Review release, release event, or audit entry; the
+  edge function can retry remaining pulse/activity cleanup.
+- Future scheduled access is not counted as currently available. Content offers
+  bilingual **Cancel scheduled access**, which uses the valid
+  `scheduled → draft` transition; ordinary Review removal still closes the
+  release.
+- Resolving from People reloads the full profile-wide semester history, and
+  each group assignment selector follows fresh roster props after a move.
+
+This paragraph describes local code only. Migration 0027 and the updated
+session and notes functions have not yet been deployed; release management
+already permits `scheduled → draft`. The production bundle/hash above remains
+the current live version until the release gate is completed.
+
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the
 platform, all driven by automation on one machine. Run one complete class.

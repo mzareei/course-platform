@@ -47,7 +47,10 @@ export function StudentNoteHistory({
     setResolving(noteId);
     setError(null);
     try {
-      const { notes: updatedNotes } = await resolveStudentNote(noteId);
+      await resolveStudentNote(noteId);
+      const { notes: updatedNotes } = await (classSessionId
+        ? listSessionNotes(classSessionId)
+        : listStudentNotes(profileId));
       setNotes(updatedNotes);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("studentNotes.resolveFailed"));

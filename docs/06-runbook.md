@@ -158,9 +158,14 @@ immediately.**
 ### What "available" means
 
 **Available** = a `content_release` in a student-visible state
-(`released | live | paused | review_only | scheduled`), with no class session.
-It reaches every student through **Review**, which is what you want for nearly
-all material.
+(`released | live | paused | review_only`, or `scheduled` after `opens_at`),
+within its opening/closing window and with no class session. A future
+`scheduled` release is labelled with its opening date but is not counted as
+available. **Cancel scheduled access** returns it to `draft`; it must not try
+the invalid `scheduled → closed` transition.
+
+A whole-course available release reaches every student through **Review**,
+which is what you want for nearly all material.
 
 A release can also carry a `class_session_id`, which is what puts it on that
 day's **Today** screen. There is no UI for that right now: the control was
@@ -308,19 +313,28 @@ student afterwards.
    recognizable sentinel change; it must refuse because `actual_start_at`
    exists, and a fresh row must prove the sentinel was not stored. As QA Test
    Student, start at Today and use Join class.
-8. End the class with the two-step in-app confirmation. Reload the QA student's
-   context and confirm the attached lecture appears as **Review only**.
+8. End the class with the two-step in-app confirmation. Repeat the authenticated
+   close request once and confirm it returns the same closed session while the
+   single group Review release remains unique. Reload the QA student's context
+   and confirm the attached lecture appears as **Review only**.
 9. Sign in as Test Student. The QA group's lecture must be absent from Review.
 10. Instructor → Gradebook → Per class → choose the class and QA Test Student.
-   Add a unique private note with Needs follow-up, then Resolve follow-up.
-   Open People → the same student's Notes and prove the profile-wide history
-   contains that same resolved note while the class-scoped view remains exact.
+   Add a unique private note with Needs follow-up. Move that student to a
+   second disposable active group, then reopen the original class: its session
+   note list must still load, the moved student must remain selectable through
+   the dropped historical enrollment, and resolving the old-group follow-up
+   must succeed. Open People → the same student's Notes and prove the
+   profile-wide history still contains every semester note after Resolve while
+   the class-scoped view remains exact.
 11. With a QA-student token, call `course-auth-context` and
     `course-student-progress`: neither response may contain the note text.
     `course-student-notes` must return 403 and no note content.
-12. Cleanup: remove the disposable group Review release, move the QA student
-    back to their original group, restore any temporarily changed group fields,
-    and retire the disposable group. Recheck the real production group.
+12. If a future scheduled release is available for rehearsal, confirm Content
+    does not count it as open yet and **Cancel scheduled access** moves it to
+    draft with bilingual confirmation. Then cleanup: remove the disposable
+    group Review release, move the QA student back to their original group,
+    restore any temporarily changed group fields, and retire the disposable
+    group. Recheck the real production group.
 
 Closed class sessions and resolved notes are append-only operational history;
 do not delete them to make a rehearsal look clean.
