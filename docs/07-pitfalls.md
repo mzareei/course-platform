@@ -964,6 +964,11 @@ Profile history starts from course-scoped note rows, not current group sessions.
 Do not batch-fail a session list because a student later moved. Keep the notes
 endpoint instructor-only; historical access does not change student privacy.
 
+Production proof moved QA Test Student out of QA730E after creating an
+unresolved note. The old session still loaded every student and note, People
+retained all three semester notes, and resolving from People preserved the full
+list through reload.
+
 ---
 
 ## 43. A class number belongs to its group
@@ -978,6 +983,9 @@ incoming number is taken, assign `max(sequence_number) + 1`, persist it in the
 same transaction, audit before/after sequence values, and return the resulting
 row.
 
+Production proof moved QA730E sequence 3 into A while A contained sequences
+1–4. The persisted session returned A sequence 5.
+
 ---
 
 ## 44. Atomic close still needs an idempotent cleanup retry
@@ -990,6 +998,10 @@ cleanup even though the authoritative close succeeded.
 **Rule:** the close RPC returns an already-closed session immediately, before
 writing another release event or audit record. The edge transition guard must
 allow that exact retry, then rerun idempotent pulse/activity cleanup.
+
+Production counts for release / release event / close audit were `0 / 0 / 0`
+before close, `1 / 1 / 1` after close, and remained `1 / 1 / 1` after a second
+authenticated stale-tab close request.
 
 ---
 
@@ -1005,3 +1017,7 @@ Keep future scheduled scope visible as scheduling information, not available
 content. Its explicit bilingual cancellation action uses
 `scheduled → draft`; normal Review removal uses a valid visible-state
 transition to `closed`.
+
+Production proof used a QA730E release opening in 2035. Content labeled the
+material scheduled and not available; cancellation returned it to `draft`
+without the previous deterministic transition failure.

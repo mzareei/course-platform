@@ -267,8 +267,8 @@ exit returned to `/teach`. Review contained Week 1 Lecture 1 and did not contain
 Week 1 Quiz. The projector cockpit was checked at 1440px width with a 977×549
 deck iframe and no horizontal overflow.
 
-The latest deployed frontend bundle is `index-B-nhKDB6.js` from commit
-`e6e4616`. Backend `main` is `bb9c8cf`; migrations 0020–0026 and the class
+The latest deployed frontend bundle is `index-Dlk8k3FR.js` from commit
+`af1ea69`. Backend `main` is `623feca`; migrations 0020–0027 and the class
 management, roster management, and student-notes functions are deployed.
 
 ### 0.7 Class management and private notes — **DEPLOYED AND PRODUCTION VERIFIED**
@@ -338,7 +338,7 @@ Cleanup restored Student Name to A and QA Test Student to TC2007B-401, archived
 A and QA730E, removed the temporary whole-course Review release, and left the
 new QA class Closed. TC2007B-401 remained unchanged and Active.
 
-#### Final composition hardening — **IMPLEMENTED LOCALLY, PENDING DEPLOYMENT**
+#### Final composition hardening — **DEPLOYED AND PRODUCTION VERIFIED**
 
 Whole-plan review found four cross-feature composition defects plus two UI
 state-refresh defects. The fixes are implemented test-first in additive
@@ -361,10 +361,30 @@ management functions/components:
 - Resolving from People reloads the full profile-wide semester history, and
   each group assignment selector follows fresh roster props after a move.
 
-This paragraph describes local code only. Migration 0027 and the updated
-session and notes functions have not yet been deployed; release management
-already permits `scheduled → draft`. The production bundle/hash above remains
-the current live version until the release gate is completed.
+Migration 0027 and the updated session and notes functions are deployed.
+Frontend commit `af1ea69`, backend commit `623feca`, and production bundle
+`index-Dlk8k3FR.js` completed the live release gate:
+
+- A note created in old QA session `27d87aed-b99c-4d83-8235-398fe1f28ba0`
+  remained available after the student moved from QA730E to A. The class list
+  still loaded both students, People retained all three semester notes, and
+  resolving from People preserved the full list through a page reload.
+- Planned session `8d72be63-54ce-4fe2-a0ed-0c08ed340626` moved from QA730E
+  sequence 3 into A, whose sequences 1–4 were occupied. The persisted result
+  was A sequence 5.
+- Close counts for release / release event / audit were `0 / 0 / 0` before,
+  `1 / 1 / 1` after the first close, and still `1 / 1 / 1` after a second
+  authenticated close request.
+- A QA730E release opening in 2035 rendered as scheduled and not currently
+  available. Cancel scheduled access succeeded and persisted `draft`.
+- The roster group selector followed A immediately and after reload.
+- Student auth context and progress returned 200 without the moved-note text;
+  the notes endpoint returned 403 without it.
+
+Cleanup restored QA Test Student to TC2007B-401, archived A and QA730E, and
+closed the new class's Review release without changing the historical Group A
+release. The cancelled schedule remains as an inert `draft` QA fixture for the
+planned final data reset. TC2007B-401 remained unchanged and Active.
 
 ### 1. Dress rehearsal with real students on real phones — **highest value**
 Nothing here substitutes for it. Only 1–3 test accounts have ever used the

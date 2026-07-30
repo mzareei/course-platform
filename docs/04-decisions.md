@@ -284,7 +284,7 @@ must return 403. Privacy here is an API boundary, not merely a hidden component.
 
 ### A group move does not erase a student's class-note history
 
-**Decided after whole-plan composition review 2026-07-30.**
+**Decided after review and verified in production 2026-07-30.**
 
 A normal group move preserves the prior student enrollment as `dropped`. That
 historical row remains valid proof that the student belonged to an earlier
@@ -300,7 +300,7 @@ to a student.
 
 ### Session numbering and closing are server composition concerns
 
-**Decided after whole-plan composition review 2026-07-30.**
+**Decided after review and verified in production 2026-07-30.**
 
 Moving an unstarted class to a group that already has the same class number
 automatically assigns the next available number in that target group. The
@@ -315,7 +315,7 @@ release or audit records, allowing pulse and activity cleanup to finish safely.
 
 ### Scheduled access is visible only after its opening time
 
-**Decided after whole-plan composition review 2026-07-30.**
+**Decided after review and verified in production 2026-07-30.**
 
 The raw `scheduled` database state is not itself evidence that students can
 open a material. Both student access and the instructor Content summary compare

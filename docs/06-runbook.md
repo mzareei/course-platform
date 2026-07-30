@@ -343,3 +343,16 @@ The 2026-07-30 follow-up completed this matrix on production bundle
 `index-B-nhKDB6.js`. It also proved the archived-group server refusal through a
 pre-staged authenticated People action, so the check exercised the real UI
 entry point and the backend guard in one request.
+
+The final composition follow-up completed the extended matrix on
+`index-Dlk8k3FR.js`. For close idempotency, record release, release-event, and
+`session_closed_with_review` audit counts before close, after close, and after a
+second signed-in stale-tab close request; the observed values were
+`0 / 0 / 0`, `1 / 1 / 1`, and `1 / 1 / 1`. For sequence moves, record the
+source sequence and every occupied target sequence before moving, then query
+the returned/persisted session; QA sequence 3 moved into A as sequence 5.
+
+The future-schedule rehearsal used a release scoped only to disposable QA730E
+and opening in 2035. Content showed it as scheduled but not available, and
+Cancel scheduled access persisted `draft`. Keep that inert draft for the
+planned final reset when deleting its event history is not explicitly approved.
