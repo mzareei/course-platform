@@ -25,7 +25,7 @@
 ### Task 1: Add progress, consent, and grade-version persistence
 
 **Files:**
-- Create: backend `supabase/migrations/0026_quiz_progress_and_combined_grades.sql`
+- Create: backend `supabase/migrations/0028_quiz_progress_and_combined_grades.sql`
 - Create: backend `tools/verify-combined-grading.mjs`
 
 **Interfaces:**
@@ -43,7 +43,7 @@ consent default false, and legacy backfill before the new default.
 
 Run: `node tools/verify-combined-grading.mjs`
 
-- [ ] **Step 3: Create migration 0026**
+- [ ] **Step 3: Create migration 0028**
 
 ```sql
 alter table public.profiles
@@ -284,7 +284,7 @@ Run typecheck, verifiers, build, then commit all listed files.
 Run all frontend checks, Deno checks for activity/quiz/pulse, combined verifier,
 projector safety verifier, and `git diff --check` in both repositories.
 
-- [ ] **Step 2: Apply migration 0026 and deploy backend**
+- [ ] **Step 2: Apply migration 0028 and deploy backend**
 
 Deploy activity attempt, class quiz, and pulse functions. Verify old sessions
 report `legacy_v1` and a newly created session reports `combined_v2`.

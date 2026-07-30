@@ -14,8 +14,7 @@ so the QA records are removed as part of the same final operation.
 
 The reset preserves:
 
-- course id and code `tc2007b` / `TC2007B`;
-- the TC2007B course title;
+- course id `tc2007b`, code `TC2007B`, and title `Information Security`;
 - all `content_items`, including lecture decks and their storage objects;
 - all current `question_banks`, `questions`, and `question_options`;
 - `activity_templates`, because they describe reusable teaching activities;
@@ -47,6 +46,10 @@ membership, enrollment, invitation, or authentication account remains.
 
 The other three professors are not invented or pre-created. They will be added
 later with their real identities and assigned to their groups.
+
+The retained legacy `quiz_courses` row is normalized to
+`TC2007B Question Library`; its lecture, question, and option identifiers remain
+unchanged.
 
 ## Deleted operational and personal data
 
@@ -113,4 +116,3 @@ Any failed precondition or postcondition rolls back the entire reset.
 
 The platform is not called clean until both the database assertions and the
 signed-in clean-state browser checks pass.
-

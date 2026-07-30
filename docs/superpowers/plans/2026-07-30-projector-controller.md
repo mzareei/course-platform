@@ -22,7 +22,7 @@
 ### Task 1: Add presentation state
 
 **Files:**
-- Create: backend `supabase/migrations/0025_class_presentation_state.sql`
+- Create: backend `supabase/migrations/0027_class_presentation_state.sql`
 - Create: backend `tools/verify-projector-safety.mjs`
 
 **Interfaces:**
@@ -60,7 +60,7 @@ create table public.class_presentation_state (
 
 ```bash
 node tools/verify-projector-safety.mjs
-git add supabase/migrations/0025_class_presentation_state.sql tools/verify-projector-safety.mjs
+git add supabase/migrations/0027_class_presentation_state.sql tools/verify-projector-safety.mjs
 git commit -m "feat: add synchronized presentation state"
 ```
 
@@ -274,7 +274,7 @@ git commit -m "feat: control the projector privately"
 Run typecheck, all frontend verifiers, production build, Deno check, projector
 safety verifier, and both deck verifiers.
 
-- [ ] **Step 2: Apply migration 0025 and deploy**
+- [ ] **Step 2: Apply migration 0027 and deploy**
 
 Deploy `course-presentation` and both deck-producing functions. Push frontend
 only after backend responses are live.
