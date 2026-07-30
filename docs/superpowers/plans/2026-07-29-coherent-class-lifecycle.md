@@ -1066,6 +1066,10 @@ transformer:
 - inserts one checkpoint after slide 3;
 - rejects a teaching slide containing a nested `<section>` instead of letting a
   non-structural regex truncate it;
+- preserves single- and double-quoted attributes containing `>`, fails closed
+  on unterminated quotes, and ignores section-looking comment/script text;
+- compares normalized exact teaching-section markup in addition to extracted
+  teaching text/order;
 - can re-transform an already upgraded deck without duplicating checkpoints;
 - uses a function replacement, never a raw replacement string.
 

@@ -710,6 +710,15 @@ the wrong place. Scan balanced section tags and fail closed when a teaching
 slide participates in nesting. The fidelity check must use those structural
 boundaries too, not the same blind regex as the transformer.
 
+A balanced section stack is still unsafe if tag discovery uses `[^>]*`: `>` is
+valid inside a quoted attribute value, and stopping there splices
+`data-teaching-slide` into the attribute. Find a tag's closing `>` only while
+outside single/double quotes; fail closed on unterminated quotes; and ignore
+section-looking text inside comments and raw script/style content. Text equality
+alone can agree with the same broken tokenizer, so also compare each teaching
+section's exact original markup after normalizing only the deliberately added
+`data-teaching-slide` attribute.
+
 Legacy navigation is not consistently absolute. Historical decks contain bare
 relative, `../` parent-relative, root-relative, and absolute Home, Mission,
 Quiz, and Exit links, with query strings and fragments. Match normalized path
