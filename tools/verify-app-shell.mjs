@@ -4,6 +4,7 @@ import { readFileSync, existsSync } from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyProjectorRouteSource } from "./lib/projector-source.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
@@ -74,11 +75,7 @@ assert.doesNotMatch(
   /\{teacherSurface \? <InstructorNav \/> : null\}/,
   "the instructor navigation must not wrap student preview"
 );
-assert.match(
-  read("src/app.tsx"),
-  /isProjectorRoute\(location\.pathname\)/,
-  "the projector route must bypass the global application shell"
-);
+assert.doesNotThrow(() => verifyProjectorRouteSource(read("src/app.tsx")));
 
 // Plain-language labels — raw state machine words must never reach the UI.
 // The words themselves live in the bilingual dictionary; the pill only maps

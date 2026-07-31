@@ -132,7 +132,41 @@ function JoinRouteShell() {
   );
 }
 
+function ProjectorUnavailable({ loading = false }: { loading?: boolean }) {
+  return (
+    <main class="projector-screen projector-empty">
+      <div class="card" role={loading ? "status" : "alert"}>
+        <h1>{loading ? t("projector.loading") : t("projector.unavailableTitle")}</h1>
+        {!loading ? <p class="hint">{t("projector.unavailableBody")}</p> : null}
+      </div>
+    </main>
+  );
+}
+
+function ProjectorRoute() {
+  const ctx = context.value;
+  const authorized = !booting.value
+    && Boolean(session.value)
+    && !contextError.value
+    && ctx?.roster_status === "active"
+    && surface.value === "instructor";
+  if (!authorized) return <ProjectorUnavailable loading={booting.value} />;
+
+  return (
+    <LocationProvider>
+      <Router>
+        <Route path="/teach/run/:sessionId/projector" component={Projector} />
+        <Route default component={ProjectorUnavailable} />
+      </Router>
+    </LocationProvider>
+  );
+}
+
 export function App() {
+  // Claim this URL before boot, sign-in, roster, and surface branches. The
+  // dedicated route still verifies authorization before mounting Projector.
+  if (isProjectorRoute(location.pathname)) return <ProjectorRoute />;
+
   if (booting.value) {
     return (
       <div class="shell">
@@ -186,19 +220,6 @@ export function App() {
   }
 
   const teacherSurface = surface.value === "instructor";
-
-  // The projector is deliberately not an application shell: it has no account
-  // controls, instructor navigation, or route to a private controller view.
-  if (teacherSurface && isProjectorRoute(location.pathname)) {
-    return (
-      <LocationProvider>
-        <Router>
-          <Route path="/teach/run/:sessionId/projector" component={Projector} />
-          <Route default component={TeachHome} />
-        </Router>
-      </LocationProvider>
-    );
-  }
 
   return (
     <LocationProvider>

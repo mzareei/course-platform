@@ -14,6 +14,8 @@ import { context } from "../../state/session";
 
 const POLL_MS = 2000;
 const HEARTBEAT_MS = 5000;
+const TELEMETRY_RETRY_MS = 750;
+const MAX_TELEMETRY_RETRIES = 3;
 
 export function Projector({ sessionId }: { sessionId?: string }) {
   const classSessionId = sessionId || "";
@@ -26,9 +28,15 @@ export function Projector({ sessionId }: { sessionId?: string }) {
   const requestedRevision = useRef(-1);
   const acknowledgedRevision = useRef(-1);
   const reportedCheckpoint = useRef("");
+  const ackRetryTimer = useRef<number | undefined>(undefined);
+  const checkpointRetryTimer = useRef<number | undefined>(undefined);
+  const ackRetries = useRef(0);
+  const checkpointRetries = useRef({ key: "", count: 0 });
   const [presentation, setPresentation] =
     useState<ProjectorPresentationState | null>(null);
   const [acknowledged, setAcknowledged] = useState(-1);
+  const [ackRetry, setAckRetry] = useState(0);
+  const [checkpointRetry, setCheckpointRetry] = useState(0);
   const [error, setError] = useState(false);
 
   const applyPresentation = useCallback((next: ProjectorPresentationState) => {
@@ -66,6 +74,17 @@ export function Projector({ sessionId }: { sessionId?: string }) {
       clearInterval(timer);
     };
   }, [classSessionId, applyPresentation]);
+
+  useEffect(() => {
+    clearTimeout(ackRetryTimer.current);
+    clearTimeout(checkpointRetryTimer.current);
+    ackRetries.current = 0;
+    checkpointRetries.current = { key: "", count: 0 };
+    return () => {
+      clearTimeout(ackRetryTimer.current);
+      clearTimeout(checkpointRetryTimer.current);
+    };
+  }, [classSessionId, presentation?.revision]);
 
   useEffect(() => {
     if (!classSessionId) return;
@@ -106,16 +125,37 @@ export function Projector({ sessionId }: { sessionId?: string }) {
       || !slide
       || acknowledgedRevision.current === revision
     ) return;
+    let cancelled = false;
     acknowledgedRevision.current = revision;
     acknowledgeSlide(classSessionId, revision, slide)
       .then((next) => {
+        if (cancelled) return;
+        clearTimeout(ackRetryTimer.current);
         setAcknowledged(revision);
         applyPresentation(next);
       })
       .catch(() => {
-        acknowledgedRevision.current = -1;
+        if (cancelled) return;
+        if (ackRetries.current >= MAX_TELEMETRY_RETRIES) return;
+        ackRetries.current += 1;
+        clearTimeout(ackRetryTimer.current);
+        ackRetryTimer.current = setTimeout(() => {
+          if (cancelled) return;
+          acknowledgedRevision.current = -1;
+          setAckRetry((current) => current + 1);
+        }, TELEMETRY_RETRY_MS) as unknown as number;
       });
-  }, [classSessionId, presentation?.revision, bridge.appliedRevision, bridge.teachingSlide, applyPresentation]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    classSessionId,
+    presentation?.revision,
+    bridge.appliedRevision,
+    bridge.teachingSlide,
+    ackRetry,
+    applyPresentation
+  ]);
 
   useEffect(() => {
     const checkpoint = bridge.checkpoint;
@@ -128,21 +168,41 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     ) return;
     const reportKey = `${presentation.revision}:${checkpoint.key}:${checkpoint.afterSlide}`;
     if (reportedCheckpoint.current === reportKey) return;
+    if (checkpointRetries.current.key !== reportKey) {
+      checkpointRetries.current = { key: reportKey, count: 0 };
+    }
+    let cancelled = false;
     reportedCheckpoint.current = reportKey;
     checkpointReached(
       classSessionId,
       presentation.revision,
       checkpoint.key,
       checkpoint.afterSlide
-    ).then(applyPresentation).catch(() => {
-      reportedCheckpoint.current = "";
+    ).then((next) => {
+      if (cancelled) return;
+      clearTimeout(checkpointRetryTimer.current);
+      applyPresentation(next);
+    }).catch(() => {
+      if (cancelled) return;
+      if (checkpointRetries.current.count >= MAX_TELEMETRY_RETRIES) return;
+      checkpointRetries.current.count += 1;
+      clearTimeout(checkpointRetryTimer.current);
+      checkpointRetryTimer.current = setTimeout(() => {
+        if (cancelled) return;
+        reportedCheckpoint.current = "";
+        setCheckpointRetry((current) => current + 1);
+      }, TELEMETRY_RETRY_MS) as unknown as number;
     });
+    return () => {
+      cancelled = true;
+    };
   }, [
     classSessionId,
     presentation?.revision,
     bridge.checkpoint,
     bridge.teachingSlide,
     acknowledged,
+    checkpointRetry,
     applyPresentation
   ]);
 

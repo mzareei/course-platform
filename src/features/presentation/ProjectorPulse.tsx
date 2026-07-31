@@ -24,6 +24,7 @@ export function ProjectorPulse({ pulse }: { pulse: ProjectorPulseState }) {
       <div class="projector-pulse-options">
         {pulse.options.map((option) => (
           <div
+            key={option.key}
             class={`projector-pulse-option${option.key === correctKey ? " correct" : ""}`}
           >
             {(useSpanish && option.text_es) || option.text}
