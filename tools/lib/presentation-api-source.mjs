@@ -200,7 +200,36 @@ function assertCallFnImport(file) {
 
 function assertDefaultCourseInjection(file) {
   const implementation = exportedImplementation(file, "callFn");
+  assertCallFnPrelude(implementation);
+
   const implementationNodes = descendants(implementation.body);
+  const fetchIdentifiers = implementationNodes.filter((node) =>
+    ts.isIdentifier(node) && node.text === "fetch"
+  );
+  assert.equal(
+    fetchIdentifiers.length,
+    1,
+    "callFn must contain exactly one fetch reference"
+  );
+  const fetchProperties = implementationNodes.filter((node) =>
+    ts.isPropertyAccessExpression(node) && node.name.text === "fetch"
+  );
+  assert.equal(
+    fetchProperties.length,
+    0,
+    "callFn must not access fetch through a property such as globalThis.fetch"
+  );
+  const fetchElements = implementationNodes.filter((node) =>
+    ts.isElementAccessExpression(node)
+    && node.argumentExpression
+    && ts.isStringLiteralLike(unwrapExpression(node.argumentExpression))
+    && unwrapExpression(node.argumentExpression).text === "fetch"
+  );
+  assert.equal(
+    fetchElements.length,
+    0,
+    'callFn must not access fetch through an element such as globalThis["fetch"]'
+  );
   const fetchCalls = implementationNodes.filter((node) =>
     ts.isCallExpression(node)
     && ts.isIdentifier(node.expression)
@@ -210,25 +239,6 @@ function assertDefaultCourseInjection(file) {
     fetchCalls.length,
     1,
     "callFn must contain exactly one direct fetch CallExpression"
-  );
-  const fetchAliases = implementationNodes.filter((node) =>
-    ts.isVariableDeclaration(node)
-    && ts.isIdentifier(node.name)
-    && node.initializer
-    && ts.isIdentifier(unwrapExpression(node.initializer))
-    && unwrapExpression(node.initializer).text === "fetch"
-  );
-  assert.equal(fetchAliases.length, 0, "callFn must not alias fetch to another network response source");
-  const indirectFetchCalls = implementationNodes.filter((node) =>
-    ts.isCallExpression(node)
-    && ts.isIdentifier(node.expression)
-    && node.expression.text !== "fetch"
-    && /fetch$/i.test(node.expression.text)
-  );
-  assert.equal(
-    indirectFetchCalls.length,
-    0,
-    "callFn must not call an aliased fetch network response source"
   );
 
   const responseDeclarations = implementation.body.statements.flatMap((statement, index) => {
@@ -243,6 +253,7 @@ function assertDefaultCourseInjection(file) {
     "callFn must have exactly one top-level response request statement"
   );
   const [{ declaration, index, statement }] = responseDeclarations;
+  assert.equal(index, 2, "callFn response request must be the third top-level statement");
   assert.ok(
     statement.declarationList.flags & ts.NodeFlags.Const,
     "callFn top-level response request must be const"
@@ -256,6 +267,11 @@ function assertDefaultCourseInjection(file) {
     "callFn top-level response must await a direct fetch call"
   );
   const fetchCall = declaration.initializer.expression;
+  assert.equal(
+    fetchIdentifiers[0],
+    fetchCall.expression,
+    "callFn's only fetch reference must be the validated response call's direct callee"
+  );
   assert.equal(fetchCall.arguments.length, 2, "callFn direct fetch must receive URL and options");
   const options = fetchCall.arguments[1];
   assert.ok(ts.isObjectLiteralExpression(options), "callFn fetch options must be an object");
@@ -352,6 +368,48 @@ function assertDefaultCourseInjection(file) {
   );
 }
 
+function assertCallFnPrelude(implementation) {
+  const statements = implementation.body.statements;
+  assert.equal(
+    statements.length,
+    6,
+    "callFn must contain exactly the expected six top-level statements"
+  );
+
+  const sessionStatement = statements[0];
+  assert.ok(
+    ts.isVariableStatement(sessionStatement)
+    && (sessionStatement.declarationList.flags & ts.NodeFlags.Const) !== 0
+    && sessionStatement.declarationList.declarations.length === 1,
+    "callFn must start with one top-level const session declaration"
+  );
+  const sessionDeclaration = sessionStatement.declarationList.declarations[0];
+  assert.ok(
+    ts.isIdentifier(sessionDeclaration.name)
+    && sessionDeclaration.name.text === "session"
+    && sessionDeclaration.initializer
+    && ts.isAwaitExpression(sessionDeclaration.initializer)
+    && ts.isCallExpression(sessionDeclaration.initializer.expression)
+    && ts.isIdentifier(sessionDeclaration.initializer.expression.expression)
+    && sessionDeclaration.initializer.expression.expression.text === "getSession"
+    && sessionDeclaration.initializer.expression.arguments.length === 0,
+    "callFn session declaration must directly await getSession()"
+  );
+
+  const signedOutGuard = statements[1];
+  assert.ok(
+    ts.isIfStatement(signedOutGuard)
+    && !signedOutGuard.elseStatement
+    && isNegatedIdentifier(signedOutGuard.expression, "session")
+    && ts.isThrowStatement(signedOutGuard.thenStatement)
+    && signedOutGuard.thenStatement.expression
+    && ts.isNewExpression(signedOutGuard.thenStatement.expression)
+    && ts.isIdentifier(signedOutGuard.thenStatement.expression.expression)
+    && signedOutGuard.thenStatement.expression.expression.text === "ApiError",
+    "callFn second statement must be the direct signed-out ApiError guard"
+  );
+}
+
 function assertPayloadFromResponse(initializer) {
   assert.ok(
     initializer && ts.isAwaitExpression(initializer),
@@ -381,6 +439,14 @@ function isNegatedResponseOk(expression) {
   return ts.isPrefixUnaryExpression(expression)
     && expression.operator === ts.SyntaxKind.ExclamationToken
     && isResponseProperty(expression.operand, "ok");
+}
+
+function isNegatedIdentifier(expression, name) {
+  const operand = ts.isPrefixUnaryExpression(expression)
+    && expression.operator === ts.SyntaxKind.ExclamationToken
+    ? unwrapExpression(expression.operand)
+    : undefined;
+  return Boolean(operand && ts.isIdentifier(operand) && operand.text === name);
 }
 
 function isResponseProperty(expression, name) {

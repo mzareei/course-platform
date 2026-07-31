@@ -86,7 +86,7 @@ const decoyFetchClient = replaceLast(
 );
 assert.throws(
   () => verifyPresentationApiSource(api, decoyFetchClient),
-  /top-level response|direct fetch|alias fetch/,
+  /top-level response|direct fetch|alias fetch|six top-level statements/,
   "a dead safe fetch must not validate an unsafe aliased real request"
 );
 assert.throws(
@@ -97,7 +97,7 @@ assert.throws(
       "const request = fetch;\n  const response = await request("
     )
   ),
-  /direct fetch|alias fetch/,
+  /direct fetch|alias fetch|six top-level statements/,
   "the real request must call fetch directly rather than through an alias"
 );
 assert.throws(
@@ -108,8 +108,74 @@ assert.throws(
       'await fetch("https://second.invalid");\n  const response = await fetch('
     )
   ),
-  /exactly one direct fetch/,
+  /exactly one direct fetch|six top-level statements/,
   "callFn must reject a second direct fetch anywhere in its executable body"
+);
+assert.throws(
+  () => verifyPresentationApiSource(
+    api,
+    client.replace(
+      "const response = await fetch(",
+      'await globalThis.fetch("https://escaped.invalid");\n  const response = await fetch('
+    )
+  ),
+  /fetch reference|top-level statements|globalThis\.fetch/,
+  "callFn must reject an additional globalThis.fetch request before the validated response"
+);
+assert.throws(
+  () => verifyPresentationApiSource(
+    api,
+    client.replace(
+      "const response = await fetch(",
+      `const request = globalThis.fetch;
+  await request("https://escaped.invalid");
+  const response = await fetch(`
+    )
+  ),
+  /fetch reference|top-level statements|globalThis\.fetch/,
+  "callFn must reject a request aliased from globalThis.fetch before the validated response"
+);
+const validatedFetch = 'fetch(`${config.supabaseUrl}/functions/v1/${name}`, {';
+for (const [label, mutatedFetch] of [
+  [
+    "element access",
+    'fetch((globalThis["fetch"]("https://escaped.invalid"), `${config.supabaseUrl}/functions/v1/${name}`), {'
+  ],
+  [
+    "bind reference",
+    'fetch((fetch.bind(globalThis), `${config.supabaseUrl}/functions/v1/${name}`), {'
+  ],
+  [
+    "call reference",
+    'fetch((globalThis.fetch.call(globalThis, "https://escaped.invalid"), `${config.supabaseUrl}/functions/v1/${name}`), {'
+  ],
+  [
+    "apply reference",
+    'fetch((globalThis.fetch.apply(globalThis, ["https://escaped.invalid"]), `${config.supabaseUrl}/functions/v1/${name}`), {'
+  ],
+  [
+    "destructured alias",
+    'fetch((() => { const { fetch: destructuredRequest } = globalThis; return `${config.supabaseUrl}/functions/v1/${name}`; })(), {'
+  ]
+]) {
+  assert.throws(
+    () => verifyPresentationApiSource(
+      api,
+      client.replace(validatedFetch, mutatedFetch)
+    ),
+    /fetch reference|globalThis\.fetch|element.*fetch/,
+    `callFn must reject an escaped fetch through ${label}`
+  );
+}
+assert.doesNotThrow(
+  () => verifyPresentationApiSource(
+    api,
+    `${client}
+export async function unrelatedHelper() {
+  return globalThis.fetch("https://outside-call-fn.invalid");
+}`
+  ),
+  "fetch references outside the exported callFn implementation must remain out of scope"
 );
 assert.throws(
   () => verifyPresentationApiSource(api, client.replace("const response =", "const result =")),
@@ -151,7 +217,7 @@ const decoyResponseClient = client
   .replace("response.status", "otherResponse.status");
 assert.throws(
   () => verifyPresentationApiSource(api, decoyResponseClient),
-  /exactly one fetch|alias fetch|top-level payload|same top-level response|response status|return the same payload/,
+  /exactly one fetch|alias fetch|top-level payload|same top-level response|response status|return the same payload|six top-level statements/,
   "a validated response fetch and dead consumers must not mask a second real network response"
 );
 assert.throws(
