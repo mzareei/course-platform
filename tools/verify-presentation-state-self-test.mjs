@@ -70,6 +70,62 @@ assert.throws(
   /default course/,
   "callFn must inject the configured course id into every request"
 );
+const decoyFetchClient = replaceLast(
+  client.replace(
+    "const response = await fetch(",
+    `if (false) {
+    await fetch("https://decoy.invalid", {
+      body: JSON.stringify({ course_id: config.defaultCourseId, ...body })
+    });
+  }
+  const unsafeFetch = fetch;
+  const response = await unsafeFetch(`
+  ),
+  "course_id: config.defaultCourseId",
+  "course_id: body.course_id"
+);
+assert.throws(
+  () => verifyPresentationApiSource(api, decoyFetchClient),
+  /top-level response|direct fetch/,
+  "a dead safe fetch must not validate an unsafe aliased real request"
+);
+assert.throws(
+  () => verifyPresentationApiSource(
+    api,
+    client.replace(
+      "const response = await fetch(",
+      "const request = fetch;\n  const response = await request("
+    )
+  ),
+  /direct fetch/,
+  "the real request must call fetch directly rather than through an alias"
+);
+assert.throws(
+  () => verifyPresentationApiSource(api, client.replace("const response =", "const result =")),
+  /top-level response/,
+  "callFn must bind the real request to the response variable"
+);
+assert.throws(
+  () => verifyPresentationApiSource(api, client.replace("response.json()", "otherResponse.json()")),
+  /parse the same top-level response/,
+  "callFn must parse the direct request's response"
+);
+assert.throws(
+  () => verifyPresentationApiSource(api, client.replace("response.ok", "otherResponse.ok")),
+  /check the same top-level response status/,
+  "callFn must check the direct request's response status"
+);
+assert.throws(
+  () => verifyPresentationApiSource(
+    api,
+    client.replace(
+      "{ course_id: config.defaultCourseId, ...body }",
+      "{ ...body, course_id: config.defaultCourseId }"
+    )
+  ),
+  /inject course then spread input|default course/,
+  "request-body order must preserve the existing default-then-input contract"
+);
 
 console.log("verify-presentation-state-self-test: OK");
 
@@ -95,4 +151,10 @@ function matchingBrace(source, start) {
     }
   }
   throw new Error("unbalanced fixture");
+}
+
+function replaceLast(source, search, replacement) {
+  const index = source.lastIndexOf(search);
+  assert.notEqual(index, -1, `missing ${search} fixture`);
+  return source.slice(0, index) + replacement + source.slice(index + search.length);
 }

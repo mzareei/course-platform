@@ -200,13 +200,33 @@ function assertCallFnImport(file) {
 
 function assertDefaultCourseInjection(file) {
   const implementation = exportedImplementation(file, "callFn");
-  const fetchCalls = descendants(implementation.body).filter((node) =>
-    ts.isCallExpression(node)
-    && ts.isIdentifier(node.expression)
-    && node.expression.text === "fetch"
+  const responseDeclarations = implementation.body.statements.flatMap((statement, index) => {
+    if (!ts.isVariableStatement(statement)) return [];
+    return statement.declarationList.declarations
+      .filter((declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === "response")
+      .map((declaration) => ({ declaration, index, statement }));
+  });
+  assert.equal(
+    responseDeclarations.length,
+    1,
+    "callFn must have exactly one top-level response request statement"
   );
-  assert.equal(fetchCalls.length, 1, "callFn must make exactly one executable fetch request");
-  const options = fetchCalls[0].arguments[1];
+  const [{ declaration, index, statement }] = responseDeclarations;
+  assert.ok(
+    statement.declarationList.flags & ts.NodeFlags.Const,
+    "callFn top-level response request must be const"
+  );
+  assert.ok(
+    declaration.initializer
+    && ts.isAwaitExpression(declaration.initializer)
+    && ts.isCallExpression(declaration.initializer.expression)
+    && ts.isIdentifier(declaration.initializer.expression.expression)
+    && declaration.initializer.expression.expression.text === "fetch",
+    "callFn top-level response must await a direct fetch call"
+  );
+  const fetchCall = declaration.initializer.expression;
+  assert.equal(fetchCall.arguments.length, 2, "callFn direct fetch must receive URL and options");
+  const options = fetchCall.arguments[1];
   assert.ok(ts.isObjectLiteralExpression(options), "callFn fetch options must be an object");
   const bodyProperty = options.properties.find((property) =>
     ts.isPropertyAssignment(property) && propertyName(property.name) === "body"
@@ -241,6 +261,30 @@ function assertDefaultCourseInjection(file) {
     && ts.isIdentifier(input.expression)
     && input.expression.text === "body",
     "callFn must spread the caller body after the default course"
+  );
+
+  const responseConsumers = implementation.body.statements.slice(index + 1)
+    .flatMap((laterStatement) => descendants(laterStatement));
+  assert.equal(
+    responseConsumers.some((node) =>
+      ts.isCallExpression(node)
+      && ts.isPropertyAccessExpression(node.expression)
+      && ts.isIdentifier(node.expression.expression)
+      && node.expression.expression.text === "response"
+      && node.expression.name.text === "json"
+    ),
+    true,
+    "callFn must parse the same top-level response"
+  );
+  assert.equal(
+    responseConsumers.some((node) =>
+      ts.isPropertyAccessExpression(node)
+      && ts.isIdentifier(node.expression)
+      && node.expression.text === "response"
+      && node.name.text === "ok"
+    ),
+    true,
+    "callFn must check the same top-level response status"
   );
 }
 
