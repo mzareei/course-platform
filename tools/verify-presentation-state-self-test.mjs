@@ -19,6 +19,19 @@ assert.throws(
   /presentation API|controllerCurrent/,
   "a fully block-commented API must fail"
 );
+assert.throws(
+  () => verifyPresentationApiSource(
+    `export const decoy = String.raw\`${api.replaceAll("`", "\\`").replaceAll("${", "\\${")}\`;`,
+    client
+  ),
+  /controllerCurrent/,
+  "a complete API preserved only inside a raw template string must fail"
+);
+assert.throws(
+  () => verifyPresentationApiSource(`export const decoy = ${JSON.stringify(api)};`, client),
+  /controllerCurrent/,
+  "a complete API preserved only inside an ordinary string must fail"
+);
 
 const actions = {
   controllerCurrent: "controller_current",

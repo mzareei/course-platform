@@ -1,182 +1,272 @@
 import assert from "node:assert/strict";
+import ts from "typescript";
 
 const wrappers = [
   {
     name: "controllerCurrent",
-    payload: /^\s*action:\s*"controller_current",\s*class_session_id:\s*classSessionId\s*$/s
+    payload: [
+      ["action", "string", "controller_current"],
+      ["class_session_id", "identifier", "classSessionId"]
+    ]
   },
   {
     name: "projectorCurrent",
-    payload: /^\s*action:\s*"projector_current",\s*class_session_id:\s*classSessionId\s*$/s
+    payload: [
+      ["action", "string", "projector_current"],
+      ["class_session_id", "identifier", "classSessionId"]
+    ]
   },
   {
     name: "requestSlide",
-    payload: /^\s*action:\s*"request_slide",\s*class_session_id:\s*classSessionId,\s*revision,\s*requested_slide:\s*requestedSlide\s*$/s
+    payload: [
+      ["action", "string", "request_slide"],
+      ["class_session_id", "identifier", "classSessionId"],
+      ["revision", "identifier", "revision"],
+      ["requested_slide", "identifier", "requestedSlide"]
+    ]
   },
   {
     name: "acknowledgeSlide",
-    payload: /^\s*action:\s*"acknowledge_slide",\s*class_session_id:\s*classSessionId,\s*revision,\s*acknowledged_slide:\s*acknowledgedSlide\s*$/s
+    payload: [
+      ["action", "string", "acknowledge_slide"],
+      ["class_session_id", "identifier", "classSessionId"],
+      ["revision", "identifier", "revision"],
+      ["acknowledged_slide", "identifier", "acknowledgedSlide"]
+    ]
   },
   {
     name: "checkpointReached",
-    payload: /^\s*action:\s*"checkpoint_reached",\s*class_session_id:\s*classSessionId,\s*revision,\s*checkpoint_key:\s*checkpointKey,\s*checkpoint_after_slide:\s*checkpointAfterSlide\s*$/s
+    payload: [
+      ["action", "string", "checkpoint_reached"],
+      ["class_session_id", "identifier", "classSessionId"],
+      ["revision", "identifier", "revision"],
+      ["checkpoint_key", "identifier", "checkpointKey"],
+      ["checkpoint_after_slide", "identifier", "checkpointAfterSlide"]
+    ]
   },
   {
     name: "setPresentationPhase",
-    payload: /^\s*action:\s*"set_phase",\s*class_session_id:\s*classSessionId,\s*revision,\s*phase\s*$/s
+    payload: [
+      ["action", "string", "set_phase"],
+      ["class_session_id", "identifier", "classSessionId"],
+      ["revision", "identifier", "revision"],
+      ["phase", "identifier", "phase"]
+    ]
   },
   {
     name: "presentationHeartbeat",
-    payload: /^\s*action:\s*"heartbeat",\s*class_session_id:\s*classSessionId,\s*revision,\s*surface\s*$/s
+    payload: [
+      ["action", "string", "heartbeat"],
+      ["class_session_id", "identifier", "classSessionId"],
+      ["revision", "identifier", "revision"],
+      ["surface", "identifier", "surface"]
+    ]
   }
 ];
 
 export function verifyPresentationApiSource(apiSource, clientSource) {
-  const api = stripSourceComments(apiSource);
-  const client = stripSourceComments(clientSource);
+  const api = parseTypeScript(apiSource, "presentation.ts");
+  const client = parseTypeScript(clientSource, "client.ts");
 
-  assert.doesNotMatch(
-    api,
-    /\blocalStorage\b|\bsessionStorage\b|\.from\s*\(/,
-    "presentation API must not query tables or persist browser state"
-  );
-  assert.match(
-    api,
-    /import\s*\{\s*callFn\s*\}\s*from\s*["']\.\/client["']\s*;/,
-    "presentation API must import the authenticated edge-function client"
-  );
+  rejectBrowserPersistenceAndTables(api);
 
   for (const wrapper of wrappers) {
-    const body = exportedFunctionBody(api, wrapper.name);
-    const call = body.match(
-      /^\s*return\s+callFn(?:<[\s\S]+?>)?\(\s*"course-presentation"\s*,\s*\{([\s\S]*?)\}\s*\)\s*;?\s*$/s
+    const implementation = exportedImplementation(api, wrapper.name);
+    assert.equal(
+      implementation.body.statements.length,
+      1,
+      `${wrapper.name} must contain only its executable return boundary`
     );
+    const statement = implementation.body.statements[0];
     assert.ok(
-      call,
-      `${wrapper.name} must return its own executable callFn("course-presentation", payload)`
+      ts.isReturnStatement(statement) && statement.expression,
+      `${wrapper.name} must return its course-presentation request`
     );
-    assert.match(
-      call[1],
-      wrapper.payload,
-      `${wrapper.name} must send its exact action and snake_case payload`
-    );
+    assertPresentationCall(statement.expression, wrapper);
   }
 
-  const callFnBody = exportedFunctionBody(client, "callFn");
-  assert.match(
-    callFnBody,
-    /body:\s*JSON\.stringify\(\s*\{\s*course_id:\s*config\.defaultCourseId,\s*\.\.\.body\s*\}\s*\)/s,
+  assertCallFnImport(api);
+  assertDefaultCourseInjection(client);
+}
+
+function parseTypeScript(source, fileName) {
+  const file = ts.createSourceFile(
+    fileName,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  assert.equal(
+    file.parseDiagnostics.length,
+    0,
+    `${fileName} must be valid TypeScript source`
+  );
+  return file;
+}
+
+function exportedImplementation(file, name) {
+  const declarations = file.statements.filter((statement) =>
+    ts.isFunctionDeclaration(statement)
+    && statement.name?.text === name
+    && hasModifier(statement, ts.SyntaxKind.ExportKeyword)
+  );
+  const implementations = declarations.filter((declaration) => declaration.body);
+  assert.equal(
+    implementations.length,
+    1,
+    `${name} must have exactly one exported executable implementation`
+  );
+  return implementations[0];
+}
+
+function hasModifier(node, kind) {
+  return node.modifiers?.some((modifier) => modifier.kind === kind) ?? false;
+}
+
+function assertPresentationCall(expression, wrapper) {
+  assert.ok(
+    ts.isCallExpression(expression)
+    && ts.isIdentifier(expression.expression)
+    && expression.expression.text === "callFn",
+    `${wrapper.name} must return an actual callFn CallExpression`
+  );
+  assert.equal(expression.arguments.length, 2, `${wrapper.name} must pass endpoint and payload`);
+  assert.ok(
+    ts.isStringLiteral(expression.arguments[0])
+    && expression.arguments[0].text === "course-presentation",
+    `${wrapper.name} must call the literal course-presentation endpoint`
+  );
+  const payload = expression.arguments[1];
+  assert.ok(ts.isObjectLiteralExpression(payload), `${wrapper.name} payload must be an object`);
+  assert.equal(
+    payload.properties.length,
+    wrapper.payload.length,
+    `${wrapper.name} must send only its exact payload fields`
+  );
+  wrapper.payload.forEach((expected, index) =>
+    assertPayloadProperty(payload.properties[index], expected, wrapper.name)
+  );
+}
+
+function assertPayloadProperty(property, expected, wrapperName) {
+  const [expectedName, valueKind, expectedValue] = expected;
+  if (ts.isShorthandPropertyAssignment(property)) {
+    assert.equal(valueKind, "identifier", `${wrapperName}.${expectedName} has the wrong value kind`);
+    assert.equal(property.name.text, expectedName, `${wrapperName} has the wrong payload field`);
+    assert.equal(property.name.text, expectedValue, `${wrapperName}.${expectedName} has the wrong identifier`);
+    return;
+  }
+
+  assert.ok(
+    ts.isPropertyAssignment(property),
+    `${wrapperName}.${expectedName} must be a property assignment or shorthand`
+  );
+  assert.equal(propertyName(property.name), expectedName, `${wrapperName} has the wrong payload field`);
+  if (valueKind === "string") {
+    assert.ok(
+      ts.isStringLiteral(property.initializer) && property.initializer.text === expectedValue,
+      `${wrapperName}.${expectedName} must use the exact string literal ${expectedValue}`
+    );
+  } else {
+    assert.ok(
+      ts.isIdentifier(property.initializer) && property.initializer.text === expectedValue,
+      `${wrapperName}.${expectedName} must use identifier ${expectedValue}`
+    );
+  }
+}
+
+function propertyName(name) {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name)) return name.text;
+  return "";
+}
+
+function assertCallFnImport(file) {
+  const imports = file.statements.filter((statement) =>
+    ts.isImportDeclaration(statement)
+    && ts.isStringLiteral(statement.moduleSpecifier)
+    && statement.moduleSpecifier.text === "./client"
+  );
+  const hasCallFn = imports.some((statement) => {
+    const bindings = statement.importClause?.namedBindings;
+    return ts.isNamedImports(bindings)
+      && bindings.elements.some((element) =>
+        element.name.text === "callFn"
+        && (!element.propertyName || element.propertyName.text === "callFn")
+      );
+  });
+  assert.equal(hasCallFn, true, "presentation API must import callFn from ./client");
+}
+
+function assertDefaultCourseInjection(file) {
+  const implementation = exportedImplementation(file, "callFn");
+  const fetchCalls = descendants(implementation.body).filter((node) =>
+    ts.isCallExpression(node)
+    && ts.isIdentifier(node.expression)
+    && node.expression.text === "fetch"
+  );
+  assert.equal(fetchCalls.length, 1, "callFn must make exactly one executable fetch request");
+  const options = fetchCalls[0].arguments[1];
+  assert.ok(ts.isObjectLiteralExpression(options), "callFn fetch options must be an object");
+  const bodyProperty = options.properties.find((property) =>
+    ts.isPropertyAssignment(property) && propertyName(property.name) === "body"
+  );
+  assert.ok(bodyProperty, "callFn fetch options must contain an executable body property");
+  const stringify = bodyProperty.initializer;
+  assert.ok(
+    ts.isCallExpression(stringify)
+    && ts.isPropertyAccessExpression(stringify.expression)
+    && ts.isIdentifier(stringify.expression.expression)
+    && stringify.expression.expression.text === "JSON"
+    && stringify.expression.name.text === "stringify",
+    "callFn body must execute JSON.stringify"
+  );
+  assert.equal(stringify.arguments.length, 1, "callFn JSON.stringify must receive one request object");
+  const requestBody = stringify.arguments[0];
+  assert.ok(ts.isObjectLiteralExpression(requestBody), "callFn request body must be an object");
+  assert.equal(requestBody.properties.length, 2, "callFn request body must inject course then spread input");
+
+  const [course, input] = requestBody.properties;
+  assert.ok(
+    ts.isPropertyAssignment(course)
+    && propertyName(course.name) === "course_id"
+    && ts.isPropertyAccessExpression(course.initializer)
+    && ts.isIdentifier(course.initializer.expression)
+    && course.initializer.expression.text === "config"
+    && course.initializer.name.text === "defaultCourseId",
     "callFn must inject the default course into the executable request body"
   );
-}
-
-export function stripSourceComments(source) {
-  let output = "";
-  let state = "code";
-
-  for (let index = 0; index < source.length; index += 1) {
-    const char = source[index];
-    const next = source[index + 1];
-
-    if (state === "line-comment") {
-      if (char === "\n") {
-        output += "\n";
-        state = "code";
-      } else {
-        output += " ";
-      }
-      continue;
-    }
-    if (state === "block-comment") {
-      if (char === "*" && next === "/") {
-        output += "  ";
-        index += 1;
-        state = "code";
-      } else {
-        output += char === "\n" ? "\n" : " ";
-      }
-      continue;
-    }
-    if (state === "single-quote" || state === "double-quote" || state === "template") {
-      output += char;
-      if (char === "\\") {
-        if (index + 1 < source.length) {
-          output += source[index + 1];
-          index += 1;
-        }
-        continue;
-      }
-      if (
-        (state === "single-quote" && char === "'")
-        || (state === "double-quote" && char === '"')
-        || (state === "template" && char === "`")
-      ) {
-        state = "code";
-      }
-      continue;
-    }
-
-    if (char === "/" && next === "/") {
-      output += "  ";
-      index += 1;
-      state = "line-comment";
-    } else if (char === "/" && next === "*") {
-      output += "  ";
-      index += 1;
-      state = "block-comment";
-    } else {
-      output += char;
-      if (char === "'") state = "single-quote";
-      else if (char === '"') state = "double-quote";
-      else if (char === "`") state = "template";
-    }
-  }
-
-  return output;
-}
-
-function exportedFunctionBody(source, name) {
-  const declaration = new RegExp(
-    `export\\s+(?:async\\s+)?function\\s+${name}\\s*(?:<[^{};()]*>)?\\s*\\(`,
-    "g"
+  assert.ok(
+    ts.isSpreadAssignment(input)
+    && ts.isIdentifier(input.expression)
+    && input.expression.text === "body",
+    "callFn must spread the caller body after the default course"
   );
-  const matches = [...source.matchAll(declaration)];
-  assert.ok(matches.length, `${name} must be an exported function`);
-
-  // Overloaded functions place the executable implementation last.
-  const match = matches.at(-1);
-  const start = match.index;
-  const parametersStart = start + match[0].lastIndexOf("(");
-  const parametersEnd = matchingDelimiter(source, parametersStart, "(", ")");
-  const bodyStart = source.indexOf("{", parametersEnd + 1);
-  assert.notEqual(bodyStart, -1, `${name} must have an executable body`);
-  const bodyEnd = matchingDelimiter(source, bodyStart, "{", "}");
-  return source.slice(bodyStart + 1, bodyEnd);
 }
 
-function matchingDelimiter(source, start, open, close) {
-  let depth = 0;
-  let quote = null;
-
-  for (let index = start; index < source.length; index += 1) {
-    const char = source[index];
-    if (quote) {
-      if (char === "\\") {
-        index += 1;
-      } else if (char === quote) {
-        quote = null;
-      }
-      continue;
-    }
-    if (char === "'" || char === '"' || char === "`") {
-      quote = char;
-    } else if (char === open) {
-      depth += 1;
-    } else if (char === close) {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
+function rejectBrowserPersistenceAndTables(file) {
+  for (const node of descendants(file)) {
+    assert.equal(
+      ts.isIdentifier(node) && (node.text === "localStorage" || node.text === "sessionStorage"),
+      false,
+      "presentation API must not persist browser state"
+    );
+    assert.equal(
+      ts.isCallExpression(node)
+      && ts.isPropertyAccessExpression(node.expression)
+      && node.expression.name.text === "from",
+      false,
+      "presentation API must not query tables directly"
+    );
   }
+}
 
-  throw new Error(`${open}${close} delimiters are unbalanced`);
+function descendants(root) {
+  const nodes = [];
+  const visit = (node) => {
+    nodes.push(node);
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(root, visit);
+  return nodes;
 }
