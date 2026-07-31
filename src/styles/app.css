@@ -680,6 +680,118 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   color: var(--text-muted);
 }
 
+/* ---------------------------------------------------------------- projector */
+.projector-screen {
+  position: relative;
+  display: flex;
+  width: 100vw;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--surface);
+}
+.projector-deck {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 100dvh;
+}
+.projector-deck .run-deck-host,
+.projector-deck .run-deck-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+}
+.projector-deck.is-covered {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.projector-status {
+  position: absolute;
+  inset: auto 1.25rem 1.25rem;
+  z-index: 2;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: calc(100% - 2.5rem);
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
+}
+.projector-empty {
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.projector-empty .card { max-width: 34rem; }
+.projector-pulse {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(1.2rem, 3vh, 2.75rem);
+  width: min(92vw, 1120px);
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 5rem) 0;
+}
+.projector-pulse-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.projector-pulse-progress {
+  color: var(--text-muted);
+  font-size: clamp(1rem, 1.7vw, 1.45rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.projector-pulse h1 {
+  font-size: clamp(2rem, 4.5vw, 4.6rem);
+  line-height: 1.08;
+}
+.projector-pulse-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.75rem, 1.6vw, 1.25rem);
+}
+.projector-pulse-option {
+  display: flex;
+  align-items: center;
+  min-height: clamp(5.5rem, 14vh, 10rem);
+  padding: clamp(1rem, 2.5vw, 2rem);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  font-size: clamp(1.2rem, 2.25vw, 2.15rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.projector-pulse-option.correct {
+  border-color: var(--good);
+  background: var(--good-soft);
+  color: var(--good);
+}
+.projector-pulse-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: clamp(1rem, 1.8vw, 1.35rem);
+}
+.projector-pulse-correct {
+  color: var(--good);
+  font-weight: 750;
+}
+@media (max-width: 680px) {
+  .projector-pulse-options { grid-template-columns: 1fr; }
+}
+
 /* ---------------------------------------------------------------- quiz player */
 .pulse-choice.selected {
   border-color: var(--primary);

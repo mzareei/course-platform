@@ -63,6 +63,8 @@ requireMarker("src/app.tsx", "roster_status", "not-enrolled accounts must land o
 requireMarker("src/state/session.ts", "platform_owner", "surface routing from memberships");
 requireMarker("src/app.tsx", "InstructorNav", "instructor surface");
 requireMarker("src/app.tsx", "StudentShell", "student surface");
+requireMarker("src/app.tsx", 'path="/teach/run/:sessionId/projector"', "projector route");
+requireMarker("src/app.tsx", "Projector", "read-only projector surface");
 requireMarker("src/app.tsx", 'path="/student/review"', "student review preview");
 requireMarker("src/app.tsx", 'path="/student/grades"', "student grades preview");
 requireMarker("src/components/StudentShell.tsx", "preview ? \"/student\"", "preview route prefix");
@@ -71,6 +73,11 @@ assert.doesNotMatch(
   read("src/app.tsx"),
   /\{teacherSurface \? <InstructorNav \/> : null\}/,
   "the instructor navigation must not wrap student preview"
+);
+assert.match(
+  read("src/app.tsx"),
+  /isProjectorRoute\(location\.pathname\)/,
+  "the projector route must bypass the global application shell"
 );
 
 // Plain-language labels — raw state machine words must never reach the UI.

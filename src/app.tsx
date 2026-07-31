@@ -19,7 +19,12 @@ import { Viewer } from "./screens/Viewer";
 import { Live } from "./screens/student/Live";
 import { JoinClass } from "./screens/student/JoinClass";
 import { RunClass } from "./screens/instructor/RunClass";
+import { Projector } from "./screens/instructor/Projector";
 import { StudentShell } from "./components/StudentShell";
+
+function isProjectorRoute(path: string) {
+  return /^\/teach\/run\/[^/]+\/projector\/?$/.test(path);
+}
 
 function InstructorNav() {
   const { path } = useLocation();
@@ -181,6 +186,19 @@ export function App() {
   }
 
   const teacherSurface = surface.value === "instructor";
+
+  // The projector is deliberately not an application shell: it has no account
+  // controls, instructor navigation, or route to a private controller view.
+  if (teacherSurface && isProjectorRoute(location.pathname)) {
+    return (
+      <LocationProvider>
+        <Router>
+          <Route path="/teach/run/:sessionId/projector" component={Projector} />
+          <Route default component={TeachHome} />
+        </Router>
+      </LocationProvider>
+    );
+  }
 
   return (
     <LocationProvider>

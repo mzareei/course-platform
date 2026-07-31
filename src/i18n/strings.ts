@@ -881,6 +881,34 @@ export const strings = {
     "Revisar el banco de preguntas"
   ],
 
+  // ---------------------------------------------------------------- projector
+  "projector.loading": [
+    "Synchronizing the classroom display…",
+    "Sincronizando la pantalla del salón…"
+  ],
+  "projector.syncFailed": [
+    "The classroom display could not synchronize. Retrying…",
+    "La pantalla del salón no pudo sincronizarse. Reintentando…"
+  ],
+  "projector.unavailableTitle": [
+    "Projector unavailable",
+    "Proyector no disponible"
+  ],
+  "projector.unavailableBody": [
+    "This class does not have a lecture deck available for the classroom display.",
+    "Esta clase no tiene una presentación disponible para la pantalla del salón."
+  ],
+  "projector.deckTitle": ["Classroom lecture deck", "Presentación para el salón"],
+  "projector.pulse.eyebrow": ["Class checkpoint", "Punto de control"],
+  "projector.pulse.answeredOf": [
+    "{answered} of {eligible} answered",
+    "{answered} de {eligible} respondieron"
+  ],
+  "projector.pulse.correctAnswer": [
+    "Correct answer: {answer}",
+    "Respuesta correcta: {answer}"
+  ],
+
   // ---------------------------------------------------------------- end of class
   "endOfClass.title": ["End-of-class quiz", "Quiz de fin de clase"],
   "endOfClass.body": [
