@@ -6,6 +6,7 @@ import {
   projectorIsStale,
   shouldApplyRevision
 } from "../src/features/presentation/state.ts";
+import { verifyPresentationApiSource } from "./lib/presentation-api-source.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -61,23 +62,7 @@ assert.equal(
 );
 
 const api = readFileSync(path.join(root, "src/api/presentation.ts"), "utf8");
-assert.match(api, /callFn<[^>]+>\("course-presentation",\s*\{/s);
-assert.doesNotMatch(api, /localStorage|sessionStorage|\.from\s*\(/);
-for (const action of [
-  "controller_current",
-  "projector_current",
-  "request_slide",
-  "acknowledge_slide",
-  "checkpoint_reached",
-  "set_phase",
-  "heartbeat"
-]) {
-  assert.match(api, new RegExp(`action:\\s*"${action}"`), `missing ${action} action payload`);
-}
-assert.match(api, /action:\s*"request_slide",\s*class_session_id:\s*classSessionId,\s*revision,\s*requested_slide:\s*requestedSlide/s);
-assert.match(api, /action:\s*"acknowledge_slide",\s*class_session_id:\s*classSessionId,\s*revision,\s*acknowledged_slide:\s*acknowledgedSlide/s);
-assert.match(api, /action:\s*"checkpoint_reached",\s*class_session_id:\s*classSessionId,\s*revision,\s*checkpoint_key:\s*checkpointKey,\s*checkpoint_after_slide:\s*checkpointAfterSlide/s);
-assert.match(api, /action:\s*"set_phase",\s*class_session_id:\s*classSessionId,\s*revision,\s*phase/s);
-assert.match(api, /action:\s*"heartbeat",\s*class_session_id:\s*classSessionId,\s*revision,\s*surface/s);
+const client = readFileSync(path.join(root, "src/api/client.ts"), "utf8");
+verifyPresentationApiSource(api, client);
 
 console.log("verify-presentation-state: OK");
