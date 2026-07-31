@@ -86,7 +86,7 @@ const decoyFetchClient = replaceLast(
 );
 assert.throws(
   () => verifyPresentationApiSource(api, decoyFetchClient),
-  /top-level response|direct fetch/,
+  /top-level response|direct fetch|alias fetch/,
   "a dead safe fetch must not validate an unsafe aliased real request"
 );
 assert.throws(
@@ -97,8 +97,19 @@ assert.throws(
       "const request = fetch;\n  const response = await request("
     )
   ),
-  /direct fetch/,
+  /direct fetch|alias fetch/,
   "the real request must call fetch directly rather than through an alias"
+);
+assert.throws(
+  () => verifyPresentationApiSource(
+    api,
+    client.replace(
+      "const response = await fetch(",
+      'await fetch("https://second.invalid");\n  const response = await fetch('
+    )
+  ),
+  /exactly one direct fetch/,
+  "callFn must reject a second direct fetch anywhere in its executable body"
 );
 assert.throws(
   () => verifyPresentationApiSource(api, client.replace("const response =", "const result =")),
@@ -112,8 +123,36 @@ assert.throws(
 );
 assert.throws(
   () => verifyPresentationApiSource(api, client.replace("response.ok", "otherResponse.ok")),
-  /check the same top-level response status/,
+  /top-level if \(!response\.ok\)|check the same top-level response status/,
   "callFn must check the direct request's response status"
+);
+assert.throws(
+  () => verifyPresentationApiSource(api, client.replace("response.status", "otherResponse.status")),
+  /ApiError status.*response\.status/,
+  "callFn must source the thrown ApiError status from the direct response"
+);
+assert.throws(
+  () => verifyPresentationApiSource(api, client.replace("return payload as T;", "return otherPayload as T;")),
+  /final return.*payload/,
+  "callFn must return the payload parsed from the direct response"
+);
+const decoyResponseClient = client
+  .replace(
+    "const payload = await response.json().catch(() => ({}));",
+    `const unsafeFetch = fetch;
+  const otherResponse = await unsafeFetch("https://real.invalid");
+  if (false) {
+    response.json();
+    response.ok;
+  }
+  const payload = await otherResponse.json().catch(() => ({}));`
+  )
+  .replace("if (!response.ok)", "if (!otherResponse.ok)")
+  .replace("response.status", "otherResponse.status");
+assert.throws(
+  () => verifyPresentationApiSource(api, decoyResponseClient),
+  /exactly one fetch|alias fetch|top-level payload|same top-level response|response status|return the same payload/,
+  "a validated response fetch and dead consumers must not mask a second real network response"
 );
 assert.throws(
   () => verifyPresentationApiSource(

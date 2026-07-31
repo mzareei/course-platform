@@ -200,6 +200,37 @@ function assertCallFnImport(file) {
 
 function assertDefaultCourseInjection(file) {
   const implementation = exportedImplementation(file, "callFn");
+  const implementationNodes = descendants(implementation.body);
+  const fetchCalls = implementationNodes.filter((node) =>
+    ts.isCallExpression(node)
+    && ts.isIdentifier(node.expression)
+    && node.expression.text === "fetch"
+  );
+  assert.equal(
+    fetchCalls.length,
+    1,
+    "callFn must contain exactly one direct fetch CallExpression"
+  );
+  const fetchAliases = implementationNodes.filter((node) =>
+    ts.isVariableDeclaration(node)
+    && ts.isIdentifier(node.name)
+    && node.initializer
+    && ts.isIdentifier(unwrapExpression(node.initializer))
+    && unwrapExpression(node.initializer).text === "fetch"
+  );
+  assert.equal(fetchAliases.length, 0, "callFn must not alias fetch to another network response source");
+  const indirectFetchCalls = implementationNodes.filter((node) =>
+    ts.isCallExpression(node)
+    && ts.isIdentifier(node.expression)
+    && node.expression.text !== "fetch"
+    && /fetch$/i.test(node.expression.text)
+  );
+  assert.equal(
+    indirectFetchCalls.length,
+    0,
+    "callFn must not call an aliased fetch network response source"
+  );
+
   const responseDeclarations = implementation.body.statements.flatMap((statement, index) => {
     if (!ts.isVariableStatement(statement)) return [];
     return statement.declarationList.declarations
@@ -263,29 +294,115 @@ function assertDefaultCourseInjection(file) {
     "callFn must spread the caller body after the default course"
   );
 
-  const responseConsumers = implementation.body.statements.slice(index + 1)
-    .flatMap((laterStatement) => descendants(laterStatement));
+  const responseFlow = implementation.body.statements.slice(index);
   assert.equal(
-    responseConsumers.some((node) =>
-      ts.isCallExpression(node)
-      && ts.isPropertyAccessExpression(node.expression)
-      && ts.isIdentifier(node.expression.expression)
-      && node.expression.expression.text === "response"
-      && node.expression.name.text === "json"
-    ),
-    true,
-    "callFn must parse the same top-level response"
+    responseFlow.length,
+    4,
+    "callFn direct response flow must contain only response, payload, status branch, and return"
   );
-  assert.equal(
-    responseConsumers.some((node) =>
-      ts.isPropertyAccessExpression(node)
-      && ts.isIdentifier(node.expression)
-      && node.expression.text === "response"
-      && node.name.text === "ok"
-    ),
-    true,
-    "callFn must check the same top-level response status"
+
+  const payloadStatement = responseFlow[1];
+  assert.ok(
+    ts.isVariableStatement(payloadStatement)
+    && payloadStatement.declarationList.flags & ts.NodeFlags.Const
+    && payloadStatement.declarationList.declarations.length === 1,
+    "callFn must bind one top-level const payload immediately after the response"
   );
+  const payloadDeclaration = payloadStatement.declarationList.declarations[0];
+  assert.ok(
+    ts.isIdentifier(payloadDeclaration.name)
+    && payloadDeclaration.name.text === "payload",
+    "callFn top-level payload must use the payload binding"
+  );
+  assertPayloadFromResponse(payloadDeclaration.initializer);
+
+  const statusBranch = responseFlow[2];
+  assert.ok(
+    ts.isIfStatement(statusBranch)
+    && isNegatedResponseOk(statusBranch.expression),
+    "callFn must use a top-level if (!response.ok) status branch"
+  );
+  assert.ok(ts.isBlock(statusBranch.thenStatement), "callFn response error branch must be a block");
+  const throws = statusBranch.thenStatement.statements.filter((statement) =>
+    ts.isThrowStatement(statement)
+  );
+  assert.equal(throws.length, 1, "callFn response error branch must throw exactly one ApiError");
+  const thrown = throws[0].expression;
+  assert.ok(
+    thrown
+    && ts.isNewExpression(thrown)
+    && ts.isIdentifier(thrown.expression)
+    && thrown.expression.text === "ApiError",
+    "callFn response error branch must throw ApiError"
+  );
+  assert.ok(
+    thrown.arguments
+    && thrown.arguments.length >= 2
+    && isResponseProperty(thrown.arguments[1], "status"),
+    "callFn ApiError status must come from response.status"
+  );
+
+  const finalReturn = responseFlow[3];
+  assert.ok(
+    ts.isReturnStatement(finalReturn)
+    && finalReturn.expression
+    && ts.isIdentifier(unwrapExpression(finalReturn.expression))
+    && unwrapExpression(finalReturn.expression).text === "payload",
+    "callFn final return must use the same top-level payload binding"
+  );
+}
+
+function assertPayloadFromResponse(initializer) {
+  assert.ok(
+    initializer && ts.isAwaitExpression(initializer),
+    "callFn top-level payload must await response.json().catch(...)"
+  );
+  const catchCall = initializer.expression;
+  assert.ok(
+    ts.isCallExpression(catchCall)
+    && ts.isPropertyAccessExpression(catchCall.expression)
+    && catchCall.expression.name.text === "catch"
+    && catchCall.arguments.length === 1,
+    "callFn top-level payload must await response.json().catch(...)"
+  );
+  const jsonCall = catchCall.expression.expression;
+  assert.ok(
+    ts.isCallExpression(jsonCall)
+    && jsonCall.arguments.length === 0
+    && ts.isPropertyAccessExpression(jsonCall.expression)
+    && jsonCall.expression.name.text === "json"
+    && ts.isIdentifier(jsonCall.expression.expression)
+    && jsonCall.expression.expression.text === "response",
+    "callFn top-level payload must parse the same top-level response"
+  );
+}
+
+function isNegatedResponseOk(expression) {
+  return ts.isPrefixUnaryExpression(expression)
+    && expression.operator === ts.SyntaxKind.ExclamationToken
+    && isResponseProperty(expression.operand, "ok");
+}
+
+function isResponseProperty(expression, name) {
+  const unwrapped = unwrapExpression(expression);
+  return ts.isPropertyAccessExpression(unwrapped)
+    && ts.isIdentifier(unwrapped.expression)
+    && unwrapped.expression.text === "response"
+    && unwrapped.name.text === name;
+}
+
+function unwrapExpression(expression) {
+  let current = expression;
+  while (
+    ts.isParenthesizedExpression(current)
+    || ts.isAsExpression(current)
+    || ts.isTypeAssertionExpression(current)
+    || ts.isNonNullExpression(current)
+    || ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
 }
 
 function rejectBrowserPersistenceAndTables(file) {
