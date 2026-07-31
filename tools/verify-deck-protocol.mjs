@@ -27,6 +27,8 @@ const {
   DECK_PROTOCOL_VERSION,
   isDeckMessage,
   isGotoTeachingSlideMessage,
+  nextRemoteTeachingSlide,
+  reduceAppliedDeckRevision,
   validateCheckpointQuestion
 } = await import("../src/features/deck/protocol.ts");
 
@@ -124,8 +126,51 @@ assert.equal(
     slide: 3,
     teaching_slide: 2
   }, sameOrigin),
-  false,
-  "deck position acknowledgements must always state their applied revision"
+  true,
+  "legacy decks must remain valid position reporters during a rolling engine upgrade"
+);
+assert.equal(
+  reduceAppliedDeckRevision(7, {
+    version: 1,
+    type: "deck.slide_changed",
+    slide: 3,
+    teaching_slide: 2
+  }),
+  7,
+  "a legacy position message must not erase or impersonate a remote acknowledgement"
+);
+assert.equal(
+  reduceAppliedDeckRevision(7, {
+    version: 1,
+    type: "deck.slide_changed",
+    slide: 4,
+    teaching_slide: 3,
+    appliedRevision: null
+  }),
+  7,
+  "local navigation after a remote acknowledgement must preserve the last non-null revision"
+);
+assert.equal(
+  reduceAppliedDeckRevision(7, {
+    version: 1,
+    type: "deck.slide_changed",
+    slide: 5,
+    teaching_slide: 4,
+    appliedRevision: 9
+  }),
+  9,
+  "a newer remote acknowledgement must replace the retained revision"
+);
+assert.equal(
+  reduceAppliedDeckRevision(9, { version: 1, type: "deck.ready", slide: 1 }),
+  null,
+  "a newly ready iframe must reset the acknowledgement lifecycle"
+);
+assert.equal(nextRemoteTeachingSlide(5, 5), 5);
+assert.equal(
+  nextRemoteTeachingSlide(5, 10),
+  6,
+  "Task 6 can request the current boundary before advancing to the next teaching slide"
 );
 assert.equal(
   isGotoTeachingSlideMessage({
@@ -455,8 +500,8 @@ assert.match(
 );
 assert.match(
   hookSource,
-  /case "deck\.slide_changed":[\s\S]*setAppliedRevision\(message\.appliedRevision\)/,
-  "the parent bridge must retain the revision acknowledged by its bound deck"
+  /setAppliedRevision\(\(current\) => reduceAppliedDeckRevision\(current, message\)\)/,
+  "the parent bridge acknowledgement lifecycle must use the executable reducer"
 );
 assert.match(
   hookSource,

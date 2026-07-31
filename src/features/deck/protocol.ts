@@ -7,7 +7,7 @@ export type DeckToParentMessage =
     type: "deck.slide_changed";
     slide: number;
     teaching_slide: number | null;
-    appliedRevision: number | null;
+    appliedRevision?: number | null;
   }
   | {
     version: 1;
@@ -91,6 +91,34 @@ export function isGotoTeachingSlideMessage(
   );
 }
 
+export function reduceAppliedDeckRevision(
+  current: number | null,
+  message: Pick<DeckToParentMessage, "type">
+    & Partial<Pick<
+      Extract<DeckToParentMessage, { type: "deck.slide_changed" }>,
+      "appliedRevision"
+    >>
+): number | null {
+  if (message.type === "deck.ready") return null;
+  return isPositiveInteger(message.appliedRevision)
+    ? message.appliedRevision
+    : current;
+}
+
+/**
+ * A controller requests the current teaching coordinate once more when its
+ * next authored checkpoint is at that boundary. After the checkpoint closes,
+ * it passes the next pending boundary (or null) and advances normally.
+ */
+export function nextRemoteTeachingSlide(
+  currentTeachingSlide: number,
+  pendingCheckpointAfterSlide: number | null
+): number {
+  return pendingCheckpointAfterSlide === currentTeachingSlide
+    ? currentTeachingSlide
+    : currentTeachingSlide + 1;
+}
+
 function isCheckpointKey(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -113,24 +141,25 @@ export function isDeckMessage(
         && isPositiveInteger(candidate.slide)
       );
     case "deck.slide_changed":
-      return (
-        hasExactKeys(candidate, [
-          "version",
-          "type",
-          "slide",
-          "teaching_slide",
-          "appliedRevision"
-        ])
-        && isPositiveInteger(candidate.slide)
-        && (
-          candidate.teaching_slide === null
-          || isPositiveInteger(candidate.teaching_slide)
-        )
-        && (
-          candidate.appliedRevision === null
-          || isPositiveInteger(candidate.appliedRevision)
-        )
-      );
+      {
+        const positionKeys = ["version", "type", "slide", "teaching_slide"];
+        const modernKeys = [...positionKeys, "appliedRevision"];
+        const exactPosition = hasExactKeys(candidate, positionKeys)
+          || hasExactKeys(candidate, modernKeys);
+        return (
+          exactPosition
+          && isPositiveInteger(candidate.slide)
+          && (
+            candidate.teaching_slide === null
+            || isPositiveInteger(candidate.teaching_slide)
+          )
+          && (
+            candidate.appliedRevision === undefined
+            || candidate.appliedRevision === null
+            || isPositiveInteger(candidate.appliedRevision)
+          )
+        );
+      }
     case "deck.checkpoint_entered":
       return (
         hasExactKeys(candidate, [

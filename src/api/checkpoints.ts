@@ -42,6 +42,7 @@ export type BackfillResult = {
   checkpoint_count: number;
   mapped_question_count: number;
   preparation_state: "ready";
+  deck_upgraded: boolean;
 };
 
 export function prepareLegacyCheckpoints(

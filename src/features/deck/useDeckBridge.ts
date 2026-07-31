@@ -2,6 +2,7 @@ import type { RefObject } from "preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
 import {
   isDeckMessage,
+  reduceAppliedDeckRevision,
   type ParentToDeckMessage
 } from "./protocol";
 import { t } from "../../i18n";
@@ -41,13 +42,13 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
         case "deck.ready":
           setDeckReady(true);
           setSlide(message.slide);
-          setAppliedRevision(null);
+          setAppliedRevision((current) => reduceAppliedDeckRevision(current, message));
           setCheckpointAction(null);
           break;
         case "deck.slide_changed":
           setSlide(message.slide);
           setTeachingSlide(message.teaching_slide);
-          setAppliedRevision(message.appliedRevision);
+          setAppliedRevision((current) => reduceAppliedDeckRevision(current, message));
           if (message.teaching_slide !== null) setCheckpoint(null);
           break;
         case "deck.checkpoint_entered":
