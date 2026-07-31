@@ -56,5 +56,10 @@ assert.throws(
   /bounded/,
   "unbounded retry implementation must fail"
 );
+assert.throws(
+  () => verifyProjectorSafetySource(projector.replace("setAckRetry((current) => current + 1);", ""), pulse),
+  /setAckRetry/,
+  "an acknowledgement failure must schedule a bounded retry"
+);
 
 console.log("verify-projector-safety-self-test: OK");

@@ -101,7 +101,7 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
   }
 
   const calls = descendants(projectorFunction.body).map(callName).filter(Boolean);
-  for (const required of ["projectorCurrent", "acknowledgeSlide", "checkpointReached", "presentationHeartbeat", "setInterval", "setTimeout"]) {
+  for (const required of ["projectorCurrent", "acknowledgeSlide", "checkpointReached", "presentationHeartbeat", "setInterval", "setTimeout", "setAckRetry", "setCheckpointRetry"]) {
     assert.equal(calls.includes(required), true, `projector must execute ${required}`);
   }
   const initialPoll = descendants(projectorFunction.body).find((node) =>
