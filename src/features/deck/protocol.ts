@@ -7,6 +7,7 @@ export type DeckToParentMessage =
     type: "deck.slide_changed";
     slide: number;
     teaching_slide: number | null;
+    appliedRevision: number | null;
   }
   | {
     version: 1;
@@ -29,7 +30,14 @@ export type ParentToDeckMessage =
   | { version: 1; type: "checkpoint.question_ready"; checkpoint_key: string }
   | { version: 1; type: "checkpoint.question_sent"; checkpoint_key: string }
   | { version: 1; type: "checkpoint.answer_revealed"; checkpoint_key: string }
-  | { version: 1; type: "checkpoint.resume"; checkpoint_key: string };
+  | { version: 1; type: "checkpoint.resume"; checkpoint_key: string }
+  // This command intentionally has no protocol version so it matches the
+  // presentation-state wire contract shared by controller and projector.
+  | {
+    type: "course-platform:goto-slide";
+    teachingSlide: number;
+    revision: number;
+  };
 
 type MessageRecord = Record<string, unknown>;
 
@@ -67,6 +75,22 @@ function isPositiveInteger(value: unknown): value is number {
   return Number.isInteger(value) && Number(value) > 0;
 }
 
+export function isGotoTeachingSlideMessage(
+  value: unknown
+): value is Extract<
+  ParentToDeckMessage,
+  { type: "course-platform:goto-slide" }
+> {
+  const candidate = safeMessageRecord(value);
+  return Boolean(
+    candidate
+    && hasExactKeys(candidate, ["type", "teachingSlide", "revision"])
+    && candidate.type === "course-platform:goto-slide"
+    && isPositiveInteger(candidate.teachingSlide)
+    && isPositiveInteger(candidate.revision)
+  );
+}
+
 function isCheckpointKey(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -90,11 +114,21 @@ export function isDeckMessage(
       );
     case "deck.slide_changed":
       return (
-        hasExactKeys(candidate, ["version", "type", "slide", "teaching_slide"])
+        hasExactKeys(candidate, [
+          "version",
+          "type",
+          "slide",
+          "teaching_slide",
+          "appliedRevision"
+        ])
         && isPositiveInteger(candidate.slide)
         && (
           candidate.teaching_slide === null
           || isPositiveInteger(candidate.teaching_slide)
+        )
+        && (
+          candidate.appliedRevision === null
+          || isPositiveInteger(candidate.appliedRevision)
         )
       );
     case "deck.checkpoint_entered":

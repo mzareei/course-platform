@@ -26,6 +26,7 @@ Object.defineProperty(globalThis, "location", {
 const {
   DECK_PROTOCOL_VERSION,
   isDeckMessage,
+  isGotoTeachingSlideMessage,
   validateCheckpointQuestion
 } = await import("../src/features/deck/protocol.ts");
 
@@ -52,13 +53,15 @@ const validDeckMessages = [
     version: 1,
     type: "deck.slide_changed",
     slide: 3,
-    teaching_slide: 2
+    teaching_slide: 2,
+    appliedRevision: 7
   },
   {
     version: 1,
     type: "deck.slide_changed",
     slide: 4,
-    teaching_slide: null
+    teaching_slide: null,
+    appliedRevision: null
   },
   {
     version: 1,
@@ -101,6 +104,52 @@ assert.equal(
   false,
   "slide positions must be integers"
 );
+for (const invalidRevision of [0, -1, 1.5, Number.NaN, "1"]) {
+  assert.equal(
+    isDeckMessage({
+      version: 1,
+      type: "deck.slide_changed",
+      slide: 3,
+      teaching_slide: 2,
+      appliedRevision: invalidRevision
+    }, sameOrigin),
+    false,
+    `deck acknowledgements must reject invalid revision ${String(invalidRevision)}`
+  );
+}
+assert.equal(
+  isDeckMessage({
+    version: 1,
+    type: "deck.slide_changed",
+    slide: 3,
+    teaching_slide: 2
+  }, sameOrigin),
+  false,
+  "deck position acknowledgements must always state their applied revision"
+);
+assert.equal(
+  isGotoTeachingSlideMessage({
+    type: "course-platform:goto-slide",
+    teachingSlide: 11,
+    revision: 4
+  }),
+  true,
+  "the remote navigation command must accept a positive teaching slide and revision"
+);
+for (const invalid of [
+  { type: "course-platform:goto-slide", teachingSlide: 0, revision: 4 },
+  { type: "course-platform:goto-slide", teachingSlide: 11.5, revision: 4 },
+  { type: "course-platform:goto-slide", teachingSlide: 11, revision: 0 },
+  { type: "course-platform:goto-slide", teachingSlide: 11, revision: 4.5 },
+  { type: "course-platform:goto-slide", teachingSlide: 11, revision: 4, extra: true },
+  { version: 1, type: "course-platform:goto-slide", teachingSlide: 11, revision: 4 }
+]) {
+  assert.equal(
+    isGotoTeachingSlideMessage(invalid),
+    false,
+    "malformed or non-exact remote navigation commands must fail closed"
+  );
+}
 assert.equal(
   isDeckMessage({
     version: 1,
@@ -388,6 +437,26 @@ assert.match(
   hookSource,
   /deckWindow\.postMessage\(message, window\.location\.origin\)/,
   "parent-to-deck messages must target the app origin only"
+);
+assert.match(
+  hookSource,
+  /goToTeachingSlide/,
+  "the parent bridge must expose remote teaching-slide navigation"
+);
+assert.match(
+  hookSource,
+  /type:\s*"course-platform:goto-slide"/,
+  "remote navigation must use the shared parent command"
+);
+assert.match(
+  hookSource,
+  /isPositiveInteger\(teachingSlide\)[\s\S]*isPositiveInteger\(revision\)/,
+  "the parent bridge must fail closed before posting invalid slide or revision numbers"
+);
+assert.match(
+  hookSource,
+  /case "deck\.slide_changed":[\s\S]*setAppliedRevision\(message\.appliedRevision\)/,
+  "the parent bridge must retain the revision acknowledged by its bound deck"
 );
 assert.match(
   hookSource,

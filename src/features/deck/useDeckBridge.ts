@@ -20,6 +20,7 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
   const [deckReady, setDeckReady] = useState(false);
   const [slide, setSlide] = useState<number | null>(null);
   const [teachingSlide, setTeachingSlide] = useState<number | null>(null);
+  const [appliedRevision, setAppliedRevision] = useState<number | null>(null);
   const [checkpoint, setCheckpoint] = useState<ActiveCheckpoint | null>(null);
   const [checkpointAction, setCheckpointAction] = useState<CheckpointAction | null>(null);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
@@ -40,11 +41,13 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
         case "deck.ready":
           setDeckReady(true);
           setSlide(message.slide);
+          setAppliedRevision(null);
           setCheckpointAction(null);
           break;
         case "deck.slide_changed":
           setSlide(message.slide);
           setTeachingSlide(message.teaching_slide);
+          setAppliedRevision(message.appliedRevision);
           if (message.teaching_slide !== null) setCheckpoint(null);
           break;
         case "deck.checkpoint_entered":
@@ -81,10 +84,28 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
     setBridgeError(null);
   }, [iframeRef]);
 
+  const goToTeachingSlide = useCallback((
+    teachingSlide: number,
+    revision: number
+  ) => {
+    const isPositiveInteger = (value: number) =>
+      Number.isInteger(value) && value > 0;
+    if (!isPositiveInteger(teachingSlide) || !isPositiveInteger(revision)) {
+      setBridgeError(t("deck.bridgeInvalid"));
+      return;
+    }
+    send({
+      type: "course-platform:goto-slide",
+      teachingSlide,
+      revision
+    });
+  }, [send]);
+
   const reset = useCallback(() => {
     setDeckReady(false);
     setSlide(null);
     setTeachingSlide(null);
+    setAppliedRevision(null);
     setCheckpoint(null);
     setCheckpointAction(null);
     setBridgeError(null);
@@ -95,9 +116,11 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
     deckReady,
     slide,
     teachingSlide,
+    appliedRevision,
     checkpoint,
     checkpointAction,
     send,
+    goToTeachingSlide,
     bridgeError,
     navigationSequence,
     reset
