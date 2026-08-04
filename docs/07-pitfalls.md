@@ -1082,3 +1082,11 @@ If the parent background references an undefined token, CSS drops the
 background declaration and both layers show through each other: the prompt is
 painted twice and appears to stack or flicker. Keep the parent layer on a
 defined app surface token and retain the verifier that rejects `--surface-0`.
+
+## 50. The question preview is part of the public classroom display
+
+The professor's Run Class page is often the exact browser window sent to the
+room projector. The generated bank includes `is_correct` for grading, but the
+pre-send question preview must never use it for styling or labels. Otherwise
+students see the answer before they respond. Keep the preview neutral and only
+show correctness in the private results/reveal state.

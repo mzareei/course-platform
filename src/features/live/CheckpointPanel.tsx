@@ -136,11 +136,8 @@ export function CheckpointPanel({
           </h3>
           <div class="stack checkpoint-options">
             {state.question.options.map((option) => (
-              <div class={`pulse-choice${option.is_correct ? " correct" : ""}`}>
+              <div class="pulse-choice">
                 {(useSpanish && option.text_es) || option.text}
-                {option.is_correct
-                  ? ` ✓ ${t("run.correctAnswer")}`
-                  : ""}
               </div>
             ))}
           </div>

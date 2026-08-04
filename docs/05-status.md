@@ -20,6 +20,10 @@ The normal-mode question overlay's opaque surface regression was fixed after a
 browser screenshot showed the iframe's fullscreen layer compositing underneath
 it. The app-shell verifier now guards the surface token contract.
 
+The question preview is now answer-neutral too: before the professor sends a
+checkpoint, the Run Class screen shows only the prompt and options. Correct
+answer styling is reserved for the private post-reveal results state.
+
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
 browser rehearsal of the single-screen question layer is complete. A true

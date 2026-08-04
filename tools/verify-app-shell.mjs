@@ -113,9 +113,16 @@ requireMarker("src/screens/student/Today.tsx", "action-dock", "Today has exactly
 // checkpoint panel must stay together, and starting must use the atomic session
 // transition rather than a client-authored state update.
 const runClassSource = read("src/screens/instructor/RunClass.tsx");
+const checkpointPanelSource = read("src/features/live/CheckpointPanel.tsx");
 const appStyles = read("src/styles/app.css");
 assert.match(runClassSource, /<InstructorDeck/);
 assert.match(runClassSource, /<CheckpointPanel/);
+const checkpointPreviewSource = checkpointPanelSource.split("      {round ?")[0];
+assert.doesNotMatch(
+  checkpointPreviewSource,
+  /option\.is_correct|run\.correctAnswer/,
+  "the audience-visible question preview must not reveal the correct answer"
+);
 assert.doesNotMatch(runClassSource, /<option value="hard">[^]*<option value="hard">/);
 assert.match(runClassSource, /startClassSession/);
 assert.match(runClassSource, /pushBankQuestion\(\{/);
