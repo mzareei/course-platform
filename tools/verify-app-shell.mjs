@@ -118,6 +118,7 @@ const classroomQuestionSource = read("src/features/live/ClassroomQuestionLayer.t
 const questionBanksSource = read("src/components/QuestionBanks.tsx");
 const questionBankReviewSource = read("src/components/QuestionBankReview.tsx");
 const appStyles = read("src/styles/app.css");
+const authSource = read("src/auth/auth.ts");
 assert.match(runClassSource, /<InstructorDeck/);
 assert.match(runClassSource, /<CheckpointPanel/);
 const checkpointPreviewSource = checkpointPanelSource.split("      {round ?")[0];
@@ -145,6 +146,12 @@ assert.match(questionBanksSource, /QuestionBankReview/, "question banks must exp
 assert.match(questionBankReviewSource, /listQuestions\(/, "question banks must load reviewable questions");
 assert.match(questionBankReviewSource, /updateQuestion\(/, "question banks must save expert edits");
 assert.match(questionBankReviewSource, /deleteQuestion\(/, "question banks must allow removing questions");
+assert.match(authSource, /EMAIL_PATTERN\.test\(cleaned\)/, "sign-in must accept valid instructor email domains");
+assert.doesNotMatch(
+  authSource,
+  /return isInstitutionalEmail\(email\) \|\| isTestAccessEmail\(email\)/,
+  "the client must not block invited instructors by domain"
+);
 assert.doesNotMatch(runClassSource, /<option value="hard">[^]*<option value="hard">/);
 assert.match(runClassSource, /startClassSession/);
 assert.match(runClassSource, /pushBankQuestion\(\{/);

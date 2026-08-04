@@ -1,6 +1,6 @@
-// Passwordless auth, ported from the Gen-2 app's auth-api.js. Identity is the
-// institutional email; sign-in only opens the door — course access still requires
-// an active roster profile (course-auth-context decides).
+// Passwordless auth, ported from the Gen-2 app's auth-api.js. Sign-in accepts any
+// well-formed course email so invited instructors can use an external domain;
+// course-auth-context still enforces the server-side profile and role guard.
 import type { Session } from "@supabase/supabase-js";
 import { client, callFnAnon } from "../api/client";
 import { config } from "../config";
@@ -62,8 +62,9 @@ export function isInstitutionalEmail(email: string): boolean {
 }
 
 export function isEmailAllowedLocally(email: string): boolean {
-  // Client-side convenience check only; the server re-validates and fails closed.
-  return isInstitutionalEmail(email) || isTestAccessEmail(email);
+  // Format check only. The server decides whether the address is an invited
+  // instructor, an institutional student, or an approved external student.
+  return EMAIL_PATTERN.test(email.trim().toLowerCase());
 }
 
 function redirectUrl(): string {

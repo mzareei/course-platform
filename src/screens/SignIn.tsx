@@ -43,9 +43,7 @@ export function SignIn() {
     if (!isEmailAllowedLocally(cleaned)) {
       setMessage({
         kind: "error",
-        text: t("signIn.wrongDomain", {
-          domains: config.allowedInstitutionalDomains.map((d) => "@" + d).join(" / ")
-        })
+        text: t("signIn.invalidEmail")
       });
       return;
     }

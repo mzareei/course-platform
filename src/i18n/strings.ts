@@ -30,8 +30,8 @@ export const strings = {
   "signIn.eyebrow": ["Course Platform", "Plataforma del Curso"],
   "signIn.title": ["Sign in", "Iniciar sesión"],
   "signIn.lede": [
-    "No password. Enter your institutional email and we'll send you a one-time sign-in link.",
-    "Sin contraseña. Escribe tu correo institucional y te enviaremos un enlace de acceso de un solo uso."
+    "No password. Enter your course email and we'll send you a one-time sign-in link.",
+    "Sin contraseña. Escribe tu correo del curso y te enviaremos un enlace de acceso de un solo uso."
   ],
   "signIn.emailLabel": ["Institutional email", "Correo institucional"],
   "signIn.send": ["Email me a sign-in link", "Enviarme un enlace de acceso"],
@@ -49,6 +49,7 @@ export const strings = {
     "Use your institutional email ({domains}).",
     "Usa tu correo institucional ({domains})."
   ],
+  "signIn.invalidEmail": ["Enter a valid email address.", "Escribe una dirección de correo válida."],
   "signIn.cooldown": [
     "A sign-in email was just sent. You can request another in {seconds}s.",
     "Acabamos de enviar un correo de acceso. Puedes pedir otro en {seconds}s."
