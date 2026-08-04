@@ -13,6 +13,25 @@ const app = read("src/app.tsx");
 const projector = read("src/screens/instructor/Projector.tsx");
 const pulse = read("src/features/presentation/ProjectorPulse.tsx");
 
+function mutate(source, from, to, label) {
+  const next = source.replace(from, to);
+  assert.notEqual(next, source, `${label} mutation must change the fixture`);
+  return next;
+}
+
+function removeNth(source, needle, occurrence, label) {
+  let from = 0;
+  let index = -1;
+  for (let count = 0; count <= occurrence; count += 1) {
+    index = source.indexOf(needle, from);
+    assert.notEqual(index, -1, `${label} mutation must find occurrence ${occurrence}`);
+    from = index + needle.length;
+  }
+  const next = source.slice(0, index) + source.slice(index + needle.length);
+  assert.notEqual(next, source, `${label} mutation must change the fixture`);
+  return next;
+}
+
 assert.doesNotThrow(() => verifyProjectorRouteSource(app));
 assert.doesNotThrow(() => verifyProjectorSafetySource(projector, pulse));
 assert.throws(
@@ -32,7 +51,7 @@ assert.throws(
 );
 assert.throws(
   () => verifyProjectorSafetySource(
-    projector.replace("void refresh();", "if (false) projectorCurrent(classSessionId);"),
+    mutate(projector, "void refresh();", "if (false) { void refresh(); }", "dead poll"),
     pulse
   ),
   /first poll|setInterval|projectorCurrent/,
@@ -40,16 +59,130 @@ assert.throws(
 );
 assert.throws(
   () => verifyProjectorSafetySource(
-    projector.replace("acknowledgeSlide,", "controllerCurrent as acknowledgeSlide,"),
+    mutate(projector, "void refresh();", "function unused() { void refresh(); }", "nested poll"),
+    pulse
+  ),
+  /first poll/,
+  "an unused nested polling function must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    mutate(projector, "    void refresh();", "    return undefined;\n    void refresh();", "unreachable poll"),
+    pulse
+  ),
+  /first poll|unreachable/,
+  "an initial poll after an unconditional return must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    mutate(projector, "acknowledgeSlide,", "controllerCurrent as acknowledgeSlide,", "indirect import"),
     pulse
   ),
   /alias|allowed/,
   "an indirect controller import must fail"
 );
 assert.throws(
+  () => verifyProjectorSafetySource(
+    projector.replace(
+      'import { useCallback, useEffect, useRef, useState } from "preact/hooks";',
+      'import * as presentation from "../../api/presentation";\nimport { useCallback, useEffect, useRef, useState } from "preact/hooks";'
+    ).replace("void refresh();", "void presentation.requestSlide(classSessionId, 0, 1);"),
+    pulse
+  ),
+  /exactly one presentation API import|presentation APIs through/,
+  "namespace presentation controller calls must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    mutate(
+      projector,
+      '  const classSessionId = sessionId || "";',
+      '  const hiddenController = { requestSlide() {} };\n  hiddenController.requestSlide();\n  const classSessionId = sessionId || "";',
+      "property controller call"
+    ),
+    pulse
+  ),
+  /requestSlide|controller/,
+  "controller member calls must fail through property access"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    mutate(
+      projector,
+      '  const classSessionId = sessionId || "";',
+      '  const hiddenController = { requestSlide() {} };\n  hiddenController["requestSlide"]();\n  const classSessionId = sessionId || "";',
+      "element controller call"
+    ),
+    pulse
+  ),
+  /requestSlide|controller/,
+  "controller member calls must fail through element access"
+);
+assert.throws(
   () => verifyProjectorSafetySource(projector, pulse.replace('pulse.state === "revealed"', "true")),
   /coupled to pulse.state/,
   "reveal-only rendering must stay coupled to server state"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    pulse.replace(
+      "const correctKey = revealed ? pulse.correct_option?.key : null;",
+      "const correctKey = pulse.correct_option?.key;"
+    )
+  ),
+  /correct_option must only be read/,
+  "an unguarded correctness read must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    pulse.replace(
+      'const revealed = pulse.state === "revealed";',
+      'const revealed = pulse.state === "revealed";\n  const leakedExplanation = pulse.explanation;'
+    )
+  ),
+  /explanation must only be read/,
+  "an unguarded explanation read must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    mutate(
+      pulse,
+      'const revealed = pulse.state === "revealed";',
+      'const revealed = pulse.state === "revealed";\n  const leakedElementExplanation = pulse["explanation"];',
+      "element explanation leak"
+    )
+  ),
+  /explanation must only be read/,
+  "an unguarded element explanation read must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    mutate(
+      pulse,
+      'const revealed = pulse.state === "revealed";',
+      'const revealed = pulse.state === "revealed";\n  const pulseAlias = pulse;\n  const leakedAliasExplanation = pulseAlias.explanation;',
+      "aliased explanation leak"
+    )
+  ),
+  /explanation must only be read/,
+  "an unguarded aliased explanation read must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    mutate(
+      pulse,
+      'const revealed = pulse.state === "revealed";',
+      'const revealed = pulse.state === "revealed";\n  const { correct_option: leakedCorrectOption } = pulse;',
+      "destructured correctness leak"
+    )
+  ),
+  /correct_option must only be read/,
+  "an unguarded destructured correctness read must fail"
 );
 assert.throws(
   () => verifyProjectorSafetySource(projector.replace("MAX_TELEMETRY_RETRIES", "MAX_RETRIES"), pulse),
@@ -61,5 +194,24 @@ assert.throws(
   /setAckRetry/,
   "an acknowledgement failure must schedule a bounded retry"
 );
+for (const [occurrence, label] of [
+  [1, "ack initial bridge guard"],
+  [2, "ack completion bridge guard"],
+  [3, "ack failure bridge guard"],
+  [4, "ack retry bridge guard"],
+  [5, "checkpoint initial bridge guard"],
+  [6, "checkpoint completion bridge guard"],
+  [7, "checkpoint failure bridge guard"],
+  [8, "checkpoint retry bridge guard"]
+]) {
+  assert.throws(
+    () => verifyProjectorSafetySource(
+      removeNth(projector, "|| !bridgeBelongsToSession", occurrence, label),
+      pulse
+    ),
+    /bridge session identity|bridge.*active session/,
+    `${label} must remain guarded`
+  );
+}
 
 console.log("verify-projector-safety-self-test: OK");

@@ -19,6 +19,14 @@ const MAX_TELEMETRY_RETRIES = 3;
 
 export function Projector({ sessionId }: { sessionId?: string }) {
   const classSessionId = sessionId || "";
+  const activeSession = useRef({ id: classSessionId, generation: 0 });
+  if (activeSession.current.id !== classSessionId) {
+    activeSession.current = {
+      id: classSessionId,
+      generation: activeSession.current.generation + 1
+    };
+  }
+  const sessionGeneration = activeSession.current.generation;
   const classSession = (context.value?.teacher_sessions ?? []).find(
     (candidate) => candidate.session_id === classSessionId
   );
@@ -37,22 +45,45 @@ export function Projector({ sessionId }: { sessionId?: string }) {
   const [acknowledged, setAcknowledged] = useState(-1);
   const [ackRetry, setAckRetry] = useState(0);
   const [checkpointRetry, setCheckpointRetry] = useState(0);
+  const [bridgeSession, setBridgeSession] = useState({ id: "", generation: -1 });
   const [error, setError] = useState(false);
 
-  const applyPresentation = useCallback((next: ProjectorPresentationState) => {
+  const isActiveSession = useCallback((id: string, generation: number) =>
+    activeSession.current.id === id
+    && activeSession.current.generation === generation, []);
+
+  const applyPresentation = useCallback((
+    next: ProjectorPresentationState,
+    id: string,
+    generation: number
+  ) => {
+    if (!isActiveSession(id, generation) || next.session_id !== id) return;
     setPresentation((current) => {
-      const accepted = current && next.revision < current.revision ? current : next;
+      if (!isActiveSession(id, generation)) return current;
+      const accepted = current?.session_id === id && next.revision < current.revision
+        ? current
+        : next;
       stateRef.current = accepted;
       return accepted;
     });
     setError(false);
-  }, []);
+  }, [isActiveSession]);
+
+  const presentationForSession = presentation?.session_id === classSessionId
+    ? presentation
+    : null;
+  const bridgeBelongsToSession =
+    bridgeSession.id === classSessionId
+    && bridgeSession.generation === sessionGeneration;
 
   useEffect(() => {
+    if (!isActiveSession(classSessionId, sessionGeneration)) return;
     stateRef.current = null;
     requestedRevision.current = -1;
     acknowledgedRevision.current = -1;
     reportedCheckpoint.current = "";
+    bridge.reset();
+    setBridgeSession({ id: classSessionId, generation: sessionGeneration });
     setPresentation(null);
     setAcknowledged(-1);
     setError(false);
@@ -61,10 +92,14 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     let cancelled = false;
     const refresh = () => projectorCurrent(classSessionId)
       .then((next) => {
-        if (!cancelled) applyPresentation(next);
+        if (!cancelled) applyPresentation(next, classSessionId, sessionGeneration);
       })
       .catch(() => {
-        if (!cancelled && !stateRef.current) setError(true);
+        if (
+          !cancelled
+          && isActiveSession(classSessionId, sessionGeneration)
+          && (!stateRef.current || stateRef.current.session_id !== classSessionId)
+        ) setError(true);
       });
 
     void refresh();
@@ -73,7 +108,7 @@ export function Projector({ sessionId }: { sessionId?: string }) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [classSessionId, applyPresentation]);
+  }, [classSessionId, sessionGeneration, applyPresentation, bridge.reset, isActiveSession]);
 
   useEffect(() => {
     clearTimeout(ackRetryTimer.current);
@@ -84,16 +119,19 @@ export function Projector({ sessionId }: { sessionId?: string }) {
       clearTimeout(ackRetryTimer.current);
       clearTimeout(checkpointRetryTimer.current);
     };
-  }, [classSessionId, presentation?.revision]);
+  }, [classSessionId, sessionGeneration, presentationForSession?.revision]);
 
   useEffect(() => {
     if (!classSessionId) return;
     let cancelled = false;
     const beat = () => {
-      const revision = stateRef.current?.revision ?? 0;
+      if (!isActiveSession(classSessionId, sessionGeneration)) return;
+      const revision = stateRef.current?.session_id === classSessionId
+        ? stateRef.current.revision
+        : 0;
       presentationHeartbeat(classSessionId, revision, "projector")
         .then((next) => {
-          if (!cancelled) applyPresentation(next);
+          if (!cancelled) applyPresentation(next, classSessionId, sessionGeneration);
         })
         .catch(() => undefined);
     };
@@ -102,45 +140,61 @@ export function Projector({ sessionId }: { sessionId?: string }) {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [classSessionId, applyPresentation]);
+  }, [classSessionId, sessionGeneration, applyPresentation, isActiveSession]);
 
   useEffect(() => {
     if (
-      !presentation
+      !presentationForSession
       || !bridge.deckReady
-      || presentation.revision < 1
-      || presentation.revision <= requestedRevision.current
+      || presentationForSession.revision < 1
+      || presentationForSession.revision <= requestedRevision.current
+      || !bridgeBelongsToSession
+      || !isActiveSession(classSessionId, sessionGeneration)
     ) return;
-    bridge.goToTeachingSlide(presentation.requested_slide, presentation.revision);
-    requestedRevision.current = presentation.revision;
-  }, [presentation?.revision, presentation?.requested_slide, bridge.deckReady, bridge.goToTeachingSlide]);
+    bridge.goToTeachingSlide(
+      presentationForSession.requested_slide,
+      presentationForSession.revision
+    );
+    requestedRevision.current = presentationForSession.revision;
+  }, [
+    classSessionId,
+    sessionGeneration,
+    presentationForSession?.revision,
+    presentationForSession?.requested_slide,
+    bridge.deckReady,
+    bridgeBelongsToSession,
+    bridge.goToTeachingSlide,
+    isActiveSession
+  ]);
 
   useEffect(() => {
     const revision = bridge.appliedRevision;
     const slide = bridge.teachingSlide;
     if (
       !classSessionId
-      || !presentation
-      || revision !== presentation.revision
+      || !presentationForSession
+      || revision !== presentationForSession.revision
       || !slide
       || acknowledgedRevision.current === revision
+      || !bridgeBelongsToSession
+      || !isActiveSession(classSessionId, sessionGeneration)
     ) return;
     let cancelled = false;
     acknowledgedRevision.current = revision;
     acknowledgeSlide(classSessionId, revision, slide)
       .then((next) => {
-        if (cancelled) return;
+        if (cancelled || !isActiveSession(classSessionId, sessionGeneration) || !bridgeBelongsToSession) return;
         clearTimeout(ackRetryTimer.current);
         setAcknowledged(revision);
-        applyPresentation(next);
+        applyPresentation(next, classSessionId, sessionGeneration);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled || !isActiveSession(classSessionId, sessionGeneration) || !bridgeBelongsToSession) return;
         if (ackRetries.current >= MAX_TELEMETRY_RETRIES) return;
         ackRetries.current += 1;
         clearTimeout(ackRetryTimer.current);
         ackRetryTimer.current = setTimeout(() => {
-          if (cancelled) return;
+          if (cancelled || !isActiveSession(classSessionId, sessionGeneration) || !bridgeBelongsToSession) return;
           acknowledgedRevision.current = -1;
           setAckRetry((current) => current + 1);
         }, TELEMETRY_RETRY_MS) as unknown as number;
@@ -150,23 +204,28 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     };
   }, [
     classSessionId,
-    presentation?.revision,
+    sessionGeneration,
+    presentationForSession?.revision,
     bridge.appliedRevision,
     bridge.teachingSlide,
+    bridgeBelongsToSession,
     ackRetry,
-    applyPresentation
+    applyPresentation,
+    isActiveSession
   ]);
 
   useEffect(() => {
     const checkpoint = bridge.checkpoint;
     if (
       !classSessionId
-      || !presentation
+      || !presentationForSession
       || !checkpoint
       || bridge.teachingSlide !== checkpoint.afterSlide
-      || acknowledged !== presentation.revision
+      || acknowledged !== presentationForSession.revision
+      || !bridgeBelongsToSession
+      || !isActiveSession(classSessionId, sessionGeneration)
     ) return;
-    const reportKey = `${presentation.revision}:${checkpoint.key}:${checkpoint.afterSlide}`;
+    const reportKey = `${presentationForSession.revision}:${checkpoint.key}:${checkpoint.afterSlide}`;
     if (reportedCheckpoint.current === reportKey) return;
     if (checkpointRetries.current.key !== reportKey) {
       checkpointRetries.current = { key: reportKey, count: 0 };
@@ -175,20 +234,20 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     reportedCheckpoint.current = reportKey;
     checkpointReached(
       classSessionId,
-      presentation.revision,
+      presentationForSession.revision,
       checkpoint.key,
       checkpoint.afterSlide
     ).then((next) => {
-      if (cancelled) return;
+      if (cancelled || !isActiveSession(classSessionId, sessionGeneration) || !bridgeBelongsToSession) return;
       clearTimeout(checkpointRetryTimer.current);
-      applyPresentation(next);
+      applyPresentation(next, classSessionId, sessionGeneration);
     }).catch(() => {
-      if (cancelled) return;
+      if (cancelled || !isActiveSession(classSessionId, sessionGeneration) || !bridgeBelongsToSession) return;
       if (checkpointRetries.current.count >= MAX_TELEMETRY_RETRIES) return;
       checkpointRetries.current.count += 1;
       clearTimeout(checkpointRetryTimer.current);
       checkpointRetryTimer.current = setTimeout(() => {
-        if (cancelled) return;
+        if (cancelled || !isActiveSession(classSessionId, sessionGeneration) || !bridgeBelongsToSession) return;
         reportedCheckpoint.current = "";
         setCheckpointRetry((current) => current + 1);
       }, TELEMETRY_RETRY_MS) as unknown as number;
@@ -198,12 +257,15 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     };
   }, [
     classSessionId,
-    presentation?.revision,
+    sessionGeneration,
+    presentationForSession?.revision,
     bridge.checkpoint,
     bridge.teachingSlide,
     acknowledged,
+    bridgeBelongsToSession,
     checkpointRetry,
-    applyPresentation
+    applyPresentation,
+    isActiveSession
   ]);
 
   if (!classSession || !classSession.content_item_id) {
@@ -217,7 +279,9 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     );
   }
 
-  const pulseActive = presentation?.phase === "pulse" ? presentation.pulse : null;
+  const pulseActive = presentationForSession?.phase === "pulse"
+    ? presentationForSession.pulse
+    : null;
 
   return (
     <main class="projector-screen">
@@ -226,12 +290,12 @@ export function Projector({ sessionId }: { sessionId?: string }) {
           contentItemId={classSession.content_item_id}
           title={classSession.content_title || classSession.title || t("projector.deckTitle")}
           frameRef={frameRef}
-          slide={presentation?.requested_slide ?? null}
+          slide={presentationForSession?.requested_slide ?? null}
           onNavigation={bridge.reset}
         />
       </div>
       {pulseActive ? <ProjectorPulse pulse={pulseActive} /> : null}
-      {!presentation && !error ? (
+      {!presentationForSession && !error ? (
         <div class="projector-status" role="status">{t("projector.loading")}</div>
       ) : null}
       {error ? (
