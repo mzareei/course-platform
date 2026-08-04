@@ -1,8 +1,8 @@
 # Status
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-03
 
-### Single-screen classroom display — implemented locally, ready to deploy
+### Single-screen classroom display — deployed and instructor-verified
 
 Run Class is now the teaching display. The separate projector/controller card
 has been removed from the normal workflow. The professor keeps the lecture
@@ -10,16 +10,36 @@ deck full-screen and the same deck document receives an answer-neutral live
 question layer (prompt plus options only) when a checkpoint is sent. Reveal and
 grading remain private in the Checkpoint panel; Continue clears the layer and
 resumes the deck. The old projector route and `course-presentation` function
-remain only as compatibility code until the production reset and cleanup.
+remain only as compatibility code, not part of the normal teaching flow.
 
-Frontend commit deployed to Cloudflare Pages: `7cc93dc`.
+Frontend commit deployed to Cloudflare Pages: `2fb1a83`.
 Supabase migration `0028_class_presentation_state.sql` and edge function
 `course-presentation` are deployed to project `ojmbupftdikwmlqvibwt`.
 
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
-The guarded clean-data reset has not been executed. Real-phone rehearsal and
-deployment/browser verification of the single-screen layer remain before
-declaring the project fully complete.
+The production data reset has now been executed and verified. Instructor-side
+browser rehearsal of the single-screen question layer is complete. A true
+real-phone rehearsal remains a human-device check; Chrome's student tab was
+blocked by an extension UI, so it is not represented as completed here.
+
+### Production clean reset — executed and verified
+
+On 2026-08-03 the signed-in Supabase SQL Editor ran the guarded reset
+transaction after the owner precondition returned exactly one active owner.
+The count-only postcondition query returned one course, one profile, two
+memberships, four groups, and one instructor enrollment; zero sessions,
+releases, attempts, responses, grades, notes, reflections, and audit rows.
+TC2007B teaching assets were preserved: 27 content items, 14 question banks,
+and 223 generated questions (with their options and generation assets).
+Groups are `401: active`, `402: planned`, `501: planned`, and `502: planned`.
+No production class session was created after the reset, so the delivered
+state is clean rather than polluted by a synthetic rehearsal.
+
+The guarded operation is preserved for future environments in backend
+migrations `0030_prepare_clean_platform_reset.sql` and
+`0031_execute_clean_platform_reset.sql`. Production was executed directly in
+the SQL Editor because this session did not have a Supabase CLI access token;
+the verifier and migration remain committed as the reproducible runbook.
 
 ### Projector browser rehearsal — fixed and verified
 
@@ -30,8 +50,8 @@ deployed, Week 1 Lecture 1 was upgraded through the Question banks screen, and
 the live controller/projector pair was verified on slides 2 → 3 with a healthy
 projector heartbeat.
 
-Phases 1–5 are complete and deployed. Phase 6 (cleanup) has not started, and
-several capabilities still live only in the old app.
+Phases 1–5 are complete and deployed. Phase 6 public-site cleanup remains
+separate from the clean teaching-platform reset.
 
 ---
 
@@ -120,11 +140,13 @@ The product design is approved in
 Key decisions: quizzes remain live-only; question banks become
 professor-only; Classes becomes a first-class screen; a 40-slide lecture gets
 approximately four pre-generated concept checkpoints; QR joining returns; and
-Run Class embeds the deck beside context-sensitive controls.
+Run Class renders the deck with context-sensitive controls; live checkpoints
+appear in the same deck surface rather than a separate projector window.
 
-The redesign is live and its full instructor/student lifecycle has been
-rehearsed through separate production browser sessions. A real-phone classroom
-dress rehearsal remains the next operational milestone.
+The redesign is live and its instructor lifecycle has been rehearsed through a
+production browser session. The real-phone classroom dress rehearsal remains
+the next operational milestone and must be performed with actual student
+devices; it is not safe to manufacture that evidence from a desktop tab.
 
 ### 0.1 Content delivery semantics — **DONE, verifier-covered**
 

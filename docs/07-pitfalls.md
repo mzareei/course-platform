@@ -6,6 +6,17 @@ the UI is silently wrong.**
 
 ---
 
+## 47. The clean reset must preserve the course row and teaching assets
+
+Deleting the TC2007B course would cascade into lecture decks, activity
+templates and question banks. The production reset therefore normalizes the
+existing `tc2007b` row and deletes only operational identities, sessions,
+releases, attempts, grades, notes, reflections and audit records. The guarded
+reset function fingerprints retained identifiers before and after deletion and
+rolls back if anything changes.
+
+---
+
 ## 1. Test through the real entry points, not internal routes
 
 **The single most important lesson in this document.**
@@ -1052,3 +1063,13 @@ question must therefore be rendered inside the generated deck engine as well
 as in the parent page. Keep the payload answer-neutral: prompt, bilingual
 prompt, and option text only — never `correct_key`, correctness flags, results,
 student names, or scores.
+
+## 48. A desktop tab is not a real-phone classroom rehearsal
+
+QR joining, late joins, concurrent answers, timer expiry, reflection and podium
+depend on separate student devices and independent browser lifecycles. A
+signed-in instructor tab can prove the deck/checkpoint protocol, but it cannot
+prove phone camera scanning, sleeping phones, network handoff, or simultaneous
+submissions. If browser automation is blocked by an extension UI, record the
+instructor-side evidence and leave the phone rehearsal explicitly pending
+instead of claiming an end-to-end classroom pass.

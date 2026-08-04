@@ -80,6 +80,42 @@ anything in `supabase/functions/_shared/templates/`:
 node tools/build-deck-assets.mjs
 ```
 
+## Clean production reset (one time, after QA)
+
+The reset is guarded by migration `0030_prepare_clean_platform_reset.sql`.
+It preserves TC2007B content, generated assets, question banks and the owner,
+then leaves Groups 401/402/501/502 with no students or historical activity.
+Do not run it while feature QA is still in progress.
+
+From the backend repository, first apply only migration 0030 and run the
+count-only preview through the service-role SQL connection:
+
+```sql
+select public.clean_tc2007b_platform(false);
+```
+
+The preview returns counts and opaque fingerprints only; it does not perform
+DML. Review the owner count, retained-asset fingerprint and operational counts.
+If any precondition fails, stop and fix the data rather than bypassing the
+guard. After the final signed-in rehearsal, apply migration 0031:
+
+```bash
+npx supabase db push --include-all --yes
+```
+
+Migration 0031 calls `public.clean_tc2007b_platform(true)` in the migration
+transaction, asserts that retained fingerprints are unchanged and that all
+historical tables are empty, then drops the one-shot function. Any error rolls
+back the complete reset. In the production project on 2026-08-03, the same
+guarded transaction was executed directly in the signed-in SQL Editor because
+the available CLI session had no `SUPABASE_ACCESS_TOKEN`; the count-only
+postcondition was recorded in `05-status.md` and `PROJECT-HANDOFF.md`.
+Verify the clean state from the real instructor entry point: TC2007B opens,
+Groups 401/402/501/502 are present, Content and Question banks remain, and
+Classes, Gradebook history, Review releases, notes, students and attempts are
+empty. Do not create a synthetic production class merely to make the clean
+state appear non-empty.
+
 ## Test accounts
 
 | Who | Email | How |

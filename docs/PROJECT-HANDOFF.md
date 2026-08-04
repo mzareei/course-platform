@@ -42,32 +42,25 @@ Lecture HTML is always opened through the gated `/content?t=...` path; never use
 
 ## Current deployed state
 
-Frontend `main`: `f26235b` (`fix: synchronize projector and controller both ways`).
-Backend `main`: `09c208e` (`fix: synchronize projector deck navigation`).
+Frontend `main`: `2fb1a83` (single-screen classroom question layer).
+Backend working tree: clean-reset migrations `0030`/`0031` are prepared for
+future environments; production reset evidence is recorded below.
 
 Live app: https://course-platform-3ko.pages.dev
 
-The projector/controller feature is deployed:
+The single-screen classroom feature is deployed:
 
-- `/teach/run/:sessionId/projector` is a read-only projector route.
-- Run Class contains `ControllerNavigation` with projector heartbeat status,
-  previous/next slide requests, and an Open projector link.
-- `class_presentation_state` migration `0028` is applied.
-- `course-presentation` is deployed and returns separate controller/projector
-  response shapes.
-- Projector telemetry is bound to both the active session generation and the
-  deck bridge generation; same-content session changes force a fresh deck mount.
-- Projector safety verifiers reject private result APIs, correctness leaks,
-  stale telemetry, dead polling, computed aliases, and reveal-shadowing tricks.
-- The existing Week 1 Lecture 1 storage deck was upgraded through Content →
-  Question banks → Refresh lecture deck after the first browser rehearsal
-  exposed that old decks did not yet contain the remote-navigation listener.
-- Chrome rehearsal verified live: controller and projector start aligned,
-  heartbeat says connected, and repeated Next commands move both views together.
-- Navigation is bidirectional: clicking visible deck controls on the projector
-  publishes the local slide back to presentation state, while controller
-  commands apply to the projector. The projector receives a safe projector-
-  shaped response and never controller-only quiz details.
+- Run Class renders one lecture deck. A checkpoint question is sent into that
+  same deck as an answer-neutral overlay, so the professor can use ordinary
+  browser fullscreen without a second projector window.
+- Reveal and grading stay private in the Checkpoint panel; Continue removes the
+  overlay and resumes the deck. The generated deck and parent shell validate
+  the protocol and reject correctness or identity leakage.
+- The old projector route and `course-presentation` function remain as
+  compatibility code only; they are not required for the classroom flow.
+- Chrome rehearsal verified the deployed instructor path: bilingual prompt,
+  A/B/C/D options, neutral reveal, and continue/resume were observed in the
+  real deck iframe.
 
 ## Verification baseline
 
@@ -98,21 +91,29 @@ npx supabase functions deploy <function-name> --project-ref ojmbupftdikwmlqvibwt
   private student notes, and end-class lifecycle.
 - Remote projector/controller synchronization and its privacy verifiers.
 
+## Production reset and verification
+
+The clean reset was executed on 2026-08-03 in the signed-in Supabase SQL
+Editor, after the guarded owner precondition returned exactly one active owner.
+The count-only postcondition returned: 1 course, 1 profile, 2 memberships, 4
+groups, 1 instructor enrollment, and zero sessions, releases, attempts,
+responses, grades, notes, reflections, and audit rows. Retained TC2007B assets
+are 27 content items, 14 question banks, and 223 questions (plus options and
+generation assets). Group 401 is active; 402, 501, and 502 are planned.
+
+The backend reset implementation is tracked in migrations `0030` and `0031`,
+and `tools/verify-clean-platform-reset.mjs` passes. Production was executed
+directly because the session had no Supabase CLI access token; no synthetic
+class session was created after the reset.
+
 ## What is pending
 
-1. **Production data reset (destructive, last step).** Preserve TC2007B content,
-   question banks, generation assets, one platform owner, and four clean groups
-   (401 active with the owner; 402/501/502 planned). Delete historical students,
-   memberships, sessions, releases, attempts, responses, grades, notes,
-   reflections, audit history, and QA auth accounts. This has **not** been run.
-2. Finish and review guarded reset migrations `0030`/`0031` in the backend. Do
-   not improvise deletes: validate the actual production schema and run a
-   count-only preview first, then execute only after all signed-in QA.
-3. Real-phone dress rehearsal with the professor and students. Test from the
-   Today screen, not by typing internal routes. Cover sleeping phones, late
-   joins, concurrent answers, projector reload, quiz timing, reflection, and
-   podium.
-4. Phase 6 public-site cleanup: remove teaching content from the public academic
+1. Real-phone classroom dress rehearsal with the professor and enrolled
+   students. Cover QR join from Today, late joins, concurrent answers, quiz
+   timing, reflection, podium, and a projector reload. Desktop instructor
+   rehearsal is complete; Chrome's student tab was blocked by an extension UI,
+   so this evidence must be collected with actual phones.
+2. Phase 6 public-site cleanup: remove teaching content from the public academic
    repository, redirect retired apps, and crawl for gated-content leaks.
 
 ## Safe continuation sequence
@@ -124,7 +125,7 @@ npx supabase functions deploy <function-name> --project-ref ojmbupftdikwmlqvibwt
 3. Run the verification baseline before changing code.
 4. Re-read `docs/superpowers/specs/2026-07-30-production-data-reset-design.md`
    and `docs/superpowers/plans/2026-07-30-production-data-reset.md` before any
-   reset work.
+   future reset work.
 5. Keep this file, `05-status.md`, and `07-pitfalls.md` updated in the same
    commit as meaningful changes. Record commit IDs, deployment IDs, verified
    behavior, and explicit remaining work. Never record student names, emails,
@@ -138,5 +139,6 @@ npx supabase functions deploy <function-name> --project-ref ojmbupftdikwmlqvibwt
   explicit deploy command.
 - The primary local checkout may contain untracked `.superdesign/` and
   `AGENTS.md`; preserve them.
-- Do not claim the platform is clean until the reset postconditions are queried
-  and the clean-state UI is verified.
+- Do not claim a real-phone rehearsal until phones complete the flow. The clean
+  platform claim is backed by the SQL postcondition counts above; create a
+  production class only when the next real class is ready.
