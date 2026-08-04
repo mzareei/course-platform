@@ -897,7 +897,10 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         </div>
       ) : (
         <div class="run-cockpit">
-          <div class="run-deck-column">{deck}</div>
+          <div class="run-deck-column">
+            {deck}
+            <ClassroomQuestionLayer round={classroomRound} />
+          </div>
           <div class="run-control-column">
             {joinUrl ? (
               <JoinCard
@@ -939,7 +942,6 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           </div>
         </div>
       )}
-      {isLive ? <ClassroomQuestionLayer round={classroomRound} /> : null}
     </div>
   );
 }

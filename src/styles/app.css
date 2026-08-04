@@ -488,7 +488,7 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   gap: 1rem;
   align-items: start;
 }
-.run-deck-column { min-width: 0; }
+.run-deck-column { min-width: 0; position: relative; }
 .run-control-column {
   min-width: 0;
   display: flex;
@@ -594,9 +594,9 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
 /* Audience-facing live question. The deck engine renders an equivalent layer
    inside its own document so browser fullscreen does not hide the question. */
 .classroom-question-layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 120;
+  z-index: 10;
   display: grid;
   place-items: center;
   padding: clamp(1.5rem, 5vw, 5rem);
