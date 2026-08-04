@@ -22,9 +22,11 @@ export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) 
           {t("run.classroomQuestion.answerNeutral")}
         </p>
         <div class="classroom-question-options">
-          {round.options.map((option) => (
+          {round.options.map((option, index) => (
             <div class="classroom-question-option" key={option.key}>
-              <span class="classroom-question-key">{option.key}</span>
+              <span class="classroom-question-key">
+                {String.fromCharCode(65 + index)}
+              </span>
               <span>
                 <span>{option.text}</span>
                 {option.text_es ? (
