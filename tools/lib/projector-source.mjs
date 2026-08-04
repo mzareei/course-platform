@@ -63,7 +63,7 @@ function isImmediateMountRefresh(node) {
     && prior.every((candidate) => {
       if (ts.isReturnStatement(candidate) || ts.isThrowStatement(candidate)) return false;
       if (!ts.isIfStatement(candidate)) return true;
-      if (!ts.isReturnStatement(candidate.thenStatement)) return true;
+      if (!ts.isReturnStatement(candidate.thenStatement) && !ts.isThrowStatement(candidate.thenStatement)) return true;
       const condition = candidate.expression.getText().replace(/\s/g, "");
       return condition === "!classSessionId" || condition === "!isActiveSession(classSessionId,sessionGeneration)";
     })
@@ -218,8 +218,18 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
   assert.match(projectorSource, /clearTimeout\(checkpointRetryTimer\.current\)/, "checkpoint retry timer must be cancelled");
   const forbiddenMembers = new Set(["controllerCurrent", "requestSlide", "setPresentationPhase", "callFn", "CheckpointPanel", "pulseResults", "closePulse", "revealPulse", "pushBankQuestion"]);
   const forbiddenAliases = new Set();
+  const forbiddenKeys = new Map();
   for (const node of descendants(projectorFunction.body)) {
-    if (!ts.isVariableDeclaration(node) || !ts.isObjectBindingPattern(node.name)) continue;
+    if (!ts.isVariableDeclaration(node)) continue;
+    if (ts.isIdentifier(node.name) && node.initializer) {
+      if (ts.isPropertyAccessExpression(node.initializer) && forbiddenMembers.has(node.initializer.name.text)) {
+        forbiddenAliases.add(node.name.text);
+      }
+      if (ts.isStringLiteral(node.initializer) && forbiddenMembers.has(node.initializer.text)) {
+        forbiddenKeys.set(node.name.text, node.initializer.text);
+      }
+    }
+    if (!ts.isObjectBindingPattern(node.name)) continue;
     for (const element of node.name.elements) {
       if (!ts.isBindingElement(element)) continue;
       const property = element.propertyName;
@@ -242,7 +252,9 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
       const argument = expression.argumentExpression;
       const member = ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)
         ? argument.text
-        : argument.getText(projector);
+        : ts.isIdentifier(argument) && forbiddenKeys.has(argument.text)
+          ? forbiddenKeys.get(argument.text)
+          : argument.getText(projector);
       if (forbiddenMembers.has(member)) assert.fail(`projector must not execute forbidden member ${member}`);
     }
   }
@@ -257,6 +269,11 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
   assert.equal(jsxNames(projectorFunction.body).includes("button"), false, "projector must not render controls");
 
   const pulseFunction = exportedFunction(pulse, "ProjectorPulse");
+  for (const node of [pulseFunction, ...descendants(pulseFunction)]) {
+    if (ts.isParameter(node) && ts.isIdentifier(node.name) && node.name.text === "revealed") {
+      assert.fail("revealed must not be shadowed by a parameter");
+    }
+  }
   const revealed = descendants(pulseFunction.body).find((node) =>
     ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "revealed"
   );

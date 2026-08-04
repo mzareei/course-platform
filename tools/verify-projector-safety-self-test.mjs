@@ -59,6 +59,14 @@ assert.throws(
 );
 assert.throws(
   () => verifyProjectorSafetySource(
+    mutate(projector, "    void refresh();", "    if (true) throw new Error();\n    void refresh();", "conditional throw poll"),
+    pulse
+  ),
+  /first poll/,
+  "a conditionally unreachable initial poll after throw must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
     mutate(projector, "    void refresh();", "    if (true) return undefined;\n    void refresh();", "conditional unreachable poll"),
     pulse
   ),
@@ -67,11 +75,48 @@ assert.throws(
 );
 assert.throws(
   () => verifyProjectorSafetySource(
+    mutate(
+      projector,
+      '  const classSessionId = sessionId || "";',
+      '  const hiddenController = { requestSlide() {} };\n  const go = hiddenController.requestSlide;\n  go();\n  const classSessionId = sessionId || "";',
+      "property controller alias"
+    ),
+    pulse
+  ),
+  /aliased forbidden|requestSlide|controller/,
+  "property-assigned controller aliases must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    mutate(
+      projector,
+      '  const classSessionId = sessionId || "";',
+      '  const hiddenController = { requestSlide() {} };\n  const key = "requestSlide";\n  hiddenController[key]();\n  const classSessionId = sessionId || "";',
+      "constant-key controller call"
+    ),
+    pulse
+  ),
+  /requestSlide|controller/,
+  "constant-key controller calls must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
     mutate(projector, "void refresh();", "function unused() { void refresh(); }", "nested poll"),
     pulse
   ),
   /first poll/,
   "an unused nested polling function must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    pulse.replace(
+      "function ProjectorPulse({ pulse }: { pulse: ProjectorPulseState }) {",
+      "function ProjectorPulse({ pulse }: { pulse: ProjectorPulseState }, revealed: boolean) {"
+    )
+  ),
+  /shadowed by a parameter/,
+  "parameter shadowing the server reveal flag must fail"
 );
 assert.throws(
   () => verifyProjectorSafetySource(
