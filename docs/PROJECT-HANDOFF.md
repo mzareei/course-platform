@@ -43,7 +43,7 @@ Lecture HTML is always opened through the gated `/content?t=...` path; never use
 ## Current deployed state
 
 Frontend `main`: `e7360d8` (`docs: record projector controller deployment`).
-Backend `main`: `4d3125b` (`feat: deploy synchronized classroom presentation`).
+Backend `main`: `0a01244` (`fix: deploy remote deck navigation protocol`).
 
 Live app: https://course-platform-3ko.pages.dev
 
@@ -59,6 +59,11 @@ The projector/controller feature is deployed:
   deck bridge generation; same-content session changes force a fresh deck mount.
 - Projector safety verifiers reject private result APIs, correctness leaks,
   stale telemetry, dead polling, computed aliases, and reveal-shadowing tricks.
+- The existing Week 1 Lecture 1 storage deck was upgraded through Content →
+  Question banks → Refresh lecture deck after the first browser rehearsal
+  exposed that old decks did not yet contain the remote-navigation listener.
+- Chrome rehearsal verified live: controller and projector start aligned,
+  heartbeat says connected, and repeated Next commands move both views together.
 
 ## Verification baseline
 

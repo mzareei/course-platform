@@ -19,6 +19,15 @@ The remaining production operation is the guarded clean-data reset; it has not
 been executed. Real-phone rehearsal and Phase 6 public-site cleanup also remain
 before declaring the project fully complete.
 
+### Projector browser rehearsal — fixed and verified
+
+On 2026-08-04, Chrome exposed that the Week 1 storage deck predated the remote
+navigation listener. The backend presentation state was changing, but the old
+iframe ignored it. The deck engine and checkpoint-backfill function were
+deployed, Week 1 Lecture 1 was upgraded through the Question banks screen, and
+the live controller/projector pair was verified on slides 2 → 3 with a healthy
+projector heartbeat.
+
 Phases 1–5 are complete and deployed. Phase 6 (cleanup) has not started, and
 several capabilities still live only in the old app.
 

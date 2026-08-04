@@ -1029,3 +1029,10 @@ but no fresh `deck.ready` event arrives, so remote navigation and telemetry
 silently stop. `Projector` keys `InstructorDeck` by session generation and
 guards all acknowledgement/checkpoint retries with both session and bridge
 identity.
+
+The remote projector protocol lives inside the generated deck HTML. Deploying
+`course-presentation` alone is insufficient for decks generated before the
+protocol existed: the API state changes, but the old iframe ignores
+`course-platform:goto-slide` and stays on its first slide. Deploy the updated
+deck engine and run the idempotent **Refresh lecture deck** action for existing
+ready banks before testing projector navigation.
