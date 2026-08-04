@@ -143,6 +143,7 @@ export function People() {
   }, []);
 
   const needsReason =
+    role !== "instructor" &&
     email.trim() !== "" &&
     !(data?.allowed_domains ?? []).some((d) => email.trim().toLowerCase().endsWith(`@${d}`));
   const roster = groupId

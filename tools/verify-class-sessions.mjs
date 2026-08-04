@@ -178,6 +178,11 @@ assert.match(
   /selectedGroupAssignable[\s\S]+isAssignableGroupStatus\(selectedGroup\.status\)/,
   "archived and completed filtered groups must not expose assignment controls"
 );
+assert.match(
+  people,
+  /const needsReason =\s*role !== ["']instructor["']/,
+  "external instructor invites must not require an outside-institution reason"
+);
 assert.match(people, /people\.groupNotAssignable/);
 assert.match(
   people,

@@ -1112,3 +1112,13 @@ request a magic link. The server must then confirm that the address belongs to
 an active or invited instructor/platform-owner membership before bypassing the
 institutional-domain guard. Never make every external student address valid by
 changing only the client-side check.
+
+## 54. The People form must mirror the role-aware email policy
+
+The server permits external instructor invitations, but the People form also
+computes whether an outside-institution reason is required. If that UI check
+looks only at the email domain, an external instructor is correctly accepted by
+the API but the Add person button stays disabled until a misleading reason is
+entered. Keep the client condition role-aware (`role !== "instructor"`) and
+retain the reason requirement for external students, teaching assistants, and
+observers. The class-session verifier guards this contract.

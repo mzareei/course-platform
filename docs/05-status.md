@@ -37,6 +37,12 @@ Instructor sign-in now accepts any valid email domain when the address belongs
 to an invited instructor/platform owner. Student access remains restricted by
 the institutional-domain or explicit external-access-grant policy.
 
+The People screen now follows the same role-aware policy: an external instructor
+can be added without an outside-institution reason, while external students,
+teaching assistants, and observers still require the documented reason/grant.
+This keeps the Add person button usable for guest professors without weakening
+student access controls.
+
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
 browser rehearsal of the single-screen question layer is complete. A true
