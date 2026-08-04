@@ -145,6 +145,7 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
     "acknowledgeSlide",
     "checkpointReached",
     "presentationHeartbeat",
+    "requestSlide",
     "ProjectorPresentationState"
   ]);
   for (const specifier of names.elements) {
@@ -174,7 +175,7 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
   }
 
   const calls = descendants(projectorFunction.body).map(callName).filter(Boolean);
-  for (const required of ["projectorCurrent", "acknowledgeSlide", "checkpointReached", "presentationHeartbeat", "setInterval", "setTimeout", "setAckRetry", "setCheckpointRetry"]) {
+  for (const required of ["projectorCurrent", "acknowledgeSlide", "checkpointReached", "presentationHeartbeat", "requestSlide", "setInterval", "setTimeout", "setAckRetry", "setCheckpointRetry"]) {
     assert.equal(calls.includes(required), true, `projector must execute ${required}`);
   }
   const initialPoll = descendants(projectorFunction.body).find((node) =>
@@ -211,7 +212,7 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
     assert.match(effectBody, /isActiveSession\(classSessionId, sessionGeneration\)/, `${telemetry} must verify active session generation`);
     assert.ok((effectBody.match(/bridgeBelongsToSession/g) || []).length >= 4, `${telemetry} must verify bridge session identity on initial attempt, completion, failure, and retry`);
   }
-  assert.match(projectorSource, /const\s+POLL_MS\s*=\s*2000/, "projector polling must be two seconds");
+  assert.match(projectorSource, /const\s+POLL_MS\s*=\s*750/, "projector polling must be responsive");
   assert.match(projectorSource, /const\s+HEARTBEAT_MS\s*=\s*5000/, "projector heartbeat must be five seconds");
   assert.match(projectorSource, /const\s+MAX_TELEMETRY_RETRIES\s*=\s*[1-9]/, "telemetry retries must be bounded");
   assert.match(projectorSource, /clearTimeout\(ackRetryTimer\.current\)/, "ack retry timer must be cancelled");
@@ -263,7 +264,7 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
       assert.equal(forbiddenAliases.has(node.expression.text), false, `projector must not execute aliased forbidden member ${node.expression.text}`);
     }
   }
-  for (const forbidden of ["controllerCurrent", "requestSlide", "setPresentationPhase", "callFn", "CheckpointPanel", "pulseResults", "closePulse", "revealPulse", "pushBankQuestion"]) {
+  for (const forbidden of ["controllerCurrent", "setPresentationPhase", "callFn", "CheckpointPanel", "pulseResults", "closePulse", "revealPulse", "pushBankQuestion"]) {
     assert.equal(calls.includes(forbidden), false, `projector must not execute ${forbidden}`);
   }
   assert.equal(jsxNames(projectorFunction.body).includes("button"), false, "projector must not render controls");

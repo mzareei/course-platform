@@ -734,6 +734,15 @@ export const strings = {
   "run.close": ["Close the question", "Cerrar la pregunta"],
   "run.askAnother": ["Ask another question", "Hacer otra pregunta"],
   "run.revealed": ["Answer shown to the class", "Respuesta mostrada al grupo"],
+  "run.classroomQuestion.eyebrow": ["Live question", "Pregunta en vivo"],
+  "run.classroomQuestion.answerNeutral": [
+    "Choose the best answer on your phone.",
+    "Elige la mejor respuesta en tu teléfono."
+  ],
+  "run.classroomQuestion.continueHint": [
+    "Continue the lecture when you are ready.",
+    "Continúa la clase cuando estés listo."
+  ],
   "run.whoAnswered": ["Who answered", "Quién respondió"],
   "run.nobodyYet": ["Nobody has answered yet.", "Todavía nadie ha respondido."],
   "run.correctLabel": ["Correct", "Correcta"],

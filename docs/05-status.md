@@ -2,22 +2,24 @@
 
 **Last updated:** 2026-08-04
 
-### Projector/controller — implemented and deployed
+### Single-screen classroom display — implemented locally, ready to deploy
 
-The classroom display is now a separate read-only projector route. Run Class
-includes a private controller card with projector heartbeat status, previous/
-next slide commands, and a direct projector link. Presentation state is
-server-synchronized through `course-presentation`; the projector never receives
-student names, scores, notes, reflections, or unrevealed correctness data.
+Run Class is now the teaching display. The separate projector/controller card
+has been removed from the normal workflow. The professor keeps the lecture
+deck full-screen and the same deck document receives an answer-neutral live
+question layer (prompt plus options only) when a checkpoint is sent. Reveal and
+grading remain private in the Checkpoint panel; Continue clears the layer and
+resumes the deck. The old projector route and `course-presentation` function
+remain only as compatibility code until the production reset and cleanup.
 
 Frontend commit deployed to Cloudflare Pages: `7cc93dc`.
 Supabase migration `0028_class_presentation_state.sql` and edge function
 `course-presentation` are deployed to project `ojmbupftdikwmlqvibwt`.
 
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
-The remaining production operation is the guarded clean-data reset; it has not
-been executed. Real-phone rehearsal and Phase 6 public-site cleanup also remain
-before declaring the project fully complete.
+The guarded clean-data reset has not been executed. Real-phone rehearsal and
+deployment/browser verification of the single-screen layer remain before
+declaring the project fully complete.
 
 ### Projector browser rehearsal — fixed and verified
 

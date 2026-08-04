@@ -1042,3 +1042,13 @@ as a local navigation event and written through the safe projector-shaped
 `request_slide` response; otherwise the controller can remain on an older
 slide even though the projector moved. Keep remote-vs-local navigation marked
 explicitly in the deck bridge.
+
+## 46. A parent overlay disappears in browser fullscreen
+
+The lecture deck is an iframe. A question layer rendered only by the parent
+Run Class page is hidden when the professor presses the deck's fullscreen
+button, because fullscreen promotes the iframe document itself. The live
+question must therefore be rendered inside the generated deck engine as well
+as in the parent page. Keep the payload answer-neutral: prompt, bilingual
+prompt, and option text only — never `correct_key`, correctness flags, results,
+student names, or scores.

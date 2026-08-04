@@ -30,6 +30,15 @@ export type ParentToDeckMessage =
   | { version: 1; type: "checkpoint.question_ready"; checkpoint_key: string }
   | { version: 1; type: "checkpoint.question_sent"; checkpoint_key: string }
   | { version: 1; type: "checkpoint.answer_revealed"; checkpoint_key: string }
+  | {
+    version: 1;
+    type: "checkpoint.question_display";
+    checkpoint_key: string;
+    prompt: string;
+    prompt_es: string | null;
+    options: Array<{ key: string; text: string; text_es: string | null }>;
+  }
+  | { version: 1; type: "checkpoint.question_clear"; checkpoint_key: string }
   | { version: 1; type: "checkpoint.resume"; checkpoint_key: string }
   // This command intentionally has no protocol version so it matches the
   // presentation-state wire contract shared by controller and projector.

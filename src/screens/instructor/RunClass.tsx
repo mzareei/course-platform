@@ -1,7 +1,7 @@
 // Run Class is the instructor's one-screen cockpit: the session's private
 // lecture deck, slide-aware live question controls, final quiz, reflection
 // arrivals, QR entry, and the irreversible end-class action.
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import QRCode from "qrcode";
 import { startClassSession } from "../../api/classes";
 import {
@@ -19,10 +19,10 @@ import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
 import { endClassSession } from "../../api/session";
 import { StatusPill } from "../../components/StatusPill";
 import { InstructorDeck } from "../../features/deck/InstructorDeck";
-import { ControllerNavigation } from "../../features/presentation/ControllerNavigation";
 import type { CheckpointQuestion } from "../../features/deck/protocol";
 import { useDeckBridge } from "../../features/deck/useDeckBridge";
 import { CheckpointPanel } from "../../features/live/CheckpointPanel";
+import { ClassroomQuestionLayer } from "../../features/live/ClassroomQuestionLayer";
 import {
   checkpointQuestionMatches,
   isCheckpointOperationCurrent,
@@ -110,9 +110,6 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   );
   const frameRef = useRef<HTMLIFrameElement>(null);
   const bridge = useDeckBridge(frameRef);
-  const syncControllerDeck = useCallback((slide: number, revision: number) => {
-    if (bridge.deckReady) bridge.goToTeachingSlide(slide, revision);
-  }, [bridge.deckReady, bridge.goToTeachingSlide]);
 
   const [bank, setBank] = useState<BankSummary | null>(null);
   const [banksLoaded, setBanksLoaded] = useState(false);
@@ -155,6 +152,36 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const bridgeFailure =
     bridge.bridgeError
     || (bridgeTimedOut ? t("run.checkpoint.bridgeFailed") : null);
+  const classroomRound =
+    checkpointState.type === "open" || checkpointState.type === "revealed"
+      ? checkpointState.round
+      : null;
+
+  function sendClassroomQuestion(round: PulseRound, checkpoint: ActiveCheckpoint) {
+    if (!bridge.deckReady || bridge.checkpoint?.key !== checkpoint.key) return;
+    bridge.send({
+      version: 1,
+      type: "checkpoint.question_display",
+      checkpoint_key: checkpoint.key,
+      prompt: round.text,
+      prompt_es: round.text_es ?? null,
+      options: round.options.map((option) => ({
+        key: option.key,
+        text: option.text,
+        text_es: option.text_es ?? null
+      }))
+    });
+  }
+
+  useEffect(() => {
+    if (!classroomRound || !activeCheckpoint) return;
+    sendClassroomQuestion(classroomRound, activeCheckpoint);
+  }, [
+    classroomRound?.round_id,
+    activeCheckpoint?.key,
+    bridge.deckReady,
+    bridge.checkpoint?.key
+  ]);
 
   useEffect(() => {
     if (!joinUrl) {
@@ -632,6 +659,13 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         )
       ) return;
       recovery.current = null;
+      if (bridge.deckReady && bridge.checkpoint?.key === checkpoint.key) {
+        bridge.send({
+          version: 1,
+          type: "checkpoint.question_clear",
+          checkpoint_key: checkpoint.key
+        });
+      }
       if (!deckAlreadyResumed && bridge.deckReady) {
         bridge.send({
           version: 1,
@@ -875,12 +909,6 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
               />
             ) : null}
 
-            <ControllerNavigation
-              sessionId={sessionId}
-              currentSlide={bridge.teachingSlide}
-              onSlide={syncControllerDeck}
-            />
-
             {!banksLoaded ? (
               <section class="checkpoint-panel card">
                 <p class="hint" role="status">{t("run.loadingBanks")}</p>
@@ -911,6 +939,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           </div>
         </div>
       )}
+      {isLive ? <ClassroomQuestionLayer round={classroomRound} /> : null}
     </div>
   );
 }
