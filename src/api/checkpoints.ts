@@ -28,10 +28,71 @@ export type CheckpointBankSummary = {
   checkpoint_coverage: CheckpointCoverage[];
 };
 
+export type BankQuestionOption = {
+  id: string;
+  option_text: string;
+  option_text_es: string | null;
+  is_correct: boolean;
+  position: number;
+};
+
+export type BankQuestion = {
+  id: string;
+  generation_key: string;
+  prompt: string;
+  prompt_es: string | null;
+  explanation: string | null;
+  explanation_es: string | null;
+  difficulty: "easy" | "medium" | "hard";
+  segment_key: string | null;
+  source_slide_numbers: number[];
+  source_slide_start: number | null;
+  source_slide_end: number | null;
+  checkpoint_after_slide: number | null;
+  status: string;
+  source: string | null;
+  updated_at: string;
+  question_options: BankQuestionOption[];
+};
+
 export function listBanks() {
   return callFn<{ banks: CheckpointBankSummary[] }>("course-question-bank", {
     action: "list_banks"
   });
+}
+
+export function listQuestions(questionBankId: string) {
+  return callFn<{ bank_id: string; bank_title: string; questions: BankQuestion[] }>(
+    "course-question-bank",
+    { action: "list_questions", question_bank_id: questionBankId }
+  );
+}
+
+export function updateQuestion(input: {
+  question_bank_id: string;
+  question_id: string;
+  prompt: string;
+  prompt_es?: string | null;
+  explanation?: string | null;
+  explanation_es?: string | null;
+  difficulty: "easy" | "medium" | "hard";
+  options: Array<{
+    text: string;
+    text_es?: string | null;
+    is_correct: boolean;
+  }>;
+}) {
+  return callFn<{ question_id: string; bank_id: string; updated: boolean }>(
+    "course-question-bank",
+    { action: "update_question", ...input }
+  );
+}
+
+export function deleteQuestion(input: { question_bank_id: string; question_id: string }) {
+  return callFn<{ question_id: string; bank_id: string; deleted: boolean }>(
+    "course-question-bank",
+    { action: "delete_question", ...input }
+  );
 }
 
 export type BackfillResult = {

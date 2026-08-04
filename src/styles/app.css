@@ -678,6 +678,41 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   .classroom-question-options { grid-template-columns: 1fr; }
 }
 
+/* Professor-only question bank review and editing. */
+.question-bank-review { gap: 0.9rem; }
+.question-bank-question-list { gap: 0.75rem; }
+.question-bank-question { gap: 0.75rem; background: var(--surface); }
+.question-bank-question h4 { margin: 0.25rem 0 0; font-size: 1.05rem; }
+.question-bank-question-tags { flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
+.question-bank-answer-list { display: grid; gap: 0.35rem; }
+.question-bank-answer {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+.question-bank-answer.correct {
+  border-color: var(--good);
+  background: var(--good-soft);
+}
+.question-bank-answer small { display: block; margin-top: 0.15rem; color: var(--text-muted); }
+.question-bank-editor { border-top: 1px solid var(--border); padding-top: 0.8rem; }
+.question-bank-difficulty { max-width: 18rem; }
+.question-bank-editor-options { gap: 0.65rem; }
+.question-bank-editor-option {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+}
+.checkbox-label { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-muted); font-size: 0.88rem; }
+
 @media (max-width: 960px) {
   .run-class-shell {
     width: 100%;

@@ -13,6 +13,7 @@ import {
 } from "../features/deck/bankReadiness";
 import { t } from "../i18n";
 import { activeRoles } from "../state/session";
+import { QuestionBankReview } from "./QuestionBankReview";
 
 export function QuestionBanks() {
   const [banks, setBanks] = useState<CheckpointBankSummary[] | null>(null);
@@ -83,6 +84,7 @@ function QuestionBankCard({
   const [preparing, setPreparing] = useState(false);
   const [prepareError, setPrepareError] = useState<string | null>(null);
   const [prepared, setPrepared] = useState<BackfillResult | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const ready = readiness === "ready" || prepared !== null;
   const pending = readiness === "pending";
   const canRefreshDeck = instructorCanPrepare && ready && prepared === null;
@@ -139,6 +141,18 @@ function QuestionBankCard({
       <p class="hint">
         {t("content.banks.checkpointCount", { count: checkpointCount })}
       </p>
+
+      {instructorCanPrepare ? (
+        <button
+          class="btn"
+          type="button"
+          onClick={() => setReviewOpen((open) => !open)}
+        >
+          {reviewOpen
+            ? t("content.banks.closeReview")
+            : t("content.banks.reviewQuestions")}
+        </button>
+      ) : null}
 
       {bank.checkpoint_coverage.length ? (
         <div class="stack" style="gap: 0.4rem;">
@@ -215,6 +229,10 @@ function QuestionBankCard({
 
       {prepareError ? (
         <p class="error-text" role="alert">{prepareError}</p>
+      ) : null}
+
+      {reviewOpen ? (
+        <QuestionBankReview bankId={bank.bank_id} onChanged={onRefresh} />
       ) : null}
     </article>
   );

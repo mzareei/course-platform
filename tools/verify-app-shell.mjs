@@ -115,6 +115,8 @@ requireMarker("src/screens/student/Today.tsx", "action-dock", "Today has exactly
 const runClassSource = read("src/screens/instructor/RunClass.tsx");
 const checkpointPanelSource = read("src/features/live/CheckpointPanel.tsx");
 const classroomQuestionSource = read("src/features/live/ClassroomQuestionLayer.tsx");
+const questionBanksSource = read("src/components/QuestionBanks.tsx");
+const questionBankReviewSource = read("src/components/QuestionBankReview.tsx");
 const appStyles = read("src/styles/app.css");
 assert.match(runClassSource, /<InstructorDeck/);
 assert.match(runClassSource, /<CheckpointPanel/);
@@ -139,6 +141,10 @@ assert.match(
   /classroom-question-layer-fullscreen/,
   "the live question must have an app-viewport full-screen fallback"
 );
+assert.match(questionBanksSource, /QuestionBankReview/, "question banks must expose expert review");
+assert.match(questionBankReviewSource, /listQuestions\(/, "question banks must load reviewable questions");
+assert.match(questionBankReviewSource, /updateQuestion\(/, "question banks must save expert edits");
+assert.match(questionBankReviewSource, /deleteQuestion\(/, "question banks must allow removing questions");
 assert.doesNotMatch(runClassSource, /<option value="hard">[^]*<option value="hard">/);
 assert.match(runClassSource, /startClassSession/);
 assert.match(runClassSource, /pushBankQuestion\(\{/);
