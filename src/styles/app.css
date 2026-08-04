@@ -600,7 +600,9 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   display: grid;
   place-items: center;
   padding: clamp(1.5rem, 5vw, 5rem);
-  background: var(--surface-0);
+  /* Keep the parent layer opaque so the deck's own fullscreen layer is not
+     composited underneath it in normal (non-fullscreen) Run Class mode. */
+  background: var(--surface);
   color: var(--text);
 }
 .classroom-question-shell {

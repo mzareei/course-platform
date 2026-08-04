@@ -1,6 +1,6 @@
 # Status
 
-**Last updated:** 2026-08-03
+**Last updated:** 2026-08-04
 
 ### Single-screen classroom display — deployed and instructor-verified
 
@@ -15,6 +15,10 @@ remain only as compatibility code, not part of the normal teaching flow.
 Frontend commit deployed to Cloudflare Pages: `2fb1a83`.
 Supabase migration `0028_class_presentation_state.sql` and edge function
 `course-presentation` are deployed to project `ojmbupftdikwmlqvibwt`.
+
+The normal-mode question overlay's opaque surface regression was fixed after a
+browser screenshot showed the iframe's fullscreen layer compositing underneath
+it. The app-shell verifier now guards the surface token contract.
 
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side

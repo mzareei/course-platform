@@ -1073,3 +1073,12 @@ prove phone camera scanning, sleeping phones, network handoff, or simultaneous
 submissions. If browser automation is blocked by an extension UI, record the
 instructor-side evidence and leave the phone rehearsal explicitly pending
 instead of claiming an end-to-end classroom pass.
+
+## 49. The normal Run Class overlay must have an opaque app token
+
+The fullscreen deck owns a question layer inside its iframe. Normal Run Class
+also mounts a parent layer so the question remains visible outside fullscreen.
+If the parent background references an undefined token, CSS drops the
+background declaration and both layers show through each other: the prompt is
+painted twice and appears to stack or flicker. Keep the parent layer on a
+defined app surface token and retain the verifier that rejects `--surface-0`.

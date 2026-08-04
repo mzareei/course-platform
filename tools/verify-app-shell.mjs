@@ -113,6 +113,7 @@ requireMarker("src/screens/student/Today.tsx", "action-dock", "Today has exactly
 // checkpoint panel must stay together, and starting must use the atomic session
 // transition rather than a client-authored state update.
 const runClassSource = read("src/screens/instructor/RunClass.tsx");
+const appStyles = read("src/styles/app.css");
 assert.match(runClassSource, /<InstructorDeck/);
 assert.match(runClassSource, /<CheckpointPanel/);
 assert.doesNotMatch(runClassSource, /<option value="hard">[^]*<option value="hard">/);
@@ -184,6 +185,11 @@ assert.doesNotMatch(
   runClassSource,
   /\bconfirm\(/,
   "ending a class must use an accessible in-app confirmation state"
+);
+assert.doesNotMatch(
+  appStyles,
+  /\.classroom-question-layer\s*\{[^}]*background:\s*var\(--surface-0\)/s,
+  "the live-question layer must use a defined opaque surface token"
 );
 
 if (failures.length) {
