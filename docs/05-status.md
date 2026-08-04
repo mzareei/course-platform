@@ -1,6 +1,18 @@
 # Status
 
-**Last updated:** 2026-07-29
+**Last updated:** 2026-08-04
+
+### Projector/controller — implemented and deployed
+
+The classroom display is now a separate read-only projector route. Run Class
+includes a private controller card with projector heartbeat status, previous/
+next slide commands, and a direct projector link. Presentation state is
+server-synchronized through `course-presentation`; the projector never receives
+student names, scores, notes, reflections, or unrevealed correctness data.
+
+Frontend commit deployed to Cloudflare Pages: `7cc93dc`.
+Supabase migration `0028_class_presentation_state.sql` and edge function
+`course-presentation` are deployed to project `ojmbupftdikwmlqvibwt`.
 
 Phases 1–5 are complete and deployed. Phase 6 (cleanup) has not started, and
 several capabilities still live only in the old app.

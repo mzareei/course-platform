@@ -1021,3 +1021,11 @@ transition to `closed`.
 Production proof used a QA730E release opening in 2035. Content labeled the
 material scheduled and not available; cancellation returned it to `draft`
 without the previous deterministic transition failure.
+## Projector/controller deployment (2026-08-04)
+
+The projector must be remounted when the active class session changes, even if
+both sessions use the same lecture. Otherwise the deck bridge has been reset
+but no fresh `deck.ready` event arrives, so remote navigation and telemetry
+silently stop. `Projector` keys `InstructorDeck` by session generation and
+guards all acknowledgement/checkpoint retries with both session and bridge
+identity.
