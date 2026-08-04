@@ -1090,3 +1090,10 @@ room projector. The generated bank includes `is_correct` for grading, but the
 pre-send question preview must never use it for styling or labels. Otherwise
 students see the answer before they respond. Keep the preview neutral and only
 show correctness in the private results/reveal state.
+
+## 51. A question can be readable without the side controls
+
+Run Class keeps the instructor controls beside the deck, but that layout is
+too narrow for long bilingual questions. The audience layer therefore needs a
+user-initiated browser Full screen action. Keep it on the neutral layer, with
+Escape and a matching toggle to return to the cockpit.

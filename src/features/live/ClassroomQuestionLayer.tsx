@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "preact/hooks";
 import type { PulseRound } from "../../api/pulse";
 import { t } from "../../i18n";
 
@@ -7,9 +8,31 @@ import { t } from "../../i18n";
  * The deck engine renders the same neutral layer inside browser fullscreen.
  */
 export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) {
+  const layerRef = useRef<HTMLElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === layerRef.current);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    const layer = layerRef.current;
+    if (!layer) return;
+    if (document.fullscreenElement === layer) {
+      await document.exitFullscreen();
+    } else {
+      await layer.requestFullscreen();
+    }
+  }
+
   if (!round) return null;
   return (
     <section
+      ref={layerRef}
       class="classroom-question-layer"
       data-testid="classroom-question-layer"
       aria-live="polite"
@@ -39,6 +62,18 @@ export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) 
         <p class="classroom-question-hint">
           {t("run.classroomQuestion.continueHint")}
         </p>
+        <div class="classroom-question-actions">
+          <button
+            class="btn classroom-question-fullscreen"
+            type="button"
+            aria-pressed={isFullscreen}
+            onClick={() => void toggleFullscreen()}
+          >
+            {isFullscreen
+              ? t("run.classroomQuestion.exitFullscreen")
+              : t("run.classroomQuestion.fullscreen")}
+          </button>
+        </div>
       </div>
     </section>
   );

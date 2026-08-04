@@ -24,6 +24,10 @@ The question preview is now answer-neutral too: before the professor sends a
 checkpoint, the Run Class screen shows only the prompt and options. Correct
 answer styling is reserved for the private post-reveal results state.
 
+Live questions now include a Full screen action. It promotes the neutral
+question layer to the browser viewport so the room sees one readable question;
+Escape or the same button returns to the normal teaching cockpit.
+
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
 browser rehearsal of the single-screen question layer is complete. A true

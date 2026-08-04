@@ -114,6 +114,7 @@ requireMarker("src/screens/student/Today.tsx", "action-dock", "Today has exactly
 // transition rather than a client-authored state update.
 const runClassSource = read("src/screens/instructor/RunClass.tsx");
 const checkpointPanelSource = read("src/features/live/CheckpointPanel.tsx");
+const classroomQuestionSource = read("src/features/live/ClassroomQuestionLayer.tsx");
 const appStyles = read("src/styles/app.css");
 assert.match(runClassSource, /<InstructorDeck/);
 assert.match(runClassSource, /<CheckpointPanel/);
@@ -122,6 +123,16 @@ assert.doesNotMatch(
   checkpointPreviewSource,
   /option\.is_correct|run\.correctAnswer/,
   "the audience-visible question preview must not reveal the correct answer"
+);
+assert.match(
+  classroomQuestionSource,
+  /requestFullscreen\(\)/,
+  "the live question must offer a browser full-screen action"
+);
+assert.match(
+  classroomQuestionSource,
+  /run\.classroomQuestion\.fullscreen/,
+  "the full-screen action must have bilingual classroom copy"
 );
 assert.doesNotMatch(runClassSource, /<option value="hard">[^]*<option value="hard">/);
 assert.match(runClassSource, /startClassSession/);

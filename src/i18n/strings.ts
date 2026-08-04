@@ -743,6 +743,11 @@ export const strings = {
     "Continue the lecture when you are ready.",
     "Continúa la clase cuando estés listo."
   ],
+  "run.classroomQuestion.fullscreen": ["Full screen", "Pantalla completa"],
+  "run.classroomQuestion.exitFullscreen": [
+    "Exit full screen",
+    "Salir de pantalla completa"
+  ],
   "run.whoAnswered": ["Who answered", "Quién respondió"],
   "run.nobodyYet": ["Nobody has answered yet.", "Todavía nadie ha respondido."],
   "run.correctLabel": ["Correct", "Correcta"],
