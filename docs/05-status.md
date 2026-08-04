@@ -14,6 +14,11 @@ Frontend commit deployed to Cloudflare Pages: `7cc93dc`.
 Supabase migration `0028_class_presentation_state.sql` and edge function
 `course-presentation` are deployed to project `ojmbupftdikwmlqvibwt`.
 
+The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
+The remaining production operation is the guarded clean-data reset; it has not
+been executed. Real-phone rehearsal and Phase 6 public-site cleanup also remain
+before declaring the project fully complete.
+
 Phases 1–5 are complete and deployed. Phase 6 (cleanup) has not started, and
 several capabilities still live only in the old app.
 

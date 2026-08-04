@@ -6,7 +6,8 @@ Paste everything below the line into a fresh session.
 
 I'm Mahdi Zareei, a research professor at Tecnológico de Monterrey. You're
 picking up an in-progress project from a previous AI session. Everything you
-need is documented in the repo — read it before doing anything.
+need is documented in the repo — read it before doing anything. **Read
+`docs/PROJECT-HANDOFF.md` first; it is the current source of truth.**
 
 ## Open this folder
 

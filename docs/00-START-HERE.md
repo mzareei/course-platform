@@ -14,6 +14,7 @@ files in order. Together they are meant to replace having been in the room.
 | `05-status.md` | What is finished, what is left, in priority order |
 | `06-runbook.md` | Build, deploy, test, verify — the exact commands |
 | `07-pitfalls.md` | Traps that have already cost hours. **Read this before debugging anything.** |
+| `PROJECT-HANDOFF.md` | Durable current state, decisions, deployments, pending work, and continuation sequence |
 | `HANDOFF-PROMPT.md` | Paste into a fresh session to continue the work |
 
 ## The 60-second version
