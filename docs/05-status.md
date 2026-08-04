@@ -55,6 +55,8 @@ with role `instructor`; the `platform_owner` is the only global course
 administrator. This applies consistently to Home sessions, Classes, People,
 releases, gradebook, insights, and roster mutations. The policy is enforced in
 the edge functions rather than relying on the client hiding other groups.
+The deployed backend scope hardening is tracked in commits `03295ad`,
+`1a524d8`, and `9d40cc0`.
 
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
