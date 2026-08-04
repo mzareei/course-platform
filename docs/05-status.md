@@ -28,6 +28,11 @@ Live questions now include a Full screen action. It promotes the neutral
 question layer to the browser viewport so the room sees one readable question;
 Escape or the same button returns to the normal teaching cockpit.
 
+Question Banks now has an instructor-only review editor. It lists every active
+question used by both during-class checkpoints and the end-of-class quiz,
+shows the correct option for expert review, supports bilingual prompt/option
+edits, and archives questions that should no longer be used.
+
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
 browser rehearsal of the single-screen question layer is complete. A true

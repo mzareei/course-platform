@@ -1097,3 +1097,10 @@ Run Class keeps the instructor controls beside the deck, but that layout is
 too narrow for long bilingual questions. The audience layer therefore needs a
 user-initiated browser Full screen action. Keep it on the neutral layer, with
 Escape and a matching toggle to return to the cockpit.
+
+## 52. Question-bank edits must preserve historical references
+
+Question options can be referenced by student responses. Expert removal is
+therefore a status archive, not a hard delete, and edits update existing option
+rows in place. The edge function validates four options and exactly one correct
+answer before writing and records an audit event for every edit or archive.
