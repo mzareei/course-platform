@@ -1,7 +1,7 @@
 // Run Class is the instructor's one-screen cockpit: the session's private
 // lecture deck, slide-aware live question controls, final quiz, reflection
 // arrivals, QR entry, and the irreversible end-class action.
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import QRCode from "qrcode";
 import { startClassSession } from "../../api/classes";
 import {
@@ -110,6 +110,9 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   );
   const frameRef = useRef<HTMLIFrameElement>(null);
   const bridge = useDeckBridge(frameRef);
+  const syncControllerDeck = useCallback((slide: number, revision: number) => {
+    if (bridge.deckReady) bridge.goToTeachingSlide(slide, revision);
+  }, [bridge.deckReady, bridge.goToTeachingSlide]);
 
   const [bank, setBank] = useState<BankSummary | null>(null);
   const [banksLoaded, setBanksLoaded] = useState(false);
@@ -875,6 +878,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
             <ControllerNavigation
               sessionId={sessionId}
               currentSlide={bridge.teachingSlide}
+              onSlide={syncControllerDeck}
             />
 
             {!banksLoaded ? (

@@ -16,7 +16,7 @@ export function ControllerNavigation({
 }: {
   sessionId: string;
   currentSlide: number | null;
-  onSlide?: (slide: number) => void;
+  onSlide?: (slide: number, revision: number) => void;
 }) {
   const [state, setState] = useState<ControllerPresentationState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,12 +26,18 @@ export function ControllerNavigation({
   useEffect(() => {
     let cancelled = false;
     const refresh = () => controllerCurrent(sessionId)
-      .then((next) => { if (!cancelled) { setState(next); setError(false); } })
+      .then((next) => {
+        if (!cancelled) {
+          setState(next);
+          onSlide?.(next.requested_slide, next.revision);
+          setError(false);
+        }
+      })
       .catch(() => { if (!cancelled) setError(true); });
     void refresh();
     const timer = setInterval(refresh, POLL_MS);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [sessionId]);
+  }, [sessionId, onSlide]);
 
   async function move(delta: number) {
     const base = currentSlide || state?.requested_slide || 1;
@@ -40,7 +46,7 @@ export function ControllerNavigation({
     try {
       const next = await requestSlide(sessionId, state?.revision || 0, nextSlide);
       setState(next);
-      onSlide?.(nextSlide);
+      onSlide?.(nextSlide, next.revision);
       setError(false);
     } catch {
       setError(true);
