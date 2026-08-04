@@ -770,6 +770,16 @@ export const strings = {
   "run.start": ["Start class", "Iniciar clase"],
   "run.starting": ["Starting class…", "Iniciando la clase…"],
   "run.startFailed": ["Could not start the class.", "No se pudo iniciar la clase."],
+  "run.controller.eyebrow": ["Projector control", "Control del proyector"],
+  "run.controller.title": ["Classroom display", "Pantalla del salón"],
+  "run.controller.body": ["Open the projector view on the classroom screen, then move the lecture from here.", "Abre la vista del proyector en la pantalla del salón y mueve la clase desde aquí."],
+  "run.controller.projectorLive": ["Projector connected", "Proyector conectado"],
+  "run.controller.projectorOffline": ["Projector not connected", "Proyector no conectado"],
+  "run.controller.previous": ["Previous", "Anterior"],
+  "run.controller.next": ["Next", "Siguiente"],
+  "run.controller.slide": ["Slide {slide}", "Diapositiva {slide}"],
+  "run.controller.openProjector": ["Open projector view", "Abrir vista del proyector"],
+  "run.controller.failed": ["Projector control is temporarily unavailable.", "El control del proyector no está disponible temporalmente."],
   "run.loadingBanksFailed": [
     "Could not load this lecture's question bank.",
     "No se pudo cargar el banco de preguntas de esta clase."

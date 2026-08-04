@@ -19,6 +19,7 @@ import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
 import { endClassSession } from "../../api/session";
 import { StatusPill } from "../../components/StatusPill";
 import { InstructorDeck } from "../../features/deck/InstructorDeck";
+import { ControllerNavigation } from "../../features/presentation/ControllerNavigation";
 import type { CheckpointQuestion } from "../../features/deck/protocol";
 import { useDeckBridge } from "../../features/deck/useDeckBridge";
 import { CheckpointPanel } from "../../features/live/CheckpointPanel";
@@ -870,6 +871,11 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                 compact
               />
             ) : null}
+
+            <ControllerNavigation
+              sessionId={sessionId}
+              currentSlide={bridge.teachingSlide}
+            />
 
             {!banksLoaded ? (
               <section class="checkpoint-panel card">
