@@ -1122,3 +1122,12 @@ the API but the Add person button stays disabled until a misleading reason is
 entered. Keep the client condition role-aware (`role !== "instructor"`) and
 retain the reason requirement for external students, teaching assistants, and
 observers. The class-session verifier guards this contract.
+
+## 55. An invited roster row is not an invitation email
+
+Creating a `profiles` row with `status = 'invited'` only makes the address
+eligible to claim the course. It does not contact the mailbox. Any instructor
+invite flow must call Supabase Auth's `inviteUserByEmail`; when Auth already has
+that address, fall back to `signInWithOtp` so re-added instructors still get a
+fresh link. Surface the delivery result and provide a resend action—otherwise
+the UI can look successful while the professor receives nothing.

@@ -8,7 +8,8 @@ import {
   addRosterPerson,
   assignPersonSection,
   listRoster,
-  removeRosterPerson
+  removeRosterPerson,
+  resendInstructorInvitation
 } from "../../api/roster";
 import { StatusPill } from "../../components/StatusPill";
 import { RosterImport } from "../../components/RosterImport";
@@ -105,6 +106,7 @@ export function People() {
   const [reason, setReason] = useState("");
 
   const [removing, setRemoving] = useState<string | null>(null);
+  const [inviting, setInviting] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
   const [profileToAssign, setProfileToAssign] = useState("");
   const [selectedNoteProfile, setSelectedNoteProfile] = useState<RosterPerson | null>(null);
@@ -190,13 +192,38 @@ export function People() {
         external_access_reason: needsReason ? reason.trim() : undefined
       });
       if (!result.added) throw new Error(result.reason || t("people.addFailed"));
-      setNotice(t("people.added", { name: name.trim() || email.trim() }));
+      const addedName = name.trim() || email.trim();
+      setNotice(
+        role === "instructor" && result.invite_email_sent === true
+          ? t("people.addedWithInvitation", { name: addedName })
+          : role === "instructor" && result.invite_email_sent === false
+            ? t("people.addedInvitationFailed", { name: addedName })
+            : t("people.added", { name: addedName })
+      );
       setEmail(""); setName(""); setStudentId(""); setReason("");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("people.addFailed"));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function resendInvitation(person: RosterPerson) {
+    setNotice(null);
+    setError(null);
+    setInviting(person.profile_id);
+    try {
+      const result = await resendInstructorInvitation(person.profile_id);
+      setNotice(
+        result.sent
+          ? t("people.invitationResent", { name: person.full_name })
+          : t("people.invitationResendFailed", { name: person.full_name })
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("people.invitationResendFailed", { name: person.full_name }));
+    } finally {
+      setInviting(null);
     }
   }
 
@@ -416,16 +443,32 @@ export function People() {
                   <td>
                     {/* The server refuses self-removal and platform owners; hiding
                         the button for yourself just avoids an avoidable error. */}
-                    {person.profile_id !== myProfileId && person.membership_status === "active" ? (
-                      <button
-                        class="btn quiet"
-                        type="button"
-                        disabled={removing === person.profile_id}
-                        onClick={() => void removePerson(person.profile_id, person.full_name)}
-                      >
-                        {removing === person.profile_id ? t("people.removing") : t("people.remove")}
-                      </button>
-                    ) : null}
+                    <div class="row">
+                      {person.course_role === "instructor" &&
+                      person.profile_status === "invited" &&
+                      !person.claimed ? (
+                        <button
+                          class="btn quiet"
+                          type="button"
+                          disabled={Boolean(inviting) || Boolean(removing)}
+                          onClick={() => void resendInvitation(person)}
+                        >
+                          {inviting === person.profile_id
+                            ? t("people.sendingInvitation")
+                            : t("people.resendInvitation")}
+                        </button>
+                      ) : null}
+                      {person.profile_id !== myProfileId && person.membership_status === "active" ? (
+                        <button
+                          class="btn quiet"
+                          type="button"
+                          disabled={removing === person.profile_id || Boolean(inviting)}
+                          onClick={() => void removePerson(person.profile_id, person.full_name)}
+                        >
+                          {removing === person.profile_id ? t("people.removing") : t("people.remove")}
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

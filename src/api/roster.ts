@@ -54,7 +54,12 @@ export function addRosterPerson(input: {
   section_code: string;
   external_access_reason?: string;
 }) {
-  return callFn<{ added: boolean; reason?: string }>("course-roster-management", {
+  return callFn<{
+    added: boolean;
+    reason?: string;
+    invite_email_sent?: boolean | null;
+    invite_email_method?: "invitation" | "magic_link" | null;
+  }>("course-roster-management", {
     action: "add_person",
     ...input
   });
@@ -65,6 +70,18 @@ export function removeRosterPerson(profileId: string) {
     "course-roster-management",
     { action: "remove_person", profile_id: profileId }
   );
+}
+
+export function resendInstructorInvitation(profileId: string) {
+  return callFn<{
+    sent: boolean;
+    method: "invitation" | "magic_link" | null;
+    email: string;
+    full_name: string;
+  }>("course-roster-management", {
+    action: "resend_instructor_invitation",
+    profile_id: profileId
+  });
 }
 
 export function assignPersonSection(profileId: string, sectionId: string) {

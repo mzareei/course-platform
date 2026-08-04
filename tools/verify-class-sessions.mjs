@@ -183,6 +183,11 @@ assert.match(
   /const needsReason =\s*role !== ["']instructor["']/,
   "external instructor invites must not require an outside-institution reason"
 );
+assert.match(
+  people,
+  /invite_email_sent[\s\S]+people\.addedWithInvitation/,
+  "People must tell the instructor whether the invitation email was sent"
+);
 assert.match(people, /people\.groupNotAssignable/);
 assert.match(
   people,

@@ -464,6 +464,21 @@ export const strings = {
   ],
   "people.add": ["Add person", "Agregar persona"],
   "people.added": ["{name} was added to the roster.", "{name} se agregó a la lista."],
+  "people.addedWithInvitation": [
+    "{name} was added to the roster and an invitation email was sent.",
+    "{name} se agregó a la lista y se envió un correo de invitación."
+  ],
+  "people.addedInvitationFailed": [
+    "{name} was added to the roster, but the invitation email could not be sent. Ask them to use Sign in and request a new link.",
+    "{name} se agregó a la lista, pero no se pudo enviar el correo de invitación. Pídele que use Iniciar sesión y solicite un nuevo enlace."
+  ],
+  "people.resendInvitation": ["Resend invitation", "Reenviar invitación"],
+  "people.sendingInvitation": ["Sending…", "Enviando…"],
+  "people.invitationResent": ["An invitation email was sent to {name}.", "Se envió un correo de invitación a {name}."],
+  "people.invitationResendFailed": [
+    "The invitation email could not be sent to {name}.",
+    "No se pudo enviar el correo de invitación a {name}."
+  ],
   "people.addFailed": ["Could not add this person.", "No se pudo agregar a esta persona."],
   // ----------------------------------------------- people · CSV roster import
   "roster.import.title": ["Import a roster from a spreadsheet", "Importar una lista desde una hoja de cálculo"],

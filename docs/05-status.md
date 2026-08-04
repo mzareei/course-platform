@@ -43,6 +43,12 @@ teaching assistants, and observers still require the documented reason/grant.
 This keeps the Add person button usable for guest professors without weakening
 student access controls.
 
+Instructor roster adds now also send a Supabase Auth invitation email. If the
+address already has an Auth account, the backend sends the normal magic-link
+email instead. Invited instructor rows expose a Resend invitation action, and
+the People screen reports whether delivery succeeded. Backend commit `2b777a3`
+is deployed for `course-roster-management` and `course-admin`.
+
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
 browser rehearsal of the single-screen question layer is complete. A true
