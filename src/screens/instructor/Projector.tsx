@@ -4,6 +4,7 @@ import {
   checkpointReached,
   presentationHeartbeat,
   projectorCurrent,
+  requestSlide,
   type ProjectorPresentationState
 } from "../../api/presentation";
 import { InstructorDeck } from "../../features/deck/InstructorDeck";
@@ -12,7 +13,7 @@ import { ProjectorPulse } from "../../features/presentation/ProjectorPulse";
 import { t } from "../../i18n";
 import { context } from "../../state/session";
 
-const POLL_MS = 2000;
+const POLL_MS = 750;
 const HEARTBEAT_MS = 5000;
 const TELEMETRY_RETRY_MS = 750;
 const MAX_TELEMETRY_RETRIES = 3;
@@ -164,6 +165,39 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     bridge.deckReady,
     bridgeBelongsToSession,
     bridge.goToTeachingSlide,
+    isActiveSession
+  ]);
+
+  // The projector deck remains usable with its own visible controls. Publish
+  // those local moves back to the shared presentation state so the instructor
+  // controller and every other projector follow the same slide.
+  useEffect(() => {
+    const slide = bridge.teachingSlide;
+    if (
+      !presentationForSession
+      || !classSessionId
+      || slide === null
+      || bridge.navigationOrigin !== "local"
+      || slide === presentationForSession.requested_slide
+      || !bridgeBelongsToSession
+      || !isActiveSession(classSessionId, sessionGeneration)
+    ) return;
+    let cancelled = false;
+    requestSlide(classSessionId, presentationForSession.revision, slide, "projector")
+      .then((next) => {
+        if (!cancelled) applyPresentation(next, classSessionId, sessionGeneration);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [
+    classSessionId,
+    sessionGeneration,
+    presentationForSession?.revision,
+    presentationForSession?.requested_slide,
+    bridge.teachingSlide,
+    bridge.navigationOrigin,
+    bridgeBelongsToSession,
+    applyPresentation,
     isActiveSession
   ]);
 

@@ -85,12 +85,25 @@ export function requestSlide(
   classSessionId: string,
   revision: number,
   requestedSlide: number
+): Promise<ControllerPresentationState>;
+export function requestSlide(
+  classSessionId: string,
+  revision: number,
+  requestedSlide: number,
+  surface: "projector"
+): Promise<ProjectorPresentationState>;
+export function requestSlide(
+  classSessionId: string,
+  revision: number,
+  requestedSlide: number,
+  surface: "controller" | "projector" = "controller"
 ) {
-  return callFn<ControllerPresentationState>("course-presentation", {
+  return callFn<ControllerPresentationState | ProjectorPresentationState>("course-presentation", {
     action: "request_slide",
     class_session_id: classSessionId,
     revision,
-    requested_slide: requestedSlide
+    requested_slide: requestedSlide,
+    surface
   });
 }
 

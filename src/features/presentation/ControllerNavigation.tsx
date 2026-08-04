@@ -7,7 +7,7 @@ import {
 import { projectorIsStale } from "./state";
 import { t } from "../../i18n";
 
-const POLL_MS = 3000;
+const POLL_MS = 750;
 
 export function ControllerNavigation({
   sessionId,

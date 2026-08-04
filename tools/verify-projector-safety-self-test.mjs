@@ -298,14 +298,14 @@ assert.throws(
   "an acknowledgement failure must schedule a bounded retry"
 );
 for (const [occurrence, label] of [
-  [1, "ack initial bridge guard"],
-  [2, "ack completion bridge guard"],
-  [3, "ack failure bridge guard"],
-  [4, "ack retry bridge guard"],
-  [5, "checkpoint initial bridge guard"],
-  [6, "checkpoint completion bridge guard"],
-  [7, "checkpoint failure bridge guard"],
-  [8, "checkpoint retry bridge guard"]
+  [2, "ack initial bridge guard"],
+  [3, "ack completion bridge guard"],
+  [4, "ack failure bridge guard"],
+  [5, "ack retry bridge guard"],
+  [6, "checkpoint initial bridge guard"],
+  [7, "checkpoint completion bridge guard"],
+  [8, "checkpoint failure bridge guard"],
+  [9, "checkpoint retry bridge guard"]
 ]) {
   assert.throws(
     () => verifyProjectorSafetySource(

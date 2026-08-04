@@ -22,7 +22,8 @@ const wrappers = [
       ["action", "string", "request_slide"],
       ["class_session_id", "identifier", "classSessionId"],
       ["revision", "identifier", "revision"],
-      ["requested_slide", "identifier", "requestedSlide"]
+      ["requested_slide", "identifier", "requestedSlide"],
+      ["surface", "identifier", "surface"]
     ]
   },
   {

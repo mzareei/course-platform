@@ -22,6 +22,7 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
   const [slide, setSlide] = useState<number | null>(null);
   const [teachingSlide, setTeachingSlide] = useState<number | null>(null);
   const [appliedRevision, setAppliedRevision] = useState<number | null>(null);
+  const [navigationOrigin, setNavigationOrigin] = useState<"remote" | "local" | null>(null);
   const [checkpoint, setCheckpoint] = useState<ActiveCheckpoint | null>(null);
   const [checkpointAction, setCheckpointAction] = useState<CheckpointAction | null>(null);
   const [bridgeError, setBridgeError] = useState<string | null>(null);
@@ -43,12 +44,18 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
           setDeckReady(true);
           setSlide(message.slide);
           setAppliedRevision((current) => reduceAppliedDeckRevision(current, message));
+          setNavigationOrigin(null);
           setCheckpointAction(null);
           break;
         case "deck.slide_changed":
           setSlide(message.slide);
           setTeachingSlide(message.teaching_slide);
           setAppliedRevision((current) => reduceAppliedDeckRevision(current, message));
+          setNavigationOrigin(
+            Number.isInteger(message.appliedRevision) && Number(message.appliedRevision) > 0
+              ? "remote"
+              : "local"
+          );
           if (message.teaching_slide !== null) setCheckpoint(null);
           break;
         case "deck.checkpoint_entered":
@@ -107,6 +114,7 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
     setSlide(null);
     setTeachingSlide(null);
     setAppliedRevision(null);
+    setNavigationOrigin(null);
     setCheckpoint(null);
     setCheckpointAction(null);
     setBridgeError(null);
@@ -118,6 +126,7 @@ export function useDeckBridge(iframeRef: RefObject<HTMLIFrameElement>) {
     slide,
     teachingSlide,
     appliedRevision,
+    navigationOrigin,
     checkpoint,
     checkpointAction,
     send,
