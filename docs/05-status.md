@@ -49,6 +49,13 @@ email instead. Invited instructor rows expose a Resend invitation action, and
 the People screen reports whether delivery succeeded. Backend commit `2b777a3`
 is deployed for `course-roster-management` and `course-admin`.
 
+Instructor access is now section-scoped. A regular instructor can see and
+manage only the group(s) where they have an active `section_enrollments` row
+with role `instructor`; the `platform_owner` is the only global course
+administrator. This applies consistently to Home sessions, Classes, People,
+releases, gradebook, insights, and roster mutations. The policy is enforced in
+the edge functions rather than relying on the client hiding other groups.
+
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
 browser rehearsal of the single-screen question layer is complete. A true

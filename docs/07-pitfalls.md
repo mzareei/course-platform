@@ -1131,3 +1131,14 @@ invite flow must call Supabase Auth's `inviteUserByEmail`; when Auth already has
 that address, fall back to `signInWithOtp` so re-added instructors still get a
 fresh link. Surface the delivery result and provide a resend action—otherwise
 the UI can look successful while the professor receives nothing.
+
+## 56. Course instructor membership is not global group access
+
+TC2007B is one course containing groups 401, 402, 501, and 502. A course-level
+`instructor` membership grants teaching capability, but it does not grant
+visibility into every group. The section assignment is the active
+`section_enrollments` row whose role is `instructor`; only an active
+`platform_owner` membership is global. Every teacher-facing edge function must
+load the permitted section IDs and apply them to reads and writes. A client
+filter is not sufficient because a crafted request could otherwise expose or
+mutate another professor's roster, sessions, releases, or grades.
