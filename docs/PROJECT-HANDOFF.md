@@ -42,8 +42,8 @@ Lecture HTML is always opened through the gated `/content?t=...` path; never use
 
 ## Current deployed state
 
-Frontend `main`: `e7360d8` (`docs: record projector controller deployment`).
-Backend `main`: `0a01244` (`fix: deploy remote deck navigation protocol`).
+Frontend `main`: `f26235b` (`fix: synchronize projector and controller both ways`).
+Backend `main`: `09c208e` (`fix: synchronize projector deck navigation`).
 
 Live app: https://course-platform-3ko.pages.dev
 
@@ -64,6 +64,10 @@ The projector/controller feature is deployed:
   exposed that old decks did not yet contain the remote-navigation listener.
 - Chrome rehearsal verified live: controller and projector start aligned,
   heartbeat says connected, and repeated Next commands move both views together.
+- Navigation is bidirectional: clicking visible deck controls on the projector
+  publishes the local slide back to presentation state, while controller
+  commands apply to the projector. The projector receives a safe projector-
+  shaped response and never controller-only quiz details.
 
 ## Verification baseline
 

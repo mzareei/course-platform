@@ -1036,3 +1036,9 @@ protocol existed: the API state changes, but the old iframe ignores
 `course-platform:goto-slide` and stays on its first slide. Deploy the updated
 deck engine and run the idempotent **Refresh lecture deck** action for existing
 ready banks before testing projector navigation.
+
+The deck controls are bidirectional. A projector-side click must be reported
+as a local navigation event and written through the safe projector-shaped
+`request_slide` response; otherwise the controller can remain on an older
+slide even though the projector moved. Keep remote-vs-local navigation marked
+explicitly in the deck bridge.
