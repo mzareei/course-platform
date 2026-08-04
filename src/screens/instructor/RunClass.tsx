@@ -158,11 +158,12 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       : null;
 
   function sendClassroomQuestion(round: PulseRound, checkpoint: ActiveCheckpoint) {
-    if (!bridge.deckReady || bridge.checkpoint?.key !== checkpoint.key) return;
+    if (!bridge.deckReady) return;
+    const deckCheckpointKey = bridge.checkpoint?.key || checkpoint.key;
     bridge.send({
       version: 1,
       type: "checkpoint.question_display",
-      checkpoint_key: checkpoint.key,
+      checkpoint_key: deckCheckpointKey,
       prompt: round.text,
       prompt_es: round.text_es ?? null,
       options: round.options.map((option) => ({
@@ -659,12 +660,13 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         )
       ) return;
       recovery.current = null;
-      if (bridge.deckReady && bridge.checkpoint?.key === checkpoint.key) {
-        bridge.send({
-          version: 1,
-          type: "checkpoint.question_clear",
-          checkpoint_key: checkpoint.key
-        });
+    if (bridge.deckReady) {
+      const deckCheckpointKey = bridge.checkpoint?.key || checkpoint.key;
+      bridge.send({
+        version: 1,
+        type: "checkpoint.question_clear",
+        checkpoint_key: deckCheckpointKey
+      });
       }
       if (!deckAlreadyResumed && bridge.deckReady) {
         bridge.send({
