@@ -1169,6 +1169,8 @@ export const strings = {
     "Every question is mapped to a teaching checkpoint.",
     "Cada pregunta está vinculada con un punto de control de la clase."
   ],
+  "content.banks.refreshDeck": ["Refresh lecture deck", "Actualizar presentación"],
+  "content.banks.refreshing": ["Refreshing lecture deck…", "Actualizando presentación…"],
 
   "content.uploadTitle": ["New lecture from a PDF", "Nueva clase desde un PDF"],
   "content.uploadBody": [

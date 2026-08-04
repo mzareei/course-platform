@@ -85,6 +85,7 @@ function QuestionBankCard({
   const [prepared, setPrepared] = useState<BackfillResult | null>(null);
   const ready = readiness === "ready" || prepared !== null;
   const pending = readiness === "pending";
+  const canRefreshDeck = instructorCanPrepare && ready && prepared === null;
   const checkpointCount = prepared?.checkpoint_count
     ?? bank.checkpoint_coverage.length;
 
@@ -190,6 +191,20 @@ function QuestionBankCard({
             {preparing
               ? t("content.banks.preparing")
               : t("content.banks.prepare")}
+          </button>
+        </>
+      ) : canRefreshDeck ? (
+        <>
+          <p class="hint">{t("content.banks.readyBody")}</p>
+          <button
+            class="btn quiet"
+            type="button"
+            disabled={preparing}
+            onClick={prepare}
+          >
+            {preparing
+              ? t("content.banks.refreshing")
+              : t("content.banks.refreshDeck")}
           </button>
         </>
       ) : !ready ? (
