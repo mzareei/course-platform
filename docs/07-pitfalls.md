@@ -1104,3 +1104,11 @@ Question options can be referenced by student responses. Expert removal is
 therefore a status archive, not a hard delete, and edits update existing option
 rows in place. The edge function validates four options and exactly one correct
 answer before writing and records an audit event for every edit or archive.
+
+## 53. External instructor email is role-gated, not domain-gated
+
+The sign-in form may accept any well-formed email so an invited professor can
+request a magic link. The server must then confirm that the address belongs to
+an active or invited instructor/platform-owner membership before bypassing the
+institutional-domain guard. Never make every external student address valid by
+changing only the client-side check.

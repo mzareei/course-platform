@@ -33,6 +33,10 @@ question used by both during-class checkpoints and the end-of-class quiz,
 shows the correct option for expert review, supports bilingual prompt/option
 edits, and archives questions that should no longer be used.
 
+Instructor sign-in now accepts any valid email domain when the address belongs
+to an invited instructor/platform owner. Student access remains restricted by
+the institutional-domain or explicit external-access-grant policy.
+
 The canonical continuation record is now [`PROJECT-HANDOFF.md`](PROJECT-HANDOFF.md).
 The production data reset has now been executed and verified. Instructor-side
 browser rehearsal of the single-screen question layer is complete. A true
