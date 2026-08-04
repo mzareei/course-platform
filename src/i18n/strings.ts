@@ -33,7 +33,7 @@ export const strings = {
     "No password. Enter your course email and we'll send you a one-time sign-in link.",
     "Sin contraseña. Escribe tu correo del curso y te enviaremos un enlace de acceso de un solo uso."
   ],
-  "signIn.emailLabel": ["Institutional email", "Correo institucional"],
+  "signIn.emailLabel": ["Course email", "Correo del curso"],
   "signIn.send": ["Email me a sign-in link", "Enviarme un enlace de acceso"],
   "signIn.resend": ["Resend sign-in email", "Reenviar el correo de acceso"],
   "signIn.codeLabel": [

@@ -113,7 +113,7 @@ export function SignIn() {
           {t("signIn.emailLabel")}
           <input
             type="email"
-            placeholder={`name@${config.allowedInstitutionalDomains[0]}`}
+            placeholder="name@example.com"
             value={email}
             onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
             autocomplete="email"
