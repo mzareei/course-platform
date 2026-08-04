@@ -59,6 +59,14 @@ assert.throws(
 );
 assert.throws(
   () => verifyProjectorSafetySource(
+    mutate(projector, "    void refresh();", "    if (true) return undefined;\n    void refresh();", "conditional unreachable poll"),
+    pulse
+  ),
+  /first poll/,
+  "a conditionally unreachable initial poll must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
     mutate(projector, "void refresh();", "function unused() { void refresh(); }", "nested poll"),
     pulse
   ),
@@ -67,11 +75,61 @@ assert.throws(
 );
 assert.throws(
   () => verifyProjectorSafetySource(
+    mutate(
+      projector,
+      '  const classSessionId = sessionId || "";',
+      '  const hiddenController = { requestSlide() {} };\n  hiddenController[`requestSlide`]();\n  const classSessionId = sessionId || "";',
+      "template controller call"
+    ),
+    pulse
+  ),
+  /requestSlide|controller/,
+  "controller member calls must fail through template element access"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    mutate(
+      projector,
+      '  const classSessionId = sessionId || "";',
+      '  const hiddenController = { requestSlide() {} };\n  const { requestSlide: go } = hiddenController;\n  go();\n  const classSessionId = sessionId || "";',
+      "destructured controller alias"
+    ),
+    pulse
+  ),
+  /aliased forbidden|requestSlide|controller/,
+  "destructured controller aliases must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
     mutate(projector, "    void refresh();", "    return undefined;\n    void refresh();", "unreachable poll"),
     pulse
   ),
   /first poll|unreachable/,
   "an initial poll after an unconditional return must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    pulse.replace(
+      'const revealed = pulse.state === "revealed";',
+      'const revealed = pulse.state === "revealed";\n  if (pulse.state === "revealed") { const revealed = true; void revealed; }'
+    )
+  ),
+  /one server-derived binding/,
+  "shadowed reveal bindings must fail"
+);
+assert.throws(
+  () => verifyProjectorSafetySource(
+    projector,
+    mutate(
+      pulse,
+      'const revealed = pulse.state === "revealed";',
+      'const revealed = pulse.state === "revealed";\n  const leakedTemplateExplanation = pulse[`explanation`];',
+      "template explanation leak"
+    )
+  ),
+  /explanation must only be read/,
+  "template-literal sensitive reads must stay guarded"
 );
 assert.throws(
   () => verifyProjectorSafetySource(

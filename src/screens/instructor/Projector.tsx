@@ -287,6 +287,7 @@ export function Projector({ sessionId }: { sessionId?: string }) {
     <main class="projector-screen">
       <div class={`projector-deck${pulseActive ? " is-covered" : ""}`}>
         <InstructorDeck
+          key={`${classSessionId}:${sessionGeneration}`}
           contentItemId={classSession.content_item_id}
           title={classSession.content_title || classSession.title || t("projector.deckTitle")}
           frameRef={frameRef}

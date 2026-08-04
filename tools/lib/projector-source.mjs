@@ -57,7 +57,16 @@ function isImmediateMountRefresh(node) {
     && ts.isArrowFunction(callback)
     && ts.isCallExpression(effect)
     && callName(effect) === "useEffect"
-    && prior.every((candidate) => !ts.isReturnStatement(candidate) && !ts.isThrowStatement(candidate))
+    // The first refresh must be a top-level, reachable statement in the
+    // effect callback.  Allowing an `if (...) return` before it creates a
+    // convincing-looking but dead poll fixture.
+    && prior.every((candidate) => {
+      if (ts.isReturnStatement(candidate) || ts.isThrowStatement(candidate)) return false;
+      if (!ts.isIfStatement(candidate)) return true;
+      if (!ts.isReturnStatement(candidate.thenStatement)) return true;
+      const condition = candidate.expression.getText().replace(/\s/g, "");
+      return condition === "!classSessionId" || condition === "!isActiveSession(classSessionId,sessionGeneration)";
+    })
     && block.statements.includes(statement)
   );
 }
@@ -76,8 +85,9 @@ function isDominatedByReveal(node, source) {
 
 function sensitiveName(node) {
   if (ts.isPropertyAccessExpression(node)) return node.name.text;
-  if (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression)) {
-    return node.argumentExpression.text;
+  if (ts.isElementAccessExpression(node)) {
+    const argument = node.argumentExpression;
+    if (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) return argument.text;
   }
   if (ts.isBindingElement(node)) {
     const property = node.propertyName;
@@ -207,14 +217,38 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
   assert.match(projectorSource, /clearTimeout\(ackRetryTimer\.current\)/, "ack retry timer must be cancelled");
   assert.match(projectorSource, /clearTimeout\(checkpointRetryTimer\.current\)/, "checkpoint retry timer must be cancelled");
   const forbiddenMembers = new Set(["controllerCurrent", "requestSlide", "setPresentationPhase", "callFn", "CheckpointPanel", "pulseResults", "closePulse", "revealPulse", "pushBankQuestion"]);
+  const forbiddenAliases = new Set();
+  for (const node of descendants(projectorFunction.body)) {
+    if (!ts.isVariableDeclaration(node) || !ts.isObjectBindingPattern(node.name)) continue;
+    for (const element of node.name.elements) {
+      if (!ts.isBindingElement(element)) continue;
+      const property = element.propertyName;
+      const name = element.name;
+      const propertyText = property && (ts.isIdentifier(property) || ts.isStringLiteral(property))
+        ? property.text
+        : null;
+      if (propertyText && forbiddenMembers.has(propertyText) && ts.isIdentifier(name)) {
+        forbiddenAliases.add(name.text);
+      }
+    }
+  }
   for (const node of descendants(projectorFunction.body)) {
     if (!ts.isCallExpression(node)) continue;
     const expression = node.expression;
     if (ts.isPropertyAccessExpression(expression) && forbiddenMembers.has(expression.name.text)) {
       assert.fail(`projector must not execute forbidden member ${expression.name.text}`);
     }
-    if (ts.isElementAccessExpression(expression) && ts.isStringLiteral(expression.argumentExpression) && forbiddenMembers.has(expression.argumentExpression.text)) {
-      assert.fail(`projector must not execute forbidden member ${expression.argumentExpression.text}`);
+    if (ts.isElementAccessExpression(expression)) {
+      const argument = expression.argumentExpression;
+      const member = ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)
+        ? argument.text
+        : argument.getText(projector);
+      if (forbiddenMembers.has(member)) assert.fail(`projector must not execute forbidden member ${member}`);
+    }
+  }
+  for (const node of descendants(projectorFunction.body)) {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      assert.equal(forbiddenAliases.has(node.expression.text), false, `projector must not execute aliased forbidden member ${node.expression.text}`);
     }
   }
   for (const forbidden of ["controllerCurrent", "requestSlide", "setPresentationPhase", "callFn", "CheckpointPanel", "pulseResults", "closePulse", "revealPulse", "pushBankQuestion"]) {
@@ -231,8 +265,11 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
   const sensitive = new Set(["correct_option", "explanation", "explanation_es"]);
   const reads = descendants(pulseFunction.body).filter((node) => {
     if (ts.isPropertyAccessExpression(node)) return sensitive.has(node.name.text);
-    if (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression)) {
-      return sensitive.has(node.argumentExpression.text);
+    if (ts.isElementAccessExpression(node)) {
+      const argument = node.argumentExpression;
+      if (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) {
+        return sensitive.has(argument.text);
+      }
     }
     if (ts.isBindingElement(node)) {
       const property = node.propertyName;
@@ -244,6 +281,10 @@ export function verifyProjectorSafetySource(projectorSource, pulseSource) {
     return false;
   });
   assert.ok(reads.length > 0, "projector pulse must render server-provided reveal data");
+  const revealedDeclarations = descendants(pulseFunction.body).filter((node) =>
+    ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "revealed"
+  );
+  assert.equal(revealedDeclarations.length, 1, "revealed must have one server-derived binding");
   for (const read of reads) {
     assert.equal(isDominatedByReveal(read, pulse), true, `${sensitiveName(read)} must only be read inside the revealed branch`);
   }
