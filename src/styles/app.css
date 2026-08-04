@@ -610,6 +610,14 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   height: 100vh;
   overflow: auto;
 }
+.classroom-question-layer-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+}
 .classroom-question-shell {
   width: min(1100px, 100%);
   display: flex;

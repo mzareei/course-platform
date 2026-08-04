@@ -134,6 +134,11 @@ assert.match(
   /run\.classroomQuestion\.fullscreen/,
   "the full-screen action must have bilingual classroom copy"
 );
+assert.match(
+  classroomQuestionSource,
+  /classroom-question-layer-fullscreen/,
+  "the live question must have an app-viewport full-screen fallback"
+);
 assert.doesNotMatch(runClassSource, /<option value="hard">[^]*<option value="hard">/);
 assert.match(runClassSource, /startClassSession/);
 assert.match(runClassSource, /pushBankQuestion\(\{/);
