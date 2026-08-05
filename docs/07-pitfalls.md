@@ -1132,6 +1132,70 @@ that address, fall back to `signInWithOtp` so re-added instructors still get a
 fresh link. Surface the delivery result and provide a resend action—otherwise
 the UI can look successful while the professor receives nothing.
 
+## 57. Gated content can link straight back out to its public copy
+
+Found 2026-08-05 during the content-origin audit, by rebuilding all 23 items
+with `migrate-gated-content.mjs --dry-run` and grepping the output.
+
+The Phase 2 migration deliberately rewrote every relative link in a deck or
+mission to an **absolute public URL**, so cross-navigation would keep working
+while the public copies still existed. That was correct then. The consequence
+now is that every object in the private bucket carries hard
+`https://mzareei.github.io` links — and nine of the twelve missions link to the
+**public, ungated copy of their own lecture**. A student inside `/content?t=…`
+is one click from the material the gate exists to protect.
+
+`removeLegacyDeckNavigation()` in `_shared/checkpoint-deck.ts` cleans four
+destinations, but only from anchors carrying `ui-btn`, and only when a lecture
+goes through checkpoint preparation. Mission anchors use `class="btn"`, and
+missions never go through that path at all. So the cleanup that exists has
+never touched a mission and, as written, never would.
+
+**Rule:** a gate is only as good as the outbound links inside what it serves.
+When content moves behind an authorisation boundary, audit its *outbound* links
+as carefully as its inbound ones, and make "no reference to the public origin" a
+validator, not a review habit. Ordering matters too: retiring the public site
+before the objects are re-published turns every mission's primary navigation
+into a 404 from *inside* the private bucket.
+
+---
+
+## 58. Two writers, two filenames, one storage path convention
+
+The migrated items live at `courses/tc2007b/items/<slug>/index.html` — the
+migration tool passes `filename: "index.html"`. The AI pipeline writes
+`deck.html`. Both are `storage_object` items under the same prefix, and nothing
+in the schema records which is which.
+
+Any tool that assumes one filename will silently write a second object beside
+the real one, leaving `content_items.source_ref` pointing at a stale deck that
+still loads. The failure mode is a lecture that "did not update" with no error
+anywhere.
+
+**Rule:** read the existing `source_ref` and reconcile it against
+`storage.objects` before writing. Never derive a storage filename from a
+content type.
+
+---
+
+## 59. `created_by` is not populated by every write path
+
+`course-content-library`'s insert sets `created_by`. `course-content-upload`'s
+`register_item` upsert does not — it never has. So the 23 migrated decks, the
+entire hand-authored course, almost certainly carry `created_by = null`.
+
+This only surfaced when ownership became a requirement: there is no data to
+backfill *from*. Ownership has to be assigned by a reviewed decision, not
+recovered.
+
+**Rule:** if a column is meant to answer "who made this", check every path that
+creates a row, not the one you happen to be reading. An upsert that omits the
+column writes null on insert and leaves it stale on update — the same family as
+pitfall #13, where the payload was written on the update path and should not
+have been.
+
+---
+
 ## 56. Course instructor membership is not global group access
 
 TC2007B is one course containing groups 401, 402, 501, and 502. A course-level

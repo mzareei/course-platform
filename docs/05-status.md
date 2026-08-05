@@ -1,6 +1,46 @@
 # Status
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-05
+
+### Private content authoring and publishing — audited and designed, not built
+
+Requirements 1–8 and 13 of the private-content brief are answered on paper. No
+code was changed, no migration was written, no production row or storage object
+was touched, and the private content repository was **not** created. Awaiting
+the professor's approval before implementation.
+
+- `docs/audits/2026-08-05-content-origin-audit.md` — the content-origin audit.
+- `docs/audits/content-origin-audit.sql` — a read-only script that produces the
+  per-item production report. Safe to run at any time, including during class.
+- `docs/superpowers/specs/2026-08-05-private-content-publishing-design.md` — the
+  private-repo layout, the seven-gate publish workflow, the CLI-vs-Action
+  recommendation, the owner/sharing model, the group-management guards, the
+  destructive-step register, and the TDD plan.
+
+What the audit established from repository evidence:
+
+- All 23 migrated items (11 lectures, 12 missions including 3 bridge missions)
+  are `storage_object` at `courses/tc2007b/items/<slug>/index.html` — note
+  `index.html`, not `deck.html`; `deck.html` is the AI pipeline's filename.
+- The public academic site still publishes every one of them, linked by hand
+  from `_courses/information-security.md`. `_config.yml` excludes `supabase`
+  and `docs/superpowers` but not `assets/`.
+- Every object in the private bucket carries hard `https://mzareei.github.io`
+  links, because `migrate-gated-content.mjs` deliberately absolutised them in
+  Phase 2. Nine missions link to the **public copy of their own lecture**.
+- `removeLegacyDeckNavigation()` strips four of those destinations, but only
+  from `ui-btn` anchors and only during checkpoint preparation — so no mission
+  has ever been cleaned, and no code path currently would.
+- Content items are course-wide and unowned: any instructor can read, edit and
+  overwrite any other instructor's item and storage object. `created_by` is
+  null on the migrated items because `register_item` never set it.
+- Group create is owner-only on the backend; **rename and archive are not**, and
+  the Add-a-group card renders for every instructor.
+
+What is still unverified: everything about production rows. This session had no
+Supabase credentials and the sandbox blocks outbound HTTPS to
+`mzareei.github.io`, so the 27-item inventory is derived from the code that
+wrote it, not read from the database. Run the SQL script before acting.
 
 ### Single-screen classroom display — deployed and instructor-verified
 

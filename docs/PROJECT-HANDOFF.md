@@ -114,7 +114,46 @@ class session was created after the reset.
    rehearsal is complete; Chrome's student tab was blocked by an extension UI,
    so this evidence must be collected with actual phones.
 2. Phase 6 public-site cleanup: remove teaching content from the public academic
-   repository, redirect retired apps, and crawl for gated-content leaks.
+   repository, redirect retired apps, and crawl for gated-content leaks. **The
+   2026-08-05 audit found this cannot be done first** — every private object
+   links back to the public copies, so the objects must be re-published clean
+   before the public site is retired. See pitfall #57.
+3. Private content authoring and publishing — **designed, awaiting approval,
+   not built.** Read `docs/audits/2026-08-05-content-origin-audit.md` and
+   `docs/superpowers/specs/2026-08-05-private-content-publishing-design.md`.
+   No production data, storage object, or repository was created or changed.
+
+## Private content architecture — status as of 2026-08-05
+
+Audit and design are complete on paper; implementation has not started.
+
+Established from repository evidence (direct):
+
+- 23 migrated items at `courses/tc2007b/items/<slug>/index.html` — note the
+  filename differs from the AI pipeline's `deck.html` (pitfall #58).
+- The public academic site still publishes all 23, linked from
+  `_courses/information-security.md`; `_config.yml` does not exclude `assets/`.
+- Every private object carries absolute `mzareei.github.io` links; 9 missions
+  link to the public copy of their own lecture (pitfall #57).
+- Content items are unowned and course-wide: any instructor can read, edit and
+  overwrite any other instructor's item and storage object. `created_by` is
+  null on migrated items (pitfall #59).
+- Group create is owner-only on the backend; rename and archive are not, and
+  the Add-a-group control renders for every instructor.
+
+Not verified — this session had no Supabase credentials and no outbound access
+to `mzareei.github.io`:
+
+- The actual 27 `content_items` rows, their release/session use, and their
+  question-bank links. Run `docs/audits/content-origin-audit.sql` (read-only)
+  and record the results in the audit document before any publish or cleanup.
+- Whether the public URLs are currently live.
+
+Destructive steps are enumerated as D1–D8 in the design document with a
+mandatory ordering (D2 → D1 → D4 → D5 → D6). **None have been performed, and
+none should be without explicit approval.** D8 — any deletion of content items,
+question banks, questions, students, grades, attempts, releases or storage
+objects — is not proposed at all.
 
 ## Safe continuation sequence
 
