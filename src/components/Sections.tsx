@@ -8,12 +8,19 @@
 // "Group" in the UI, `section` in the schema. The schema word means nothing to
 // a professor here, and design rule #2 forbids leaking it.
 //
+// Group *lifecycle* — create, rename, retire — is platform-owner only
+// (requirement 8). An assigned instructor still lists the groups they teach and
+// still manages their members; only the lifecycle controls are withheld, with
+// a bilingual line saying why. The server refuses a crafted request either way
+// (`section_management_owner_only`), so this is a screen that tells the truth
+// rather than an authorisation boundary.
+//
 // Module scope, per docs/07-pitfalls.md #4.
 import { useEffect, useState } from "preact/hooks";
-import { listSections, saveSection, type CourseSection } from "../api/schedule";
+import { listSections, saveSection, sectionErrorKey, type CourseSection } from "../api/schedule";
 import { StatusPill } from "./StatusPill";
 import { SectionEditor } from "./SectionEditor";
-import { refreshContext } from "../state/session";
+import { isOwner, refreshContext } from "../state/session";
 import { t } from "../i18n";
 
 export function Sections() {
@@ -55,7 +62,7 @@ export function Sections() {
       await load();
       await refreshContext();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("sections.saveFailed"));
+      setError(t(sectionErrorKey((e as { code?: string })?.code)));
     } finally {
       setBusy(null);
     }
@@ -80,7 +87,7 @@ export function Sections() {
       await load();
       await refreshContext();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("sections.saveFailed"));
+      setError(t(sectionErrorKey((e as { code?: string })?.code)));
     } finally {
       setBusy(null);
     }
@@ -129,29 +136,33 @@ export function Sections() {
                       <td><StatusPill state={section.status} /></td>
                       <td>
                         <div class="row" style="gap: 0.3rem;">
-                          <button
-                            class="btn quiet"
-                            type="button"
-                            disabled={busy === section.id}
-                            onClick={() => setEditingSectionId(section.id)}
-                          >
-                            {t("sections.edit")}
-                          </button>
+                          {isOwner.value ? (
+                            <button
+                              class="btn quiet"
+                              type="button"
+                              disabled={busy === section.id}
+                              onClick={() => setEditingSectionId(section.id)}
+                            >
+                              {t("sections.edit")}
+                            </button>
+                          ) : null}
                           <a class="btn quiet" href={`/teach/people?group=${section.id}`}>
                             {t("sections.members")}
                           </a>
-                          <button
-                            class="btn quiet"
-                            type="button"
-                            disabled={busy === section.id}
-                            onClick={() => void onToggle(section)}
-                          >
-                            {live ? t("sections.retire") : t("sections.reactivate")}
-                          </button>
+                          {isOwner.value ? (
+                            <button
+                              class="btn quiet"
+                              type="button"
+                              disabled={busy === section.id}
+                              onClick={() => void onToggle(section)}
+                            >
+                              {live ? t("sections.retire") : t("sections.reactivate")}
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
-                    {editingSectionId === section.id ? (
+                    {isOwner.value && editingSectionId === section.id ? (
                       <tr>
                         <td colSpan={5}>
                           <SectionEditor
@@ -170,6 +181,9 @@ export function Sections() {
         </div>
       ) : null}
 
+      {!isOwner.value ? <p class="hint">{t("sections.ownerOnly")}</p> : null}
+
+      {isOwner.value ? (
       <div class="card">
         <h3>{t("sections.add")}</h3>
         <div class="grid-2">
@@ -198,6 +212,7 @@ export function Sections() {
           </button>
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

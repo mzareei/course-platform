@@ -588,6 +588,10 @@ export const strings = {
     "¿Retirar el grupo {code}? Dejará de aparecer al programar una clase. Los días de clase, calificaciones y estudiantes existentes no se tocan."
   ],
   "sections.reactivate": ["Reactivate", "Reactivar"],
+  "sections.ownerOnly": [
+    "Groups are created, renamed and retired by the platform owner. You can manage the members of the groups you teach.",
+    "Los grupos son creados, renombrados y retirados por el administrador de la plataforma. Puedes administrar a los integrantes de los grupos que impartes."
+  ],
 
   // ---------------------------------------------------------------- schedule
   "schedule.title": ["Class days", "Días de clase"],

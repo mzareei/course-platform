@@ -43,6 +43,14 @@ export function saveSection(input: {
   );
 }
 
+/** Group lifecycle is platform-owner only. The controls are hidden for
+ *  everyone else, so this only fires from a stale tab — but a raw
+ *  `section_management_owner_only` on screen is pitfall #12's exact shape. */
+export function sectionErrorKey(code?: string) {
+  if (code === "section_management_owner_only") return "sections.ownerOnly" as const;
+  return "sections.saveFailed" as const;
+}
+
 export interface ClassSession {
   /** listSessions returns `session_id`, not `id` — the two are not the same
    *  field and the compiler cannot tell you. See pitfalls #3. */

@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { saveSection, type CourseSection } from "../api/schedule";
+import { saveSection, sectionErrorKey, type CourseSection } from "../api/schedule";
 import { t } from "../i18n";
 
 type SectionEditorProps = {
@@ -42,7 +42,7 @@ export function SectionEditor({ section, onSaved, onCancel }: SectionEditorProps
       });
       onSaved(saved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("sections.saveFailed"));
+      setError(t(sectionErrorKey((cause as { code?: string })?.code)));
     } finally {
       setSaving(false);
     }
