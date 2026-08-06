@@ -1299,6 +1299,18 @@ export const strings = {
     "Could not clean {title}. Nothing was changed for it.",
     "No se pudo limpiar {title}. No se cambió nada en ese material."
   ],
+  "content.library.sharedBadge": ["Shared with you", "Compartido contigo"],
+  "content.library.sharedHint": [
+    "Another instructor owns this. Take a copy to teach and edit your own version — theirs is not changed.",
+    "Otro profesor es el dueño. Toma una copia para impartir y editar tu propia versión — la de esa persona no cambia."
+  ],
+  "content.library.copy": ["Take a copy", "Tomar una copia"],
+  "content.library.copying": ["Copying…", "Copiando…"],
+  "content.library.copied": [
+    "Copied {title}. It is yours now, with its questions.",
+    "Se copió {title}. Ahora es tuya, con sus preguntas."
+  ],
+  "content.library.copyFailed": ["Could not copy that item.", "No se pudo copiar ese material."],
   "content.cancel": ["Cancel", "Cancelar"],
   "content.approvedNote": [
     "Approved — it now appears in your content library as a draft, ready to release for a class.",

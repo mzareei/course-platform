@@ -55,10 +55,24 @@ question. Decisions, all recorded in `04-decisions.md`:
 8. **The Content screen's cleanup control** — previews, confirms in-app, walks
    the items one at a time, and renders nothing once everything is clean.
 
-**Still to build:** the copy/fork action with question-bank copy, the Content
-screen's owned/shared distinction and Copy action, generation slug namespacing
-(pitfall #60), the content repository and publish CLI, and the D5/D6 public-site
-retirement including the `review-coach` and `teacher` items found in G4.
+9. **`copy_content_item`** — a receiving instructor takes a copy with its own
+   storage object and its own question bank, including every question's
+   checkpoint metadata and both languages. Visibility is the gate, not
+   ownership; the source is never written; the copy starts `owner_private`.
+10. **Generated lectures follow the ownership rules.** A slug clash owned by
+    somebody else is resolved silently instead of named — naming it leaks
+    content the caller may not see and blocks a title they may use. The worker
+    re-checks ownership immediately before the upsert, because `create_job`'s
+    check runs minutes earlier and two concurrent jobs both pass it.
+    Regeneration snapshots the deck it replaces.
+11. **The Content screen tells the truth about whose lecture it is.** A shared
+    item is badged, explained, and offers exactly one action — Take a copy.
+    Every write control is gated on `can_edit`, so no button is offered that
+    would 403.
+
+**Still to build:** the content repository `mzareei/course-content` and its
+publish CLI, and the D5/D6 public-site retirement including the `review-coach`
+and `teacher` items found in G4.
 
 **Audit closed 2026-08-06.** The professor ran all five read-only queries. 27
 items confirmed (12 lectures, 12 missions, 2 static_path resources, 1 activity),
