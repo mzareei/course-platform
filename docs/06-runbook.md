@@ -80,6 +80,88 @@ anything in `supabase/functions/_shared/templates/`:
 node tools/build-deck-assets.mjs
 ```
 
+## Deploying the private-content work
+
+Ordered. Each step assumes the one before it succeeded. Nothing here is
+reversible by simply reverting a commit, so read the whole sequence before
+starting the first command.
+
+### 0. Before anything
+
+Create the private repository `mzareei/course-content` on GitHub (private, no
+README) and move `tools/content-repo/` into it — see that directory's README.
+The materials need a home before they leave the public one.
+
+### 1. Backend, in this order
+
+Migrations first, then the functions that depend on them. A function deploy
+proves packaging, not that its database contract exists.
+
+```bash
+cd ~/Documents/GitHub/mzareei.github.io
+npx supabase migration list --linked        # confirm 0032/0033 are pending
+npx supabase db push --include-all --yes    # applies 0032 then 0033
+```
+
+`0032` is additive and changes nothing anyone can see. `0033` assigns all 27
+content items to the platform owner; it aborts if there is not exactly one
+active owner, and rolls back rather than leaving a half-owned library.
+
+**The ordering that matters:** `0033` must be applied *before* the content
+functions are deployed. Every existing item has a null owner until it runs, and
+while the code treats null as "visible to everyone" — deliberately, so this
+cannot lock you out — deploying the filter first and the backfill later leaves
+a window where ownership means nothing.
+
+```bash
+npx supabase functions deploy course-section-management --project-ref ojmbupftdikwmlqvibwt
+npx supabase functions deploy course-content-library    --project-ref ojmbupftdikwmlqvibwt
+npx supabase functions deploy course-content-upload     --project-ref ojmbupftdikwmlqvibwt
+npx supabase functions deploy course-content-cleanup    --project-ref ojmbupftdikwmlqvibwt
+npx supabase functions deploy course-generation         --project-ref ojmbupftdikwmlqvibwt
+npx supabase functions deploy course-generation-worker  --project-ref ojmbupftdikwmlqvibwt
+```
+
+### 2. Frontend
+
+Merge the frontend PR. Cloudflare builds `main` automatically. Confirm the new
+bundle is live before testing anything — testing against a stale bundle is a
+reliable way to waste an hour.
+
+### 3. Clean the stored decks
+
+Instructor → **Content**. A card appears above your lectures naming how many
+items still link to the public site and how many links in total. Preview costs
+nothing and writes nothing.
+
+**Do this while nothing is released.** Production confirmed zero student-visible
+releases on 2026-08-06; the rewrite currently disturbs nobody, and that stops
+being true the moment you release material for a class.
+
+Confirm, and watch it work through the items one at a time. Each one keeps a
+rollback copy under `.versions/` with a `content_versions` row.
+
+Then verify one deck through the real path: open it from **Review** as a
+student, not by typing a URL. Check the deck still advances, and that the
+mission's "Return to lecture" button is gone rather than broken.
+
+### 4. Only then, the public site
+
+Do not start this until step 3 reports every item clean. Retiring the public
+tree first turns every mission's primary navigation into a 404 *from inside*
+the private bucket.
+
+Two content items also point at the public apps and must be archived or
+repointed in the same change: `review-coach` and `teacher`.
+
+### Rolling back
+
+- A bad deck: the previous bytes are in `.versions/` next to it, indexed by
+  `content_versions`. Re-upload that object at the live path.
+- The ownership backfill: `owner_profile_id` was null before it ran, and the
+  audit row records the count assigned.
+- Migration `0032`: additive; leaving the columns in place is harmless.
+
 ## Clean production reset (one time, after QA)
 
 The reset is guarded by migration `0030_prepare_clean_platform_reset.sql`.

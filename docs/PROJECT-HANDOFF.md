@@ -123,31 +123,70 @@ class session was created after the reset.
    `docs/superpowers/specs/2026-08-05-private-content-publishing-design.md`.
    No production data, storage object, or repository was created or changed.
 
-## Private content architecture — status as of 2026-08-05
+## Private content architecture — status as of 2026-08-06
 
-Audit and design are complete on paper; implementation has not started.
+Audit closed, design approved, implementation complete except the public-site
+retirement. **Nothing is deployed.** No production row, storage object, release
+or public page has been changed.
 
-Established from repository evidence (direct):
+### Verified from production (all five audit queries run 2026-08-06)
 
-- 23 migrated items at `courses/tc2007b/items/<slug>/index.html` — note the
-  filename differs from the AI pipeline's `deck.html` (pitfall #58).
-- The public academic site still publishes all 23, linked from
-  `_courses/information-security.md`; `_config.yml` does not exclude `assets/`.
-- Every private object carries absolute `mzareei.github.io` links; 9 missions
-  link to the public copy of their own lecture (pitfall #57).
-- Content items are unowned and course-wide: any instructor can read, edit and
-  overwrite any other instructor's item and storage object. `created_by` is
-  null on migrated items (pitfall #59).
-- Group create is owner-only on the backend; rename and archive are not, and
-  the Add-a-group control renders for every instructor.
+27 content items: 12 lectures, 12 missions, 2 `static_path` resources, 1
+activity. 14 question banks, 223 active questions. Matches the reset record.
 
-Not verified — this session had no Supabase credentials and no outbound access
-to `mzareei.github.io`:
+- **Zero items are released to students.** This inverts the risk on cleaning
+  the decks: the rewrite currently disturbs nobody, and stops being free the
+  moment material is released for a class.
+- Every item points at `deck.html`, not `index.html` as the code-derived audit
+  claimed. 23 superseded `index.html` objects sit in the bucket referenced by
+  nothing (pitfall #58).
+- Only `week-01-lecture` was ever checkpoint-prepared, so 11 lectures and all
+  12 missions carry every public link they were migrated with.
+- `review-coach` and `teacher` point straight at the public first-generation
+  apps and break when those are retired.
+- `created_by` is null on all 27, so ownership was assigned, not recovered.
 
-- The actual 27 `content_items` rows, their release/session use, and their
-  question-bank links. Run `docs/audits/content-origin-audit.sql` (read-only)
-  and record the results in the audit document before any publish or cleanup.
-- Whether the public URLs are currently live.
+### Built, on branch `claude/tc2007b-private-content-4cniyb` in both repos
+
+| Piece | Where |
+|---|---|
+| Group lifecycle restricted to the platform owner | both repos |
+| Ownership / sharing / versions schema + delete guard (`0032`) | backend |
+| Ownership backfill (`0033`) | backend |
+| Content scoped to its owner; upload guarded too | backend |
+| `copy_content_item` — copy with its question bank | backend |
+| Generated lectures under the same ownership rules | backend |
+| Legacy nav cleanup, anchors **and** engine script | backend |
+| `course-content-cleanup` — preview + clean, one item per call | backend |
+| The Content screen's cleanup control | frontend |
+| Owned/shared distinction and Copy action | frontend |
+| Content repository scaffold, validator, publish CLI | frontend `tools/content-repo/` |
+
+Measured on all 23 real decks rebuilt from source: **111 public references
+before the cleanup, 0 after**, every script block still parsing.
+
+Verifier baseline: **17 frontend, 62 backend.** Seven backend verifiers fail
+identically on pristine `origin/main` — pre-existing and unrelated. Frontend
+typecheck and build pass.
+
+### Blocked, and on what
+
+1. **`mzareei/course-content` does not exist.** This session's GitHub token
+   cannot create repositories (403). It is a manual step; `tools/content-repo/`
+   holds everything that goes in it.
+2. **D5/D6, retiring the public course tree**, is correctly blocked twice over:
+   the materials need the new repository first, and the stored decks must be
+   cleaned first or every mission's navigation 404s from inside the bucket.
+3. **Nothing has been verified live.** No signed-in instructor session and no
+   network route to Supabase from this environment. Every claim above is from
+   static verification or from the professor's own query output.
+
+### The deployment sequence
+
+`06-runbook.md` carries it in full. The order is not a preference: create the
+content repository, apply `0032` then `0033`, deploy the six edge functions,
+merge the frontend, clean the decks while nothing is released, and only then
+touch the public site.
 
 Destructive steps are enumerated as D1–D8 in the design document with a
 mandatory ordering (D2 → D1 → D4 → D5 → D6). **None have been performed, and
