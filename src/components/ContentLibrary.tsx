@@ -16,6 +16,7 @@ import {
 import { updateClass } from "../api/classes";
 import { listSessions, type ClassSession } from "../api/schedule";
 import { canReleaseToReview } from "../api/contentVisibility";
+import { PublicLinkCleanup } from "./PublicLinkCleanup";
 import { refreshContext } from "../state/session";
 import { t, formatDay } from "../i18n";
 
@@ -111,6 +112,10 @@ export function ContentLibraryView() {
   return (
     <div class="stack">
       <p class="hint">{t("content.library.lede")}</p>
+
+      {/* Renders nothing once every stored file is clean, so this one-time
+          job does not leave a permanent maintenance card behind. */}
+      <PublicLinkCleanup />
 
       <div class="row" style="justify-content: space-between; align-items: center;">
         <span class="hint">

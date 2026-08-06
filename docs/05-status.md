@@ -37,10 +37,28 @@ question. Decisions, all recorded in `04-decisions.md`:
    `ui-btn`; missions use `btn` / `back-link` and link to the public `progress/`
    app and the public copy of their own lecture.
 
-**Still to build:** owner scoping in `course-content-library` and
-`course-content-upload`, the copy/fork action, generation slug namespacing
-(P12), the content repository and publish CLI, and the Content screen's
-owned/shared distinction.
+4. **Content is private to its owner** — `course-content-library` and
+   `course-content-upload` scope reads to owner ∪ shares and refuse writes to
+   anything the caller does not own. The null-owner branch is load-bearing:
+   every existing item is unowned until `0033` runs, so hiding null-owner items
+   before the backfill would empty the professor's own Content screen.
+5. **Migration `0033_assign_content_ownership.sql`** — the D3 backfill. Refuses
+   unless exactly one active platform owner exists, fills only null owners,
+   leaves `created_by` alone, asserts its own postcondition.
+6. **`removeLegacyDeckScriptNavigation`** — the anchor pass alone left three
+   links per lecture, all in the legacy engine's M/Q/E keyboard shortcuts.
+   Measured on all 23 real decks rebuilt from source: **111 public references
+   before, 0 after**, every script block still parsing.
+7. **`course-content-cleanup` edge function** — preview (writes nothing) and
+   clean (one item per call), with the storage-safe ordering: read, transform,
+   verify, back up the old bytes, record the version, then overwrite.
+8. **The Content screen's cleanup control** — previews, confirms in-app, walks
+   the items one at a time, and renders nothing once everything is clean.
+
+**Still to build:** the copy/fork action with question-bank copy, the Content
+screen's owned/shared distinction and Copy action, generation slug namespacing
+(pitfall #60), the content repository and publish CLI, and the D5/D6 public-site
+retirement including the `review-coach` and `teacher` items found in G4.
 
 **Audit closed 2026-08-06.** The professor ran all five read-only queries. 27
 items confirmed (12 lectures, 12 missions, 2 static_path resources, 1 activity),
