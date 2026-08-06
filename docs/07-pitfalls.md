@@ -1187,21 +1187,36 @@ into a 404 from *inside* the private bucket.
 
 ---
 
-## 58. Two writers, two filenames, one storage path convention
+## 58. A superseded storage object does not go away on its own
 
-The migrated items live at `courses/tc2007b/items/<slug>/index.html` — the
-migration tool passes `filename: "index.html"`. The AI pipeline writes
-`deck.html`. Both are `storage_object` items under the same prefix, and nothing
-in the schema records which is which.
+**First written from the code, then corrected by production on 2026-08-06.**
+The correction is the more useful half.
 
-Any tool that assumes one filename will silently write a second object beside
-the real one, leaving `content_items.source_ref` pointing at a stale deck that
-still loads. The failure mode is a lecture that "did not update" with no error
-anywhere.
+The derivation: `migrate-gated-content.mjs` passes `filename: "index.html"`,
+the AI pipeline writes `deck.html`, so the bucket must hold two conventions and
+a publish tool that assumes one would corrupt the other.
 
-**Rule:** read the existing `source_ref` and reconcile it against
-`storage.objects` before writing. Never derive a storage filename from a
-content type.
+Production says otherwise. **Every one of the 24 storage-backed items points at
+`deck.html`** — and **all 23 `index.html` objects are still in the bucket**,
+referenced by nothing. Something re-uploaded and re-registered the decks under
+a new filename, and the old objects were simply left there. Neither repository
+contains the script that did it.
+
+They are not served: the gated chain resolves `source_ref`, and no row points
+at them. But they are almost certainly the original Phase 2 artifacts, public
+links and all, sitting one signed URL away from being served by anything that
+guesses a path.
+
+**Rule:** Postgres and Storage do not share a transaction, and they do not
+share a garbage collector either. Changing where a row points leaves the old
+object alive and unreferenced, forever. When a storage path changes, decide
+explicitly what happens to the object it used to name — and record that
+decision, because the next person will find two plausible files and no way to
+tell which one is live.
+
+Corollary: never re-register content by scanning the bucket. Two candidate
+files per slug means a scanner has to guess, and guessing wrong silently
+reverts a lecture to an older version that still renders perfectly.
 
 ---
 

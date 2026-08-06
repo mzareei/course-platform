@@ -89,19 +89,64 @@ building cleanly**:
 | 22 | `week-11-lecture` | lecture | Week 11 Lecture: Intrusion Detection (IDS/IPS) |
 | 23 | `week-11-mission-09` | mission | Mission 09: Tune The Detector |
 
-Storage path for every one of them, from `course-content-upload`'s
-`create_upload_url`:
+### Storage paths — CORRECTED against production, 2026-08-06
 
-```
-courses/tc2007b/items/<slug>/index.html
-```
+Query 5 was run against production and **contradicted the derivation above.**
+Recording the correction rather than quietly editing it, because the reasoning
+that produced the wrong answer is itself worth keeping.
 
-Note the filename: the migration tool passes `filename: "index.html"`, so the
-real production paths end in **`index.html`**, not the `deck.html` named in the
-brief. `deck.html` is what the AI pipeline writes for *generated* lectures.
-This is exactly the kind of detail a publish tool must not guess at — query 5 in
-the SQL script reconciles `content_items.source_ref` against `storage.objects`
-so the true filenames are established before anything is written.
+**What was derived:** `migrate-gated-content.mjs` passes
+`filename: "index.html"` to `create_upload_url`, so the migrated items should
+sit at `courses/tc2007b/items/<slug>/index.html`, and only AI-generated
+lectures should use `deck.html`. Two filenames, two writers (finding F8).
+
+**What production actually holds:**
+
+- **Every one of the 24 storage-backed content items points at `deck.html`.**
+  There is no `index.html` in any `source_ref`. The migrated decks and the
+  generated one share a single convention.
+- **`index.html` still exists in the bucket for all 23 migrated items** — 23
+  objects that no `content_items` row references. They are orphans.
+
+So the two-filename hazard is real but inverted: it is not that a publish tool
+might write `deck.html` beside a live `index.html`; it is that **something
+already did the reverse**, and the superseded `index.html` copies were never
+removed.
+
+Neither `migrate-gated-content.mjs` (writes `index.html`) nor
+`course-checkpoint-backfill` (uploads to the existing `item.source_ref`, so it
+cannot rename) produces this state. Migration `0012`'s own header comment names
+`deck.html` as the intended convention, and `0019` calls it "unchanged from
+Phase 2". The most likely history is a one-off re-upload and re-registration to
+`deck.html` that is not in either repository. **The `index.html` orphans are
+therefore of unknown vintage** — probably the original Phase 2 artifacts, with
+their public links fully intact.
+
+Consequences for the publishing design:
+
+1. `content.json → storage_filename` is `deck.html` for every existing item.
+   The field stays explicit anyway — this audit is exactly why the value is
+   read from production rather than inferred.
+2. The 23 orphans are **not served** today: the gated chain resolves
+   `source_ref`, and nothing points at them. They are dead weight, not an
+   active leak.
+3. They must not be deleted casually. Deleting a storage object is irreversible
+   and they may be the only surviving copy of the pre-checkpoint decks. Removal
+   is a new register entry, **D9**, and it is not part of the current plan.
+4. Nothing may ever re-register content by scanning the bucket. Two candidate
+   files per slug means a scanner would have to guess, and guessing wrong
+   silently reverts a lecture to its Phase 2 state.
+
+### Verified inventory, 2026-08-06
+
+24 storage-backed items: the 23 migrated ones listed above, plus one generated
+lecture, `week-12-lecture-1-access-control-deep-dive`. That slug is derived
+from its title and is live evidence for pitfall #60 — the collision risk is not
+hypothetical, it is the naming scheme already in use.
+
+The clean reset recorded 27 content items, so **3 items are not storage-backed**
+and did not appear in query 5. Queries 2 and 3 identify them; they are expected
+to be `supabase_record` activities such as the Week 1 Quiz.
 
 The remaining **4 of 27** are not identified from the repository alone. The
 likely composition, to be confirmed by query 2:
@@ -279,7 +324,7 @@ Rename and archive are open to any assigned instructor, which is precisely the
 | F5 | No content version history; publish overwrites the object and the row | Medium — no rollback after a bad publish | n/a (new capability) |
 | F6 | `created_by` is null on migrated items, so ownership cannot be inferred retroactively | Medium — owner must be assigned deliberately, once, with approval | Yes |
 | F7 | Fixing F1 without first fixing F2 turns every mission's primary navigation into a 404 | Medium — ordering hazard | Yes |
-| F8 | Storage filenames are `index.html` (migrated) vs `deck.html` (generated); a publish tool that assumes one will corrupt the other | Medium — silent data hazard | Yes |
+| F8 | ~~Storage filenames are `index.html` (migrated) vs `deck.html` (generated)~~ — **corrected 2026-08-06.** Every live item uses `deck.html`; 23 superseded `index.html` objects remain in the bucket, referenced by nothing | Low as a leak, Medium as a trap for any bucket-scanning tool | Orphans are removable, but only deliberately (D9) |
 | F9 | `question_banks.content_item_id` is `on delete set null` — deleting and recreating an item silently orphans its bank | Medium — data-loss hazard during migration | **No, once triggered** |
 
 F9 is the one that would be genuinely expensive to undo, and it is the reason
