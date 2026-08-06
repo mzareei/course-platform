@@ -342,3 +342,60 @@ The production proof assigned an invited profile before first sign-in, then
 archived the target group. The historical-group People view removed that target
 from assignment controls, and a pre-staged authenticated request was refused
 without changing the student's existing enrollment.
+
+---
+
+### Sharing content means taking a copy, not read-only access
+
+**Decided with the professor on 2026-08-05.** This supersedes the original
+brief's requirement 7 wording ("receiving instructors see shared content
+read-only … cannot edit").
+
+A shared lecture that cannot be edited is not much use to the instructor
+receiving it: they teach a different group, at a different pace, and will want
+their own emphasis. So a share makes an item *visible*, and the receiving
+instructor takes a **copy** — a new content item they own, with its own storage
+object and its own question bank, recording `forked_from_content_item_id`.
+
+The bank is copied because a lecture without its bank cannot run checkpoints or
+an end-of-class quiz on this platform; it would be a deck they can show and
+nothing more.
+
+The accepted cost, named explicitly by the professor: **the owner's later
+improvements do not propagate to copies.** Nobody's copy silently changes under
+them, and nobody can write to the original. Two-way sync was not considered
+worth the complexity or the surprise.
+
+---
+
+### Publishing is a command, not a merge hook
+
+**Decided 2026-08-05.** Pushing to the private content repository does not
+update the course. The professor runs `publish.mjs`, authenticated with his own
+short-lived instructor token.
+
+The reason is the credential, not the risk of exposure: publishing never makes
+anything student-visible — that still requires an explicit release — so
+auto-publish could not leak content. But an Action that publishes needs a
+standing Supabase secret, and right now **nothing in this system holds a
+long-lived content-write credential.** Every write path authenticates as a
+signed-in instructor whose role is re-checked in-function.
+
+A GitHub Action still runs on every PR: it validates and cannot publish. It
+holds no secrets. If auto-publish is ever wanted, the honest way is a dedicated
+machine instructor account with its own membership and audit trail.
+
+---
+
+### Group lifecycle belongs to the platform owner
+
+**Decided 2026-08-05, implemented 2026-08-06.**
+
+Teaching a group and owning its lifecycle are different rights. Creating a
+group was already owner-only; renaming and archiving were not, so any assigned
+instructor could rename Group 401 or archive it.
+
+Create, rename, retire and reactivate are now platform-owner only, enforced in
+`course-section-management` before any write. Listing and member management stay
+section-scoped for instructors — restricting those would regress the
+section-scoped access the platform already depends on.

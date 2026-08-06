@@ -1,6 +1,56 @@
 # Status
 
-**Last updated:** 2026-08-05
+**Last updated:** 2026-08-06
+
+### Private content work — approved, implementation started
+
+The professor approved the design on 2026-08-05 and settled every open
+question. Decisions, all recorded in `04-decisions.md`:
+
+- Content repository is `mzareei/course-content`, one directory per course
+  (`courses/tc2007b-information-security/`).
+- Ownership backfill assigns all existing items to the owner profile (D3).
+- **Sharing is copy-based, not read-only.** A receiving instructor sees a
+  shared item and takes a copy they own and can edit; the question bank is
+  copied with it. The owner's later improvements deliberately do not propagate.
+  This supersedes the "read-only, cannot edit" wording in the original brief.
+- Publishing is CLI-only; the GitHub Action validates and cannot publish.
+- Public course content is removed but the course page stays, carrying a link
+  to the platform.
+- Generation is routed through the same ownership and versioning rules, the
+  legacy-nav matcher is fixed, and a trigger refuses deletion of a content item
+  with an active bank.
+
+**Shipped to the branch, not deployed:**
+
+1. **Group lifecycle is platform-owner only** (requirement 8). The backend
+   update branch refused nothing before — any assigned instructor could rename
+   or archive a group. It now returns `section_management_owner_only` as 403,
+   and the frontend hides Add / Edit / Retire for non-owners with a bilingual
+   explanation. Manage members stays available to assigned instructors.
+2. **Migration `0032_content_ownership_and_versions.sql`** — `owner_profile_id`,
+   `visibility`, `forked_from_content_item_id`, `content_shares`,
+   `content_versions`, and a BEFORE DELETE trigger on `content_items` that
+   refuses when an active question bank still points at it. Additive only, and
+   deliberately contains **no backfill** so D3 stays a separate approved step.
+3. **`removeLegacyDeckNavigation` now cleans missions.** It only ever matched
+   `ui-btn`; missions use `btn` / `back-link` and link to the public `progress/`
+   app and the public copy of their own lecture.
+
+**Still to build:** owner scoping in `course-content-library` and
+`course-content-upload`, the copy/fork action, generation slug namespacing
+(P12), the content repository and publish CLI, and the Content screen's
+owned/shared distinction.
+
+**Still parked on production access:** D3 (backfill) and D4 (re-publish the 23
+objects). Both need the audit SQL output first.
+
+**A new finding while answering the professor's question about other
+professors:** generated lecture slugs come from the lecture title, and assemble
+upserts on `(course_id, slug)` with `upsert: true` on the object. Two
+professors generating "Firewalls" in the same course means the second silently
+overwrites the first's deck and rebinds the question bank. Recorded as
+pitfall #60.
 
 ### Private content authoring and publishing — audited and designed, not built
 

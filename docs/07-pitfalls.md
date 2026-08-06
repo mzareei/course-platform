@@ -1132,6 +1132,33 @@ that address, fall back to `signInWithOtp` so re-added instructors still get a
 fresh link. Surface the delivery result and provide a resend action—otherwise
 the UI can look successful while the professor receives nothing.
 
+## 60. A generated slug derived from a title is a cross-professor collision
+
+Found 2026-08-06, answering the professor's question about where another
+professor's generated content is stored.
+
+`course-generation` builds the slug with
+`cleanSlug(lecture_slug || lecture_title)`, and the worker's assemble step
+upserts the content item on `(course_id, slug)` and PUTs the deck with
+`upsert: true`. Two instructors in the same course who both generate a lecture
+called "Firewalls" both produce `firewalls` — and the second run **silently
+overwrites the first's content item and deck file**, then rebinds the question
+bank through `(course_id, content_item_id, bank_type)`.
+
+Nothing errors. The first professor's lecture is simply someone else's now.
+
+This has never bitten because the course has had one instructor. It becomes
+live the moment there is a second, which is exactly what the multi-professor
+work introduces.
+
+**Rule:** a slug derived from user-supplied text is not an identity. When more
+than one person can create content in one namespace, namespace the slug by
+owner and make the write refuse an item the caller does not own — so a
+collision is a clear error rather than a silent replacement. Same family as
+pitfall #43, where a class number belonging to its group collided on move.
+
+---
+
 ## 57. Gated content can link straight back out to its public copy
 
 Found 2026-08-05 during the content-origin audit, by rebuilding all 23 items
