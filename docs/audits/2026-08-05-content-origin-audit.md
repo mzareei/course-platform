@@ -2,7 +2,9 @@
 
 **Date:** 2026-08-05
 **Scope:** requirement 1 and 2 of the private-content-authoring brief.
-**Status:** repository evidence complete; production database confirmation pending.
+**Status:** complete. Repository evidence gathered 2026-08-05; production
+confirmed 2026-08-06 by running all five read-only queries. Two derived
+findings were corrected by the data — see F8 and pitfall #58.
 **Nothing in this audit changed production.** No SQL was executed, no storage
 object was written or deleted, no release was altered.
 
@@ -16,8 +18,8 @@ Be clear about the boundary before reading the findings.
 |---|---|---|
 | `mzareei/course-platform` (frontend) | Yes — full checkout, verifiers run | Direct |
 | `mzareei/mzareei.github.io` (backend + public site) | Yes — read-only clone at `9d40cc0` | Direct |
-| Production Supabase `ojmbupftdikwmlqvibwt` | **No** — no service key, no CLI token | Not verified |
-| Private `course-content` bucket | **No** | Not verified |
+| Production Supabase `ojmbupftdikwmlqvibwt` | Indirectly — the professor ran the read-only queries on 2026-08-06 and returned the results | **Direct, as of 2026-08-06** |
+| Private `course-content` bucket | Indirectly, via `storage.objects` in query 5 | **Direct, as of 2026-08-06** |
 | Live `https://mzareei.github.io/...` | **No** — outbound HTTPS to that host is blocked by the sandbox proxy (403 on CONNECT) | Not verified live; verified from committed source |
 
 So: everything below that describes *files, code and configuration* is direct
@@ -137,16 +139,84 @@ Consequences for the publishing design:
    files per slug means a scanner would have to guess, and guessing wrong
    silently reverts a lecture to its Phase 2 state.
 
-### Verified inventory, 2026-08-06
+### Verified inventory, 2026-08-06 — all four queries run
 
-24 storage-backed items: the 23 migrated ones listed above, plus one generated
-lecture, `week-12-lecture-1-access-control-deep-dive`. That slug is derived
-from its title and is live evidence for pitfall #60 — the collision risk is not
-hypothetical, it is the naming scheme already in use.
+Production returned **exactly 27 content items**, matching the reset record.
 
-The clean reset recorded 27 content items, so **3 items are not storage-backed**
-and did not appear in query 5. Queries 2 and 3 identify them; they are expected
-to be `supabase_record` activities such as the Week 1 Quiz.
+| Origin | Type | Count |
+|---|---|---|
+| `storage_object` | lecture | 12 |
+| `storage_object` | mission | 12 |
+| `static_path` | resource | **2** |
+| `supabase_record` | activity | 1 |
+
+The 12 lectures are the 11 migrated ones plus `week-12-lecture-1-access-control-deep-dive`,
+the one AI-generated lecture. Its slug is derived from its title — live evidence
+that pitfall #60's namespace is the one already in use.
+
+**14 question banks, 223 active questions**, matching the reset record exactly
+(12 banks × 18, plus `week-01-mission-01` with 2 and `week-01-quiz` with 5).
+
+#### Finding G1 — nothing is released to students right now
+
+`students_can_open` is **`no` for all 27 items**. Not one release is in a
+student-visible state; the clean reset removed them and none has been recreated.
+
+This is the single most useful fact in the audit, and it **inverts the risk on
+D4**. Re-publishing all 23 objects was ranked high-risk because it rewrites
+material students might be reading. Right now no student can open anything, so
+the rewrite disturbs nobody. **The safest possible moment to do D4 is before
+the next release is created.**
+
+#### Finding G2 — one class session is open, on `week-01-lecture`
+
+`week-01-lecture` reports `in_an_open_class = 1`: a session in `open`, `live`,
+`paused` or `continued`. The reset postcondition recorded zero sessions, so this
+was created afterwards.
+
+It does not make the lecture student-visible (G1 still holds — closing a class
+is what creates a Review release). But publishing over the one lecture attached
+to an unfinished class is exactly the case the preflight gate exists to refuse.
+**Establish what that session is before D4 touches `week-01-lecture`.** Every
+other item is unattached.
+
+#### Finding G3 — only one deck has ever been checkpoint-prepared
+
+`checkpoint_preparation_state` is `ready` on exactly one bank —
+`week-01-lecture`. The other 13 are `none`.
+
+This settles the open question in §2c. Only `week-01-lecture` has had any legacy
+navigation stripped, and only its four `ui-btn` destinations. **The other 11
+lectures and all 12 missions still carry every public link they were migrated
+with.** No bank is stranded at `pending_upload`, so there is no half-finished
+preparation to recover.
+
+#### Finding G4 — two content items point directly at the public site
+
+Query 3 turned up something the code-derived audit missed entirely:
+
+| Slug | Title | `source_ref` |
+|---|---|---|
+| `review-coach` | Review Coach | `/assets/course-materials/information-security/review-coach/` |
+| `teacher` | Teacher Insights | `/assets/course-materials/information-security/teacher/` |
+
+Two `static_path` resources pointing at first-generation apps on the public
+site. They are **inert today**: `studentDelivery()` classifies a `static_path`
+resource as `internal`, so no student screen renders them, and G1 means they
+have no release anyway.
+
+But they are direct dependencies on the tree D5/D6 removes. Retiring the public
+apps turns both into content items pointing at a 404. They must be archived or
+repointed **as part of D5/D6**, not discovered afterwards.
+
+(`week-01-quiz` is `supabase_record` with `source_ref = app/activity.html` — a
+vestigial path on a row that is `live_only` and never opened directly. No
+action.)
+
+#### Finding G5 — no item has a recorded author
+
+`created_by` is null on **all 27**, confirming F6 and pitfall #59 from data
+rather than inference. Ownership cannot be recovered; D3 must assign it.
 
 The remaining **4 of 27** are not identified from the repository alone. The
 likely composition, to be confirmed by query 2:
@@ -318,6 +388,11 @@ Rename and archive are open to any assigned instructor, which is precisely the
 | # | Finding | Severity | Reversible? |
 |---|---|---|---|
 | F1 | Every lecture and mission is published in the clear on the public academic site, linked from a public course index | High — defeats the gate | Yes (site change) |
+| G1 | **Nothing is released to students right now** (0 of 27). D4 currently disturbs nobody — this is the safe window | Inverts D4's risk downward | n/a |
+| G2 | One unfinished class session is attached to `week-01-lecture` | Medium — publish preflight must refuse it | Yes |
+| G3 | Only `week-01-lecture` was ever checkpoint-prepared; 11 lectures and all 12 missions still carry every public link | Confirms F2's scope is the maximum, not a subset | Yes |
+| G4 | `review-coach` and `teacher` are `static_path` items pointing straight at the public apps D6 retires | Medium — breaks on D6 unless handled with it | Yes |
+| G5 | `created_by` null on all 27, confirmed from data | Confirms F6 | Yes |
 | F2 | 9 missions link from inside the private bucket to the **public copy of their lecture**; 10 link to the public `progress/` app | High — click-out from behind the gate | Yes (re-publish objects) |
 | F3 | Any course instructor can read, edit and overwrite any other instructor's content item and storage object | High — requirement 7 is unimplemented | n/a (new capability) |
 | F4 | A regular instructor can rename and archive their assigned group | Medium — requirement 8 half-enforced | n/a (new guard) |
@@ -345,5 +420,19 @@ and record:
 5. Query 5 — the true filename of every object, and any `content_items` row
    pointing at a path the bucket does not have (or vice versa).
 
-Until those five results are recorded, no publish, migration, or public-site
-retirement should run.
+**All five were run on 2026-08-06 and are recorded above (G1–G5).** The audit
+is closed. Two derived findings were wrong and are corrected in place with
+their reasoning preserved: the storage filename (F8) and the generated-slug
+collision (pitfall #60).
+
+### What the data changed about the plan
+
+- **D4 moves earlier and gets cheaper.** G1 means no student can open anything
+  today, so re-publishing the 23 objects rewrites material nobody is reading.
+  Doing it before the next release is created is materially safer than doing it
+  afterwards.
+- **D4 must still refuse `week-01-lecture`** until G2's open session is
+  understood. One item, not twenty-three.
+- **D5/D6 grow two dependencies.** G4's `review-coach` and `teacher` items must
+  be archived or repointed in the same change that retires the public apps.
+- **D3 is unavoidable.** G5 confirms there is no author data to recover.

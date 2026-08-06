@@ -42,8 +42,23 @@ question. Decisions, all recorded in `04-decisions.md`:
 (P12), the content repository and publish CLI, and the Content screen's
 owned/shared distinction.
 
-**Still parked on production access:** D3 (backfill) and D4 (re-publish the 23
-objects). Both need the audit SQL output first.
+**Audit closed 2026-08-06.** The professor ran all five read-only queries. 27
+items confirmed (12 lectures, 12 missions, 2 static_path resources, 1 activity),
+14 banks, 223 questions — matching the reset record exactly. Five new findings,
+G1–G5 in the audit document. The two that change the plan:
+
+- **G1: nothing is released to students right now** — 0 of 27 items are
+  student-visible. D4 currently rewrites material nobody can open, which makes
+  now the safest window to do it rather than the riskiest.
+- **G4: `review-coach` and `teacher` are `static_path` items pointing straight
+  at the public apps D6 retires.** They must be archived or repointed in the
+  same change, not discovered afterwards.
+
+Also confirmed: only `week-01-lecture` has ever been checkpoint-prepared, so
+11 lectures and all 12 missions still carry every public link (G3); one
+unfinished class session is attached to `week-01-lecture`, which publish
+preflight must refuse until it is understood (G2); and `created_by` is null on
+all 27, so ownership must be assigned rather than recovered (G5).
 
 **Corrected finding on generated slugs.** It was first recorded as "the second
 professor silently overwrites the first". That is wrong: `create_job` already
