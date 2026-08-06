@@ -71,8 +71,11 @@ the professor's approval before implementation.
 What the audit established from repository evidence:
 
 - All 23 migrated items (11 lectures, 12 missions including 3 bridge missions)
-  are `storage_object` at `courses/tc2007b/items/<slug>/index.html` — note
-  `index.html`, not `deck.html`; `deck.html` is the AI pipeline's filename.
+  are `storage_object` under `courses/tc2007b/items/<slug>/`. **The filename in
+  this bullet was originally derived as `index.html` and is wrong** — production
+  says every item points at `deck.html`, with the superseded `index.html`
+  objects still sitting in the bucket unreferenced. Corrected 2026-08-06; see
+  the audit and pitfall #58.
 - The public academic site still publishes every one of them, linked by hand
   from `_courses/information-security.md`. `_config.yml` excludes `supabase`
   and `docs/superpowers` but not `assets/`.
