@@ -1132,30 +1132,47 @@ that address, fall back to `signInWithOtp` so re-added instructors still get a
 fresh link. Surface the delivery result and provide a resend action—otherwise
 the UI can look successful while the professor receives nothing.
 
-## 60. A generated slug derived from a title is a cross-professor collision
+## 60. A uniqueness check that names content the caller cannot see
 
-Found 2026-08-06, answering the professor's question about where another
-professor's generated content is stored.
+**First written 2026-08-06 as "the second professor silently overwrites the
+first." That was wrong, and the correction is the more useful entry.**
 
-`course-generation` builds the slug with
-`cleanSlug(lecture_slug || lecture_title)`, and the worker's assemble step
-upserts the content item on `(course_id, slug)` and PUTs the deck with
-`upsert: true`. Two instructors in the same course who both generate a lecture
-called "Firewalls" both produce `firewalls` — and the second run **silently
-overwrites the first's content item and deck file**, then rebinds the question
-bank through `(course_id, content_item_id, bank_type)`.
+`course-generation`'s `create_job` already refuses a colliding slug:
 
-Nothing errors. The first professor's lecture is simply someone else's now.
+```ts
+if (clash) throw new Error(
+  `A content item with slug "${lectureSlug}" already exists — choose a different one.`);
+```
 
-This has never bitten because the course has had one instructor. It becomes
-live the moment there is a second, which is exactly what the multi-professor
-work introduces.
+So in the ordinary sequential case nothing is overwritten. The original claim
+came from reading the worker's `upsert(..., { onConflict: "course_id,slug" })`
+in isolation and never checking whether anything upstream had already closed
+the door. **Reading one end of a write path is not reading the write path.**
 
-**Rule:** a slug derived from user-supplied text is not an identity. When more
-than one person can create content in one namespace, namespace the slug by
-owner and make the write refuse an item the caller does not own — so a
-collision is a clear error rather than a silent replacement. Same family as
-pitfall #43, where a class number belonging to its group collided on move.
+What is genuinely wrong is subtler, and it only appears once content is owned:
+
+1. **The refusal names content the caller is not allowed to see.** Once the
+   library is scoped by owner, professor B cannot see professor A's
+   `firewalls` lecture — but is still told it exists, by name, and is blocked
+   from a title they have every right to use. A uniqueness error across a
+   privacy boundary is both an information leak and impossible advice, the same
+   shape as pitfall #43's "choose another class number".
+
+2. **Two narrow races survive the check.** Two jobs created concurrently with
+   the same slug both pass, and the second to assemble overwrites the first.
+   The same holds if a publish or `register_item` creates the slug between job
+   creation and assemble. The check is a read followed by a much later write,
+   with no lock and no unique constraint failure to fall back on, because the
+   write is an upsert.
+
+**Rule:** a global uniqueness check stops being a usability feature the moment
+the namespace stops being global. Namespace the slug by owner so two
+professors can both have a "Firewalls" lecture, and make the write refuse an
+item the caller does not own — so the remaining races fail loudly instead of
+resolving in favour of whoever finished last.
+
+And: when a check and its write are far apart, the check is advisory. The
+guarantee has to live at the write.
 
 ---
 

@@ -45,12 +45,13 @@ owned/shared distinction.
 **Still parked on production access:** D3 (backfill) and D4 (re-publish the 23
 objects). Both need the audit SQL output first.
 
-**A new finding while answering the professor's question about other
-professors:** generated lecture slugs come from the lecture title, and assemble
-upserts on `(course_id, slug)` with `upsert: true` on the object. Two
-professors generating "Firewalls" in the same course means the second silently
-overwrites the first's deck and rebinds the question bank. Recorded as
-pitfall #60.
+**Corrected finding on generated slugs.** It was first recorded as "the second
+professor silently overwrites the first". That is wrong: `create_job` already
+refuses a colliding slug. What is real is that the refusal names content the
+caller will not be allowed to see once the library is owner-scoped, blocking a
+legitimate title and leaking that someone else's exists — plus two narrow races
+where the check and the upsert are far apart. Owner-namespaced slugs plus an
+ownership check at the write fix both. See pitfall #60, rewritten.
 
 ### Private content authoring and publishing — audited and designed, not built
 
