@@ -1,0 +1,17 @@
+{
+  "courses": {
+    "tc2007b": {
+      "directory": "courses/tc2007b-information-security",
+      "title": "TC2007B — Information Security",
+      "languages": ["en", "es"],
+      "storage_prefix": "courses/tc2007b/items"
+    }
+  },
+  "//": "Hosts an authored artifact may reference after inlining. Anything else fails validation, so a new external dependency is a reviewed change rather than a silent one.",
+  "allowed_external_hosts": [
+    "fonts.googleapis.com",
+    "fonts.gstatic.com"
+  ],
+  "//forbidden": "The course's own public origin. A link from inside the gate to the ungated copy of the same material is the failure this repository exists to end.",
+  "forbidden_hosts": ["mzareei.github.io"]
+}

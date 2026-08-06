@@ -1,0 +1,18 @@
+# Validates every pull request. Holds no secrets and cannot publish — that is
+# deliberate: publishing needs a credential, and this repository is the one
+# place a standing credential must never live.
+name: Validate content
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/validate.mjs
