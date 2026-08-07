@@ -114,7 +114,85 @@ class session was created after the reset.
    rehearsal is complete; Chrome's student tab was blocked by an extension UI,
    so this evidence must be collected with actual phones.
 2. Phase 6 public-site cleanup: remove teaching content from the public academic
-   repository, redirect retired apps, and crawl for gated-content leaks.
+   repository, redirect retired apps, and crawl for gated-content leaks. **The
+   2026-08-05 audit found this cannot be done first** — every private object
+   links back to the public copies, so the objects must be re-published clean
+   before the public site is retired. See pitfall #57.
+3. Private content authoring and publishing — **designed, awaiting approval,
+   not built.** Read `docs/audits/2026-08-05-content-origin-audit.md` and
+   `docs/superpowers/specs/2026-08-05-private-content-publishing-design.md`.
+   No production data, storage object, or repository was created or changed.
+
+## Private content architecture — status as of 2026-08-06
+
+Audit closed, design approved, implementation complete except the public-site
+retirement. **Nothing is deployed.** No production row, storage object, release
+or public page has been changed.
+
+### Verified from production (all five audit queries run 2026-08-06)
+
+27 content items: 12 lectures, 12 missions, 2 `static_path` resources, 1
+activity. 14 question banks, 223 active questions. Matches the reset record.
+
+- **Zero items are released to students.** This inverts the risk on cleaning
+  the decks: the rewrite currently disturbs nobody, and stops being free the
+  moment material is released for a class.
+- Every item points at `deck.html`, not `index.html` as the code-derived audit
+  claimed. 23 superseded `index.html` objects sit in the bucket referenced by
+  nothing (pitfall #58).
+- Only `week-01-lecture` was ever checkpoint-prepared, so 11 lectures and all
+  12 missions carry every public link they were migrated with.
+- `review-coach` and `teacher` point straight at the public first-generation
+  apps and break when those are retired.
+- `created_by` is null on all 27, so ownership was assigned, not recovered.
+
+### Built, on branch `claude/tc2007b-private-content-4cniyb` in both repos
+
+| Piece | Where |
+|---|---|
+| Group lifecycle restricted to the platform owner | both repos |
+| Ownership / sharing / versions schema + delete guard (`0032`) | backend |
+| Ownership backfill (`0033`) | backend |
+| Content scoped to its owner; upload guarded too | backend |
+| `copy_content_item` — copy with its question bank | backend |
+| Generated lectures under the same ownership rules | backend |
+| Legacy nav cleanup, anchors **and** engine script | backend |
+| `course-content-cleanup` — preview + clean, one item per call | backend |
+| The Content screen's cleanup control | frontend |
+| Owned/shared distinction and Copy action | frontend |
+| Content repository scaffold, validator, publish CLI | frontend `tools/content-repo/` |
+
+Measured on all 23 real decks rebuilt from source: **111 public references
+before the cleanup, 0 after**, every script block still parsing.
+
+Verifier baseline: **17 frontend, 62 backend.** Seven backend verifiers fail
+identically on pristine `origin/main` — pre-existing and unrelated. Frontend
+typecheck and build pass.
+
+### Blocked, and on what
+
+1. **`mzareei/course-content` does not exist.** This session's GitHub token
+   cannot create repositories (403). It is a manual step; `tools/content-repo/`
+   holds everything that goes in it.
+2. **D5/D6, retiring the public course tree**, is correctly blocked twice over:
+   the materials need the new repository first, and the stored decks must be
+   cleaned first or every mission's navigation 404s from inside the bucket.
+3. **Nothing has been verified live.** No signed-in instructor session and no
+   network route to Supabase from this environment. Every claim above is from
+   static verification or from the professor's own query output.
+
+### The deployment sequence
+
+`06-runbook.md` carries it in full. The order is not a preference: create the
+content repository, apply `0032` then `0033`, deploy the six edge functions,
+merge the frontend, clean the decks while nothing is released, and only then
+touch the public site.
+
+Destructive steps are enumerated as D1–D8 in the design document with a
+mandatory ordering (D2 → D1 → D4 → D5 → D6). **None have been performed, and
+none should be without explicit approval.** D8 — any deletion of content items,
+question banks, questions, students, grades, attempts, releases or storage
+objects — is not proposed at all.
 
 ## Safe continuation sequence
 

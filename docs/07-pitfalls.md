@@ -1132,6 +1132,129 @@ that address, fall back to `signInWithOtp` so re-added instructors still get a
 fresh link. Surface the delivery result and provide a resend action—otherwise
 the UI can look successful while the professor receives nothing.
 
+## 60. A uniqueness check that names content the caller cannot see
+
+**First written 2026-08-06 as "the second professor silently overwrites the
+first." That was wrong, and the correction is the more useful entry.**
+
+`course-generation`'s `create_job` already refuses a colliding slug:
+
+```ts
+if (clash) throw new Error(
+  `A content item with slug "${lectureSlug}" already exists — choose a different one.`);
+```
+
+So in the ordinary sequential case nothing is overwritten. The original claim
+came from reading the worker's `upsert(..., { onConflict: "course_id,slug" })`
+in isolation and never checking whether anything upstream had already closed
+the door. **Reading one end of a write path is not reading the write path.**
+
+What is genuinely wrong is subtler, and it only appears once content is owned:
+
+1. **The refusal names content the caller is not allowed to see.** Once the
+   library is scoped by owner, professor B cannot see professor A's
+   `firewalls` lecture — but is still told it exists, by name, and is blocked
+   from a title they have every right to use. A uniqueness error across a
+   privacy boundary is both an information leak and impossible advice, the same
+   shape as pitfall #43's "choose another class number".
+
+2. **Two narrow races survive the check.** Two jobs created concurrently with
+   the same slug both pass, and the second to assemble overwrites the first.
+   The same holds if a publish or `register_item` creates the slug between job
+   creation and assemble. The check is a read followed by a much later write,
+   with no lock and no unique constraint failure to fall back on, because the
+   write is an upsert.
+
+**Rule:** a global uniqueness check stops being a usability feature the moment
+the namespace stops being global. Namespace the slug by owner so two
+professors can both have a "Firewalls" lecture, and make the write refuse an
+item the caller does not own — so the remaining races fail loudly instead of
+resolving in favour of whoever finished last.
+
+And: when a check and its write are far apart, the check is advisory. The
+guarantee has to live at the write.
+
+---
+
+## 57. Gated content can link straight back out to its public copy
+
+Found 2026-08-05 during the content-origin audit, by rebuilding all 23 items
+with `migrate-gated-content.mjs --dry-run` and grepping the output.
+
+The Phase 2 migration deliberately rewrote every relative link in a deck or
+mission to an **absolute public URL**, so cross-navigation would keep working
+while the public copies still existed. That was correct then. The consequence
+now is that every object in the private bucket carries hard
+`https://mzareei.github.io` links — and nine of the twelve missions link to the
+**public, ungated copy of their own lecture**. A student inside `/content?t=…`
+is one click from the material the gate exists to protect.
+
+`removeLegacyDeckNavigation()` in `_shared/checkpoint-deck.ts` cleans four
+destinations, but only from anchors carrying `ui-btn`, and only when a lecture
+goes through checkpoint preparation. Mission anchors use `class="btn"`, and
+missions never go through that path at all. So the cleanup that exists has
+never touched a mission and, as written, never would.
+
+**Rule:** a gate is only as good as the outbound links inside what it serves.
+When content moves behind an authorisation boundary, audit its *outbound* links
+as carefully as its inbound ones, and make "no reference to the public origin" a
+validator, not a review habit. Ordering matters too: retiring the public site
+before the objects are re-published turns every mission's primary navigation
+into a 404 from *inside* the private bucket.
+
+---
+
+## 58. A superseded storage object does not go away on its own
+
+**First written from the code, then corrected by production on 2026-08-06.**
+The correction is the more useful half.
+
+The derivation: `migrate-gated-content.mjs` passes `filename: "index.html"`,
+the AI pipeline writes `deck.html`, so the bucket must hold two conventions and
+a publish tool that assumes one would corrupt the other.
+
+Production says otherwise. **Every one of the 24 storage-backed items points at
+`deck.html`** — and **all 23 `index.html` objects are still in the bucket**,
+referenced by nothing. Something re-uploaded and re-registered the decks under
+a new filename, and the old objects were simply left there. Neither repository
+contains the script that did it.
+
+They are not served: the gated chain resolves `source_ref`, and no row points
+at them. But they are almost certainly the original Phase 2 artifacts, public
+links and all, sitting one signed URL away from being served by anything that
+guesses a path.
+
+**Rule:** Postgres and Storage do not share a transaction, and they do not
+share a garbage collector either. Changing where a row points leaves the old
+object alive and unreferenced, forever. When a storage path changes, decide
+explicitly what happens to the object it used to name — and record that
+decision, because the next person will find two plausible files and no way to
+tell which one is live.
+
+Corollary: never re-register content by scanning the bucket. Two candidate
+files per slug means a scanner has to guess, and guessing wrong silently
+reverts a lecture to an older version that still renders perfectly.
+
+---
+
+## 59. `created_by` is not populated by every write path
+
+`course-content-library`'s insert sets `created_by`. `course-content-upload`'s
+`register_item` upsert does not — it never has. So the 23 migrated decks, the
+entire hand-authored course, almost certainly carry `created_by = null`.
+
+This only surfaced when ownership became a requirement: there is no data to
+backfill *from*. Ownership has to be assigned by a reviewed decision, not
+recovered.
+
+**Rule:** if a column is meant to answer "who made this", check every path that
+creates a row, not the one you happen to be reading. An upsert that omits the
+column writes null on insert and leaves it stale on update — the same family as
+pitfall #13, where the payload was written on the update path and should not
+have been.
+
+---
+
 ## 56. Course instructor membership is not global group access
 
 TC2007B is one course containing groups 401, 402, 501, and 502. A course-level

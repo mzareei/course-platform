@@ -11,11 +11,13 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   contentLibrary, listReleases, updateReleaseState, makeAvailable, studentsCanOpen, ContentNotReviewableError,
+  copyContentItem,
   type ContentItem, type ContentLibrary as Library, type ReleaseRow
 } from "../api/content";
 import { updateClass } from "../api/classes";
 import { listSessions, type ClassSession } from "../api/schedule";
 import { canReleaseToReview } from "../api/contentVisibility";
+import { PublicLinkCleanup } from "./PublicLinkCleanup";
 import { refreshContext } from "../state/session";
 import { t, formatDay } from "../i18n";
 
@@ -112,6 +114,10 @@ export function ContentLibraryView() {
     <div class="stack">
       <p class="hint">{t("content.library.lede")}</p>
 
+      {/* Renders nothing once every stored file is clean, so this one-time
+          job does not leave a permanent maintenance card behind. */}
+      <PublicLinkCleanup />
+
       <div class="row" style="justify-content: space-between; align-items: center;">
         <span class="hint">
           {t("content.library.countAvailable", {
@@ -149,6 +155,9 @@ export function ContentLibraryView() {
           .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))[0];
         const plannedAssignments = assignableSessions.filter((session) => session.content_item_id === item.id);
         const failure = itemError[item.id];
+        // Absent means an older deployed function that predates ownership, and
+        // the pre-ownership behaviour was "every instructor may write".
+        const canEdit = item.can_edit !== false;
 
         return (
           <div class="card stack">
@@ -161,10 +170,34 @@ export function ContentLibraryView() {
                       ? t("content.library.statusAvailable")
                       : t("content.library.statusHidden")}
                   </span>
+                  {item.is_shared_with_me ? (
+                    <span class="pill" style="margin-left: 0.4rem;">
+                      {t("content.library.sharedBadge")}
+                    </span>
+                  ) : null}
                 </p>
+                {item.is_shared_with_me ? (
+                  <p class="hint">{t("content.library.sharedHint")}</p>
+                ) : null}
               </div>
               <div class="row" style="flex: 0 0 auto;">
-                {!wholeCourseRelease ? (
+                {/* A share grants visibility and one action: take a copy.
+                    Offering the availability controls here would be a button
+                    that always 403s, which reads as a no-op rather than a
+                    refusal. */}
+                {item.is_shared_with_me ? (
+                  <button
+                    class="btn primary"
+                    type="button"
+                    disabled={busy === item.id}
+                    onClick={() => void run(item.id, async () => {
+                      const result = await copyContentItem(item.id);
+                      setNotice(t("content.library.copied", { title: result.item?.title || item.title }));
+                    })}
+                  >
+                    {busy === item.id ? t("content.library.copying") : t("content.library.copy")}
+                  </button>
+                ) : canEdit && !wholeCourseRelease ? (
                   <button
                     class="btn primary"
                     type="button"
@@ -182,6 +215,7 @@ export function ContentLibraryView() {
                 ) : null}
               </div>
             </div>
+            {canEdit ? (
             <label class="field">
               {t("content.library.assignToClass")}
               <select
@@ -219,6 +253,7 @@ export function ContentLibraryView() {
                 ))}
               </select>
             </label>
+            ) : null}
             {plannedAssignments.length ? (
               <div class="stack" style="gap: 0.4rem;">
                 <p class="hint">{t("content.library.plannedAssignments")}</p>
@@ -233,7 +268,7 @@ export function ContentLibraryView() {
                 ))}
               </div>
             ) : null}
-            {manageableReleases.length ? (
+            {canEdit && manageableReleases.length ? (
               <div class="stack" style="gap: 0.4rem;">
                 {manageableReleases.map((release) => {
                   const scope = reviewScope(release);

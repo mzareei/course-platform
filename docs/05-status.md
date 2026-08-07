@@ -1,6 +1,147 @@
 # Status
 
-**Last updated:** 2026-08-04
+**Last updated:** 2026-08-06
+
+### Private content work — approved, implementation started
+
+The professor approved the design on 2026-08-05 and settled every open
+question. Decisions, all recorded in `04-decisions.md`:
+
+- Content repository is `mzareei/course-content`, one directory per course
+  (`courses/tc2007b-information-security/`).
+- Ownership backfill assigns all existing items to the owner profile (D3).
+- **Sharing is copy-based, not read-only.** A receiving instructor sees a
+  shared item and takes a copy they own and can edit; the question bank is
+  copied with it. The owner's later improvements deliberately do not propagate.
+  This supersedes the "read-only, cannot edit" wording in the original brief.
+- Publishing is CLI-only; the GitHub Action validates and cannot publish.
+- Public course content is removed but the course page stays, carrying a link
+  to the platform.
+- Generation is routed through the same ownership and versioning rules, the
+  legacy-nav matcher is fixed, and a trigger refuses deletion of a content item
+  with an active bank.
+
+**Shipped to the branch, not deployed:**
+
+1. **Group lifecycle is platform-owner only** (requirement 8). The backend
+   update branch refused nothing before — any assigned instructor could rename
+   or archive a group. It now returns `section_management_owner_only` as 403,
+   and the frontend hides Add / Edit / Retire for non-owners with a bilingual
+   explanation. Manage members stays available to assigned instructors.
+2. **Migration `0032_content_ownership_and_versions.sql`** — `owner_profile_id`,
+   `visibility`, `forked_from_content_item_id`, `content_shares`,
+   `content_versions`, and a BEFORE DELETE trigger on `content_items` that
+   refuses when an active question bank still points at it. Additive only, and
+   deliberately contains **no backfill** so D3 stays a separate approved step.
+3. **`removeLegacyDeckNavigation` now cleans missions.** It only ever matched
+   `ui-btn`; missions use `btn` / `back-link` and link to the public `progress/`
+   app and the public copy of their own lecture.
+
+4. **Content is private to its owner** — `course-content-library` and
+   `course-content-upload` scope reads to owner ∪ shares and refuse writes to
+   anything the caller does not own. The null-owner branch is load-bearing:
+   every existing item is unowned until `0033` runs, so hiding null-owner items
+   before the backfill would empty the professor's own Content screen.
+5. **Migration `0033_assign_content_ownership.sql`** — the D3 backfill. Refuses
+   unless exactly one active platform owner exists, fills only null owners,
+   leaves `created_by` alone, asserts its own postcondition.
+6. **`removeLegacyDeckScriptNavigation`** — the anchor pass alone left three
+   links per lecture, all in the legacy engine's M/Q/E keyboard shortcuts.
+   Measured on all 23 real decks rebuilt from source: **111 public references
+   before, 0 after**, every script block still parsing.
+7. **`course-content-cleanup` edge function** — preview (writes nothing) and
+   clean (one item per call), with the storage-safe ordering: read, transform,
+   verify, back up the old bytes, record the version, then overwrite.
+8. **The Content screen's cleanup control** — previews, confirms in-app, walks
+   the items one at a time, and renders nothing once everything is clean.
+
+9. **`copy_content_item`** — a receiving instructor takes a copy with its own
+   storage object and its own question bank, including every question's
+   checkpoint metadata and both languages. Visibility is the gate, not
+   ownership; the source is never written; the copy starts `owner_private`.
+10. **Generated lectures follow the ownership rules.** A slug clash owned by
+    somebody else is resolved silently instead of named — naming it leaks
+    content the caller may not see and blocks a title they may use. The worker
+    re-checks ownership immediately before the upsert, because `create_job`'s
+    check runs minutes earlier and two concurrent jobs both pass it.
+    Regeneration snapshots the deck it replaces.
+11. **The Content screen tells the truth about whose lecture it is.** A shared
+    item is badged, explained, and offers exactly one action — Take a copy.
+    Every write control is gated on `can_edit`, so no button is offered that
+    would 403.
+
+**Still to build:** the content repository `mzareei/course-content` and its
+publish CLI, and the D5/D6 public-site retirement including the `review-coach`
+and `teacher` items found in G4.
+
+**Audit closed 2026-08-06.** The professor ran all five read-only queries. 27
+items confirmed (12 lectures, 12 missions, 2 static_path resources, 1 activity),
+14 banks, 223 questions — matching the reset record exactly. Five new findings,
+G1–G5 in the audit document. The two that change the plan:
+
+- **G1: nothing is released to students right now** — 0 of 27 items are
+  student-visible. D4 currently rewrites material nobody can open, which makes
+  now the safest window to do it rather than the riskiest.
+- **G4: `review-coach` and `teacher` are `static_path` items pointing straight
+  at the public apps D6 retires.** They must be archived or repointed in the
+  same change, not discovered afterwards.
+
+Also confirmed: only `week-01-lecture` has ever been checkpoint-prepared, so
+11 lectures and all 12 missions still carry every public link (G3); one
+unfinished class session is attached to `week-01-lecture`, which publish
+preflight must refuse until it is understood (G2); and `created_by` is null on
+all 27, so ownership must be assigned rather than recovered (G5).
+
+**Corrected finding on generated slugs.** It was first recorded as "the second
+professor silently overwrites the first". That is wrong: `create_job` already
+refuses a colliding slug. What is real is that the refusal names content the
+caller will not be allowed to see once the library is owner-scoped, blocking a
+legitimate title and leaking that someone else's exists — plus two narrow races
+where the check and the upsert are far apart. Owner-namespaced slugs plus an
+ownership check at the write fix both. See pitfall #60, rewritten.
+
+### Private content authoring and publishing — audited and designed, not built
+
+Requirements 1–8 and 13 of the private-content brief are answered on paper. No
+code was changed, no migration was written, no production row or storage object
+was touched, and the private content repository was **not** created. Awaiting
+the professor's approval before implementation.
+
+- `docs/audits/2026-08-05-content-origin-audit.md` — the content-origin audit.
+- `docs/audits/content-origin-audit.sql` — a read-only script that produces the
+  per-item production report. Safe to run at any time, including during class.
+- `docs/superpowers/specs/2026-08-05-private-content-publishing-design.md` — the
+  private-repo layout, the seven-gate publish workflow, the CLI-vs-Action
+  recommendation, the owner/sharing model, the group-management guards, the
+  destructive-step register, and the TDD plan.
+
+What the audit established from repository evidence:
+
+- All 23 migrated items (11 lectures, 12 missions including 3 bridge missions)
+  are `storage_object` under `courses/tc2007b/items/<slug>/`. **The filename in
+  this bullet was originally derived as `index.html` and is wrong** — production
+  says every item points at `deck.html`, with the superseded `index.html`
+  objects still sitting in the bucket unreferenced. Corrected 2026-08-06; see
+  the audit and pitfall #58.
+- The public academic site still publishes every one of them, linked by hand
+  from `_courses/information-security.md`. `_config.yml` excludes `supabase`
+  and `docs/superpowers` but not `assets/`.
+- Every object in the private bucket carries hard `https://mzareei.github.io`
+  links, because `migrate-gated-content.mjs` deliberately absolutised them in
+  Phase 2. Nine missions link to the **public copy of their own lecture**.
+- `removeLegacyDeckNavigation()` strips four of those destinations, but only
+  from `ui-btn` anchors and only during checkpoint preparation — so no mission
+  has ever been cleaned, and no code path currently would.
+- Content items are course-wide and unowned: any instructor can read, edit and
+  overwrite any other instructor's item and storage object. `created_by` is
+  null on the migrated items because `register_item` never set it.
+- Group create is owner-only on the backend; **rename and archive are not**, and
+  the Add-a-group card renders for every instructor.
+
+What is still unverified: everything about production rows. This session had no
+Supabase credentials and the sandbox blocks outbound HTTPS to
+`mzareei.github.io`, so the 27-item inventory is derived from the code that
+wrote it, not read from the database. Run the SQL script before acting.
 
 ### Single-screen classroom display — deployed and instructor-verified
 

@@ -35,6 +35,15 @@ export interface ContentItem {
   created_at?: string;
   updated_at?: string;
   release_counts: { draft: number; active: number; total: number };
+  // Computed per row by course-content-library. can_edit is false for an item
+  // shared with one of your groups but owned by somebody else; the screen must
+  // not offer write controls that would 403. Optional so an older deployed
+  // function that omits them is treated as "yours", which is what the
+  // pre-ownership behaviour was.
+  can_edit?: boolean;
+  is_shared_with_me?: boolean;
+  owner_profile_id?: string | null;
+  forked_from_content_item_id?: string | null;
 }
 
 export interface LibrarySection {
@@ -205,4 +214,14 @@ export function studentsCanOpen(state: string, opensAt: string | null, now = new
     return Boolean(opensAt) && new Date(opensAt as string) <= now;
   }
   return !opensAt || new Date(opensAt) <= now;
+}
+
+/** Take a copy of an item shared with one of your groups. The copy is yours:
+ *  your own storage object, your own question bank, and the original is never
+ *  written. */
+export function copyContentItem(contentItemId: string) {
+  return callFn<{ item: ContentItem; copied_from: { id: string; slug: string }; questions_copied: number }>(
+    "course-content-library",
+    { action: "copy_content_item", content_item_id: contentItemId }
+  );
 }

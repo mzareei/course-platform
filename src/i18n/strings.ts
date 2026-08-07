@@ -588,6 +588,10 @@ export const strings = {
     "¿Retirar el grupo {code}? Dejará de aparecer al programar una clase. Los días de clase, calificaciones y estudiantes existentes no se tocan."
   ],
   "sections.reactivate": ["Reactivate", "Reactivar"],
+  "sections.ownerOnly": [
+    "Groups are created, renamed and retired by the platform owner. You can manage the members of the groups you teach.",
+    "Los grupos son creados, renombrados y retirados por el administrador de la plataforma. Puedes administrar a los integrantes de los grupos que impartes."
+  ],
 
   // ---------------------------------------------------------------- schedule
   "schedule.title": ["Class days", "Días de clase"],
@@ -1265,6 +1269,48 @@ export const strings = {
   "content.status.failed": ["Failed", "Falló"],
   "content.stepOf": ["Step {step} of {total}", "Paso {step} de {total}"],
   "content.review": ["Review it", "Revisarla"],
+  "cleanup.title": [
+    "Some lectures link out to the public site",
+    "Algunas clases enlazan al sitio público"
+  ],
+  "cleanup.body": [
+    "These files were moved into private storage with their original links intact, so a student reading them can click through to the public copy. Cleaning removes only those navigation links — your slides are untouched, and a copy of each file is kept so it can be restored.",
+    "Estos archivos se movieron al almacenamiento privado con sus enlaces originales intactos, así que un estudiante que los lea puede pasar a la copia pública. La limpieza elimina solo esos enlaces de navegación — tus diapositivas no se tocan y se guarda una copia de cada archivo para poder restaurarlo."
+  ],
+  "cleanup.found": [
+    "{items} item(s) still link out, {links} link(s) in total.",
+    "{items} material(es) todavía enlazan hacia afuera, {links} enlace(s) en total."
+  ],
+  "cleanup.allClean": [
+    "No material links out to the public site.",
+    "Ningún material enlaza al sitio público."
+  ],
+  "cleanup.action": ["Clean these links", "Limpiar estos enlaces"],
+  "cleanup.confirm": [
+    "Confirm: clean the links",
+    "Confirmar: limpiar los enlaces"
+  ],
+  "cleanup.working": ["Cleaning {title}…", "Limpiando {title}…"],
+  "cleanup.done": [
+    "Cleaned {count} item(s).",
+    "Se limpiaron {count} material(es)."
+  ],
+  "cleanup.failed": [
+    "Could not clean {title}. Nothing was changed for it.",
+    "No se pudo limpiar {title}. No se cambió nada en ese material."
+  ],
+  "content.library.sharedBadge": ["Shared with you", "Compartido contigo"],
+  "content.library.sharedHint": [
+    "Another instructor owns this. Take a copy to teach and edit your own version — theirs is not changed.",
+    "Otro profesor es el dueño. Toma una copia para impartir y editar tu propia versión — la de esa persona no cambia."
+  ],
+  "content.library.copy": ["Take a copy", "Tomar una copia"],
+  "content.library.copying": ["Copying…", "Copiando…"],
+  "content.library.copied": [
+    "Copied {title}. It is yours now, with its questions.",
+    "Se copió {title}. Ahora es tuya, con sus preguntas."
+  ],
+  "content.library.copyFailed": ["Could not copy that item.", "No se pudo copiar ese material."],
   "content.cancel": ["Cancel", "Cancelar"],
   "content.approvedNote": [
     "Approved — it now appears in your content library as a draft, ready to release for a class.",
