@@ -1,6 +1,34 @@
 # Status
 
-**Last updated:** 2026-08-06
+**Last updated:** 2026-08-07
+
+### Private content work — deployed to production, decks cleaned live
+
+Both PRs (`course-platform#1`, `mzareei.github.io#7`) merged and deployed by
+the professor on 2026-08-07. Sequence actually followed:
+
+1. `mzareei/course-content` created; `tools/content-repo/` moved into it.
+2. Migrations `0030`–`0033` pushed. `0033` failed on the first attempt —
+   `function min(uuid) does not exist` — because Postgres has no built-in
+   `min()`/`max()` aggregate for `uuid`. Harmless: one statement, one
+   transaction, nothing written. Fixed in `mzareei.github.io#8` (dropped the
+   aggregate, used `count` + `limit 1` instead) and merged; re-run succeeded.
+3. All six edge functions deployed
+   (`course-section-management`, `course-content-library`,
+   `course-content-upload`, `course-content-cleanup`, `course-generation`,
+   `course-generation-worker`).
+4. **The Content-screen cleanup was run live by the professor.** Reported
+   "22 item(s) still link out, 104 link(s) in total" → "Cleaned 22 item(s)."
+   22 rather than 23 is correct: `week-01-lecture` was already partially
+   cleaned via the legacy checkpoint-preparation path (see pitfall #57/#58
+   history) and correctly reported nothing to change.
+
+Pending: a student-side spot check (open a cleaned mission through Review,
+confirm the deck still works and "Return to lecture" is gone rather than
+broken) to close the loop per pitfall #1 — a reported success is not the same
+as verifying through the real entry point. Once confirmed, D5/D6 (retiring the
+public site) are unblocked, including archiving/repointing the `review-coach`
+and `teacher` static_path items found in G4.
 
 ### Private content work — approved, implementation started
 
