@@ -41,6 +41,37 @@ Fixed on `mzareei.github.io#9` (backend) and `course-platform`
 production; this frontend branch needs merging and pushing. Not yet
 click-tested by the professor.
 
+### "How do I modify Week 1?" — pull.mjs, the missing half of the content repo
+
+The content-repo scaffold (`tools/content-repo/`, meant to become
+`mzareei/course-content`) shipped `publish.mjs` but nothing to get a lecture's
+*current* bytes back out of production to edit in the first place — none of
+the 23 real items had ever been pulled into it, so "modify Week 1" had no good
+answer.
+
+Added `tools/pull.mjs`: reads a slug from `course-content-library`, fetches
+its live HTML through the same gated `course-content-access` +
+`course-content-serve` path the app's own instructor preview uses (never a
+storage signed URL or a service key), and writes it plus a matching
+`content.json` into the repo layout `publish.mjs` already expects.
+
+The one real limitation: `content_items.title`/`summary` are English-only
+database columns, so there is no Spanish source to pull. A first pull sets
+`title.es`/`summary.es` to the English text and prints a warning;
+`lib/pull-metadata.mjs` (the pure, tested part — `pull.mjs` itself is
+untested I/O, like `publish.mjs`) guarantees a re-pull never overwrites a real
+translation already on disk once someone has written one in. Test-first:
+`tools/verify-content-repo-pull.mjs`, four fixtures, captured RED (missing
+module) before implementation.
+
+README.md in the scaffold now documents the pull → edit → publish loop and
+exactly where the instructor's own session token comes from (the browser
+localStorage key `supabase-js` already writes, not a new credential).
+
+**If `mzareei/course-content` was already created from an earlier copy of
+this scaffold, `tools/pull.mjs` and `lib/pull-metadata.mjs` need to be copied
+there by hand** — this session has no access to that repository.
+
 ### Private content work — deployed to production, decks cleaned live
 
 Both PRs (`course-platform#1`, `mzareei.github.io#7`) merged and deployed by

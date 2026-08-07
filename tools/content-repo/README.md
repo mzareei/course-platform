@@ -24,6 +24,12 @@ accessible by integration`). Creating it is a 30-second manual step.
 3. Delete `tools/content-repo/` from `course-platform` once it has moved —
    two copies of the same tooling is two copies of one fact, and they drift.
 
+**If `mzareei/course-content` already exists** from an earlier copy of this
+scaffold: `tools/pull.mjs` and `lib/pull-metadata.mjs` are new additions (this
+change added the fetch half of the workflow — pulling a lecture down to edit
+it — which the earlier copy did not have). Copy just those two files across
+and commit them there; nothing else in this directory changed.
+
 ## Layout
 
 ```
@@ -39,6 +45,7 @@ courses/
 shared/                          mirrored deck engine — see below
 tools/
   validate.mjs                   the gate; runs in CI, no secrets
+  pull.mjs                       fetch a lecture's current live copy to edit
   publish.mjs                    the only thing that writes to production
 .github/workflows/validate.yml   validates every PR; cannot publish
 ```
@@ -52,6 +59,45 @@ means the mapping is visible in `ls` and the tools have nothing to infer.
 `mzareei.github.io/supabase/functions/_shared/templates/`. Editing it here
 would create a second source of truth and a silent drift path. `validate.mjs`
 fails if the mirror does not match.
+
+## Modifying an existing lecture (e.g. Week 1)
+
+The item does not exist in this repository until you pull it once — none of
+the 23 migrated lectures/missions have been pulled yet, only scaffolded.
+
+```bash
+COURSE_ACCESS_TOKEN=<your instructor session token> node tools/pull.mjs week-01-lecture
+```
+
+This downloads the exact bytes students would see today — through the same
+gated path the app's own instructor preview uses, never a service key — into
+`content/week-01-lecture/index.html`, and writes a matching `content.json`.
+Edit the HTML file with any editor, then publish:
+
+```bash
+COURSE_ACCESS_TOKEN=<your instructor session token> node tools/publish.mjs week-01-lecture --confirm
+```
+
+**One thing pull cannot get you:** `content_items.title`/`summary` in the
+database are English-only columns — there has never been a Spanish source for
+them anywhere but a human. A first pull sets `title.es` to the English text
+and prints a warning; replace it with a real translation before publishing,
+or a re-pull will keep whatever you already wrote there (it never overwrites
+an existing non-empty translation).
+
+Where your session token comes from: sign in to the app at
+`course-platform-3ko.pages.dev`, open the browser's developer console on that
+tab, and run:
+
+```js
+JSON.parse(localStorage.getItem("sb-ojmbupftdikwmlqvibwt-auth-token")).access_token
+```
+
+Copy the string it prints (no quotes) — that is `COURSE_ACCESS_TOKEN`. It is
+your own session token, the same one the app already sends on every request;
+this does not create or reveal any new credential. It expires in about an
+hour; re-run the snippet for a fresh one if a pull or publish reports an
+expired-session error.
 
 ## Publishing
 
