@@ -1207,6 +1207,39 @@ sections you don't teach but sharing requires naming one you don't) and a
 
 ---
 
+## 62. "The content repo was created and populated" meant tooling only, not content
+
+`PROJECT-HANDOFF.md` and `05-status.md` both recorded, as part of a completed
+deploy sequence dated 2026-08-07, that step 1 was "`mzareei/course-content`
+created; `tools/content-repo/` moved into it." Read on its own, that sentence
+implies the edit-locally-push-publish loop is live.
+
+It wasn't checkable at the time — the sessions writing those entries had no
+access to the real `mzareei/course-content` repository, only to the scaffold
+copy inside `course-platform/tools/content-repo/`. A later session (2026-08-07,
+this one) did have access and diffed the two. The real repo held exactly the
+scaffold as it existed *at the moment of that one copy-in*: `course.json`,
+`lib/validate.mjs`, `tools/publish.mjs`, `tools/validate.mjs`, the CI workflow.
+Two things had since been added to the `course-platform` copy and never
+carried over — `tools/pull.mjs` and `lib/pull-metadata.mjs` — and one thing had
+never existed anywhere: an actual pulled-down copy of any of the 27 production
+items. `courses/` does not exist in the real repo at all.
+
+"Moved the scaffold in" and "the authoring loop works" are different claims.
+The first is a file copy; the second requires the fetch tool to exist in that
+copy *and* at least one item to have been pulled through it. Neither had
+happened, so "modify a lecture, push, done" had no working first step despite
+two status entries that read as though it did.
+
+**Rule:** a claim about a second repository's contents is not verified by a
+status entry in this one, even a status entry written in good faith by a
+session that genuinely did what it could reach. If you have access to
+`mzareei/course-content` and are about to tell the professor the pull/edit/
+publish loop is ready, `ls` the actual repository first. See
+`docs/CONTENT-REPO-SYNC-HANDOFF.md` for the gap and the plan to close it.
+
+---
+
 ## 57. Gated content can link straight back out to its public copy
 
 Found 2026-08-05 during the content-origin audit, by rebuilding all 23 items

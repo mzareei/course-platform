@@ -2,6 +2,55 @@
 
 **Last updated:** 2026-08-07
 
+### `mzareei/course-content` verified: still just the scaffold — no lecture content has ever been pulled in
+
+The professor's actual intent, stated plainly: **`course-content` is meant to
+be the one place the material lives.** Clone it to a laptop, edit a lecture
+there, push — and the platform pulls the published result into production.
+Nothing else should need touching to change a slide.
+
+This session has direct read/write access to the real `mzareei/course-content`
+repository (earlier sessions did not — see the blocked note in
+`PROJECT-HANDOFF.md`). Checked it directly rather than trusting the entries
+below it in this file. **It is not the state those entries imply.**
+
+What is actually there — one commit, `8f34c26 "Course content authoring
+repository"`, on both `main` and this session's branch:
+
+```
+README.md   course.json   lib/validate.mjs
+tools/publish.mjs   tools/validate.mjs   .github/workflows/validate.yml
+```
+
+That's the *original* scaffold — the placeholder committed because the agent
+that first stood up the repo request "could not create the repository" and
+left this as the starting content (its own README still says so, verbatim).
+
+What is missing, all three load-bearing:
+
+1. **`tools/pull.mjs` and `lib/pull-metadata.mjs`** — the fetch half of the
+   loop, added later to `course-platform/tools/content-repo/` (see the
+   "pull.mjs, the missing half" entry below). That entry already flagged
+   "this session has no access to that repository" when it shipped the tool —
+   and nobody with access has copied it across since. Confirmed by diff: the
+   real repo's `tools/` and `lib/` are missing exactly those two files,
+   nothing else differs.
+2. **`courses/` does not exist.** Not one of the 27 production content items
+   has ever been pulled down. "Modify Week 1" has no local file to open yet.
+3. **`shared/`** — the mirrored deck-engine copy the repo's own README
+   documents in its layout section — was never added either.
+
+So despite the "deployed to production" entry below recording step 1 as
+"`mzareei/course-content` created; `tools/content-repo/` moved into it" —
+that was true only for the *tooling that existed at the time*. The edit-
+locally-and-push loop the professor wants has never actually worked, because
+half the tool for it didn't exist yet when the repo was populated, and the
+other half (any actual content) was never pulled. See pitfall #62.
+
+Full plan to close this gap, and a ready-to-paste continuation prompt, are in
+the new `docs/CONTENT-REPO-SYNC-HANDOFF.md`. Nothing described there has been
+started — this entry is documentation of the gap, not a fix.
+
 ### Sharing was reported done and wasn't — the write side is now built
 
 The design and every consuming piece (`canEditContentItem`,
