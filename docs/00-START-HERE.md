@@ -16,6 +16,7 @@ files in order. Together they are meant to replace having been in the room.
 | `07-pitfalls.md` | Traps that have already cost hours. **Read this before debugging anything.** |
 | `PROJECT-HANDOFF.md` | Durable current state, decisions, deployments, pending work, and continuation sequence |
 | `HANDOFF-PROMPT.md` | Paste into a fresh session to continue the work |
+| `CONTENT-REPO-SYNC-HANDOFF.md` | The `course-content` clone → edit → push → publish loop: verified current gap and a paste-in prompt to close it |
 
 ## The 60-second version
 
