@@ -44,6 +44,18 @@ export interface ContentItem {
   is_shared_with_me?: boolean;
   owner_profile_id?: string | null;
   forked_from_content_item_id?: string | null;
+  // Only populated for an item you own — course-content-library returns an
+  // empty array for anything you don't, so this is never a list of shares you
+  // merely received.
+  shares?: ContentShare[];
+}
+
+export interface ContentShare {
+  section_id: string;
+  section_code: string;
+  section_name: string;
+  can_release: boolean;
+  can_copy: boolean;
 }
 
 export interface LibrarySection {
@@ -52,6 +64,19 @@ export interface LibrarySection {
   section_code: string;
   section_name: string;
   status: string;
+}
+
+/**
+ * A course-wide, id/code/name-only section list for the share picker.
+ * course-section-management deliberately hides sections an instructor
+ * doesn't teach (pitfall #38), but sharing requires naming a group you don't
+ * teach — this list carries no roster or session data, so widening it here
+ * doesn't reopen that pitfall.
+ */
+export interface ShareableSection {
+  id: string;
+  section_code: string;
+  section_name: string;
 }
 
 export interface LibrarySession {
@@ -67,6 +92,7 @@ export interface ContentLibrary {
   content_items: ContentItem[];
   sections: LibrarySection[];
   sessions: LibrarySession[];
+  shareable_sections: ShareableSection[];
 }
 
 export function contentLibrary() {
@@ -224,4 +250,25 @@ export function copyContentItem(contentItemId: string) {
     "course-content-library",
     { action: "copy_content_item", content_item_id: contentItemId }
   );
+}
+
+/**
+ * Grant a group visibility into an item you own. This is visibility only —
+ * the recipient sees it and can take their own copy; it does not make them a
+ * co-owner and they cannot re-share it further.
+ */
+export function shareContentItem(contentItemId: string, sectionId: string) {
+  return callFn<{ shared: true } & ContentLibrary>("course-content-library", {
+    action: "share_content_item",
+    content_item_id: contentItemId,
+    section_id: sectionId
+  });
+}
+
+export function unshareContentItem(contentItemId: string, sectionId: string) {
+  return callFn<{ shared: false } & ContentLibrary>("course-content-library", {
+    action: "unshare_content_item",
+    content_item_id: contentItemId,
+    section_id: sectionId
+  });
 }

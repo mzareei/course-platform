@@ -2,6 +2,76 @@
 
 **Last updated:** 2026-08-07
 
+### Sharing was reported done and wasn't — the write side is now built
+
+The design and every consuming piece (`canEditContentItem`,
+`isVisibleContentItem`, `copy_content_item`, the `content_shares` table, the
+frontend's shared badge and Copy button) shipped in the first round, but
+nothing ever wrote a `content_shares` row. There was no action an owner could
+call to grant a share — "share with a group" existed in the schema and
+nowhere else. Found when the professor asked "where's the share button?" and
+there genuinely wasn't one.
+
+Fixed on `mzareei.github.io#9` (backend) and `course-platform`
+`claude/tc2007b-private-content-4cniyb` (frontend, this branch):
+
+- `course-content-library` gained `share_content_item` / `unshare_content_item`.
+  Owner-gated by `canEditContentItem`, never mere `isVisibleContentItem`, so a
+  recipient can never re-share. Target section validated against real
+  `course_sections` (`planned`/`active`). Upsert on
+  `(content_item_id, section_id)` so re-sharing is idempotent. Audited both
+  ways.
+- `listContentLibrary` now also returns `shareable_sections` (a course-wide
+  id/code/name-only list, deliberately wider than the roster-filtered list
+  `course-section-management` shows — pitfall #38 hides sections you don't
+  teach, but sharing requires naming one you don't) and `shares` (an owned
+  item's current grants, empty for anything you don't own).
+- The Content screen has a **Share** button next to Make available, on any
+  owned item that isn't itself a share you received. It picks a group from
+  `shareable_sections`, and an owned item with active shares lists them with a
+  **Revoke** button.
+- Test-first: `mzareei.github.io`'s `tools/verify-content-sharing-action.mjs`
+  and this repo's `tools/verify-content-share-granting-ui.mjs`, both captured
+  RED before implementation. Full sweeps: 63 backend verifiers (62 baseline +
+  1, same 7 pre-existing unrelated failures as pristine `origin/main`), 18
+  frontend verifiers (17 baseline + 1), typecheck and build clean.
+
+**Not yet done:** backend PR #9 needs merging and
+`course-content-library` redeploying before the Share button does anything in
+production; this frontend branch needs merging and pushing. Not yet
+click-tested by the professor.
+
+### "How do I modify Week 1?" — pull.mjs, the missing half of the content repo
+
+The content-repo scaffold (`tools/content-repo/`, meant to become
+`mzareei/course-content`) shipped `publish.mjs` but nothing to get a lecture's
+*current* bytes back out of production to edit in the first place — none of
+the 23 real items had ever been pulled into it, so "modify Week 1" had no good
+answer.
+
+Added `tools/pull.mjs`: reads a slug from `course-content-library`, fetches
+its live HTML through the same gated `course-content-access` +
+`course-content-serve` path the app's own instructor preview uses (never a
+storage signed URL or a service key), and writes it plus a matching
+`content.json` into the repo layout `publish.mjs` already expects.
+
+The one real limitation: `content_items.title`/`summary` are English-only
+database columns, so there is no Spanish source to pull. A first pull sets
+`title.es`/`summary.es` to the English text and prints a warning;
+`lib/pull-metadata.mjs` (the pure, tested part — `pull.mjs` itself is
+untested I/O, like `publish.mjs`) guarantees a re-pull never overwrites a real
+translation already on disk once someone has written one in. Test-first:
+`tools/verify-content-repo-pull.mjs`, four fixtures, captured RED (missing
+module) before implementation.
+
+README.md in the scaffold now documents the pull → edit → publish loop and
+exactly where the instructor's own session token comes from (the browser
+localStorage key `supabase-js` already writes, not a new credential).
+
+**If `mzareei/course-content` was already created from an earlier copy of
+this scaffold, `tools/pull.mjs` and `lib/pull-metadata.mjs` need to be copied
+there by hand** — this session has no access to that repository.
+
 ### Private content work — deployed to production, decks cleaned live
 
 Both PRs (`course-platform#1`, `mzareei.github.io#7`) merged and deployed by

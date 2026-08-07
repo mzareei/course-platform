@@ -11,7 +11,7 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   contentLibrary, listReleases, updateReleaseState, makeAvailable, studentsCanOpen, ContentNotReviewableError,
-  copyContentItem,
+  copyContentItem, shareContentItem, unshareContentItem,
   type ContentItem, type ContentLibrary as Library, type ReleaseRow
 } from "../api/content";
 import { updateClass } from "../api/classes";
@@ -42,6 +42,11 @@ export function ContentLibraryView() {
   const [itemError, setItemError] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  // Which item's share picker is expanded, and the group chosen in it. Local
+  // to the screen, not the library payload — closing it loses nothing on the
+  // server.
+  const [sharingItemId, setSharingItemId] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<string>("");
 
   async function load() {
     try {
@@ -213,8 +218,92 @@ export function ContentLibraryView() {
                     {busy === item.id ? t("content.library.working") : t("content.library.makeAvailable")}
                   </button>
                 ) : null}
+                {/* Sharing is a distinct privilege from releasing to
+                    students, so it is offered independently of whether the
+                    whole-course release button above is showing. */}
+                {canEdit && !item.is_shared_with_me ? (
+                  <button
+                    class="btn quiet"
+                    type="button"
+                    disabled={busy === item.id}
+                    onClick={() => {
+                      setSharingItemId(sharingItemId === item.id ? null : item.id);
+                      setShareTarget("");
+                    }}
+                  >
+                    {t("content.library.share")}
+                  </button>
+                ) : null}
               </div>
             </div>
+            {canEdit && sharingItemId === item.id ? (
+              <label class="field">
+                {t("content.library.shareTo")}
+                <select
+                  value={shareTarget}
+                  disabled={busy === item.id}
+                  onChange={(event) => setShareTarget((event.target as HTMLSelectElement).value)}
+                >
+                  <option value="">{t("content.library.sharePlaceholder")}</option>
+                  {library.shareable_sections.map((section) => (
+                    <option value={section.id}>{section.section_code || section.section_name}</option>
+                  ))}
+                </select>
+                <div class="row" style="gap: 0.5rem; margin-top: 0.4rem;">
+                  <button
+                    class="btn primary"
+                    type="button"
+                    disabled={busy === item.id || !shareTarget}
+                    onClick={() => {
+                      const section = library.shareable_sections.find((candidate) => candidate.id === shareTarget);
+                      void run(item.id, async () => {
+                        await shareContentItem(item.id, shareTarget);
+                        setNotice(t("content.library.shared", {
+                          title: item.title,
+                          group: section?.section_code || section?.section_name || ""
+                        }));
+                        setSharingItemId(null);
+                        setShareTarget("");
+                      });
+                    }}
+                  >
+                    {busy === item.id ? t("content.library.sharing") : t("content.library.shareSubmit")}
+                  </button>
+                  <button
+                    class="btn quiet"
+                    type="button"
+                    disabled={busy === item.id}
+                    onClick={() => { setSharingItemId(null); setShareTarget(""); }}
+                  >
+                    {t("content.cancel")}
+                  </button>
+                </div>
+              </label>
+            ) : null}
+            {canEdit && item.shares && item.shares.length ? (
+              <div class="stack" style="gap: 0.4rem;">
+                <p class="hint">{t("content.library.currentShares")}</p>
+                {item.shares.map((share) => (
+                  <div class="row" style="justify-content: space-between; align-items: center;">
+                    <span class="pill open">{share.section_code || share.section_name}</span>
+                    <button
+                      class="btn quiet"
+                      type="button"
+                      disabled={busy === item.id}
+                      onClick={() => void run(item.id, async () => {
+                        await unshareContentItem(item.id, share.section_id);
+                        setNotice(t("content.library.revoked", {
+                          title: item.title,
+                          group: share.section_code || share.section_name
+                        }));
+                      })}
+                    >
+                      {busy === item.id ? t("content.library.revoking") : t("content.library.revoke")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             {canEdit ? (
             <label class="field">
               {t("content.library.assignToClass")}
