@@ -47,6 +47,21 @@ Cloudflare Pages, build command `npm run build`, output `dist/`. `public/_header
 carries the CSP. The Supabase Auth redirect allowlist must include the deployed origin
 before magic links will work.
 
+## Update course materials from GitHub
+
+The private [`mzareei/course-content`](https://github.com/mzareei/course-content)
+repository is the authoring source. Edit and push a validated item there; then an
+instructor can open **Content** and choose **Sync from repository** on that item.
+The platform reads the selected item from the repository, validates its metadata and
+HTML, writes a new private-storage version, and records the source commit. An
+unchanged item is a no-op. Syncing never releases an item to students — use the
+separate availability control when the reviewed version is ready.
+
+The GitHub credential is server-only. Before the first production use, configure a
+fine-grained read-only token as the Supabase secret
+`COURSE_CONTENT_GITHUB_TOKEN`, deploy `course-content-sync`, and deploy the frontend.
+See [`docs/06-runbook.md`](docs/06-runbook.md) for the exact commands.
+
 ## Roadmap (approved plan)
 
 1. **Phase 1 — this shell**: SPA against the existing backend.

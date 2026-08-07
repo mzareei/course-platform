@@ -60,6 +60,24 @@ npx supabase secrets set ANTHROPIC_MODEL=claude-sonnet-5
 npx supabase secrets set GENERATION_WORKER_SECRET=<random>   # locks the worker endpoint
 ```
 
+### Content repository sync
+
+Create a GitHub fine-grained token with read-only **Contents** access to the private
+`mzareei/course-content` repository. Keep the token out of the browser, repository,
+and frontend build output; store it only in Supabase:
+
+```bash
+cd ~/Documents/GitHub/mzareei.github.io
+npx supabase secrets set COURSE_CONTENT_GITHUB_TOKEN="<fine-grained-read-only-token>" --project-ref ojmbupftdikwmlqvibwt
+npx supabase functions deploy course-content-sync --project-ref ojmbupftdikwmlqvibwt
+```
+
+Then push the `course-platform` frontend so Cloudflare Pages builds it. In the live
+app, open **Content**, choose **Sync from repository** on an owned storage-backed
+item, and confirm that the result reports the source commit. The button updates the
+private instructor copy and version history only; it does not change
+`content_releases`. Release the item separately after review.
+
 Check the AI pipeline is wired up:
 
 ```bash
@@ -118,6 +136,7 @@ npx supabase functions deploy course-section-management --project-ref ojmbupftdi
 npx supabase functions deploy course-content-library    --project-ref ojmbupftdikwmlqvibwt
 npx supabase functions deploy course-content-upload     --project-ref ojmbupftdikwmlqvibwt
 npx supabase functions deploy course-content-cleanup    --project-ref ojmbupftdikwmlqvibwt
+npx supabase functions deploy course-content-sync       --project-ref ojmbupftdikwmlqvibwt
 npx supabase functions deploy course-generation         --project-ref ojmbupftdikwmlqvibwt
 npx supabase functions deploy course-generation-worker  --project-ref ojmbupftdikwmlqvibwt
 ```

@@ -6,6 +6,25 @@ the UI is silently wrong.**
 
 ---
 
+## 64. Repository sync needs a server secret and is not a release
+
+The Content screen can offer a **Sync from repository** button, but the browser must
+never receive the GitHub credential. The Edge Function reads the private repository
+with `COURSE_CONTENT_GITHUB_TOKEN`, validates the selected item, and writes the
+private storage/version record. A browser token, a public GitHub URL, or a client-side
+Supabase Storage upload would bypass the intended boundary.
+
+The second boundary is just as important: syncing updates the instructor's current
+copy; it does not write `content_releases` and therefore does not make the material
+student-visible. After reviewing the pulled version, use the existing availability
+control and test through the real student Review route.
+
+**Rule:** keep the GitHub token as a Supabase secret, grant it read-only Contents
+access to `mzareei/course-content`, record the source commit, and treat sync and
+student release as two explicit actions.
+
+---
+
 ## 47. The clean reset must preserve the course row and teaching assets
 
 Deleting the TC2007B course would cascade into lecture decks, activity

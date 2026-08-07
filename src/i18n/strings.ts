@@ -1101,6 +1101,8 @@ export const strings = {
     "{scope} · se abre el {date}"
   ],
   "content.library.working": ["Working…", "Trabajando…"],
+  "content.library.syncFromRepository": ["Sync from repository", "Sincronizar desde el repositorio"],
+  "content.library.syncing": ["Syncing…", "Sincronizando…"],
 
   "content.library.makeAvailableConfirm": [
     "Make {title} available to the whole course now? Students will be able to open it from Review straight away.",
@@ -1119,6 +1121,22 @@ export const strings = {
     "¿Cancelar el acceso programado a {title} para {scope}? Los estudiantes no recibirán este material a la hora programada."
   ],
   "content.library.madeAvailable": ["{title} is now available to your students.", "{title} ya está disponible para tus estudiantes."],
+  "content.library.syncConfirm": [
+    "Pull the latest validated version of {title} from the private content repository? This updates the instructor copy only; student availability does not change.",
+    "¿Traer la última versión validada de {title} desde el repositorio privado de contenido? Esto solo actualiza la copia del instructor; la disponibilidad para estudiantes no cambia."
+  ],
+  "content.library.synced": [
+    "{title} was synced from the repository. Student availability did not change.",
+    "{title} se sincronizó desde el repositorio. La disponibilidad para estudiantes no cambió."
+  ],
+  "content.library.syncUnchanged": [
+    "{title} is already up to date. Student availability did not change.",
+    "{title} ya está actualizado. La disponibilidad para estudiantes no cambió."
+  ],
+  "content.library.syncFailed": [
+    "Could not sync {title} from the repository.",
+    "No se pudo sincronizar {title} desde el repositorio."
+  ],
   "content.library.assigned": ["{lecture} is assigned to {title}.", "{lecture} se asignó a {title}."],
   "content.library.removedFromReview": [
     "{title} is no longer available in {scope}.",

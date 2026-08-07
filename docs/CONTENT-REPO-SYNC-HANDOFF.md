@@ -1,14 +1,12 @@
 # Content-repo sync — handoff
 
 **Date:** 2026-08-07
-**Status:** not started. Documentation only — nothing described here has been
-built or run.
+**Status:** repository and platform implementation complete; production deployment
+requires the server secret and explicit function/frontend deploy described below.
 
-This file exists because a routine question ("is my content in `course-content`
-yet?") turned up a gap that two other documents had implied was already closed.
-It is scoped narrowly: closing the loop the professor actually asked for, not
-the whole private-content project. Read `05-status.md`'s newest entry and
-pitfall #62 in `07-pitfalls.md` for how the gap was found.
+This file records the original gap and the now-completed repository side of the
+workflow. Read `05-status.md`'s newest entry and pitfall #64 in `07-pitfalls.md`
+for the platform-side sync boundary and current rollout gate.
 
 ## What the professor wants, in his own words
 

@@ -99,6 +99,22 @@ export function contentLibrary() {
   return callFn<ContentLibrary>("course-content-library", {});
 }
 
+export interface RepositorySyncResult {
+  status: "synced" | "unchanged";
+  slug: string;
+  source_commit: string;
+  content_sha256: string;
+  version: number;
+}
+
+/** Pull one owned storage-backed item from the validated private repository. */
+export function syncContentFromRepository(contentItemId: string) {
+  return callFn<RepositorySyncResult>("course-content-sync", {
+    action: "sync",
+    content_item_id: contentItemId
+  });
+}
+
 /**
  * Mint a private lecture token for the instructor cockpit. This is deliberately
  * content-item based: it checks teaching staff membership on the server and

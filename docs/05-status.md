@@ -2,6 +2,28 @@
 
 **Last updated:** 2026-08-07
 
+### Platform-side repository sync implemented; production rollout is a separate gate
+
+The authoring loop is now represented in the platform code as well as the private
+repository. `course-content-sync` is an instructor-only Supabase Edge Function that
+reads `mzareei/course-content` `main` with the server-side
+`COURSE_CONTENT_GITHUB_TOKEN`, validates the selected item's metadata and artifact,
+hashes it for an unchanged no-op, writes a private-storage version, and records the
+source commit plus audit event. It never writes `content_releases`.
+
+The Content screen now shows **Sync from repository** only for an owned,
+storage-backed item, with English/Spanish confirmation, progress, success, no-op, and
+failure strings. The existing **Make available** control remains a separate step, so
+pulling a change cannot accidentally make it visible to students.
+
+Verified locally: backend and frontend static contracts, `npm run typecheck`,
+`npm run verify` (20 verifiers), `npm run build`, and `git diff --check` all pass.
+
+Not yet live: set `COURSE_CONTENT_GITHUB_TOKEN`, deploy `course-content-sync`, and
+push the frontend. The exact commands and the required token scope are in
+`docs/06-runbook.md`. No production content or student release was changed by this
+implementation.
+
 ### Content-repo sync completed: authoring loop is now wired end to end
 
 The real `mzareei/course-content` checkout now contains the missing fetch half

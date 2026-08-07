@@ -11,6 +11,7 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   contentLibrary, listReleases, updateReleaseState, makeAvailable, studentsCanOpen, ContentNotReviewableError,
+  syncContentFromRepository,
   copyContentItem, shareContentItem, unshareContentItem,
   type ContentItem, type ContentLibrary as Library, type ReleaseRow
 } from "../api/content";
@@ -63,7 +64,7 @@ export function ContentLibraryView() {
     void load();
   }, []);
 
-  async function run(itemId: string, work: () => Promise<void>) {
+  async function run(itemId: string, work: () => Promise<void>, failureMessage = t("content.library.changeFailed")) {
     setNotice(null);
     setItemError((current) => ({ ...current, [itemId]: "" }));
     setBusy(itemId);
@@ -75,7 +76,7 @@ export function ContentLibraryView() {
         ...current,
         [itemId]: e instanceof ContentNotReviewableError
           ? t("content.library.notReviewable")
-          : e instanceof Error ? e.message : t("content.library.changeFailed")
+          : e instanceof Error ? e.message : failureMessage
       }));
     } finally {
       setBusy(null);
@@ -216,6 +217,27 @@ export function ContentLibraryView() {
                     }}
                   >
                     {busy === item.id ? t("content.library.working") : t("content.library.makeAvailable")}
+                  </button>
+                ) : null}
+                {canEdit && item.source_kind === "storage_object" ? (
+                  <button
+                    class="btn quiet"
+                    type="button"
+                    disabled={busy === item.id}
+                    onClick={() => {
+                      if (!confirm(t("content.library.syncConfirm", { title: item.title }))) return;
+                      void run(item.id, async () => {
+                        const result = await syncContentFromRepository(item.id);
+                        setNotice(t(
+                          result.status === "unchanged"
+                            ? "content.library.syncUnchanged"
+                            : "content.library.synced",
+                          { title: item.title }
+                        ));
+                      }, t("content.library.syncFailed", { title: item.title }));
+                    }}
+                  >
+                    {busy === item.id ? t("content.library.syncing") : t("content.library.syncFromRepository")}
                   </button>
                 ) : null}
                 {/* Sharing is a distinct privilege from releasing to
