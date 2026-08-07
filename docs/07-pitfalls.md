@@ -1176,6 +1176,37 @@ guarantee has to live at the write.
 
 ---
 
+## 61. "Sharing is done" meant every consumer of a share, not the one thing that creates one
+
+Requirement 7's design and the first implementation round built
+`canEditContentItem`, `isVisibleContentItem`, `copy_content_item`, the shared
+badge, the Copy button, and the `content_shares` table itself — every piece
+that *reads* or *acts on* a share. Reported as complete. It was not: no code
+path anywhere ever wrote a `content_shares` row. An owner had no action to
+grant one, so "share with a group" existed in the schema and nowhere else.
+`grep`-ing for `content_shares` at the time would have shown only reads.
+
+Caught when the professor asked "I don't see how I can share content" —
+the honest answer was that the button had never existed, not that it was
+hard to find.
+
+**Rule:** when a feature has a grantor and a grantee, verify both write paths
+exist before calling it done. A schema column plus a consumer path that
+assumes rows will appear is not evidence anything populates it — trace one
+concrete row from the action that creates it to the action that reads it. If
+you can't name the button/action a professor clicks to create the row, the
+feature isn't built, regardless of how much of the surrounding machinery is.
+
+Fixed by adding `share_content_item` / `unshare_content_item` to
+`course-content-library`, gated by `canEditContentItem` (never
+`isVisibleContentItem` — a recipient must not be able to re-share), plus a
+`shareable_sections` course-wide list for the picker (narrower than
+`course-section-management`'s roster-filtered list, since pitfall #38 hides
+sections you don't teach but sharing requires naming one you don't) and a
+`shares` field on each owned item so the owner can see and revoke.
+
+---
+
 ## 57. Gated content can link straight back out to its public copy
 
 Found 2026-08-05 during the content-origin audit, by rebuilding all 23 items

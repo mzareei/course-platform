@@ -1311,6 +1311,24 @@ export const strings = {
     "Se copió {title}. Ahora es tuya, con sus preguntas."
   ],
   "content.library.copyFailed": ["Could not copy that item.", "No se pudo copiar ese material."],
+  "content.library.share": ["Share", "Compartir"],
+  "content.library.shareTo": ["Share with a group", "Compartir con un grupo"],
+  "content.library.sharePlaceholder": ["Choose a group", "Elige un grupo"],
+  "content.library.shareSubmit": ["Share", "Compartir"],
+  "content.library.sharing": ["Sharing…", "Compartiendo…"],
+  "content.library.shared": [
+    "Shared {title} with {group}. They can open it and take their own copy — your version is unchanged.",
+    "Se compartió {title} con {group}. Podrán abrirla y tomar su propia copia — tu versión no cambia."
+  ],
+  "content.library.shareFailed": ["Could not share that item.", "No se pudo compartir ese material."],
+  "content.library.currentShares": ["Currently shared with", "Actualmente compartido con"],
+  "content.library.revoke": ["Revoke", "Revocar"],
+  "content.library.revoking": ["Revoking…", "Revocando…"],
+  "content.library.revoked": [
+    "{group} can no longer see {title}. A copy they already took is theirs to keep.",
+    "{group} ya no puede ver {title}. Una copia que ya hayan tomado sigue siendo suya."
+  ],
+  "content.library.revokeFailed": ["Could not revoke that share.", "No se pudo revocar ese acceso."],
   "content.cancel": ["Cancel", "Cancelar"],
   "content.approvedNote": [
     "Approved — it now appears in your content library as a draft, ready to release for a class.",

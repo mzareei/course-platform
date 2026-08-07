@@ -2,6 +2,45 @@
 
 **Last updated:** 2026-08-07
 
+### Sharing was reported done and wasn't — the write side is now built
+
+The design and every consuming piece (`canEditContentItem`,
+`isVisibleContentItem`, `copy_content_item`, the `content_shares` table, the
+frontend's shared badge and Copy button) shipped in the first round, but
+nothing ever wrote a `content_shares` row. There was no action an owner could
+call to grant a share — "share with a group" existed in the schema and
+nowhere else. Found when the professor asked "where's the share button?" and
+there genuinely wasn't one.
+
+Fixed on `mzareei.github.io#9` (backend) and `course-platform`
+`claude/tc2007b-private-content-4cniyb` (frontend, this branch):
+
+- `course-content-library` gained `share_content_item` / `unshare_content_item`.
+  Owner-gated by `canEditContentItem`, never mere `isVisibleContentItem`, so a
+  recipient can never re-share. Target section validated against real
+  `course_sections` (`planned`/`active`). Upsert on
+  `(content_item_id, section_id)` so re-sharing is idempotent. Audited both
+  ways.
+- `listContentLibrary` now also returns `shareable_sections` (a course-wide
+  id/code/name-only list, deliberately wider than the roster-filtered list
+  `course-section-management` shows — pitfall #38 hides sections you don't
+  teach, but sharing requires naming one you don't) and `shares` (an owned
+  item's current grants, empty for anything you don't own).
+- The Content screen has a **Share** button next to Make available, on any
+  owned item that isn't itself a share you received. It picks a group from
+  `shareable_sections`, and an owned item with active shares lists them with a
+  **Revoke** button.
+- Test-first: `mzareei.github.io`'s `tools/verify-content-sharing-action.mjs`
+  and this repo's `tools/verify-content-share-granting-ui.mjs`, both captured
+  RED before implementation. Full sweeps: 63 backend verifiers (62 baseline +
+  1, same 7 pre-existing unrelated failures as pristine `origin/main`), 18
+  frontend verifiers (17 baseline + 1), typecheck and build clean.
+
+**Not yet done:** backend PR #9 needs merging and
+`course-content-library` redeploying before the Share button does anything in
+production; this frontend branch needs merging and pushing. Not yet
+click-tested by the professor.
+
 ### Private content work — deployed to production, decks cleaned live
 
 Both PRs (`course-platform#1`, `mzareei.github.io#7`) merged and deployed by
