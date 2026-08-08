@@ -843,6 +843,110 @@ export const strings = {
     "La clase puede iniciar, pero los puntos de control y el quiz final necesitan una presentación elegida en el día de clase."
   ],
   "run.deck.openClasses": ["Open Classes", "Abrir Clases"],
+  "run.plan.title": ["Class question plan", "Plan de preguntas de la clase"],
+  "run.plan.create": ["Create plan", "Crear plan"],
+  "run.plan.createHint": [
+    "Choose the active bank for this class session before adding checkpoints.",
+    "Elige el banco activo de esta sesión antes de agregar puntos de control."
+  ],
+  "run.plan.bankLabel": ["Question bank", "Banco de preguntas"],
+  "run.plan.noPlan": [
+    "This class does not have a question plan yet.",
+    "Esta clase todavía no tiene un plan de preguntas."
+  ],
+  "run.plan.addCheckpoint": ["Add checkpoint", "Agregar punto de control"],
+  "run.plan.empty": [
+    "Create the first checkpoint to start this plan.",
+    "Crea el primer punto de control para empezar este plan."
+  ],
+  "run.plan.checkpointNumber": ["Checkpoint {number}", "Punto de control {number}"],
+  "run.plan.topicLabel": ["Topic", "Tema"],
+  "run.plan.slideHintLabel": ["Slide hint", "Pista de diapositiva"],
+  "run.plan.notesLabel": ["Notes", "Notas"],
+  "run.plan.candidatesLabel": ["Candidate questions", "Preguntas candidatas"],
+  "run.plan.edit": ["Edit", "Editar"],
+  "run.plan.remove": ["Remove", "Quitar"],
+  "run.plan.removeConfirm": [
+    "Remove this checkpoint from the class plan?",
+    "¿Quitar este punto de control del plan de la clase?"
+  ],
+  "run.plan.save": ["Save", "Guardar"],
+  "run.plan.cancel": ["Cancel", "Cancelar"],
+  "run.plan.askNow": ["Ask now", "Preguntar ahora"],
+  "run.plan.afterSlide": [
+    "After slide {slide}",
+    "Después de la diapositiva {slide}"
+  ],
+  "run.plan.alreadyAsked": ["Already asked", "Ya se preguntó"],
+  "run.plan.skipped": ["Skipped", "Omitido"],
+  "run.plan.noCandidates": [
+    "No candidate questions selected yet.",
+    "Todavía no hay preguntas candidatas seleccionadas."
+  ],
+  "run.plan.liveRequired": [
+    "Ask now is enabled once the class is live.",
+    "Preguntar ahora se habilita cuando la clase está en vivo."
+  ],
+  "run.plan.loadFailed": [
+    "Could not load the class question plan.",
+    "No se pudo cargar el plan de preguntas de la clase."
+  ],
+  "run.plan.createFailed": [
+    "Could not create the class question plan.",
+    "No se pudo crear el plan de preguntas de la clase."
+  ],
+  "run.plan.saveFailed": [
+    "Could not save the class question plan changes.",
+    "No se pudieron guardar los cambios del plan de preguntas."
+  ],
+  "run.plan.class_question_plan_exists": [
+    "This class already has a question plan.",
+    "Esta clase ya tiene un plan de preguntas."
+  ],
+  "run.plan.class_question_plan_topic_required": [
+    "Each checkpoint needs a topic.",
+    "Cada punto de control necesita un tema."
+  ],
+  "run.plan.class_question_plan_slide_hint_invalid": [
+    "Slide hints must be whole numbers greater than zero.",
+    "Las pistas de diapositiva deben ser números enteros mayores que cero."
+  ],
+  "run.plan.class_question_plan_checkpoint_locked": [
+    "This checkpoint is already part of class history and can no longer change.",
+    "Este punto de control ya forma parte del historial de la clase y ya no se puede cambiar."
+  ],
+  "run.plan.class_question_plan_question_not_in_bank": [
+    "Every selected candidate must belong to this class plan's active bank.",
+    "Cada candidata seleccionada debe pertenecer al banco activo de este plan."
+  ],
+  "run.plan.class_question_plan_question_ids_invalid": [
+    "Choose valid candidate questions from the active bank.",
+    "Elige preguntas candidatas válidas del banco activo."
+  ],
+  "run.plan.class_question_plan_question_ids_duplicate": [
+    "Choose each candidate question only once.",
+    "Elige cada pregunta candidata solo una vez."
+  ],
+  "run.plan.class_question_plan_question_bank_not_active": [
+    "The selected question bank is no longer active for this course.",
+    "El banco de preguntas seleccionado ya no está activo para este curso."
+  ],
+  "run.plan.class_question_plan_question_unavailable": [
+    "That saved candidate question is no longer available to send.",
+    "Esa pregunta candidata guardada ya no está disponible para enviarse."
+  ],
+  "run.plan.class_question_plan_question_not_candidate": [
+    "That question is no longer one of this checkpoint's approved candidates.",
+    "Esa pregunta ya no es una de las candidatas aprobadas para este punto."
+  ],
+  "run.plan.class_question_plan_payload_invalid": [
+    "This checkpoint request is no longer valid. Reload the plan and try again.",
+    "Esta solicitud del punto de control ya no es válida. Recarga el plan e inténtalo de nuevo."
+  ],
+  "run.plan.class_question_plan_session_state_invalid": [
+    "This class session can no longer be edited.",
+    "Esta sesión de clase ya no se puede editar."
+  ],
   "run.checkpoint.eyebrow": ["Lecture checkpoint", "Punto de control"],
   "run.checkpoint.title": ["Live question controls", "Controles de la pregunta en vivo"],
   "run.checkpoint.afterSlide": [

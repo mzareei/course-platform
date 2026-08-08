@@ -97,6 +97,23 @@ export function pushBankQuestion(input: {
   });
 }
 
+export function pushPlanQuestion(input: {
+  class_session_id: string;
+  question_id: string;
+  plan_checkpoint_id: string;
+  time_limit_seconds?: number;
+  points?: number;
+}) {
+  return callFn<{ round: PulseRound }>("course-pulse", {
+    action: "push",
+    class_session_id: input.class_session_id,
+    question_id: input.question_id,
+    plan_checkpoint_id: input.plan_checkpoint_id,
+    time_limit_seconds: input.time_limit_seconds,
+    points: input.points
+  });
+}
+
 // ---------------------------------------------------------------- question bank
 export type BankSummary = CheckpointBankSummary;
 export type DrawnQuestion = CheckpointQuestion;
