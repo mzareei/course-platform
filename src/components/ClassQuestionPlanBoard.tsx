@@ -76,10 +76,12 @@ function localizedPlanError(cause: unknown, fallbackKey: StringKey) {
 
 export function ClassQuestionPlanBoard({
   classSessionId,
-  isLive
+  isLive,
+  onRefresh
 }: {
   classSessionId: string;
   isLive: boolean;
+  onRefresh?: () => void | Promise<void>;
 }) {
   const [plan, setPlan] = useState<ClassQuestionPlan | null>(null);
   const [banks, setBanks] = useState<BankSummary[] | null>(null);
@@ -294,6 +296,7 @@ export function ClassQuestionPlanBoard({
         plan_checkpoint_id: checkpoint.id
       });
       await refreshPlan();
+      await onRefresh?.();
     } catch (cause) {
       setError(localizedPlanError(cause, "run.plan.saveFailed"));
     } finally {

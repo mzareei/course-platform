@@ -17,6 +17,7 @@ import {
 } from "../../api/pulse";
 import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
 import { endClassSession } from "../../api/session";
+import { ClassQuestionPlanBoard } from "../../components/ClassQuestionPlanBoard";
 import { StatusPill } from "../../components/StatusPill";
 import { InstructorDeck } from "../../features/deck/InstructorDeck";
 import type { CheckpointQuestion } from "../../features/deck/protocol";
@@ -202,6 +203,73 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       });
   }, [joinUrl]);
 
+  async function refreshCurrentRound() {
+    if (!sessionId) return;
+    const operationSequence = checkpointLifecycleSequence.current;
+    try {
+      const view = await currentPulse(sessionId!);
+      if (
+        !isCheckpointOperationCurrent(
+          operationSequence,
+          checkpointLifecycleSequence.current
+        )
+        || !view.round
+      ) {
+        return;
+      }
+      const afterSlide = Number(view.round.checkpoint_after_slide);
+      if (!Number.isInteger(afterSlide) || afterSlide < 1) return;
+      const segmentKey =
+        String(view.round.segment_key || "").trim()
+        || coverage.find(
+          (item) => item.checkpoint_after_slide === afterSlide
+        )?.segment_key
+        || `checkpoint-${afterSlide}`;
+      const checkpoint = { key: segmentKey, afterSlide };
+      let results = view.results;
+      if (view.round.state === "revealed" && !results) {
+        results = await pulseResults(view.round.round_id).catch(() => null);
+      }
+      if (
+        !isCheckpointOperationCurrent(
+          operationSequence,
+          checkpointLifecycleSequence.current
+        )
+      ) {
+        return;
+      }
+      recovery.current = null;
+      setActiveCheckpoint(checkpoint);
+      if (view.round.state === "revealed" && results) {
+        setCheckpointState({
+          type: "revealed",
+          round: view.round,
+          results
+        });
+      } else {
+        setCheckpointState({
+          type: "open",
+          round: view.round,
+          results
+        });
+      }
+    } catch {
+      if (
+        isCheckpointOperationCurrent(
+          operationSequence,
+          checkpointLifecycleSequence.current
+        )
+      ) {
+        setError(t("run.checkpoint.recoverFailed"));
+      }
+    }
+  }
+
+  async function refreshPlanBoardState() {
+    if (!isLive || !banksLoaded) return;
+    await refreshCurrentRound();
+  }
+
   // The scheduled session chooses the lecture. There is no second lecture/bank
   // selector inside Run Class.
   useEffect(() => {
@@ -257,65 +325,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       return;
     }
     recoveredSession.current = sessionId || null;
-    const operationSequence = checkpointLifecycleSequence.current;
-    currentPulse(sessionId!)
-      .then(async (view) => {
-        if (
-          !isCheckpointOperationCurrent(
-            operationSequence,
-            checkpointLifecycleSequence.current
-          )
-          || !view.round
-        ) {
-          return;
-        }
-        const afterSlide = Number(view.round.checkpoint_after_slide);
-        if (!Number.isInteger(afterSlide) || afterSlide < 1) return;
-        const segmentKey =
-          String(view.round.segment_key || "").trim()
-          || coverage.find(
-            (item) => item.checkpoint_after_slide === afterSlide
-          )?.segment_key
-          || `checkpoint-${afterSlide}`;
-        const checkpoint = { key: segmentKey, afterSlide };
-        let results = view.results;
-        if (view.round.state === "revealed" && !results) {
-          results = await pulseResults(view.round.round_id).catch(() => null);
-        }
-        if (
-          !isCheckpointOperationCurrent(
-            operationSequence,
-            checkpointLifecycleSequence.current
-          )
-        ) {
-          return;
-        }
-        recovery.current = null;
-        setActiveCheckpoint(checkpoint);
-        if (view.round.state === "revealed" && results) {
-          setCheckpointState({
-            type: "revealed",
-            round: view.round,
-            results
-          });
-        } else {
-          setCheckpointState({
-            type: "open",
-            round: view.round,
-            results
-          });
-        }
-      })
-      .catch(() => {
-        if (
-          isCheckpointOperationCurrent(
-            operationSequence,
-            checkpointLifecycleSequence.current
-          )
-        ) {
-          setError(t("run.checkpoint.recoverFailed"));
-        }
-      });
+    void refreshCurrentRound();
   }, [isLive, banksLoaded, sessionId, bank?.bank_id]);
 
   // If the deck never announces readiness, the class remains operable through
@@ -934,6 +944,14 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                 onOpenFinalQuiz={() => setShowFinalQuiz(true)}
               />
             )}
+
+            {sessionId && banksLoaded ? (
+              <ClassQuestionPlanBoard
+                classSessionId={sessionId}
+                isLive={isLive}
+                onRefresh={() => void refreshPlanBoardState()}
+              />
+            ) : null}
 
             {showFinalQuiz && bank?.content_slug ? (
               <EndOfClass

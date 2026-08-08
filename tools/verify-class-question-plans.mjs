@@ -23,6 +23,7 @@ for (const rel of required) {
 const api = read("src/api/classQuestionPlans.ts");
 const pulse = read("src/api/pulse.ts");
 const board = read("src/components/ClassQuestionPlanBoard.tsx");
+const runClass = read("src/screens/instructor/RunClass.tsx");
 const strings = read("src/i18n/strings.ts");
 const pushPlanQuestionBlock =
   pulse.match(/export function pushPlanQuestion[\s\S]+?\n}\n/)?.[0] || "";
@@ -74,6 +75,17 @@ assert.doesNotMatch(
   board,
   /cause instanceof Error && cause\.message/,
   "board must not expose raw backend error messages"
+);
+
+assert.match(runClass, /import\s+\{\s*ClassQuestionPlanBoard\s*\}\s+from\s+["']\.\.\/\.\.\/components\/ClassQuestionPlanBoard["']/);
+assert.match(runClass, /pushBankQuestion\(/, "RunClass must keep the legacy deck question send path");
+assert.match(runClass, /loadQuestion\(/, "RunClass must keep the bridge-driven loadQuestion path");
+assert.match(runClass, /<CheckpointPanel[\s\S]+?\/>/, "RunClass must keep the checkpoint panel");
+assert.match(runClass, /<ClassQuestionPlanBoard[\s\S]+classSessionId=\{sessionId\}[\s\S]+isLive=\{isLive\}[\s\S]+onRefresh=\{/);
+assert.match(
+  runClass,
+  /<CheckpointPanel[\s\S]+?\/>\s*\n\s*\)\}\s*\n\s*\{sessionId\s*&&\s*banksLoaded\s*\?\s*\(\s*\n\s*<ClassQuestionPlanBoard[\s\S]+?\/>/,
+  "RunClass must render the plan board below the checkpoint controls"
 );
 
 const copyKeys = [
