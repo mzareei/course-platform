@@ -51,26 +51,27 @@ function parseSlideHint(value: string): number | null {
 
 function applySelectedCandidateDefaults(
   nextPlan: ClassQuestionPlan | null,
-  previous: Record<string, string>
+  previous: Record<string, string>,
+  questionById: Map<string, BankQuestion>
 ) {
   if (!nextPlan) return {};
   const next: Record<string, string> = {};
   for (const checkpoint of nextPlan.checkpoints) {
-    if (!checkpoint.candidate_question_ids.length) continue;
+    const resolvedCandidateQuestions = checkpoint.candidate_question_ids
+      .map((questionId) => questionById.get(questionId))
+      .filter((question): question is BankQuestion => Boolean(question));
+    if (!resolvedCandidateQuestions.length) continue;
     const current = previous[checkpoint.id];
-    next[checkpoint.id] = checkpoint.candidate_question_ids.includes(current)
+    next[checkpoint.id] = resolvedCandidateQuestions.some((question) => question.id === current)
       ? current
-      : checkpoint.candidate_question_ids[0];
+      : resolvedCandidateQuestions[0].id;
   }
   return next;
 }
 
 function localizedPlanError(cause: unknown, fallbackKey: StringKey) {
   const key = classQuestionPlanErrorMessage(cause);
-  if (key) return t(key);
-  return cause instanceof Error && cause.message
-    ? cause.message
-    : t(fallbackKey);
+  return t(key || fallbackKey);
 }
 
 export function ClassQuestionPlanBoard({
@@ -103,10 +104,9 @@ export function ClassQuestionPlanBoard({
   );
 
   function applyPlan(nextPlan: ClassQuestionPlan | null) {
+    const nextQuestionById = new Map((questions || []).map((question) => [question.id, question]));
     setPlan(nextPlan);
-    setSelectedCandidateIds((current) =>
-      applySelectedCandidateDefaults(nextPlan, current)
-    );
+    setSelectedCandidateIds((current) => applySelectedCandidateDefaults(nextPlan, current, nextQuestionById));
     if (nextPlan?.question_bank_id) {
       setSelectedBankId(nextPlan.question_bank_id);
     }
@@ -151,6 +151,13 @@ export function ClassQuestionPlanBoard({
       .then((response: { bank_id: string; bank_title: string; questions: BankQuestion[] }) => {
         if (cancelled) return;
         setQuestions(response.questions);
+        setSelectedCandidateIds((current) =>
+          applySelectedCandidateDefaults(
+            plan,
+            current,
+            new Map(response.questions.map((question) => [question.id, question]))
+          )
+        );
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
@@ -275,8 +282,7 @@ export function ClassQuestionPlanBoard({
     }
   }
 
-  async function handleAskNow(checkpoint: PlanCheckpoint) {
-    const questionId = selectedCandidateIds[checkpoint.id] || checkpoint.candidate_question_ids[0] || "";
+  async function handleAskNow(checkpoint: PlanCheckpoint, questionId: string) {
     if (!questionId) return;
     setBusy(true);
     setError(null);
@@ -389,10 +395,14 @@ export function ClassQuestionPlanBoard({
             <div class="stack">
               {plan.checkpoints.map((checkpoint) => {
                 const editing = editor?.mode === "edit" && editor.checkpointId === checkpoint.id;
-                const checkpointQuestions = candidateQuestions(checkpoint);
-                const selectedCandidateId = selectedCandidateIds[checkpoint.id] || checkpoint.candidate_question_ids[0] || "";
-                const selectedQuestion = questionById.get(selectedCandidateId) || checkpointQuestions[0] || null;
+                const resolvedCandidateQuestions = candidateQuestions(checkpoint);
+                const selectedCandidateId = selectedCandidateIds[checkpoint.id] || resolvedCandidateQuestions[0]?.id || "";
+                const selectedQuestion = resolvedCandidateQuestions.find(
+                  (question) => question.id === selectedCandidateId
+                ) || resolvedCandidateQuestions[0] || null;
                 const isHistorical = checkpoint.state === "sent" || checkpoint.state === "skipped";
+                const hasStaleCandidates =
+                  checkpoint.candidate_question_ids.length > resolvedCandidateQuestions.length;
 
                 return (
                   <article class="card stack" key={checkpoint.id}>
@@ -441,9 +451,9 @@ export function ClassQuestionPlanBoard({
                         onCancel={() => setEditor(null)}
                         onSave={() => void handleSaveCheckpoint()}
                       />
-                    ) : checkpoint.state === "sent" ? null : (
+                    ) : isHistorical ? null : (
                       <div class="stack">
-                        {checkpointQuestions.length ? (
+                        {resolvedCandidateQuestions.length ? (
                           <>
                             <label class="field">
                               {t("run.plan.candidatesLabel")}
@@ -455,19 +465,24 @@ export function ClassQuestionPlanBoard({
                                     [checkpoint.id]: (event.target as HTMLSelectElement).value
                                   }))}
                               >
-                                {checkpointQuestions.map((question) => (
+                                {resolvedCandidateQuestions.map((question) => (
                                   <option key={question.id} value={question.id}>
                                     {question.prompt}
                                   </option>
                                 ))}
                               </select>
                             </label>
+                            {hasStaleCandidates ? (
+                              <p class="hint">{t("run.plan.staleCandidates")}</p>
+                            ) : null}
                             {selectedQuestion?.prompt_es ? (
                               <p class="hint">{selectedQuestion.prompt_es}</p>
                             ) : null}
                           </>
                         ) : (
-                          <p class="hint">{t("run.plan.noCandidates")}</p>
+                          <p class="hint">
+                            {hasStaleCandidates ? t("run.plan.staleCandidates") : t("run.plan.noCandidates")}
+                          </p>
                         )}
 
                         {!isHistorical ? (
@@ -475,8 +490,8 @@ export function ClassQuestionPlanBoard({
                             <button
                               class="btn"
                               type="button"
-                              disabled={busy || !isLive || !selectedCandidateId}
-                              onClick={() => void handleAskNow(checkpoint)}
+                              disabled={busy || !isLive || !selectedQuestion}
+                              onClick={() => selectedQuestion ? void handleAskNow(checkpoint, selectedQuestion.id) : undefined}
                             >
                               {t("run.plan.askNow")}
                             </button>

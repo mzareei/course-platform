@@ -883,6 +883,10 @@ export const strings = {
     "No candidate questions selected yet.",
     "Todavía no hay preguntas candidatas seleccionadas."
   ],
+  "run.plan.staleCandidates": [
+    "Some saved candidate questions are no longer available in the active bank.",
+    "Algunas preguntas candidatas guardadas ya no están disponibles en el banco activo."
+  ],
   "run.plan.liveRequired": [
     "Ask now is enabled once the class is live.",
     "Preguntar ahora se habilita cuando la clase está en vivo."
@@ -899,9 +903,61 @@ export const strings = {
     "Could not save the class question plan changes.",
     "No se pudieron guardar los cambios del plan de preguntas."
   ],
+  "run.plan.class_question_plan_failed": [
+    "The class question plan could not be updated right now.",
+    "No se pudo actualizar el plan de preguntas en este momento."
+  ],
+  "run.plan.class_question_plan_action_invalid": [
+    "This class question plan action is not available.",
+    "Esta acción del plan de preguntas no está disponible."
+  ],
+  "run.plan.class_question_plan_auth_invalid": [
+    "Your session expired. Sign in again to continue editing the class plan.",
+    "Tu sesión venció. Inicia sesión de nuevo para seguir editando el plan."
+  ],
+  "run.plan.class_question_plan_auth_required": [
+    "Sign in to continue editing the class question plan.",
+    "Inicia sesión para seguir editando el plan de preguntas."
+  ],
+  "run.plan.class_question_plan_bank_mismatch": [
+    "The selected bank does not match this class plan anymore.",
+    "El banco seleccionado ya no coincide con este plan de clase."
+  ],
+  "run.plan.class_question_plan_checkpoint_id_invalid": [
+    "That checkpoint is no longer valid. Reload the class plan and try again.",
+    "Ese punto de control ya no es válido. Recarga el plan e inténtalo de nuevo."
+  ],
+  "run.plan.class_question_plan_checkpoint_not_found": [
+    "That checkpoint could not be found. Reload the class plan and try again.",
+    "No se encontró ese punto de control. Recarga el plan e inténtalo de nuevo."
+  ],
   "run.plan.class_question_plan_exists": [
     "This class already has a question plan.",
     "Esta clase ya tiene un plan de preguntas."
+  ],
+  "run.plan.class_question_plan_forbidden": [
+    "You do not have permission to edit this class question plan.",
+    "No tienes permiso para editar este plan de preguntas."
+  ],
+  "run.plan.class_question_plan_method_not_allowed": [
+    "This class question plan request is not allowed.",
+    "Esta solicitud del plan de preguntas no está permitida."
+  ],
+  "run.plan.class_question_plan_not_found": [
+    "This class question plan no longer exists.",
+    "Este plan de preguntas ya no existe."
+  ],
+  "run.plan.class_question_plan_plan_id_invalid": [
+    "That class question plan is no longer valid. Reload and try again.",
+    "Ese plan de preguntas ya no es válido. Recarga e inténtalo de nuevo."
+  ],
+  "run.plan.class_question_plan_profile_not_found": [
+    "Your instructor profile could not be confirmed for this class plan.",
+    "No se pudo confirmar tu perfil de profesor para este plan."
+  ],
+  "run.plan.class_question_plan_question_bank_id_invalid": [
+    "Choose a valid active question bank for this class plan.",
+    "Elige un banco de preguntas activo y válido para este plan."
   ],
   "run.plan.class_question_plan_topic_required": [
     "Each checkpoint needs a topic.",
@@ -927,6 +983,10 @@ export const strings = {
     "Choose each candidate question only once.",
     "Elige cada pregunta candidata solo una vez."
   ],
+  "run.plan.class_question_plan_question_id_invalid": [
+    "That candidate question is no longer valid. Reload the plan and try again.",
+    "Esa pregunta candidata ya no es válida. Recarga el plan e inténtalo de nuevo."
+  ],
   "run.plan.class_question_plan_question_bank_not_active": [
     "The selected question bank is no longer active for this course.",
     "El banco de preguntas seleccionado ya no está activo para este curso."
@@ -943,9 +1003,25 @@ export const strings = {
     "This checkpoint request is no longer valid. Reload the plan and try again.",
     "Esta solicitud del punto de control ya no es válida. Recarga el plan e inténtalo de nuevo."
   ],
+  "run.plan.class_question_plan_session_id_invalid": [
+    "This class session is no longer valid for question planning.",
+    "Esta sesión de clase ya no es válida para planear preguntas."
+  ],
+  "run.plan.class_question_plan_session_not_found": [
+    "This class session could not be found for question planning.",
+    "No se encontró esta sesión de clase para planear preguntas."
+  ],
   "run.plan.class_question_plan_session_state_invalid": [
     "This class session can no longer be edited.",
     "Esta sesión de clase ya no se puede editar."
+  ],
+  "run.plan.class_question_plan_source_plan_id_invalid": [
+    "The source class plan is no longer valid.",
+    "El plan de clase de origen ya no es válido."
+  ],
+  "run.plan.class_question_plan_source_plan_not_found": [
+    "The source class plan could not be found.",
+    "No se encontró el plan de clase de origen."
   ],
   "run.checkpoint.eyebrow": ["Lecture checkpoint", "Punto de control"],
   "run.checkpoint.title": ["Live question controls", "Controles de la pregunta en vivo"],

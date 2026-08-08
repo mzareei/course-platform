@@ -34,6 +34,14 @@ assert.match(api, /callFn<[\s\S]+>\("course-class-question-plan"/);
 assert.match(api, /action:\s*["']get["']/);
 assert.match(api, /action:\s*["']create["']/);
 assert.match(api, /action:\s*["']set_candidates["']/);
+assert.match(api, /question_bank_id:\s*string;/);
+assert.match(api, /final_quiz_question_count:\s*number(?:\s*\|\s*null)?;/);
+assert.match(api, /notes:\s*string\s*\|\s*null;/);
+assert.match(api, /copied_from_plan_id:\s*string\s*\|\s*null;/);
+assert.match(api, /classQuestionPlanErrorKey/);
+assert.match(api, /run\.plan\.class_question_plan_failed/);
+assert.match(api, /run\.plan\.class_question_plan_auth_required/);
+assert.match(api, /run\.plan\.class_question_plan_question_bank_not_active/);
 
 assert.match(pushPlanQuestionBlock, /export function pushPlanQuestion\s*\(/);
 assert.match(pushPlanQuestionBlock, /callFn<\{ round: PulseRound \}>\("course-pulse"/);
@@ -58,9 +66,15 @@ assert.match(board, /t\("run\.plan\.alreadyAsked"\)/);
 assert.match(board, /t\("run\.plan\.noCandidates"\)/);
 assert.match(board, /candidate_question_ids/);
 assert.match(board, /checkpoint\.slide_hint\s*!==\s*null/);
-assert.match(board, /checkpoint\.state\s*===\s*["']sent["']/);
-assert.match(board, /disabled=\{[^}]*!isLive/);
+assert.match(board, /checkpoint\.state\s*===\s*["']sent["']\s*\|\|\s*checkpoint\.state\s*===\s*["']skipped["']/);
+assert.match(board, /resolvedCandidateQuestions/);
+assert.match(board, /disabled=\{[^}]*!isLive[^}]*\|\|[^}]*!selectedQuestion/);
 assert.match(board, /pushPlanQuestion\(/);
+assert.doesNotMatch(
+  board,
+  /cause instanceof Error && cause\.message/,
+  "board must not expose raw backend error messages"
+);
 
 const copyKeys = [
   "run.plan.title",
@@ -85,16 +99,37 @@ const copyKeys = [
   "run.plan.loadFailed",
   "run.plan.saveFailed",
   "run.plan.createFailed",
+  "run.plan.class_question_plan_failed",
+  "run.plan.class_question_plan_action_invalid",
+  "run.plan.class_question_plan_auth_invalid",
+  "run.plan.class_question_plan_auth_required",
+  "run.plan.class_question_plan_bank_mismatch",
+  "run.plan.class_question_plan_checkpoint_id_invalid",
+  "run.plan.class_question_plan_checkpoint_not_found",
   "run.plan.class_question_plan_topic_required",
   "run.plan.class_question_plan_slide_hint_invalid",
   "run.plan.class_question_plan_checkpoint_locked",
+  "run.plan.class_question_plan_forbidden",
+  "run.plan.class_question_plan_method_not_allowed",
+  "run.plan.class_question_plan_not_found",
+  "run.plan.class_question_plan_plan_id_invalid",
+  "run.plan.class_question_plan_profile_not_found",
+  "run.plan.class_question_plan_question_bank_id_invalid",
+  "run.plan.class_question_plan_question_bank_not_active",
   "run.plan.class_question_plan_question_not_in_bank",
   "run.plan.class_question_plan_question_ids_invalid",
   "run.plan.class_question_plan_question_ids_duplicate",
+  "run.plan.class_question_plan_question_id_invalid",
   "run.plan.class_question_plan_question_unavailable",
   "run.plan.class_question_plan_question_not_candidate",
   "run.plan.class_question_plan_payload_invalid",
-  "run.plan.class_question_plan_exists"
+  "run.plan.class_question_plan_exists",
+  "run.plan.class_question_plan_session_id_invalid",
+  "run.plan.class_question_plan_session_not_found",
+  "run.plan.class_question_plan_session_state_invalid",
+  "run.plan.class_question_plan_source_plan_id_invalid",
+  "run.plan.class_question_plan_source_plan_not_found",
+  "run.plan.staleCandidates"
 ];
 
 for (const key of copyKeys) {
