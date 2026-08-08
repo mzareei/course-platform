@@ -123,19 +123,23 @@ export function validateCheckpointDraft(input: Record<string, unknown>) {
   const topic = String(input.topic || "").trim().slice(0, 160);
   const slideHint = input.slide_hint == null || input.slide_hint === ""
     ? null : Number(input.slide_hint);
-  if (!topic) throw new Error("A checkpoint topic is required.");
+  if (!topic) throw new Error("class_question_plan_topic_required");
   if (slideHint !== null && (!Number.isInteger(slideHint) || slideHint < 1)) {
-    throw new Error("The slide hint must be a positive whole number.");
+    throw new Error("class_question_plan_slide_hint_invalid");
   }
   return { topic, slideHint, notes: String(input.notes || "").trim().slice(0, 1000) || null };
 }
 
 export function assertMutableCheckpoint(state: string, sentRoundCount: number) {
   if (state !== "planned" || sentRoundCount > 0) {
-    throw new Error("A checkpoint that has been used in class cannot be changed.");
+    throw new Error("class_question_plan_checkpoint_locked");
   }
 }
 ```
+
+The Edge Function returns these stable error codes. Task 4 maps each code to
+English and Spanish interface copy; backend validation never returns a
+user-facing sentence.
 
 - [ ] **Step 5: Run the backend verifier**
 
