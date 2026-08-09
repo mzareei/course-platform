@@ -240,6 +240,7 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
   const [deckUrl, setDeckUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reviewCapabilities = generationReviewCapabilities(generationMode);
 
   useEffect(() => {
     let cancelled = false;
@@ -250,7 +251,7 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
       .then((result) => {
         if (cancelled) return;
         setBundle({ job: result.job, questions: result.questions });
-        if (!generationReviewCapabilities(generationMode).showsDeck) return;
+        if (!reviewCapabilities.requestsDeckPreview) return;
         previewUrl(jobId)
           .then((preview) => {
             if (!cancelled) setDeckUrl(`/content?t=${encodeURIComponent(preview.token)}`);
@@ -261,7 +262,7 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
         if (!cancelled) setError(e.message);
       });
     return () => { cancelled = true; };
-  }, [jobId, generationMode]);
+  }, [jobId, reviewCapabilities.requestsDeckPreview]);
 
   async function onApprove() {
     setBusy(true);
@@ -274,7 +275,6 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
     }
   }
 
-  const reviewCapabilities = generationReviewCapabilities(generationMode);
   const bankOnly = generationMode === "bank_only";
   const byDifficulty = (level: string) => (bundle?.questions ?? []).filter((q) => q.difficulty === level);
 
@@ -317,7 +317,7 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
                   {t(`quiz.difficulty.${question.difficulty}` as "quiz.difficulty.easy")}
                 </span>
               </div>
-              {reviewCapabilities.showsDeck ? (
+              {reviewCapabilities.showsCheckpointMappings ? (
                 question.source_slide_start !== null
                   && question.source_slide_end !== null
                   && question.checkpoint_after_slide !== null ? (

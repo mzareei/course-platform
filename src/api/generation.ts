@@ -85,12 +85,31 @@ export function hasGenerationProgress(status: GenerationJob["status"]) {
 
 export function generationReviewCapabilities(mode: GenerationMode) {
   return mode === "deck_and_bank"
-    ? { showsDeck: true, createsDraftRelease: true }
-    : { showsDeck: false, createsDraftRelease: false };
+    ? {
+      showsDeck: true,
+      requestsDeckPreview: true,
+      showsCheckpointMappings: true,
+      createsDraftRelease: true
+    }
+    : {
+      showsDeck: false,
+      requestsDeckPreview: false,
+      showsCheckpointMappings: false,
+      createsDraftRelease: false
+    };
 }
 
-export function listJobs() {
-  return callFn<{ jobs: GenerationJob[] }>("course-generation", { action: "list_jobs" });
+function requireGenerationJob(job: unknown): GenerationJob {
+  const generationMode = (job as { generation_mode?: unknown } | null)?.generation_mode;
+  if (generationMode !== "deck_and_bank" && generationMode !== "bank_only") {
+    throw new Error("A generation job is missing a valid generation mode.");
+  }
+  return job as GenerationJob;
+}
+
+export async function listJobs() {
+  const result = await callFn<{ jobs: unknown[] }>("course-generation", { action: "list_jobs" });
+  return { jobs: result.jobs.map(requireGenerationJob) };
 }
 
 export function jobStatus(jobId: string) {
