@@ -48,7 +48,7 @@ type RecoveryAction =
   }
   | {
     type: "reveal" | "close";
-    checkpoint: ActiveCheckpoint;
+    checkpoint: ActiveCheckpoint | null;
     round: PulseRound;
   };
 
@@ -126,6 +126,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState(false);
+  const [recoveringCurrentRound, setRecoveringCurrentRound] = useState(false);
 
   const resultsPoll = useRef<number | undefined>(undefined);
   const previousDeckCheckpoint = useRef<ActiveCheckpoint | null>(null);
@@ -206,6 +207,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   async function refreshCurrentRound() {
     if (!sessionId) return;
     const operationSequence = checkpointLifecycleSequence.current;
+    setRecoveringCurrentRound(true);
     try {
       const view = await currentPulse(sessionId!);
       if (
@@ -214,18 +216,21 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           checkpointLifecycleSequence.current
         )
         || !view.round
-      ) {
+        ) {
         return;
       }
       const afterSlide = Number(view.round.checkpoint_after_slide);
-      if (!Number.isInteger(afterSlide) || afterSlide < 1) return;
-      const segmentKey =
-        String(view.round.segment_key || "").trim()
-        || coverage.find(
-          (item) => item.checkpoint_after_slide === afterSlide
-        )?.segment_key
-        || `checkpoint-${afterSlide}`;
-      const checkpoint = { key: segmentKey, afterSlide };
+      const checkpoint = Number.isInteger(afterSlide) && afterSlide >= 1
+        ? {
+          key:
+            String(view.round.segment_key || "").trim()
+            || coverage.find(
+              (item) => item.checkpoint_after_slide === afterSlide
+            )?.segment_key
+            || `checkpoint-${afterSlide}`,
+          afterSlide
+        }
+        : null;
       let results = view.results;
       if (view.round.state === "revealed" && !results) {
         results = await pulseResults(view.round.round_id).catch(() => null);
@@ -262,6 +267,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       ) {
         setError(t("run.checkpoint.recoverFailed"));
       }
+    } finally {
+      setRecoveringCurrentRound(false);
     }
   }
 
@@ -347,7 +354,13 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   // The deck stops at an authored checkpoint. Draw only from that exact
   // checkpoint, then tell the deck presentation that its question is ready.
   useEffect(() => {
-    if (!isLive || !bridge.checkpoint || !bank) return;
+    if (!isLive || recoveringCurrentRound || !bridge.checkpoint || !bank) return;
+    if (
+      checkpointState.type === "open"
+      || checkpointState.type === "revealed"
+    ) {
+      return;
+    }
     const next = bridge.checkpoint;
     if (
       activeCheckpoint?.key === next.key
@@ -360,6 +373,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     void loadQuestion(next);
   }, [
     isLive,
+    recoveringCurrentRound,
+    checkpointState.type,
     bridge.checkpoint?.key,
     bridge.checkpoint?.afterSlide,
     bank?.bank_id
@@ -589,7 +604,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   }
 
   async function revealRound(
-    checkpoint: ActiveCheckpoint,
+    checkpoint: ActiveCheckpoint | null,
     round: PulseRound
   ) {
     if (checkpointOperationInFlight.current) return;
@@ -607,7 +622,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         round: revealedRound,
         results
       });
-      if (bridge.deckReady && bridge.checkpoint) {
+      if (checkpoint && bridge.deckReady && bridge.checkpoint) {
         bridge.send({
           version: 1,
           type: "checkpoint.answer_revealed",
@@ -624,7 +639,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       recovery.current = { type: "reveal", checkpoint, round };
       setCheckpointState({
         type: "error",
-        checkpoint: checkpoint.afterSlide,
+        checkpoint: checkpoint?.afterSlide ?? 0,
         message: t("run.pushFailed")
       });
     } finally {
@@ -634,21 +649,28 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   }
 
   async function revealOpenRound() {
-    if (checkpointState.type !== "open" || !activeCheckpoint) return;
+    if (checkpointState.type !== "open") return;
     await revealRound(activeCheckpoint, checkpointState.round);
   }
 
   async function continueCheckpoint(
     deckAlreadyResumed = false,
-    checkpointOverride?: ActiveCheckpoint
+    checkpointOverride?: ActiveCheckpoint | null
   ) {
-    const checkpoint = checkpointOverride ?? activeCheckpoint;
-    if (!checkpoint) return;
     if (checkpointContinueInFlight.current) return;
     checkpointLifecycleSequence.current += 1;
     checkpointDrawSequence.current += 1;
     const operationSequence = checkpointLifecycleSequence.current;
     const failedAction = recovery.current;
+    const checkpoint =
+      checkpointOverride
+      ?? activeCheckpoint
+      ?? (
+        failedAction?.type === "reveal"
+        || failedAction?.type === "close"
+          ? failedAction.checkpoint
+          : null
+      );
     const round =
       checkpointState.type === "open"
       || checkpointState.type === "revealed"
@@ -657,6 +679,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           || failedAction?.type === "close"
           ? failedAction.round
           : null;
+    if (!checkpoint && !round) return;
 
     checkpointContinueInFlight.current = true;
     setBusy(true);
@@ -670,15 +693,15 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         )
       ) return;
       recovery.current = null;
-    if (bridge.deckReady) {
-      const deckCheckpointKey = bridge.checkpoint?.key || checkpoint.key;
-      bridge.send({
-        version: 1,
-        type: "checkpoint.question_clear",
-        checkpoint_key: deckCheckpointKey
-      });
+      if (checkpoint && bridge.deckReady) {
+        const deckCheckpointKey = bridge.checkpoint?.key || checkpoint.key;
+        bridge.send({
+          version: 1,
+          type: "checkpoint.question_clear",
+          checkpoint_key: deckCheckpointKey
+        });
       }
-      if (!deckAlreadyResumed && bridge.deckReady) {
+      if (checkpoint && !deckAlreadyResumed && bridge.deckReady) {
         bridge.send({
           version: 1,
           type: "checkpoint.resume",
@@ -688,7 +711,9 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       setActiveCheckpoint(null);
       setCheckpointState({
         type: "idle",
-        nextCheckpoint: nextCheckpointAfter(checkpoint.afterSlide)
+        nextCheckpoint: checkpoint
+          ? nextCheckpointAfter(checkpoint.afterSlide)
+          : undefined
       });
     } catch {
       if (
@@ -702,7 +727,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       }
       setCheckpointState({
         type: "error",
-        checkpoint: checkpoint.afterSlide,
+        checkpoint: checkpoint?.afterSlide ?? 0,
         message: t("run.pushFailed")
       });
     } finally {

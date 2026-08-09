@@ -87,6 +87,36 @@ assert.match(
   /<CheckpointPanel[\s\S]+?\/>\s*\n\s*\)\}\s*\n\s*\{sessionId\s*&&\s*banksLoaded\s*\?\s*\(\s*\n\s*<ClassQuestionPlanBoard[\s\S]+?\/>/,
   "RunClass must render the plan board below the checkpoint controls"
 );
+assert.doesNotMatch(
+  runClass,
+  /if \(!Number\.isInteger\(afterSlide\) \|\| afterSlide < 1\) return;/,
+  "RunClass must not drop active plan rounds when checkpoint_after_slide is null"
+);
+assert.match(
+  runClass,
+  /const checkpoint =\s*Number\.isInteger\(afterSlide\) && afterSlide >= 1[\s\S]+?\?\s*\{[\s\S]+afterSlide[\s\S]+?\}\s*:\s*null;/,
+  "RunClass must recover active rounds with a nullable checkpoint"
+);
+assert.match(
+  runClass,
+  /setActiveCheckpoint\(checkpoint\);/,
+  "RunClass recovery must allow activeCheckpoint to be null for plan rounds"
+);
+assert.match(
+  runClass,
+  /if \(!isLive \|\| recoveringCurrentRound \|\| !bridge\.checkpoint \|\| !bank\) return;/,
+  "RunClass must block legacy checkpoint loading while active-round recovery is in flight"
+);
+assert.doesNotMatch(
+  runClass,
+  /if \(checkpointState\.type !== "open" \|\| !activeCheckpoint\) return;/,
+  "plan rounds must still be revealable after reload without an authored checkpoint"
+);
+assert.doesNotMatch(
+  runClass,
+  /const checkpoint = checkpointOverride \?\? activeCheckpoint;\s*if \(!checkpoint\) return;/,
+  "plan rounds must remain continuable after reload without inventing a slide checkpoint"
+);
 
 const copyKeys = [
   "run.plan.title",
