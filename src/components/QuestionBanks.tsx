@@ -7,8 +7,7 @@ import {
   type CheckpointCoverage
 } from "../api/checkpoints";
 import {
-  canPrepareCheckpoints,
-  canResumeCheckpointPreparation,
+  questionBankControlCapabilities,
   questionBankReadiness
 } from "../features/deck/bankReadiness";
 import { t } from "../i18n";
@@ -77,22 +76,16 @@ function QuestionBankCard({
     role === "platform_owner" || role === "instructor"
   );
   const flexible = bank.generation_validation_profile === "flexible";
-  const legacy = !flexible;
-  const hasDeck = Boolean(bank.content_item_id);
-  const preparable = instructorCanPrepare
-    && legacy
-    && hasDeck
-    && bank.checkpoint_coverage.length === 0
-    && canPrepareCheckpoints(bank);
-  const resumable = instructorCanPrepare && legacy && hasDeck
-    && canResumeCheckpointPreparation(bank);
+  const controls = questionBankControlCapabilities(bank, instructorCanPrepare);
+  const preparable = controls.prepare;
+  const resumable = controls.resume;
   const [preparing, setPreparing] = useState(false);
   const [prepareError, setPrepareError] = useState<string | null>(null);
   const [prepared, setPrepared] = useState<BackfillResult | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const ready = readiness === "ready" || prepared !== null;
   const pending = readiness === "pending";
-  const canRefreshDeck = instructorCanPrepare && legacy && hasDeck && ready && prepared === null;
+  const canRefreshDeck = controls.refresh && prepared === null;
   const checkpointCount = prepared?.checkpoint_count
     ?? bank.checkpoint_coverage.length;
 

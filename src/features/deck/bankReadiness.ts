@@ -10,6 +10,7 @@ type CheckpointBankReadinessInput = {
   checkpoint_metadata_status: "missing" | "valid" | "invalid";
   checkpoint_coverage: CheckpointCoverageInput[];
   source_pdf_mapping_status: "missing" | "valid";
+  content_item_id?: string | null;
 };
 
 export type QuestionBankReadiness = "legacy" | "pending" | "ready" | "invalid";
@@ -57,4 +58,22 @@ export function canResumeCheckpointPreparation(
   bank: CheckpointBankReadinessInput
 ): boolean {
   return questionBankReadiness(bank) === "pending";
+}
+
+export function questionBankControlCapabilities(
+  bank: CheckpointBankReadinessInput,
+  instructorCanPrepare: boolean
+) {
+  const legacy = bank.generation_validation_profile === "legacy";
+  const hasDeck = Boolean(bank.content_item_id);
+  const readiness = questionBankReadiness(bank);
+  return {
+    prepare: instructorCanPrepare
+      && legacy
+      && hasDeck
+      && bank.checkpoint_coverage.length === 0
+      && readiness === "legacy",
+    resume: instructorCanPrepare && legacy && hasDeck && readiness === "pending",
+    refresh: instructorCanPrepare && legacy && hasDeck && readiness === "ready"
+  };
 }

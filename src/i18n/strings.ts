@@ -1360,8 +1360,8 @@ export const strings = {
     "Listo según el plan docente aprobado y las referencias a páginas fuente."
   ],
   "content.banks.flexibleInvalid": [
-    "This flexible bank needs at least one question with a valid source-PDF mapping.",
-    "Este banco flexible necesita al menos una pregunta con una referencia válida al PDF fuente."
+    "Every active question needs a valid source-page mapping.",
+    "Cada pregunta activa necesita una referencia válida a una página fuente."
   ],
   "content.banks.sourcePages": [
     "Source PDF pages: {pages}",

@@ -437,8 +437,8 @@ assert.match(
 );
 assert.match(
   bankUiSource,
-  /canResumeCheckpointPreparation\(bank\)/,
-  "only a validated durable pending state may expose the Resume action"
+  /questionBankControlCapabilities\(bank, instructorCanPrepare\)/,
+  "the card must use the shared capability gate for Resume and other deck-only actions"
 );
 assert.match(
   bankUiSource,
