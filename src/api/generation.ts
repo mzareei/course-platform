@@ -3,11 +3,40 @@
 // approve() runs, and even then only as a draft release.
 import { callFn } from "./client";
 
+export type GenerationMode = "deck_and_bank" | "bank_only";
+
+export type TeachingBrief = {
+  generation_mode: GenerationMode;
+  instructions: string;
+  live_checkpoint_goal: number | null;
+  candidates_per_checkpoint: number | null;
+  end_quiz_question_goal: number | null;
+  checkpoint_preferences: string;
+};
+
+export type TeachingPlan = {
+  source_pages: Array<{
+    source_pdf_page: number;
+    topic: string;
+    topic_es: string;
+    evidence: string;
+  }>;
+  checkpoints: Array<{
+    key: string;
+    topic: string;
+    source_pdf_pages: number[];
+    suggested_after_pdf_page: number | null;
+    candidate_goal: number | null;
+  }>;
+  end_quiz_goal: number | null;
+};
+
 export interface GenerationJob {
   id: string;
   status:
     | "queued" | "extracting" | "outlining" | "generating_deck"
-    | "generating_questions" | "assembling" | "ready_for_review"
+    | "generating_questions" | "grounding" | "assembling"
+    | "ready_for_plan_review" | "ready_for_review"
     | "approved" | "failed";
   lecture_title: string | null;
   lecture_slug: string | null;
@@ -42,8 +71,12 @@ export interface GeneratedQuestion {
 
 /** Statuses where the job is still working — the screen polls while in these. */
 export const IN_FLIGHT: GenerationJob["status"][] = [
-  "queued", "extracting", "outlining", "generating_deck", "generating_questions", "assembling"
+  "queued", "extracting", "outlining", "generating_deck", "generating_questions", "grounding", "assembling"
 ];
+
+export function isGenerationInFlight(status: GenerationJob["status"]) {
+  return IN_FLIGHT.includes(status);
+}
 
 export function listJobs() {
   return callFn<{ jobs: GenerationJob[] }>("course-generation", { action: "list_jobs" });
@@ -57,8 +90,26 @@ export function advanceJob(jobId: string) {
   return callFn<{ job: GenerationJob; advanced: boolean }>("course-generation", { action: "advance", job_id: jobId });
 }
 
-export function createJob(input: { upload_id: string; lecture_title: string; lecture_slug?: string }) {
+export function createJob(input: {
+  upload_id: string;
+  lecture_title: string;
+  lecture_slug?: string;
+  teaching_brief: TeachingBrief;
+}) {
   return callFn<{ job: GenerationJob }>("course-generation", { action: "create_job", ...input });
+}
+
+export function reviewPlan(jobId: string) {
+  return callFn<{
+    job: Pick<GenerationJob, "id" | "status"> & {
+      teaching_brief: TeachingBrief;
+      proposed_plan: TeachingPlan;
+    };
+  }>("course-generation", { action: "review_plan", job_id: jobId });
+}
+
+export function approvePlan(input: { job_id: string; approved_plan: TeachingPlan }) {
+  return callFn<{ job: GenerationJob }>("course-generation", { action: "approve_plan", ...input });
 }
 
 export function cancelJob(jobId: string) {

@@ -3,12 +3,32 @@ import { readFile } from "node:fs/promises";
 import ts from "typescript";
 
 const root = new URL("..", import.meta.url);
+const read = (path) => readFile(new URL(path, root), "utf8");
 const readinessPath = new URL("src/features/deck/bankReadiness.ts", root);
 const readinessSource = await readFile(readinessPath, "utf8");
 const compiled = ts.transpileModule(readinessSource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText;
 const readiness = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
+const [generationApi, content, strings] = await Promise.all([
+  read("src/api/generation.ts"),
+  read("src/screens/instructor/Content.tsx"),
+  read("src/i18n/strings.ts")
+]);
+const compiledGeneration = ts.transpileModule(
+  generationApi.replace('import { callFn } from "./client";', "const callFn = () => undefined;"),
+  { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }
+).outputText;
+const generation = await import(`data:text/javascript;base64,${Buffer.from(compiledGeneration).toString("base64")}`);
+
+assert.match(generationApi, /export type TeachingBrief/);
+assert.match(generationApi, /reviewPlan\(jobId/);
+assert.match(generationApi, /approvePlan\(input/);
+assert.match(content, /GenerationBriefForm/);
+assert.match(content, /GenerationPlanReview/);
+assert.match(strings, /"content\.plan\.approve"/);
+assert.match(strings, /"content\.mode\.bankOnly"/);
+assert.equal(generation.isGenerationInFlight("ready_for_plan_review"), false);
 
 const legacyBank = (overrides = {}) => ({
   total: 18,

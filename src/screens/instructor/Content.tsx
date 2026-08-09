@@ -9,9 +9,11 @@ import { t } from "../../i18n";
 import {
   listJobs, jobStatus, advanceJob, createJob, cancelJob,
   reviewBundle, approveJob, uploadPdf, previewUrl,
-  IN_FLIGHT, type GenerationJob, type GeneratedQuestion
+  isGenerationInFlight, type GenerationJob, type GeneratedQuestion, type TeachingBrief
 } from "../../api/generation";
 import { ContentLibraryView } from "../../components/ContentLibrary";
+import { GenerationBriefForm } from "../../components/GenerationBriefForm";
+import { GenerationPlanReview } from "../../components/GenerationPlanReview";
 import { QuestionBanks } from "../../components/QuestionBanks";
 
 const POLL_MS = 5000;
@@ -26,10 +28,9 @@ function slugify(value: string) {
 
 export function Content() {
   const [jobs, setJobs] = useState<GenerationJob[] | null>(null);
-  const [title, setTitle] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [planning, setPlanning] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
   // The professor's own lectures come first — the AI pipeline is the newer,
   // rarer path, not the default one.
@@ -47,13 +48,13 @@ export function Content() {
   // job resume instead of sitting there looking alive.
   useEffect(() => {
     clearInterval(poll.current);
-    const active = (jobs ?? []).filter((job) => IN_FLIGHT.includes(job.status));
+    const active = (jobs ?? []).filter((job) => isGenerationInFlight(job.status));
     if (!active.length) return;
     poll.current = setInterval(() => {
       Promise.all(active.map((job) =>
         jobStatus(job.id)
           .then(({ job: fresh }) => {
-            if (IN_FLIGHT.includes(fresh.status)) void advanceJob(job.id).catch(() => {});
+            if (isGenerationInFlight(fresh.status)) void advanceJob(job.id).catch(() => {});
             return fresh;
           })
           .catch(() => null)
@@ -62,19 +63,21 @@ export function Content() {
     return () => clearInterval(poll.current);
   }, [jobs?.map((j) => `${j.id}:${j.status}`).join(",")]);
 
-  async function onUpload() {
-    if (!file || !title.trim()) return;
+  async function onUpload({ file, title, teaching_brief }: {
+    file: File;
+    title: string;
+    teaching_brief: TeachingBrief;
+  }) {
     setBusy("upload");
     setError(null);
     try {
       const uploadId = await uploadPdf(file);
       await createJob({
         upload_id: uploadId,
-        lecture_title: title.trim(),
-        lecture_slug: slugify(title)
+        lecture_title: title,
+        lecture_slug: slugify(title),
+        teaching_brief
       });
-      setTitle("");
-      setFile(null);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("content.uploadFailed"));
@@ -124,39 +127,8 @@ export function Content() {
       <>
       <p class="hint">{t("content.lede")}</p>
 
-      <div class="card">
-        <h2>{t("content.uploadTitle")}</h2>
-        <p class="hint">{t("content.uploadBody")}</p>
-        {error ? <p class="error-text" role="alert">{error}</p> : null}
-        <div class="grid-2">
-          <label class="field">
-            {t("content.lectureTitle")}
-            <input
-              type="text"
-              placeholder={t("content.lectureTitlePlaceholder")}
-              value={title}
-              onInput={(e) => setTitle((e.target as HTMLInputElement).value)}
-            />
-          </label>
-          <label class="field">
-            {t("content.pdf")}
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => setFile((e.target as HTMLInputElement).files?.[0] ?? null)}
-            />
-          </label>
-        </div>
-        {title.trim() ? <p class="hint">{t("content.willBeSlug", { slug: slugify(title) })}</p> : null}
-        <button
-          class="btn primary"
-          type="button"
-          disabled={busy === "upload" || !file || title.trim().length < 3}
-          onClick={onUpload}
-        >
-          {busy === "upload" ? t("content.uploading") : t("content.generate")}
-        </button>
-      </div>
+      {error ? <p class="error-text" role="alert">{error}</p> : null}
+      <GenerationBriefForm busy={busy === "upload"} onSubmit={onUpload} />
 
       <h2>{t("content.jobsTitle")}</h2>
       {jobs === null ? (
@@ -173,12 +145,20 @@ export function Content() {
               job={job}
               busy={busy === job.id}
               onCancel={() => onCancel(job.id)}
+              onPlanReview={() => setPlanning(job.id)}
               onReview={() => setReviewing(job.id)}
             />
           ))}
         </div>
       )}
 
+      {planning ? (
+        <GenerationPlanReview
+          jobId={planning}
+          onClose={() => setPlanning(null)}
+          onApproved={() => { setPlanning(null); void refresh(); }}
+        />
+      ) : null}
       {reviewing ? (
         <ReviewPanel
           jobId={reviewing}
@@ -193,13 +173,13 @@ export function Content() {
 }
 
 const STEP_ORDER: GenerationJob["status"][] = [
-  "queued", "extracting", "outlining", "generating_deck", "generating_questions", "assembling", "ready_for_review"
+  "queued", "extracting", "outlining", "ready_for_plan_review", "generating_deck", "generating_questions", "grounding", "assembling", "ready_for_review"
 ];
 
-function JobCard({ job, busy, onCancel, onReview }: {
-  job: GenerationJob; busy: boolean; onCancel: () => void; onReview: () => void;
+function JobCard({ job, busy, onCancel, onPlanReview, onReview }: {
+  job: GenerationJob; busy: boolean; onCancel: () => void; onPlanReview: () => void; onReview: () => void;
 }) {
-  const inFlight = IN_FLIGHT.includes(job.status);
+  const inFlight = isGenerationInFlight(job.status);
   const step = Math.max(0, STEP_ORDER.indexOf(job.status));
   const percent = job.status === "approved" ? 100 : Math.round((step / (STEP_ORDER.length - 1)) * 100);
 
@@ -223,11 +203,14 @@ function JobCard({ job, busy, onCancel, onReview }: {
 
       {/* A retry that later succeeded leaves its message behind; showing it on a
           finished job reads as a failure when nothing is wrong. */}
-      {job.error && job.status !== "ready_for_review" && job.status !== "approved"
+      {job.error && job.status !== "ready_for_plan_review" && job.status !== "ready_for_review" && job.status !== "approved"
         ? <p class="error-text">{job.error}</p>
         : null}
 
       <div class="row">
+        {job.status === "ready_for_plan_review" ? (
+          <button class="btn primary" type="button" onClick={onPlanReview}>{t("content.plan.review")}</button>
+        ) : null}
         {job.status === "ready_for_review" ? (
           <button class="btn primary" type="button" onClick={onReview}>{t("content.review")}</button>
         ) : null}
