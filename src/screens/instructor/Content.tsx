@@ -9,7 +9,8 @@ import { t } from "../../i18n";
 import {
   listJobs, jobStatus, advanceJob, createJob, cancelJob,
   reviewBundle, approveJob, uploadPdf, previewUrl,
-  isGenerationInFlight, type GenerationJob, type GeneratedQuestion, type TeachingBrief
+  generationReviewCapabilities, hasGenerationProgress, isGenerationInFlight,
+  type GenerationJob, type GeneratedQuestion, type TeachingBrief
 } from "../../api/generation";
 import { ContentLibraryView } from "../../components/ContentLibrary";
 import { GenerationBriefForm } from "../../components/GenerationBriefForm";
@@ -79,8 +80,10 @@ export function Content() {
         teaching_brief
       });
       await refresh();
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : t("content.uploadFailed"));
+      return false;
     } finally {
       setBusy(null);
     }
@@ -180,6 +183,7 @@ function JobCard({ job, busy, onCancel, onPlanReview, onReview }: {
   job: GenerationJob; busy: boolean; onCancel: () => void; onPlanReview: () => void; onReview: () => void;
 }) {
   const inFlight = isGenerationInFlight(job.status);
+  const displaysProgress = hasGenerationProgress(job.status);
   const step = Math.max(0, STEP_ORDER.indexOf(job.status));
   const percent = job.status === "approved" ? 100 : Math.round((step / (STEP_ORDER.length - 1)) * 100);
 
@@ -192,7 +196,7 @@ function JobCard({ job, busy, onCancel, onPlanReview, onReview }: {
         </span>
       </div>
 
-      {inFlight ? (
+      {displaysProgress ? (
         <>
           <div class="progress-track" aria-hidden="true">
             <div class="progress-fill" style={`width: ${percent}%;`} />
@@ -228,18 +232,34 @@ function JobCard({ job, busy, onCancel, onPlanReview, onReview }: {
 function ReviewPanel({ jobId, onClose, onApproved }: {
   jobId: string; onClose: () => void; onApproved: () => void;
 }) {
-  const [questions, setQuestions] = useState<GeneratedQuestion[] | null>(null);
+  const [bundle, setBundle] = useState<{
+    job: GenerationJob & { generation_mode: "deck_and_bank" | "bank_only" };
+    questions: GeneratedQuestion[];
+  } | null>(null);
   const [deckUrl, setDeckUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setBundle(null);
+    setDeckUrl(null);
+    setError(null);
     reviewBundle(jobId)
-      .then((r) => setQuestions(r.questions))
-      .catch((e: Error) => setError(e.message));
-    previewUrl(jobId)
-      .then((r) => setDeckUrl(`/content?t=${encodeURIComponent(r.token)}`))
-      .catch(() => {});
+      .then((result) => {
+        if (cancelled) return;
+        setBundle({ job: result.job, questions: result.questions });
+        if (!generationReviewCapabilities(result.job.generation_mode).showsDeck) return;
+        previewUrl(jobId)
+          .then((preview) => {
+            if (!cancelled) setDeckUrl(`/content?t=${encodeURIComponent(preview.token)}`);
+          })
+          .catch(() => {});
+      })
+      .catch((e: Error) => {
+        if (!cancelled) setError(e.message);
+      });
+    return () => { cancelled = true; };
   }, [jobId]);
 
   async function onApprove() {
@@ -253,18 +273,20 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
     }
   }
 
-  const byDifficulty = (level: string) => (questions ?? []).filter((q) => q.difficulty === level);
+  const reviewCapabilities = bundle && generationReviewCapabilities(bundle.job.generation_mode);
+  const bankOnly = bundle?.job.generation_mode === "bank_only";
+  const byDifficulty = (level: string) => (bundle?.questions ?? []).filter((q) => q.difficulty === level);
 
   return (
     <div class="card">
       <div class="row" style="justify-content: space-between;">
-        <h2>{t("content.reviewTitle")}</h2>
+        <h2>{bankOnly ? t("content.reviewBankOnlyTitle") : t("content.reviewTitle")}</h2>
         <button class="btn quiet" type="button" onClick={onClose}>{t("content.close")}</button>
       </div>
-      <p class="hint">{t("content.reviewBody")}</p>
+      <p class="hint">{bankOnly ? t("content.reviewBankOnlyBody") : t("content.reviewBody")}</p>
       {error ? <p class="error-text" role="alert">{error}</p> : null}
 
-      {deckUrl ? (
+      {reviewCapabilities?.showsDeck && deckUrl ? (
         <iframe
           class="viewer-frame"
           style="height: 420px;"
@@ -273,7 +295,7 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
         />
       ) : null}
 
-      {questions === null ? (
+      {bundle === null ? (
         <p class="hint">{t("content.loadingQuestions")}</p>
       ) : (
         <div class="stack">
@@ -284,7 +306,7 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
               hard: byDifficulty("hard").length
             })}
           </p>
-          {questions.map((question, index) => (
+          {bundle.questions.map((question, index) => (
             <div class="card muted" style="padding: 0.7rem 0.85rem;">
               <div class="row" style="justify-content: space-between;">
                 <p class="hint" style="font-weight: 650; color: var(--text);">
@@ -294,7 +316,7 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
                   {t(`quiz.difficulty.${question.difficulty}` as "quiz.difficulty.easy")}
                 </span>
               </div>
-              {question.source_slide_start !== null
+              {reviewCapabilities?.showsDeck && question.source_slide_start !== null
                 && question.source_slide_end !== null
                 && question.checkpoint_after_slide !== null ? (
                   <p class="hint">
@@ -322,8 +344,8 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
         </div>
       )}
 
-      <button class="btn primary" type="button" disabled={busy || !questions?.length} onClick={onApprove}>
-        {busy ? t("content.approving") : t("content.approve")}
+      <button class="btn primary" type="button" disabled={busy || !bundle?.questions.length} onClick={onApprove}>
+        {busy ? t("content.approving") : bankOnly ? t("content.approveBankOnly") : t("content.approve")}
       </button>
     </div>
   );

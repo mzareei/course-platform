@@ -33,6 +33,7 @@ export type TeachingPlan = {
 
 export interface GenerationJob {
   id: string;
+  generation_mode?: GenerationMode;
   status:
     | "queued" | "extracting" | "outlining" | "generating_deck"
     | "generating_questions" | "grounding" | "assembling"
@@ -78,6 +79,16 @@ export function isGenerationInFlight(status: GenerationJob["status"]) {
   return IN_FLIGHT.includes(status);
 }
 
+export function hasGenerationProgress(status: GenerationJob["status"]) {
+  return isGenerationInFlight(status) || status === "ready_for_plan_review";
+}
+
+export function generationReviewCapabilities(mode: GenerationMode) {
+  return mode === "deck_and_bank"
+    ? { showsDeck: true, createsDraftRelease: true }
+    : { showsDeck: false, createsDraftRelease: false };
+}
+
 export function listJobs() {
   return callFn<{ jobs: GenerationJob[] }>("course-generation", { action: "list_jobs" });
 }
@@ -117,7 +128,11 @@ export function cancelJob(jobId: string) {
 }
 
 export function reviewBundle(jobId: string) {
-  return callFn<{ job: GenerationJob; deck_html: string | null; questions: GeneratedQuestion[] }>(
+  return callFn<{
+    job: GenerationJob & { generation_mode: GenerationMode };
+    deck_html: string | null;
+    questions: GeneratedQuestion[];
+  }>(
     "course-generation", { action: "review_bundle", job_id: jobId }
   );
 }

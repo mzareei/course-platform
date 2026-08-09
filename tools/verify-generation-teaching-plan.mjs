@@ -10,10 +10,11 @@ const compiled = ts.transpileModule(readinessSource, {
   compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
 }).outputText;
 const readiness = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
-const [generationApi, content, strings] = await Promise.all([
+const [generationApi, content, strings, briefForm] = await Promise.all([
   read("src/api/generation.ts"),
   read("src/screens/instructor/Content.tsx"),
-  read("src/i18n/strings.ts")
+  read("src/i18n/strings.ts"),
+  read("src/components/GenerationBriefForm.tsx")
 ]);
 const compiledGeneration = ts.transpileModule(
   generationApi.replace('import { callFn } from "./client";', "const callFn = () => undefined;"),
@@ -29,6 +30,19 @@ assert.match(content, /GenerationPlanReview/);
 assert.match(strings, /"content\.plan\.approve"/);
 assert.match(strings, /"content\.mode\.bankOnly"/);
 assert.equal(generation.isGenerationInFlight("ready_for_plan_review"), false);
+assert.equal(generation.hasGenerationProgress("ready_for_plan_review"), true);
+assert.deepEqual(generation.generationReviewCapabilities("bank_only"), {
+  showsDeck: false,
+  createsDraftRelease: false
+});
+assert.deepEqual(generation.generationReviewCapabilities("deck_and_bank"), {
+  showsDeck: true,
+  createsDraftRelease: true
+});
+assert.match(strings, /"content\.status\.grounding"/);
+assert.match(generationApi, /generation_mode: GenerationMode/);
+assert.match(content, /generationReviewCapabilities/);
+assert.match(briefForm, /if \(!submitted\) return;/);
 
 const legacyBank = (overrides = {}) => ({
   total: 18,

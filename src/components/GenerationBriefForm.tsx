@@ -18,7 +18,7 @@ export function GenerationBriefForm({
   onSubmit
 }: {
   busy: boolean;
-  onSubmit: (submission: BriefSubmission) => Promise<void>;
+  onSubmit: (submission: BriefSubmission) => Promise<boolean>;
 }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -32,7 +32,7 @@ export function GenerationBriefForm({
   async function submit(event: Event) {
     event.preventDefault();
     if (!file || title.trim().length < 3) return;
-    await onSubmit({
+    const submitted = await onSubmit({
       file,
       title: title.trim(),
       teaching_brief: {
@@ -44,6 +44,7 @@ export function GenerationBriefForm({
         checkpoint_preferences: preferences.trim()
       }
     });
+    if (!submitted) return;
     setTitle("");
     setFile(null);
     setInstructions("");

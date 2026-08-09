@@ -1516,6 +1516,7 @@ export const strings = {
   "content.status.outlining": ["Planning the lecture", "Planeando la clase"],
   "content.status.generating_deck": ["Writing slides", "Escribiendo diapositivas"],
   "content.status.generating_questions": ["Writing questions", "Escribiendo preguntas"],
+  "content.status.grounding": ["Checking against the PDF", "Verificando con el PDF"],
   "content.status.assembling": ["Assembling", "Ensamblando"],
   "content.status.ready_for_review": ["Ready for your review", "Lista para tu revisión"],
   "content.status.approved": ["Approved", "Aprobada"],
@@ -1592,6 +1593,11 @@ export const strings = {
     "Check the slides and the questions. Approving makes this a draft in your library — students still see nothing until you release it for a class.",
     "Revisa las diapositivas y las preguntas. Aprobar la deja como borrador en tu biblioteca — los estudiantes no ven nada hasta que la publiques para una clase."
   ],
+  "content.reviewBankOnlyTitle": ["Review question bank", "Revisa el banco de preguntas"],
+  "content.reviewBankOnlyBody": [
+    "This job creates only a question bank. It does not create a presentation deck or content release; approve it to activate the questions for class planning.",
+    "Este trabajo crea solo un banco de preguntas. No crea una presentación ni una publicación de contenido; apruébalo para activar las preguntas para la planificación de clase."
+  ],
   "content.close": ["Close", "Cerrar"],
   "content.deckPreview": ["Deck preview", "Vista previa de la presentación"],
   "content.loadingQuestions": ["Loading questions…", "Cargando preguntas…"],
@@ -1608,6 +1614,7 @@ export const strings = {
     "Esta pregunta aún no está vinculada con un punto de control de la clase."
   ],
   "content.approve": ["Approve this lecture", "Aprobar esta clase"],
+  "content.approveBankOnly": ["Approve question bank", "Aprobar banco de preguntas"],
   "content.approving": ["Approving…", "Aprobando…"],
   "content.approveFailed": ["Could not approve it.", "No se pudo aprobar."],
 
