@@ -33,7 +33,7 @@ export type TeachingPlan = {
 
 export interface GenerationJob {
   id: string;
-  generation_mode?: GenerationMode;
+  generation_mode: GenerationMode;
   status:
     | "queued" | "extracting" | "outlining" | "generating_deck"
     | "generating_questions" | "grounding" | "assembling"

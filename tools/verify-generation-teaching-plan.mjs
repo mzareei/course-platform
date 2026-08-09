@@ -43,6 +43,12 @@ assert.match(strings, /"content\.status\.grounding"/);
 assert.match(generationApi, /generation_mode: GenerationMode/);
 assert.match(content, /generationReviewCapabilities/);
 assert.match(briefForm, /if \(!submitted\) return;/);
+assert.match(content, /onReview: \(job: GenerationJob\) => void/);
+assert.match(content, /onReview=\{\(\) => setReviewing\(job\)\}/);
+assert.match(content, /generationMode=\{reviewing\.generation_mode\}/);
+assert.match(content, /const reviewCapabilities = generationReviewCapabilities\(generationMode\)/);
+assert.match(content, /reviewCapabilities\.showsDeck \? \(/);
+assert.doesNotMatch(content, /generationReviewCapabilities\(bundle\.job\.generation_mode\)/);
 
 const legacyBank = (overrides = {}) => ({
   total: 18,

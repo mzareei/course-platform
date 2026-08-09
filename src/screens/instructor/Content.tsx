@@ -10,7 +10,7 @@ import {
   listJobs, jobStatus, advanceJob, createJob, cancelJob,
   reviewBundle, approveJob, uploadPdf, previewUrl,
   generationReviewCapabilities, hasGenerationProgress, isGenerationInFlight,
-  type GenerationJob, type GeneratedQuestion, type TeachingBrief
+  type GenerationJob, type GeneratedQuestion, type GenerationMode, type TeachingBrief
 } from "../../api/generation";
 import { ContentLibraryView } from "../../components/ContentLibrary";
 import { GenerationBriefForm } from "../../components/GenerationBriefForm";
@@ -32,7 +32,7 @@ export function Content() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [planning, setPlanning] = useState<string | null>(null);
-  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<GenerationJob | null>(null);
   // The professor's own lectures come first — the AI pipeline is the newer,
   // rarer path, not the default one.
   const [tab, setTab] = useState<ContentTab>("library");
@@ -149,7 +149,7 @@ export function Content() {
               busy={busy === job.id}
               onCancel={() => onCancel(job.id)}
               onPlanReview={() => setPlanning(job.id)}
-              onReview={() => setReviewing(job.id)}
+              onReview={() => setReviewing(job)}
             />
           ))}
         </div>
@@ -164,7 +164,8 @@ export function Content() {
       ) : null}
       {reviewing ? (
         <ReviewPanel
-          jobId={reviewing}
+          jobId={reviewing.id}
+          generationMode={reviewing.generation_mode}
           onClose={() => setReviewing(null)}
           onApproved={() => { setReviewing(null); void refresh(); }}
         />
@@ -180,7 +181,7 @@ const STEP_ORDER: GenerationJob["status"][] = [
 ];
 
 function JobCard({ job, busy, onCancel, onPlanReview, onReview }: {
-  job: GenerationJob; busy: boolean; onCancel: () => void; onPlanReview: () => void; onReview: () => void;
+  job: GenerationJob; busy: boolean; onCancel: () => void; onPlanReview: () => void; onReview: (job: GenerationJob) => void;
 }) {
   const inFlight = isGenerationInFlight(job.status);
   const displaysProgress = hasGenerationProgress(job.status);
@@ -216,7 +217,7 @@ function JobCard({ job, busy, onCancel, onPlanReview, onReview }: {
           <button class="btn primary" type="button" onClick={onPlanReview}>{t("content.plan.review")}</button>
         ) : null}
         {job.status === "ready_for_review" ? (
-          <button class="btn primary" type="button" onClick={onReview}>{t("content.review")}</button>
+          <button class="btn primary" type="button" onClick={() => onReview(job)}>{t("content.review")}</button>
         ) : null}
         {job.status === "approved" ? <span class="hint">{t("content.approvedNote")}</span> : null}
         {inFlight ? (
@@ -229,8 +230,8 @@ function JobCard({ job, busy, onCancel, onPlanReview, onReview }: {
   );
 }
 
-function ReviewPanel({ jobId, onClose, onApproved }: {
-  jobId: string; onClose: () => void; onApproved: () => void;
+function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
+  jobId: string; generationMode: GenerationMode; onClose: () => void; onApproved: () => void;
 }) {
   const [bundle, setBundle] = useState<{
     job: GenerationJob & { generation_mode: "deck_and_bank" | "bank_only" };
@@ -249,7 +250,7 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
       .then((result) => {
         if (cancelled) return;
         setBundle({ job: result.job, questions: result.questions });
-        if (!generationReviewCapabilities(result.job.generation_mode).showsDeck) return;
+        if (!generationReviewCapabilities(generationMode).showsDeck) return;
         previewUrl(jobId)
           .then((preview) => {
             if (!cancelled) setDeckUrl(`/content?t=${encodeURIComponent(preview.token)}`);
@@ -260,7 +261,7 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
         if (!cancelled) setError(e.message);
       });
     return () => { cancelled = true; };
-  }, [jobId]);
+  }, [jobId, generationMode]);
 
   async function onApprove() {
     setBusy(true);
@@ -273,8 +274,8 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
     }
   }
 
-  const reviewCapabilities = bundle && generationReviewCapabilities(bundle.job.generation_mode);
-  const bankOnly = bundle?.job.generation_mode === "bank_only";
+  const reviewCapabilities = generationReviewCapabilities(generationMode);
+  const bankOnly = generationMode === "bank_only";
   const byDifficulty = (level: string) => (bundle?.questions ?? []).filter((q) => q.difficulty === level);
 
   return (
@@ -286,7 +287,7 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
       <p class="hint">{bankOnly ? t("content.reviewBankOnlyBody") : t("content.reviewBody")}</p>
       {error ? <p class="error-text" role="alert">{error}</p> : null}
 
-      {reviewCapabilities?.showsDeck && deckUrl ? (
+      {reviewCapabilities.showsDeck && deckUrl ? (
         <iframe
           class="viewer-frame"
           style="height: 420px;"
@@ -316,19 +317,21 @@ function ReviewPanel({ jobId, onClose, onApproved }: {
                   {t(`quiz.difficulty.${question.difficulty}` as "quiz.difficulty.easy")}
                 </span>
               </div>
-              {reviewCapabilities?.showsDeck && question.source_slide_start !== null
-                && question.source_slide_end !== null
-                && question.checkpoint_after_slide !== null ? (
-                  <p class="hint">
-                    {t("content.questionCheckpoint", {
-                      start: question.source_slide_start,
-                      end: question.source_slide_end,
-                      checkpoint: question.checkpoint_after_slide
-                    })}
-                  </p>
-                ) : (
-                  <p class="error-text">{t("content.questionCheckpointMissing")}</p>
-                )}
+              {reviewCapabilities.showsDeck ? (
+                question.source_slide_start !== null
+                  && question.source_slide_end !== null
+                  && question.checkpoint_after_slide !== null ? (
+                    <p class="hint">
+                      {t("content.questionCheckpoint", {
+                        start: question.source_slide_start,
+                        end: question.source_slide_end,
+                        checkpoint: question.checkpoint_after_slide
+                      })}
+                    </p>
+                  ) : (
+                    <p class="error-text">{t("content.questionCheckpointMissing")}</p>
+                  )
+              ) : null}
               <div class="stack" style="gap: 0.25rem;">
                 {question.question_options
                   .slice()
