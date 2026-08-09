@@ -107,7 +107,13 @@ export async function uploadPdf(file: File) {
   const { upload_id, signed_url } = await createUpload({ filename: file.name, size_bytes: file.size });
   const response = await fetch(signed_url, {
     method: "PUT",
-    headers: { "content-type": "application/pdf" },
+    // Match Supabase Storage's uploadToSignedUrl contract. The signed token
+    // permits replacement, but Storage still expects the upsert intent header.
+    headers: {
+      "content-type": "application/pdf",
+      "cache-control": "max-age=3600",
+      "x-upsert": "true"
+    },
     body: file
   });
   if (!response.ok) throw new Error(`Upload failed (${response.status}).`);
