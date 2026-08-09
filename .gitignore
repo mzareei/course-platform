@@ -18,3 +18,6 @@ dist/
 
 # Local visual-brainstorming artifacts
 .superpowers/
+
+# Isolated local feature workspaces
+.worktrees/
