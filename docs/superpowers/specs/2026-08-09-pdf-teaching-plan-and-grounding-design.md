@@ -48,8 +48,9 @@ This design also corrects two observed failures:
 - A source-grounding gate verifies the extracted plan, generated deck, and
   questions against the original PDF. A topic mismatch or unsupported material
   fails the job before a content item, question bank, or release is created.
-- After review, the lecturer may hide or delete generated slides. Questions
-  may only rely on currently visible teaching slides.
+- This generation change preserves the source mapping needed for a later
+  lecturer-facing hide/delete-slide feature. That editing feature is outside
+  this implementation; until then questions rely on every generated slide.
 
 ## Question design
 
