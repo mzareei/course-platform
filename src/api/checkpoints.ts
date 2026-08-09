@@ -12,11 +12,12 @@ export type CheckpointCoverage = {
 
 export type CheckpointBankSummary = {
   bank_id: string;
-  content_item_id: string;
+  content_item_id: string | null;
   title: string;
-  content_slug: string;
-  content_title: string;
-  content_type: string;
+  content_slug: string | null;
+  content_title: string | null;
+  content_type: string | null;
+  generation_validation_profile: "legacy" | "flexible";
   checkpoint_preparation_state: "none" | "pending_upload" | "ready";
   checkpoint_preparation_updated_at: string | null;
   updated_at: string;
@@ -26,6 +27,8 @@ export type CheckpointBankSummary = {
   checkpoint_metadata_present: number;
   checkpoint_metadata_valid: number;
   checkpoint_coverage: CheckpointCoverage[];
+  source_pdf_mapping_status: "missing" | "valid";
+  source_pdf_pages: number[];
 };
 
 export type BankQuestionOption = {
@@ -45,6 +48,7 @@ export type BankQuestion = {
   explanation_es: string | null;
   difficulty: "easy" | "medium" | "hard";
   segment_key: string | null;
+  source_pdf_pages: number[];
   source_slide_numbers: number[];
   source_slide_start: number | null;
   source_slide_end: number | null;

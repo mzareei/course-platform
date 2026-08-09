@@ -76,10 +76,15 @@ function QuestionBankCard({
   const instructorCanPrepare = activeRoles.value.some((role) =>
     role === "platform_owner" || role === "instructor"
   );
+  const flexible = bank.generation_validation_profile === "flexible";
+  const legacy = !flexible;
+  const hasDeck = Boolean(bank.content_item_id);
   const preparable = instructorCanPrepare
+    && legacy
+    && hasDeck
     && bank.checkpoint_coverage.length === 0
     && canPrepareCheckpoints(bank);
-  const resumable = instructorCanPrepare
+  const resumable = instructorCanPrepare && legacy && hasDeck
     && canResumeCheckpointPreparation(bank);
   const [preparing, setPreparing] = useState(false);
   const [prepareError, setPrepareError] = useState<string | null>(null);
@@ -87,11 +92,12 @@ function QuestionBankCard({
   const [reviewOpen, setReviewOpen] = useState(false);
   const ready = readiness === "ready" || prepared !== null;
   const pending = readiness === "pending";
-  const canRefreshDeck = instructorCanPrepare && ready && prepared === null;
+  const canRefreshDeck = instructorCanPrepare && legacy && hasDeck && ready && prepared === null;
   const checkpointCount = prepared?.checkpoint_count
     ?? bank.checkpoint_coverage.length;
 
   async function prepare() {
+    if (!bank.content_item_id) return;
     setPreparing(true);
     setPrepareError(null);
     try {
@@ -138,9 +144,17 @@ function QuestionBankCard({
         </span>
       </div>
 
-      <p class="hint">
-        {t("content.banks.checkpointCount", { count: checkpointCount })}
-      </p>
+      {flexible ? (
+        <p class="hint">
+          {ready ? t("content.banks.flexibleReady") : t("content.banks.flexibleInvalid")}
+          {" · "}
+          {t("content.banks.sourcePages", { pages: bank.source_pdf_pages.join(", ") || "—" })}
+        </p>
+      ) : (
+        <p class="hint">
+          {t("content.banks.checkpointCount", { count: checkpointCount })}
+        </p>
+      )}
 
       {instructorCanPrepare ? (
         <button
@@ -222,7 +236,9 @@ function QuestionBankCard({
           </button>
         </>
       ) : !ready ? (
-        <p class="error-text" role="alert">{t("content.banks.invalidMetadata")}</p>
+        <p class="error-text" role="alert">
+          {flexible ? t("content.banks.flexibleInvalid") : t("content.banks.invalidMetadata")}
+        </p>
       ) : (
         <p class="hint">{t("content.banks.readyBody")}</p>
       )}

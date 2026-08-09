@@ -5,9 +5,11 @@ type CheckpointCoverageInput = {
 type CheckpointBankReadinessInput = {
   total: number;
   by_difficulty: { easy: number; medium: number; hard: number };
+  generation_validation_profile: "legacy" | "flexible";
   checkpoint_preparation_state: "none" | "pending_upload" | "ready";
   checkpoint_metadata_status: "missing" | "valid" | "invalid";
   checkpoint_coverage: CheckpointCoverageInput[];
+  source_pdf_mapping_status: "missing" | "valid";
 };
 
 export type QuestionBankReadiness = "legacy" | "pending" | "ready" | "invalid";
@@ -15,6 +17,12 @@ export type QuestionBankReadiness = "legacy" | "pending" | "ready" | "invalid";
 export function questionBankReadiness(
   bank: CheckpointBankReadinessInput
 ): QuestionBankReadiness {
+  const profile = bank.generation_validation_profile;
+  if (profile === "flexible") {
+    return bank.total > 0 && bank.source_pdf_mapping_status === "valid"
+      ? "ready"
+      : "invalid";
+  }
   const balanced = bank.total === 18
     && bank.by_difficulty.easy === 6
     && bank.by_difficulty.medium === 6

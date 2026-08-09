@@ -1355,6 +1355,18 @@ export const strings = {
     "{count} preguntas generadas"
   ],
   "content.banks.ready": ["Ready for class", "Listo para la clase"],
+  "content.banks.flexibleReady": [
+    "Ready from the approved teaching plan and source-page mappings.",
+    "Listo según el plan docente aprobado y las referencias a páginas fuente."
+  ],
+  "content.banks.flexibleInvalid": [
+    "This flexible bank needs at least one question with a valid source-PDF mapping.",
+    "Este banco flexible necesita al menos una pregunta con una referencia válida al PDF fuente."
+  ],
+  "content.banks.sourcePages": [
+    "Source PDF pages: {pages}",
+    "Páginas del PDF fuente: {pages}"
+  ],
   "content.banks.needsAttention": ["Needs attention", "Necesita atención"],
   "content.banks.uploadPending": ["Upload pending", "Carga pendiente"],
   "content.banks.checkpointCount": [
