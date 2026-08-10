@@ -200,6 +200,10 @@ function QuestionReviewCard({
               <span class="pill live">
                 {t("content.banks.duringClass")} · {t("content.banks.afterSlide", { slide: question.checkpoint_after_slide })}
               </span>
+            ) : question.suggested_slide_hint !== null ? (
+              <span class="pill live">
+                {t("content.banks.duringClass")} · {t("content.banks.afterSlide", { slide: question.suggested_slide_hint })}
+              </span>
             ) : null}
             {question.source === "generated_edited" ? (
               <span class="pill hidden">{t("content.banks.sourceEdited")}</span>

@@ -53,6 +53,8 @@ export type BankQuestion = {
   source_slide_start: number | null;
   source_slide_end: number | null;
   checkpoint_after_slide: number | null;
+  suggested_slide_hint: number | null;
+  suggested_topic: string | null;
   status: string;
   source: string | null;
   updated_at: string;
