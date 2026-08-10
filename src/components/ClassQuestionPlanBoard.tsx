@@ -87,9 +87,11 @@ function sortedPlannedCheckpoints(checkpoints: PlanCheckpoint[]): PlanCheckpoint
 }
 
 function checkpointLabel(checkpoint: PlanCheckpoint): string {
-  return checkpoint.slide_hint !== null
-    ? t("run.plan.slideOption", { slide: checkpoint.slide_hint, topic: checkpoint.topic })
-    : checkpoint.topic;
+  if (checkpoint.slide_hint === null) return checkpoint.topic;
+  if (checkpoint.topic === `Slide ${checkpoint.slide_hint}`) {
+    return t("run.plan.slideOnlyOption", { slide: checkpoint.slide_hint });
+  }
+  return t("run.plan.slideOption", { slide: checkpoint.slide_hint, topic: checkpoint.topic });
 }
 
 export function ClassQuestionPlanBoard({
@@ -442,7 +444,13 @@ export function ClassQuestionPlanBoard({
                 {t("run.plan.pickSlideLabel")}
                 <select
                   value={selectedCheckpointId}
-                  onChange={(event) => setSelectedCheckpointId((event.target as HTMLSelectElement).value)}
+                  onChange={(event) => {
+                    const nextId = (event.target as HTMLSelectElement).value;
+                    setSelectedCheckpointId(nextId);
+                    setEditor((current) =>
+                      current && current.mode === "edit" && current.checkpointId !== nextId ? null : current
+                    );
+                  }}
                 >
                   {plannedCheckpoints.map((checkpoint) => (
                     <option key={checkpoint.id} value={checkpoint.id}>

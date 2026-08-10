@@ -196,11 +196,11 @@ function QuestionReviewCard({
           <p class="eyebrow">{t("content.banks.questionNumber", { number: index + 1 })}</p>
           <div class="row question-bank-question-tags">
             <span class="pill">{t("content.banks.endOfClass")}</span>
-            {question.checkpoint_after_slide !== null ? (
+            {typeof question.checkpoint_after_slide === "number" ? (
               <span class="pill live">
                 {t("content.banks.duringClass")} · {t("content.banks.afterSlide", { slide: question.checkpoint_after_slide })}
               </span>
-            ) : question.suggested_slide_hint !== null ? (
+            ) : typeof question.suggested_slide_hint === "number" ? (
               <span class="pill live">
                 {t("content.banks.duringClass")} · {t("content.banks.afterSlide", { slide: question.suggested_slide_hint })}
               </span>

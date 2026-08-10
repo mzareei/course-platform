@@ -66,7 +66,7 @@ assert.match(board, /t\("run\.plan\.afterSlide"/);
 assert.match(board, /t\("run\.plan\.alreadyAsked"\)/);
 assert.match(board, /t\("run\.plan\.noCandidates"\)/);
 assert.match(board, /candidate_question_ids/);
-assert.match(board, /checkpoint\.slide_hint\s*!==\s*null/);
+assert.match(board, /checkpoint\.slide_hint\s*===\s*null/);
 assert.match(board, /checkpoint\.state\s*===\s*["']sent["']\s*\|\|\s*checkpoint\.state\s*===\s*["']skipped["']/);
 assert.match(board, /resolvedCandidateQuestions/);
 assert.match(board, /disabled=\{[^}]*!isLive[^}]*\|\|[^}]*!selectedQuestion/);
@@ -75,6 +75,7 @@ assert.match(board, /function sortedPlannedCheckpoints\s*\(/);
 assert.match(board, /function checkpointLabel\s*\(/);
 assert.match(board, /t\("run\.plan\.pickSlideLabel"\)/);
 assert.match(board, /t\("run\.plan\.slideOption",/);
+assert.match(board, /t\("run\.plan\.slideOnlyOption"/);
 assert.match(board, /t\("run\.plan\.noUpcoming"\)/);
 assert.match(board, /t\("run\.plan\.history"\)/);
 assert.doesNotMatch(
@@ -185,6 +186,7 @@ const copyKeys = [
   "run.plan.staleCandidates",
   "run.plan.pickSlideLabel",
   "run.plan.slideOption",
+  "run.plan.slideOnlyOption",
   "run.plan.noUpcoming",
   "run.plan.history"
 ];

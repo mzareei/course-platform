@@ -19,7 +19,7 @@ assert.match(
 );
 assert.match(
   review,
-  /question\.checkpoint_after_slide !== null \? \([\s\S]{0,400}?\) : question\.suggested_slide_hint !== null \? \(/,
+  /typeof question\.checkpoint_after_slide === "number" \? \([\s\S]{0,400}?\) : typeof question\.suggested_slide_hint === "number" \? \(/,
   "the During class pill must fall back to suggested_slide_hint when checkpoint_after_slide is unset"
 );
 

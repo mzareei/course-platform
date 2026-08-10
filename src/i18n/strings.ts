@@ -855,15 +855,12 @@ export const strings = {
     "Esta clase todavía no tiene un plan de preguntas."
   ],
   "run.plan.addCheckpoint": ["Add checkpoint", "Agregar punto de control"],
-  "run.plan.empty": [
-    "Create the first checkpoint to start this plan.",
-    "Crea el primer punto de control para empezar este plan."
-  ],
   "run.plan.pickSlideLabel": ["Which slide are you on?", "¿En qué diapositiva estás?"],
   "run.plan.slideOption": [
     "Slide {slide} — {topic}",
     "Diapositiva {slide} — {topic}"
   ],
+  "run.plan.slideOnlyOption": ["Slide {slide}", "Diapositiva {slide}"],
   "run.plan.noUpcoming": [
     "No upcoming checkpoints. Add one to get started.",
     "No hay puntos de control pendientes. Agrega uno para empezar."
