@@ -629,7 +629,6 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   font-size: clamp(1.8rem, 4vw, 3.8rem);
   line-height: 1.1;
 }
-.classroom-question-es,
 .classroom-question-instruction,
 .classroom-question-hint {
   color: var(--text-muted);
@@ -660,12 +659,6 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   background: var(--surface-2);
   color: var(--text-muted);
   font-weight: 800;
-}
-.classroom-question-option-es {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--text-muted);
-  font-size: 0.86em;
 }
 .classroom-question-hint { margin-top: 0.5rem; }
 .classroom-question-actions {
@@ -935,4 +928,21 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
 }
 @media (prefers-reduced-motion: reduce) {
   .progress-fill { transition: none; }
+}
+
+/* ---------------------------------------------------------------- import prompt */
+.import-prompt-text {
+  margin: 0;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

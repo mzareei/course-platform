@@ -6,19 +6,26 @@
 // content. Nothing here is ever visible to a student before that.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../../i18n";
+import type { StringKey } from "../../i18n/strings";
 import {
   listJobs, jobStatus, advanceJob, createJob, cancelJob,
   reviewBundle, approveJob, uploadPdf, previewUrl,
   generationReviewCapabilities, hasGenerationProgress, isGenerationInFlight,
   type GenerationJob, type GeneratedQuestion, type GenerationMode, type TeachingBrief
 } from "../../api/generation";
+import { importContent, type DeckProblem, type ImportResult } from "../../api/contentImport";
 import { ContentLibraryView } from "../../components/ContentLibrary";
 import { GenerationBriefForm } from "../../components/GenerationBriefForm";
 import { GenerationPlanReview } from "../../components/GenerationPlanReview";
 import { QuestionBanks } from "../../components/QuestionBanks";
+import { ImportPreview } from "../../components/ImportPreview";
+import { ImportPromptCard } from "../../components/ImportPromptCard";
+import {
+  bankIsImportable, parseQuestionFile, type ParsedBank
+} from "../../features/import/questionFile";
 
 const POLL_MS = 5000;
-type ContentTab = "library" | "banks" | "generate";
+type ContentTab = "library" | "banks" | "generate" | "import";
 
 function slugify(value: string) {
   return value.trim().toLowerCase()
@@ -121,11 +128,17 @@ export function Content() {
              onClick={(e) => { e.preventDefault(); setTab("generate"); }}>
             {t("content.tab.generate")}
           </a>
+          <a href="#" role="tab" aria-current={tab === "import" ? "page" : undefined}
+             onClick={(e) => { e.preventDefault(); setTab("import"); }}>
+            {t("content.tab.import")}
+          </a>
         </div>
       </div>
 
       {tab === "library" ? <ContentLibraryView /> : tab === "banks" ? (
         <QuestionBanks />
+      ) : tab === "import" ? (
+        <ImportPanel />
       ) : (
       <>
       <p class="hint">{t("content.lede")}</p>
@@ -350,6 +363,374 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
       <button class="btn primary" type="button" disabled={busy || !bundle?.questions.length} onClick={onApprove}>
         {busy ? t("content.approving") : bankOnly ? t("content.approveBankOnly") : t("content.approve")}
       </button>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ import
+// A professor's own AI produces the question file; this panel just parses,
+// previews, repairs and sends it. An in-progress edit survives an accidental
+// tab close via a single localStorage draft — there is only ever one import
+// in flight, so one key is enough.
+const IMPORT_DRAFT_KEY = "content-import-draft";
+
+const DECK_PROBLEM_KEYS: Record<DeckProblem["kind"], StringKey> = {
+  relative: "import.deck.relative",
+  forbidden_host: "import.deck.forbiddenHost",
+  undeclared_host: "import.deck.undeclaredHost",
+  no_title: "import.deck.noTitle"
+};
+
+interface ImportDraft {
+  bank: ParsedBank;
+  fileText: string;
+  slug: string;
+  deckHtml: string;
+  externalLinksText: string;
+}
+
+function loadImportDraft(): ImportDraft | null {
+  try {
+    const raw = localStorage.getItem(IMPORT_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ImportDraft> | null;
+    // A malformed draft (e.g. left over from a future ParsedBank schema
+    // change) must never reach ImportPreview — there is no error boundary
+    // anywhere in this app, and groupBySlide() on a shape it doesn't
+    // recognize would blank the whole SPA on every reload, with the draft
+    // restoring again on the very next mount and no in-app way to clear it.
+    if (
+      !parsed
+      || typeof parsed !== "object"
+      || !parsed.bank
+      || typeof parsed.bank !== "object"
+      || typeof (parsed.bank as ParsedBank).ok !== "boolean"
+      || !Array.isArray((parsed.bank as ParsedBank).questions)
+    ) {
+      return null;
+    }
+    return {
+      bank: parsed.bank,
+      fileText: typeof parsed.fileText === "string" ? parsed.fileText : "",
+      slug: typeof parsed.slug === "string" ? parsed.slug : "",
+      deckHtml: typeof parsed.deckHtml === "string" ? parsed.deckHtml : "",
+      externalLinksText: typeof parsed.externalLinksText === "string" ? parsed.externalLinksText : ""
+    };
+  } catch {
+    return null; // Corrupted or unavailable storage — start clean rather than crash.
+  }
+}
+
+function clearImportDraft() {
+  try {
+    localStorage.removeItem(IMPORT_DRAFT_KEY);
+  } catch {
+    // Best effort only.
+  }
+}
+
+/** Comma- or newline-separated hostnames the professor's deck legitimately links to. */
+function parseHostList(text: string): string[] {
+  const hosts = text.split(/[\n,]+/).map((entry) => entry.trim()).filter(Boolean);
+  return [...new Set(hosts)];
+}
+
+function ImportPanel() {
+  const [bank, setBank] = useState<ParsedBank | null>(null);
+  const [fileText, setFileText] = useState("");
+  const [questionFileName, setQuestionFileName] = useState<string | null>(null);
+  // Once a bank has loaded cleanly, the raw file/paste inputs collapse behind
+  // a summary — see loadFromText()/showRawInputs below. `replacing` is the
+  // professor's explicit override to bring them back for a deliberate swap;
+  // it is never what silently exposes them.
+  const [replacing, setReplacing] = useState(false);
+  const [slug, setSlug] = useState("");
+  const [deckHtml, setDeckHtml] = useState("");
+  const [deckFileName, setDeckFileName] = useState<string | null>(null);
+  const [externalLinksText, setExternalLinksText] = useState("");
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  // Captured at the moment of commit, independent of live `deckHtml` — a
+  // full success calls resetForm() in the same tick as setResult(), which
+  // would otherwise blank deckHtml before this ever renders and make a
+  // successful deck import look like it was never attempted.
+  const [resultHadDeck, setResultHadDeck] = useState(false);
+
+  // Restore a draft on mount. Only ever one in-progress import, so no picker.
+  useEffect(() => {
+    const draft = loadImportDraft();
+    if (!draft) return;
+    setBank(draft.bank);
+    setFileText(draft.fileText);
+    setSlug(draft.slug);
+    setDeckHtml(draft.deckHtml);
+    setExternalLinksText(draft.externalLinksText);
+    setDraftRestored(true);
+  }, []);
+
+  // Persist on every meaningful change, so closing the tab mid-edit does not
+  // lose the professor's repairs.
+  useEffect(() => {
+    if (!bank) return;
+    try {
+      localStorage.setItem(
+        IMPORT_DRAFT_KEY,
+        JSON.stringify({ bank, fileText, slug, deckHtml, externalLinksText })
+      );
+    } catch {
+      // Private browsing can refuse storage; the draft is best effort.
+    }
+  }, [bank, fileText, slug, deckHtml, externalLinksText]);
+
+  function loadFromText(text: string) {
+    setFileText(text);
+    setResult(null);
+    const parsed = parseQuestionFile(text);
+    setBank(parsed);
+    if (parsed.ok && !slug.trim()) {
+      setSlug(slugify(parsed.title));
+    }
+    // A fresh parse always resolves any pending "load a different file"
+    // request — harmless when the parse failed too, since showRawInputs
+    // below keeps the raw inputs open on its own whenever !bank.ok.
+    setReplacing(false);
+  }
+
+  // The paste textarea's own onInput handler: distinct from loadFromText
+  // itself only in that typing/pasting directly means the source is no
+  // longer "a chosen file," so any filename shown in the collapsed summary
+  // has to go with it.
+  function onPasteInput(text: string) {
+    setQuestionFileName(null);
+    loadFromText(text);
+  }
+
+  function onChooseFile(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      loadFromText(String(reader.result || ""));
+      setQuestionFileName(file.name);
+    };
+    reader.readAsText(file);
+  }
+
+  function onChooseDeckFile(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setDeckHtml(String(reader.result || ""));
+      setDeckFileName(file.name);
+    };
+    reader.readAsText(file);
+  }
+
+  function resetForm() {
+    setBank(null);
+    setFileText("");
+    setQuestionFileName(null);
+    setReplacing(false);
+    setSlug("");
+    setDeckHtml("");
+    setDeckFileName(null);
+    setExternalLinksText("");
+    setDraftRestored(false);
+  }
+
+  async function onCommit() {
+    if (!bank || !bankIsImportable(bank)) return;
+    if (!slug.trim()) {
+      setError(t("import.slugRequired"));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const hasDeck = deckHtml.trim().length > 0;
+      const response = await importContent({
+        bank: {
+          content_slug: slug.trim(),
+          title: bank.title,
+          title_es: bank.title_es,
+          questions: bank.questions
+        },
+        ...(hasDeck
+          ? {
+            deck: {
+              slug: slug.trim(),
+              title: bank.title,
+              title_es: bank.title_es,
+              html: deckHtml,
+              external_links: parseHostList(externalLinksText)
+            }
+          }
+          : {})
+      });
+      setResult(response);
+      setResultHadDeck(hasDeck);
+      // A bad deck must never hide a good bank, or the reverse — but only
+      // clear the draft once nothing attempted has failed, so a partial
+      // failure never costs the professor their edits.
+      if (response.bank.ok && (!hasDeck || response.deck.ok)) {
+        clearImportDraft();
+        resetForm();
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("import.commitFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // A bank that failed to parse (bank.ok === false) has no ImportPreview to
+  // protect — there is nothing an accidental keystroke could discard — so the
+  // raw inputs stay open in that case regardless of `replacing`, which is the
+  // only path back to fixing the raw text. Once bank.ok is true, the inputs
+  // are closed unless the professor explicitly asked to replace them.
+  const showRawInputs = !bank || !bank.ok || replacing;
+
+  return (
+    <div class="stack">
+      <div>
+        <h2>{t("import.title")}</h2>
+      </div>
+
+      {draftRestored ? (
+        <div class="card muted row" style="justify-content: space-between; align-items: center;">
+          <p class="hint" role="status">{t("import.draftRestored")}</p>
+          <button class="btn quiet" type="button" onClick={() => setDraftRestored(false)}>
+            {t("content.close")}
+          </button>
+        </div>
+      ) : null}
+
+      {error ? <p class="error-text" role="alert">{error}</p> : null}
+
+      {/* The prompt comes before the upload because that is the order the work
+          happens in: copy it, run it in your own AI, bring the file back. */}
+      <ImportPromptCard />
+
+      <div class="card stack">
+        {showRawInputs ? (
+          <>
+            {/* Only offered when there's a previously-loaded, clean bank to
+                cancel back to — a mid-file-selection change of mind should
+                not lose anything either. */}
+            {replacing && bank && bank.ok ? (
+              <div class="row" style="justify-content: flex-end;">
+                <button class="btn quiet" type="button" onClick={() => setReplacing(false)}>
+                  {t("content.close")}
+                </button>
+              </div>
+            ) : null}
+            <label class="field">
+              {t("import.chooseFile")}
+              <input type="file" accept="application/json,.json" onChange={onChooseFile} />
+            </label>
+            <label class="field">
+              {t("import.paste")}
+              <textarea
+                rows={6}
+                value={fileText}
+                onInput={(event) => onPasteInput((event.target as HTMLTextAreaElement).value)}
+              />
+            </label>
+            {bank && !bank.ok && bank.fileProblemKey ? (
+              <p class="error-text" role="alert">
+                {t(bank.fileProblemKey, { detail: bank.fileProblem ?? "" })}
+              </p>
+            ) : null}
+          </>
+        ) : bank ? (
+          // bank.ok is guaranteed here — showRawInputs is true whenever it
+          // isn't — so this is always the "loaded cleanly" summary, never an
+          // error state. Collapsing behind this (instead of leaving a live,
+          // stale textarea sitting there) is what stops a stray click or a
+          // file re-selection from silently discarding every repair made
+          // below in ImportPreview.
+          <>
+            <p class="hint">{t("import.loadedSummary", { count: bank.questions.length })}</p>
+            {questionFileName ? <p class="hint">{questionFileName}</p> : null}
+            <button
+              class="btn quiet"
+              type="button"
+              onClick={() => { setFileText(""); setQuestionFileName(null); setReplacing(true); }}
+            >
+              {t("import.loadDifferentFile")}
+            </button>
+          </>
+        ) : null}
+      </div>
+
+      <div class="card stack">
+        <label class="field">
+          {t("import.slug")}
+          <input
+            type="text"
+            value={slug}
+            onInput={(event) => setSlug((event.target as HTMLInputElement).value)}
+          />
+          <span class="hint">{t("import.slugHint")}</span>
+        </label>
+
+        <div>
+          <h3>{t("import.deck.sectionTitle")}</h3>
+          <p class="hint">{t("import.noAutoCue")}</p>
+        </div>
+        <label class="field">
+          {t("import.deck.chooseFile")}
+          <input type="file" accept="text/html,.html" onChange={onChooseDeckFile} />
+        </label>
+        {deckFileName ? <p class="hint">{deckFileName}</p> : null}
+        <label class="field">
+          {t("import.deck.externalLinks")}
+          <textarea
+            rows={2}
+            value={externalLinksText}
+            placeholder={t("import.deck.externalLinksHint")}
+            onInput={(event) => setExternalLinksText((event.target as HTMLTextAreaElement).value)}
+          />
+          <span class="hint">{t("import.deck.externalLinksHint")}</span>
+        </label>
+      </div>
+
+      {bank && bank.ok && !replacing ? (
+        <ImportPreview bank={bank} onChange={setBank} onCommit={() => void onCommit()} />
+      ) : null}
+
+      {busy ? <p class="hint" role="status">{t("import.saving")}</p> : null}
+
+      {result ? <ImportResultSummary result={result} hasDeck={resultHadDeck} /> : null}
+    </div>
+  );
+}
+
+function ImportResultSummary({ result, hasDeck }: { result: ImportResult; hasDeck: boolean }) {
+  return (
+    <div class="card stack">
+      <p class={result.bank.ok ? "hint" : "error-text"} role={result.bank.ok ? "status" : "alert"}>
+        {result.bank.ok ? t("import.bank.success") : result.bank.error || t("import.bank.failed")}
+      </p>
+      {hasDeck ? (
+        <>
+          <p class={result.deck.ok ? "hint" : "error-text"} role={result.deck.ok ? "status" : "alert"}>
+            {result.deck.ok ? t("import.deck.success") : result.deck.error || t("import.deck.failed")}
+          </p>
+          {!result.deck.ok && result.deck.problems?.length ? (
+            <ul>
+              {result.deck.problems.map((problem, index) => (
+                <li class="error-text" key={index}>
+                  {t(DECK_PROBLEM_KEYS[problem.kind], { detail: problem.reference ?? problem.host ?? "" })}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

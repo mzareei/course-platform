@@ -1234,6 +1234,7 @@ export const strings = {
   "content.tab.library": ["Materials", "Materiales"],
   "content.tab.banks": ["Question banks", "Bancos de preguntas"],
   "content.tab.generate": ["Generate from a PDF", "Generar desde un PDF"],
+  "content.tab.import": ["Import", "Importar"],
   "content.library.loading": ["Loading materials…", "Cargando materiales…"],
   "content.library.loadFailed": ["Could not load your materials.", "No se pudieron cargar tus materiales."],
   "content.library.emptyTitle": ["No materials can be released for review yet", "Aún no hay materiales que se puedan publicar para repasar"],
@@ -1680,7 +1681,93 @@ export const strings = {
   "state.revoked": ["Revoked", "Revocado"],
   "state.completed": ["Completed", "Concluido"],
   "state.merged": ["Merged account", "Cuenta fusionada"],
-  "state.dropped": ["Dropped", "Dado de baja"]
+  "state.dropped": ["Dropped", "Dado de baja"],
+
+  // --------------------------------------------------------------- import
+  "import.title": ["Import a lecture", "Importar una clase"],
+  "import.chooseFile": ["Choose a file", "Elegir un archivo"],
+  "import.paste": ["Or paste the file contents", "O pega el contenido del archivo"],
+  "import.loadedSummary": ["Loaded: {count} questions", "Cargadas: {count} preguntas"],
+  "import.loadDifferentFile": ["Load a different file", "Cargar otro archivo"],
+  "import.group.upToSlide": ["Covers up to slide {slide}", "Cubre hasta la diapositiva {slide}"],
+  "import.group.noSlide": ["No slide given", "Sin diapositiva indicada"],
+  "import.difficultyDefaulted": ["Difficulty not given — set to medium", "Sin dificultad — se asignó media"],
+  "import.commit": ["Save to the course", "Guardar en el curso"],
+  "import.fixFirst": ["Fix the flagged questions first", "Corrige primero las preguntas marcadas"],
+  "import.needsFix": ["Needs a fix", "Requiere corrección"],
+  "import.addOption": ["Add an option", "Agregar una opción"],
+  "import.removeOption": ["Remove this option", "Quitar esta opción"],
+  "import.noAutoCue": [
+    "An imported deck does not stop at questions on its own. You choose each question from Run Class.",
+    "Una presentación importada no se detiene sola en las preguntas. Tú eliges cada pregunta desde Dar clase."
+  ],
+  "import.problem.notJson": ["This file is not valid JSON: {detail}", "Este archivo no es JSON válido: {detail}"],
+  "import.problem.noQuestions": ["This file has no questions array.", "Este archivo no tiene un arreglo de preguntas."],
+  "import.problem.promptEmpty": ["This question has no text", "Esta pregunta no tiene texto"],
+  "import.problem.promptTooLong": ["Question is too long ({detail} characters)", "La pregunta es demasiado larga ({detail} caracteres)"],
+  "import.problem.optionEmpty": ["This option is empty", "Esta opción está vacía"],
+  "import.problem.optionTooLong": ["Option is too long ({detail} characters)", "La opción es demasiado larga ({detail} caracteres)"],
+  "import.problem.optionCount": ["Needs exactly four options — found {detail}", "Se requieren exactamente cuatro opciones — hay {detail}"],
+  "import.problem.correctCount": ["Needs exactly one correct answer — found {detail}", "Se requiere exactamente una respuesta correcta — hay {detail}"],
+  "import.problem.missingSpanish": ["Spanish text is missing", "Falta el texto en español"],
+  "import.deck.relative": ["The deck refers to a file that will not exist once uploaded: {detail}", "La presentación usa un archivo que no existirá al subirla: {detail}"],
+  "import.deck.forbiddenHost": ["The deck links to the public site: {detail}", "La presentación enlaza al sitio público: {detail}"],
+  "import.deck.undeclaredHost": ["The deck links to an unexpected site: {detail}", "La presentación enlaza a un sitio inesperado: {detail}"],
+  "import.deck.noTitle": ["The deck has no title", "La presentación no tiene título"],
+
+  // -------------------------------------------------- import · orchestration
+  "import.draftRestored": [
+    "A draft you were working on was restored.",
+    "Se restauró un borrador en el que estabas trabajando."
+  ],
+  "import.slug": ["Lecture slug", "Identificador de la clase"],
+  "import.slugHint": [
+    "Links the question bank and the deck to the same lecture. Lowercase letters, numbers and dashes.",
+    "Vincula el banco de preguntas y la presentación a la misma clase. Minúsculas, números y guiones."
+  ],
+  "import.slugRequired": [
+    "Enter a lecture slug before saving.",
+    "Escribe un identificador de clase antes de guardar."
+  ],
+  "import.saving": ["Saving…", "Guardando…"],
+  "import.commitFailed": ["Could not save this import.", "No se pudo guardar esta importación."],
+  "import.bank.success": ["Question bank imported.", "Banco de preguntas importado."],
+  "import.bank.failed": ["The question bank could not be imported.", "No se pudo importar el banco de preguntas."],
+  "import.deck.sectionTitle": ["Lecture deck (optional)", "Presentación de la clase (opcional)"],
+  "import.deck.chooseFile": ["Choose the deck HTML file", "Elegir el archivo HTML de la presentación"],
+  "import.deck.externalLinks": [
+    "Sites this deck legitimately links to",
+    "Sitios a los que esta presentación enlaza legítimamente"
+  ],
+  "import.deck.externalLinksHint": [
+    "Separate multiple hostnames with a comma or a new line — e.g. example.com",
+    "Separa varios nombres de dominio con una coma o un salto de línea — por ejemplo example.com"
+  ],
+  "import.deck.success": ["Lecture deck imported.", "Presentación importada."],
+  "import.deck.failed": ["The lecture deck could not be imported.", "No se pudo importar la presentación."],
+
+  // ------------------------------------------------- import · authoring prompt
+  // Chrome only. The prompt body itself stays in English — it is instructions
+  // to a model, not text a person reads.
+  "import.prompt.title": ["The authoring prompt", "El prompt de autoría"],
+  "import.prompt.lede": [
+    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below. This exact prompt has only been tested against one model so far — see the note below before trusting it for a real class.",
+    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo. Este prompt exacto solo se ha probado contra un modelo hasta ahora — lee la nota de abajo antes de confiar en él para una clase real."
+  ],
+  "import.prompt.validationCaveat": [
+    "Checked against Claude only, on one real lecture. Not yet confirmed against ChatGPT or Gemini. Try it once on a real lecture with whichever AI you use, and check the result before relying on it in front of a class.",
+    "Verificado solo con Claude, en una clase real. Aún no se ha confirmado con ChatGPT o Gemini. Pruébalo una vez con una clase real en la IA que uses, y revisa el resultado antes de confiar en él frente a un grupo."
+  ],
+  "import.prompt.attach": [
+    "Attach the lecture itself — the PDF or slide export — in the same message, and say how many slides it has so the questions land on the right ones.",
+    "Adjunta la clase misma — el PDF o la exportación de diapositivas — en el mismo mensaje, e indica cuántas diapositivas tiene para que las preguntas apunten a las correctas."
+  ],
+  "import.prompt.copy": ["Copy the prompt", "Copiar el prompt"],
+  "import.prompt.copied": ["Copied!", "¡Copiado!"],
+  "import.prompt.copyFailed": [
+    "This browser would not let the page copy for you. Select the text below and copy it yourself.",
+    "Este navegador no permitió que la página copiara por ti. Selecciona el texto de abajo y cópialo tú."
+  ]
 } as const;
 
 export type StringKey = keyof typeof strings;
