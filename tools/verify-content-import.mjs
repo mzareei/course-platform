@@ -154,4 +154,25 @@ assert.deepEqual(
   "groups ascend by slide with ungrouped questions last"
 );
 
+const [api, preview, content, strings] = await Promise.all([
+  readFile(new URL("src/api/contentImport.ts", root), "utf8"),
+  readFile(new URL("src/components/ImportPreview.tsx", root), "utf8"),
+  readFile(new URL("src/screens/instructor/Content.tsx", root), "utf8"),
+  readFile(new URL("src/i18n/strings.ts", root), "utf8")
+]);
+
+assert.match(api, /export async function importContent/);
+assert.match(api, /course-content-import/);
+assert.match(preview, /groupBySlide/, "the preview must group by slide range as designed");
+assert.match(preview, /difficulty_defaulted/, "a defaulted difficulty must be visible");
+assert.match(preview, /questionIsImportable/);
+assert.match(content, /ImportPreview/);
+assert.match(strings, /"import\.problem\.optionCount"/);
+assert.match(strings, /"import\.problem\.correctCount"/);
+assert.match(strings, /"import\.problem\.promptTooLong"/);
+assert.match(strings, /"import\.problem\.missingSpanish"/);
+assert.match(strings, /"import\.deck\.relative"/);
+assert.match(strings, /"import\.deck\.forbiddenHost"/);
+assert.match(strings, /"import\.noAutoCue"/, "the capability difference must be stated, not discovered");
+
 console.log("content import parser verified");
