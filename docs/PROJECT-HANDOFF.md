@@ -1,6 +1,6 @@
 # TC2007B platform — current agent briefing
 
-**Last consolidated:** 2026-08-09
+**Last consolidated:** 2026-08-10
 
 **Live app:** <https://course-platform-3ko.pages.dev>
 
@@ -134,6 +134,45 @@ usage is recorded in the application.
 
 ## Current implementation and deployment state
 
+### External content import — deployed 2026-08-10, code-verified, not yet browser-verified
+
+A professor can now author a deck and question bank with their own AI
+subscription (ChatGPT/Claude/Gemini) and import both — the platform makes no
+model call on this path. See
+`docs/superpowers/specs/2026-08-09-external-content-import-design.md` for the
+design and `docs/04-decisions.md`'s newest entries for why this reverses "the
+model never emits HTML" for this path only.
+
+- New edge function `course-content-import` and the redeployed
+  `course-generation-worker` (carries the rebuilt deck engine — the
+  audience-facing language fix below) are live on `ojmbupftdikwmlqvibwt`.
+  Confirmed reachable with a real 401 from an unauthenticated request, not a
+  404.
+- Frontend is live at `index-CMHNVQqE.js` / `index-BpRzTDRG.css`, confirmed by
+  fetching the live page directly, not inferred from a successful push.
+- **Fixed a live bug in the same change**: the classroom question overlay (both
+  the parent page and the deck's own in-fullscreen copy) used to stack
+  English and Spanish together instead of showing one language, affecting
+  every class taught in Spanish (groups 501/502). Existing generated decks
+  keep the old stacked behavior until **Refresh lecture deck** is run for
+  their bank — see below.
+- No migration. Verified before and after: `npx supabase migration list --linked`
+  shows every local migration already applied on remote.
+- One Critical finding surfaced and fixed in final review before deploy:
+  importing under an existing lecture's slug would have silently corrupted a
+  real production question bank or broken "Start quiz" mid-class. The fix
+  (`isReimportableByThisFeature` in `course-content-import/index.ts`) was
+  verified against a live read-only export of every production content item
+  — zero could pass the guard. See pitfall #68.
+- **Not yet done, and cannot be done by an agent**: any browser click-path.
+  Test sign-in refuses instructors, so the Import tab, the preview/repair
+  flow, deck upload through Run Class, the language fix in a real class, and
+  a live pulse question reaching a real device are all unverified in the
+  browser. Test fixtures and the exact click path were prepared and handed to
+  the professor — see "High-priority remaining work" below.
+- The authoring prompt has been tested against exactly one model (Claude),
+  not ChatGPT or Gemini — visible as a caveat on the Import screen itself.
+
 ### Deployed and confirmed in the live browser
 
 - The Content screen contains the new **Teaching brief** form: source-of-truth
@@ -203,15 +242,36 @@ evidence.
 
 ## High-priority remaining work
 
-1. Finish one full browser test of PDF upload → teaching-plan review → generation
+1. **Professor's browser pass on external content import.** Test fixtures
+   (clean/faulty question files, clean/faulty decks) and the exact click path
+   are prepared and were handed off directly — an agent cannot sign in as the
+   instructor to do this. Covers: the Import tab reachable by click, the
+   preview/repair flow, a deck's independent pass/fail from its paired
+   questions, the deck opening through the real gated `/content?t=…` route,
+   the language fix (Spanish-only room display, both the parent overlay and
+   the in-deck fullscreen copy), and a real pulse question reaching a second
+   device and grading correctly.
+2. **Run the authoring prompt on ChatGPT and/or Gemini** with a real lecture,
+   import the result, and confirm it's clean or fix the prompt. Currently
+   validated against Claude only.
+3. **Decide on Refresh lecture deck.** Only `week-01-lecture` currently
+   qualifies (`checkpoint_preparation_state = 'ready'`) — confirmed by a
+   read-only production query and by tracing `src/features/deck/bankReadiness.ts`'s
+   own gating logic, not just the raw column. The other ten real lectures have
+   never had checkpoints prepared, so the button isn't offered for them at
+   all; bringing them onto the language-fixed deck engine needs **Prepare
+   checkpoints** instead, a materially bigger action nobody has asked for.
+   Not run by the agent that built this — the runbook forbids batching it and
+   it rewrites production storage.
+4. Finish one full browser test of PDF upload → teaching-plan review → generation
    → inspect deck and bank → make available/assign to a test class only if needed.
-2. Complete and record one fresh browser test of the PDF generation result.
-3. Conduct a real-phone class rehearsal: QR join, late join, concurrent pulse
+5. Complete and record one fresh browser test of the PDF generation result.
+6. Conduct a real-phone class rehearsal: QR join, late join, concurrent pulse
    answers, final quiz, reflection, close/reopen behavior, and projector reload.
-4. Decide and complete the public-site retirement of legacy teaching material
+7. Decide and complete the public-site retirement of legacy teaching material
    only after its gated replacements are verified. Do not delete content as part
    of routine work.
-5. Consider recording Anthropic token usage/estimated cost per generation job in
+8. Consider recording Anthropic token usage/estimated cost per generation job in
    the teacher interface.
 
 ## Safety and testing rules for every agent
@@ -238,7 +298,10 @@ evidence.
 6. `docs/07-pitfalls.md`
 7. `docs/superpowers/specs/2026-08-09-pdf-teaching-plan-and-grounding-design.md`
 8. `docs/superpowers/plans/2026-08-09-pdf-teaching-plan-and-grounding.md`
-9. `docs/CONTENT-REPO-SYNC-HANDOFF.md` when changing authoring/sync behavior.
+9. `docs/superpowers/specs/2026-08-09-external-content-import-design.md` and
+   `docs/superpowers/plans/2026-08-09-external-content-import.md` when
+   changing the import feature.
+10. `docs/CONTENT-REPO-SYNC-HANDOFF.md` when changing authoring/sync behavior.
 
 The backend's short `docs/COURSE-PLATFORM-HANDOFF.md` and the content repo's
 older README contain historical material. Use this file for current status when

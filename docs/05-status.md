@@ -1,6 +1,61 @@
 # Status
 
-**Last updated:** 2026-08-09
+**Last updated:** 2026-08-10
+
+### External content import is deployed — instructor browser verification is the professor's, not yet done
+
+Implemented, reviewed (5 task reviews + 2 fix rounds per repo, plus a final
+whole-branch review + 2 fix rounds per repo — one Critical finding, fixed and
+independently re-verified against live production data before deploy),
+merged to `main` in both repos, and deployed:
+
+- `course-content-import` (new function) and `course-generation-worker`
+  (carries the rebuilt deck engine) are deployed to project
+  `ojmbupftdikwmlqvibwt`. Confirmed live by a direct unauthenticated request
+  returning the function's real 401 response, not a 404.
+- The frontend is live at the confirmed bundle hash `index-CMHNVQqE.js` /
+  `index-BpRzTDRG.css` — checked by fetching the live page and comparing
+  against the local `vite build` output, not assumed from a successful push.
+- No migration — every column the feature writes already existed. Confirmed
+  by `npx supabase migration list --linked` showing every local migration
+  already matched on remote, both before and after this work.
+- All 25 frontend verifiers, the backend's `verify-classroom-language.mjs`/
+  `verify-content-import-security.mjs`/`verify-slide-checkpoints.mjs`/
+  `verify-live-checkpoint-security.mjs`, `deno check` on both new backend
+  files, `npm run typecheck`, and `npm run build` all pass on the merged
+  `main` in both repos — verified after merge, not only on the feature
+  branch.
+
+**What is verified by a passing check versus what has been seen work in a
+browser** matters here more than usual. Everything above is code-level: local
+verifiers, typechecks, a build, and confirming the deployed artifacts are
+genuinely live. **No browser click-path in this feature has been exercised**
+— test sign-in refuses instructors, so an agent cannot reach the Content →
+Import tab, the preview/repair flow, the deck upload, Run Class with an
+imported deck, or a live pulse question reaching a real device. Test
+fixtures, the exact click path for each, and a note on which existing lecture
+decks need **Refresh lecture deck** (only `week-01-lecture` — see pitfall
+list and the professor's handoff notes) were prepared and handed to the
+professor rather than run. Until that pass happens, treat this feature as
+"passes every check that can run without a human at the keyboard," not as
+"seen working."
+
+The authoring prompt (`ImportPromptCard.tsx`) has been tested against exactly
+one model (Claude) — see the visible caveat on the Import screen itself, and
+`docs/04-decisions.md` for the reasoning. Not yet run against ChatGPT or
+Gemini.
+
+The known, accepted limitations from the final review (documented, not
+fixed, all judged low-probability or already covered by a second independent
+check — none affect the guard against the Critical finding above): a narrow
+timing window in the deck resolve/write split if two instructors import the
+same slug concurrently (single-professor course today); a theoretical
+draft/archived-bank status gap with no reachable path found; a legacy
+`course-quiz-compatibility` shape that only a raw UUID typed as an import
+slug could reach; a shorter re-import archives a hand-edited question in the
+now-excluded tail the same as any other; option positions aren't required to
+be distinct. See the branch's final-review reports for the full reasoning on
+each.
 
 ### Current state supersedes older entries below — PDF teaching plans are deployed
 

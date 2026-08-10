@@ -6,6 +6,117 @@ the UI is silently wrong.**
 
 ---
 
+## 68. Reusing an existing content item's slug can silently corrupt a real production bank
+
+**Caught in the final whole-branch review for external content import,
+2026-08-10, before deploy — confirmed against live production data, not
+shipped.**
+
+`course-content-import`'s `resolveBankContentItem`/`resolveDeckContentItem`
+originally reused any existing `content_items` row the caller owned, without
+checking what was already on it. Migration `0033` assigned every existing
+TC2007B item to the platform owner — the same account this feature treats as
+"yours" for reuse purposes. So importing a bank under an existing lecture's
+slug (`week-05-lecture` is a completely ordinary thing to type) would either:
+
+- **conflict-overwrite** a real generated bank's metadata (same `bank_type`,
+  upsert matches) and mix `import_N`-keyed questions into an 18-question
+  checkpoint-validated bank, or
+- **insert a second active bank** on the same content item (different
+  `bank_type`, no conflict) — and `course-class-quiz`'s "Start quiz" path
+  queries active banks for that item with `.maybeSingle()` and no `bank_type`
+  filter, which throws on two rows: a raw database error mid-class.
+
+A read-only query against production before this shipped confirmed **every
+one of the 11 real lectures already had an active bank** — this was not a
+theoretical edge case, it was the default outcome of typing a real slug.
+
+**Rule:** a resolve-or-create pattern designed for a feature's own
+idempotent re-import must never be reachable for content that feature did not
+create. Verify reuse by checking that everything the existing item already
+has — `source_kind`/`source_ref` shape and any active bank's own signature
+(`generation_validation_profile`, `generation_job_id`) — matches exactly what
+this feature itself would have written, not just that the *owner* matches.
+Owner-matching alone answers "can this person write here", not "did this
+person's own tooling write what's already here" — those are different
+questions, and only the second one is safe to silently overwrite.
+
+The fix (`isReimportableByThisFeature` in `course-content-import/index.ts`)
+was verified two independent ways before deploy: by tracing the actual
+`content_items`/`question_banks` writers across the whole backend for a
+signature nothing else produces, and by running the exact check against a
+live read-only export of every production row and confirming zero would
+pass. Both checks, not just one, because "looks right" and "is right"
+diverge exactly on a guard like this.
+
+---
+
+## 67. A reference-scanning regex will match inside a `<script>` body it never meant to read
+
+**Caught in the same final-review pass, before deploy.**
+
+`_shared/deck-validation.ts`'s `references()` widened its `href`/`src`
+attribute matching to catch more exfiltration shapes (`srcset`, `poster`,
+`action`, CSS `url()`, unquoted values). The wider pattern also matched
+inside inline `<script>` element bodies, since a flat regex has no notion of
+HTML structure versus JavaScript: `<script>const data = await
+res.json();</script>` was flagged as a relative reference (`"await"`) and
+would have rejected an entirely ordinary, self-contained deck. Imported decks
+are *expected* to carry inline JS — this was not a rare shape, it was close
+to the common case.
+
+**Rule:** when tightening a document-scanning regex, test it against content
+that is supposed to pass, not only content that is supposed to fail. A
+validator's own false-positive rate on legitimate input is as real a defect
+as a missed true positive, and it is invisible if every test fixture is
+adversarial.
+
+Also worth recording as its own fact: this validator is **not** a general
+inline-script/exfiltration sandbox, and its header comment says so explicitly
+now. It checks self-containment and declared outbound links only. The
+`/content` route's CSP is the actual runtime control for anything a deck does
+client-side that doesn't require a literal, parseable reference in the
+markup. See `docs/04-decisions.md`'s "External content import reverses..."
+entry for the full reasoning.
+
+---
+
+## 66. A quoted JSON boolean is valid JSON and silently means "no correct answer"
+
+**Caught during the self-test of the external-content-import authoring
+prompt, 2026-08-09/10 — before any professor used it.**
+
+`"correct": "true"` (a string) is syntactically valid JSON and parses without
+error. `questionFile.ts`'s original check compared it with plain truthiness
+in one place and would have accepted it; the actual per-question validator
+compares `entry.correct === true`. A model that writes the string `"true"`
+instead of the boolean `true` therefore produces a file that looks perfect —
+every question present, every option present — but every single question is
+flagged with zero correct answers. Nothing about the failure points at the
+real cause; the professor sees 20+ questions flagged identically and no
+obvious reason why.
+
+Found by deliberately generating three adversarial variants of a
+prompt-following model's output (a quoted boolean, a wrapper key around the
+whole file, bare-string options with no `correct` field) and running each
+through the real parser before shipping the prompt. All three broke the
+import; none of the three would have been caught by testing only the
+happy-path output the prompt's author expects a well-behaved model to
+produce.
+
+**Rule:** the same discipline applies to server-side re-validation, not just
+the frontend preview — `course-content-import`'s `questionFault` was
+tightened in the same review round to require `is_correct === true` (strict
+equality) rather than a truthy filter, so a crafted request that bypasses the
+preview entirely cannot exploit the same confusion. When a contract crosses a
+model boundary (a prompt, not just an API), test the contract adversarially
+before trusting a single well-behaved run — pitfall #10's lesson
+("models return the right data in the wrong shape") applies just as much
+when the model is a person's own ChatGPT/Claude/Gemini session as when it's
+the platform's own pipeline.
+
+---
+
 ## 65. A PDF generation title is a label, not source material
 
 A test uploaded malware slides under the temporary title `test mal`. The older

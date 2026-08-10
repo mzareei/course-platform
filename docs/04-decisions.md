@@ -399,3 +399,50 @@ Create, rename, retire and reactivate are now platform-owner only, enforced in
 `course-section-management` before any write. Listing and member management stay
 section-scoped for instructors — restricting those would regress the
 section-scoped access the platform already depends on.
+
+---
+
+### External content import reverses "the model never emits HTML" — for this path only
+
+**Decided in the design (`docs/superpowers/specs/2026-08-09-external-content-import-design.md`),
+implemented and deployed 2026-08-10.**
+
+The platform's standing rule, from earlier in this document, is that a model
+never emits HTML: a bad or adversarial generation must not inject markup into
+a page a student opens. `course-content-import` breaks that rule on purpose,
+for imported decks only. The reasoning stands on a boundary the platform
+already crosses elsewhere: an authenticated instructor can already upload
+arbitrary HTML through `course-content-upload`. The new risk on this path is
+not a malicious professor — it is a professor unknowingly forwarding output
+shaped by prompt injection hidden in their source PDF. `_shared/deck-validation.ts`
+is the control for that: self-containment (no relative reference that would
+404 behind the gate) and no undeclared/forbidden outbound host. The in-platform
+PDF generation pipeline (`course-generation-worker`) keeps the original rule
+unchanged — it is still the platform's own model call, so the platform still
+owns the guarantee.
+
+The final whole-branch review found the shipped validator's coverage narrower
+than its own header comment claimed (see pitfall #67), and confirmed one
+architectural fact worth recording here: this validator is **not** a general
+inline-script or exfiltration sandbox. It cannot stop a `fetch()` built from
+string concatenation at runtime, or any client-side behavior that doesn't
+require a literal, parseable reference in the document. The actual runtime
+control for that broader class of risk is the `/content` route's CSP
+(`default-src 'none'; script-src 'unsafe-inline'; ...`), which already existed
+for the generated-deck path and now does double duty here. This was an
+explicit, reasoned scope decision — not a gap nobody noticed — made because
+closing it fully would require parsing and sanitizing arbitrary inline
+JavaScript, which is a different and much larger project than "check the deck
+is self-contained and doesn't link somewhere it shouldn't."
+
+### The platform makes no model call on the import path — verified, not just declared
+
+Every task and every review round in this feature grepped the new code for
+`anthropic`/`ANTHROPIC`/model-provider strings and found none. This is worth
+recording as a decision rather than an implementation detail: the entire
+point of external content import (see the design doc's "Cost" and
+"Iteration" sections) is that professors already pay for their own AI
+subscription, and the platform's spend does not grow with faculty headcount
+on this path. If a future change to `course-content-import` ever calls a
+model, that is not a bug fix — it is reopening a cost question the professor
+already decided.
