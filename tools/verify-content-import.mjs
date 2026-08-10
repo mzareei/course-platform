@@ -248,13 +248,13 @@ assert.match(
   "a restored import draft must confirm bank.questions is an array before handing it to groupBySlide()"
 );
 
-// Final-review fix #5: the authoring prompt's lede is the one line a
-// professor reads before trusting this for real — it must not claim
-// validation across providers that hasn't happened, and the honest caveat
-// (already documented in a code comment) must actually be visible in the UI.
+// 2026-08-10: the professor replaced the agent-drafted prompt with his own,
+// tested by him directly rather than through this repo's self-test loop —
+// the lede/caveat strings and the clause list below were updated to match
+// his actual wording, not the version they used to describe.
 assert.match(
-  strings, /This exact prompt has only been tested against one model so far/,
-  "import.prompt.lede must not read as unqualified cross-provider validation"
+  strings, /Written and tested by Prof\. Zareei/,
+  "the caveat must credit the actual author/tester of the current prompt, not a stale claim about a prior version"
 );
 assert.match(
   promptCard, /t\("import\.prompt\.validationCaveat"\)/,
@@ -263,8 +263,9 @@ assert.match(
 
 // ------------------------------------------------------------ authoring prompt
 // The platform makes no model call on this path, so the prompt IS the contract.
-// Each clause below was added because its absence was shown to break a real
-// import; the worked example is executed against the parser rather than eyeballed.
+// Each clause below is checked against the professor's own wording — do not
+// "fix" a clause to match old phrasing if he revises the prompt again; update
+// the regex to match his actual text instead.
 assert.match(content, /ImportPromptCard/, "the prompt must be reachable from the Import tab");
 assert.match(
   promptCard, /^export function ImportPromptCard/m,
@@ -275,20 +276,26 @@ const promptBody = promptCard.match(/export const IMPORT_PROMPT = `([\s\S]*?)`;\
 assert.ok(promptBody, "IMPORT_PROMPT must be an exported module-scope template literal");
 
 for (const [clause, why] of [
-  [/attachment wins and the title is ignored/i, "pitfall #65: the title is a label, never subject matter"],
-  [/test mal/, "pitfall #65's actual failure must be named, not paraphrased away"],
-  [/Exactly four, no more and no fewer/i, "four options is a display requirement, not a preference"],
-  [/JSON boolean true or false, unquoted/i, 'a quoted "true" parses and silently yields zero correct answers'],
-  [/never a bare string/i, "bare-string options parse and yield four empty options"],
-  [/Nothing wraps it/i, "a wrapper key makes the whole file import as no questions array"],
-  [/Never put Spanish text under "en"/, "Spanish under an en key is silent and unrecoverable"],
-  [/4000 characters/, "the prompt ceiling is the database column, pitfall #7"],
-  [/2000 characters per option/, "the option ceiling is the database column, pitfall #7"],
-  [/last slide of MY deck/i, "covers_up_to_slide is the professor's own numbering"],
+  [/The attachment always wins/i, "pitfall #65: the title is a label, never subject matter"],
+  [/only labels unless the same information actually appears inside the lecture/i, "pitfall #65: a filename/title alone must never become content"],
+  [/must have exactly four options/i, "four options is a display requirement, not a preference"],
+  [/Never put the boolean inside quotation marks/i, 'a quoted "true" parses and silently yields zero correct answers — pitfall #66'],
+  [/There is no separate answer field, answer_index field, correct_option field/i, "bare-string/answer-index shapes parse and yield unusable options"],
+  [/Nothing may wrap this object/i, "a wrapper key makes the whole file import as no questions array"],
+  [/Never put Spanish text under en/i, "Spanish under an en key is silent and unrecoverable"],
+  [/last slide a student must have seen/i, "covers_up_to_slide is the professor's own numbering"],
   [/exactly one JSON code block and nothing else/i, "commentary around the block breaks the paste"]
 ]) {
   assert.match(promptBody, clause, `authoring prompt must state: ${why}`);
 }
+
+// NOT asserted, deliberately: this version doesn't restate the database's
+// hard character ceiling (4000/2000) the way the version it replaced did —
+// flagged to the professor when the swap was made, adopted as-is per his
+// explicit instruction. The actual ceiling is still enforced regardless of
+// prompt wording, in questionFile.ts and again server-side in
+// course-content-import — a prompt that omits the number doesn't weaken the
+// database's own guard, it only removes the model's early warning.
 
 // A model that copies the worked example verbatim must produce a loadable file,
 // so the example is parsed by the same parser the import screen uses.

@@ -1751,12 +1751,12 @@ export const strings = {
   // to a model, not text a person reads.
   "import.prompt.title": ["The authoring prompt", "El prompt de autoría"],
   "import.prompt.lede": [
-    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below. This exact prompt has only been tested against one model so far — see the note below before trusting it for a real class.",
-    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo. Este prompt exacto solo se ha probado contra un modelo hasta ahora — lee la nota de abajo antes de confiar en él para una clase real."
+    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below.",
+    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo."
   ],
   "import.prompt.validationCaveat": [
-    "Checked against Claude only, on one real lecture. Not yet confirmed against ChatGPT or Gemini. Try it once on a real lecture with whichever AI you use, and check the result before relying on it in front of a class.",
-    "Verificado solo con Claude, en una clase real. Aún no se ha confirmado con ChatGPT o Gemini. Pruébalo una vez con una clase real en la IA que uses, y revisa el resultado antes de confiar en él frente a un grupo."
+    "Written and tested by Prof. Zareei. As with any AI-generated content, check the result in the preview before relying on it in front of a class.",
+    "Escrito y probado por el Prof. Zareei. Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
   ],
   "import.prompt.attach": [
     "Attach the lecture itself — the PDF or slide export — in the same message, and say how many slides it has so the questions land on the right ones.",
