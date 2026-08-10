@@ -124,10 +124,6 @@ export function Content() {
              onClick={(e) => { e.preventDefault(); setTab("banks"); }}>
             {t("content.tab.banks")}
           </a>
-          <a href="#" role="tab" aria-current={tab === "generate" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("generate"); }}>
-            {t("content.tab.generate")}
-          </a>
           <a href="#" role="tab" aria-current={tab === "import" ? "page" : undefined}
              onClick={(e) => { e.preventDefault(); setTab("import"); }}>
             {t("content.tab.import")}
