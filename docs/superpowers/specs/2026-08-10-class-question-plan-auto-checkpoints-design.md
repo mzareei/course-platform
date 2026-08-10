@@ -100,8 +100,10 @@ request:
   null`. A question tagged `topic_tags = ['final']` (the import's
   end-of-class-quiz-only marker) is excluded — it was never meant to be asked
   live.
-- **`topic`:** the group's most common non-empty `suggested_topic`; if none
-  of the group's questions supplied one, falls back to `"Slide {N}"`.
+- **`topic`:** the group's most common non-empty `suggested_topic`, ties
+  broken by the lowest question `generation_key` (i.e. the first question in
+  that slide group, deterministic import order); if none of the group's
+  questions supplied one, falls back to `"Slide {N}"`.
 - **`slide_hint`:** the group's slide number.
 - **`candidate_question_ids`:** every eligible question in that group.
 - **Ordering (`position`):** ascending by slide number.
@@ -112,11 +114,16 @@ feature existed, whose plan creation produces zero checkpoints, exactly as
 today. The professor can still use "Add checkpoint" for anything the
 importer didn't capture.
 
-This is one atomic step inside `create`, not a separate action — matches
-"automatic, the moment the plan is created." Every resulting checkpoint is a
-completely ordinary `PlanCheckpoint` afterward: editable, removable,
-reorderable through the existing `update_checkpoint` / `remove_checkpoint` /
-`set_candidates` actions, no new state machine.
+This is one step inside `create`, not a separate action — matches "automatic,
+the moment the plan is created." Every resulting checkpoint is a completely
+ordinary `PlanCheckpoint` afterward: editable, removable, reorderable through
+the existing `update_checkpoint` / `remove_checkpoint` / `set_candidates`
+actions, no new state machine.
+
+`copy` (an existing action that clones an earlier session's plan wholesale,
+checkpoints included) is unaffected — it already carries checkpoints forward
+from the source plan and never re-derives them from the bank, so this
+auto-generation logic only ever runs on a genuinely new plan.
 
 ## Live picker: slide-first
 
