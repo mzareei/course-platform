@@ -859,7 +859,16 @@ export const strings = {
     "Create the first checkpoint to start this plan.",
     "Crea el primer punto de control para empezar este plan."
   ],
-  "run.plan.checkpointNumber": ["Checkpoint {number}", "Punto de control {number}"],
+  "run.plan.pickSlideLabel": ["Which slide are you on?", "¿En qué diapositiva estás?"],
+  "run.plan.slideOption": [
+    "Slide {slide} — {topic}",
+    "Diapositiva {slide} — {topic}"
+  ],
+  "run.plan.noUpcoming": [
+    "No upcoming checkpoints. Add one to get started.",
+    "No hay puntos de control pendientes. Agrega uno para empezar."
+  ],
+  "run.plan.history": ["Asked so far", "Preguntado hasta ahora"],
   "run.plan.topicLabel": ["Topic", "Tema"],
   "run.plan.slideHintLabel": ["Slide hint", "Pista de diapositiva"],
   "run.plan.notesLabel": ["Notes", "Notas"],

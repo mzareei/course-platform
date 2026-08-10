@@ -74,6 +74,24 @@ function localizedPlanError(cause: unknown, fallbackKey: StringKey) {
   return t(key || fallbackKey);
 }
 
+function sortedPlannedCheckpoints(checkpoints: PlanCheckpoint[]): PlanCheckpoint[] {
+  return checkpoints
+    .filter((checkpoint) => checkpoint.state === "planned")
+    .slice()
+    .sort((a, b) => {
+      if (a.slide_hint === null && b.slide_hint === null) return a.position - b.position;
+      if (a.slide_hint === null) return 1;
+      if (b.slide_hint === null) return -1;
+      return a.slide_hint - b.slide_hint;
+    });
+}
+
+function checkpointLabel(checkpoint: PlanCheckpoint): string {
+  return checkpoint.slide_hint !== null
+    ? t("run.plan.slideOption", { slide: checkpoint.slide_hint, topic: checkpoint.topic })
+    : checkpoint.topic;
+}
+
 export function ClassQuestionPlanBoard({
   classSessionId,
   isLive,
@@ -94,6 +112,7 @@ export function ClassQuestionPlanBoard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectedCheckpointId, setSelectedCheckpointId] = useState("");
 
   const activeBankId = plan?.question_bank_id || selectedBankId;
   const bankById = useMemo(
@@ -173,6 +192,13 @@ export function ClassQuestionPlanBoard({
       cancelled = true;
     };
   }, [activeBankId]);
+
+  useEffect(() => {
+    const planned = sortedPlannedCheckpoints(plan?.checkpoints || []);
+    setSelectedCheckpointId((current) =>
+      planned.some((checkpoint) => checkpoint.id === current) ? current : (planned[0]?.id || "")
+    );
+  }, [plan]);
 
   async function refreshPlan() {
     const nextPlan = await getClassQuestionPlan(classSessionId);
@@ -310,6 +336,22 @@ export function ClassQuestionPlanBoard({
       .filter((question): question is BankQuestion => Boolean(question));
   }
 
+  const plannedCheckpoints = sortedPlannedCheckpoints(plan?.checkpoints || []);
+  const historyCheckpoints = (plan?.checkpoints || []).filter(
+    (checkpoint) => checkpoint.state === "sent" || checkpoint.state === "skipped"
+  );
+  const selectedCheckpoint = plannedCheckpoints.find((checkpoint) => checkpoint.id === selectedCheckpointId) || null;
+  const resolvedCandidateQuestions = selectedCheckpoint ? candidateQuestions(selectedCheckpoint) : [];
+  const selectedCandidateId = selectedCheckpoint
+    ? selectedCandidateIds[selectedCheckpoint.id] || resolvedCandidateQuestions[0]?.id || ""
+    : "";
+  const selectedQuestion = resolvedCandidateQuestions.find((question) => question.id === selectedCandidateId)
+    || resolvedCandidateQuestions[0]
+    || null;
+  const selectedHasStaleCandidates = selectedCheckpoint
+    ? selectedCheckpoint.candidate_question_ids.length > resolvedCandidateQuestions.length
+    : false;
+
   return (
     <section class="card muted stack">
       <div class="row" style="justify-content: space-between; align-items: flex-start;">
@@ -394,121 +436,129 @@ export function ClassQuestionPlanBoard({
             />
           ) : null}
 
-          {plan.checkpoints.length ? (
+          {plannedCheckpoints.length ? (
             <div class="stack">
-              {plan.checkpoints.map((checkpoint) => {
-                const editing = editor?.mode === "edit" && editor.checkpointId === checkpoint.id;
-                const resolvedCandidateQuestions = candidateQuestions(checkpoint);
-                const selectedCandidateId = selectedCandidateIds[checkpoint.id] || resolvedCandidateQuestions[0]?.id || "";
-                const selectedQuestion = resolvedCandidateQuestions.find(
-                  (question) => question.id === selectedCandidateId
-                ) || resolvedCandidateQuestions[0] || null;
-                const isHistorical = checkpoint.state === "sent" || checkpoint.state === "skipped";
-                const hasStaleCandidates =
-                  checkpoint.candidate_question_ids.length > resolvedCandidateQuestions.length;
+              <label class="field">
+                {t("run.plan.pickSlideLabel")}
+                <select
+                  value={selectedCheckpointId}
+                  onChange={(event) => setSelectedCheckpointId((event.target as HTMLSelectElement).value)}
+                >
+                  {plannedCheckpoints.map((checkpoint) => (
+                    <option key={checkpoint.id} value={checkpoint.id}>
+                      {checkpointLabel(checkpoint)}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-                return (
-                  <article class="card stack" key={checkpoint.id}>
+              {selectedCheckpoint ? (
+                editor?.mode === "edit" && editor.checkpointId === selectedCheckpoint.id ? (
+                  <CheckpointEditor
+                    draft={editor.draft}
+                    questions={questions || []}
+                    busy={busy}
+                    onDraft={updateDraft}
+                    onToggleCandidate={toggleDraftCandidate}
+                    onCancel={() => setEditor(null)}
+                    onSave={() => void handleSaveCheckpoint()}
+                  />
+                ) : (
+                  <article class="card stack" key={selectedCheckpoint.id}>
                     <div class="row" style="justify-content: space-between; align-items: flex-start;">
                       <div>
-                        <p class="eyebrow">{t("run.plan.checkpointNumber", { number: checkpoint.position })}</p>
-                        <h3 style="margin: 0.2rem 0 0;">{checkpoint.topic}</h3>
-                        {checkpoint.slide_hint !== null ? (
-                          <p class="hint">{t("run.plan.afterSlide", { slide: checkpoint.slide_hint })}</p>
+                        {selectedCheckpoint.slide_hint !== null ? (
+                          <p class="hint">{t("run.plan.afterSlide", { slide: selectedCheckpoint.slide_hint })}</p>
                         ) : null}
-                        {checkpoint.notes ? <p class="hint">{checkpoint.notes}</p> : null}
+                        {selectedCheckpoint.notes ? <p class="hint">{selectedCheckpoint.notes}</p> : null}
                       </div>
-                      {checkpoint.state === "sent" ? (
-                        <span class="pill live">{t("run.plan.alreadyAsked")}</span>
-                      ) : checkpoint.state === "skipped" ? (
-                        <span class="pill hidden">{t("run.plan.skipped")}</span>
-                      ) : !editing ? (
-                        <div class="row">
-                          <button
-                            class="btn quiet"
-                            type="button"
-                            disabled={busy}
-                            onClick={() => setEditor({ mode: "edit", checkpointId: checkpoint.id, draft: toDraft(checkpoint) })}
-                          >
-                            {t("run.plan.edit")}
-                          </button>
-                          <button
-                            class="btn quiet"
-                            type="button"
-                            disabled={busy}
-                            onClick={() => void handleRemoveCheckpoint(checkpoint)}
-                          >
-                            {t("run.plan.remove")}
-                          </button>
-                        </div>
-                      ) : null}
+                      <div class="row">
+                        <button
+                          class="btn quiet"
+                          type="button"
+                          disabled={busy}
+                          onClick={() =>
+                            setEditor({ mode: "edit", checkpointId: selectedCheckpoint.id, draft: toDraft(selectedCheckpoint) })
+                          }
+                        >
+                          {t("run.plan.edit")}
+                        </button>
+                        <button
+                          class="btn quiet"
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleRemoveCheckpoint(selectedCheckpoint)}
+                        >
+                          {t("run.plan.remove")}
+                        </button>
+                      </div>
                     </div>
 
-                    {editing ? (
-                      <CheckpointEditor
-                        draft={editor.draft}
-                        questions={questions || []}
-                        busy={busy}
-                        onDraft={updateDraft}
-                        onToggleCandidate={toggleDraftCandidate}
-                        onCancel={() => setEditor(null)}
-                        onSave={() => void handleSaveCheckpoint()}
-                      />
-                    ) : isHistorical ? null : (
-                      <div class="stack">
-                        {resolvedCandidateQuestions.length ? (
-                          <>
-                            <label class="field">
-                              {t("run.plan.candidatesLabel")}
-                              <select
-                                value={selectedCandidateId}
-                                onChange={(event) =>
-                                  setSelectedCandidateIds((current) => ({
-                                    ...current,
-                                    [checkpoint.id]: (event.target as HTMLSelectElement).value
-                                  }))}
-                              >
-                                {resolvedCandidateQuestions.map((question) => (
-                                  <option key={question.id} value={question.id}>
-                                    {question.prompt}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            {hasStaleCandidates ? (
-                              <p class="hint">{t("run.plan.staleCandidates")}</p>
-                            ) : null}
-                            {selectedQuestion?.prompt_es ? (
-                              <p class="hint">{selectedQuestion.prompt_es}</p>
-                            ) : null}
-                          </>
-                        ) : (
-                          <p class="hint">
-                            {hasStaleCandidates ? t("run.plan.staleCandidates") : t("run.plan.noCandidates")}
-                          </p>
-                        )}
-
-                        {!isHistorical ? (
-                          <div class="row" style="justify-content: flex-end;">
-                            <button
-                              class="btn"
-                              type="button"
-                              disabled={busy || !isLive || !selectedQuestion}
-                              onClick={() => selectedQuestion ? void handleAskNow(checkpoint, selectedQuestion.id) : undefined}
-                            >
-                              {t("run.plan.askNow")}
-                            </button>
-                          </div>
+                    {resolvedCandidateQuestions.length ? (
+                      <>
+                        <label class="field">
+                          {t("run.plan.candidatesLabel")}
+                          <select
+                            value={selectedCandidateId}
+                            onChange={(event) =>
+                              setSelectedCandidateIds((current) => ({
+                                ...current,
+                                [selectedCheckpoint.id]: (event.target as HTMLSelectElement).value
+                              }))}
+                          >
+                            {resolvedCandidateQuestions.map((question) => (
+                              <option key={question.id} value={question.id}>
+                                {question.prompt}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        {selectedHasStaleCandidates ? (
+                          <p class="hint">{t("run.plan.staleCandidates")}</p>
                         ) : null}
-                      </div>
+                        {selectedQuestion?.prompt_es ? (
+                          <p class="hint">{selectedQuestion.prompt_es}</p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p class="hint">
+                        {selectedHasStaleCandidates ? t("run.plan.staleCandidates") : t("run.plan.noCandidates")}
+                      </p>
                     )}
+
+                    <div class="row" style="justify-content: flex-end;">
+                      <button
+                        class="btn"
+                        type="button"
+                        disabled={busy || !isLive || !selectedQuestion}
+                        onClick={() => selectedQuestion ? void handleAskNow(selectedCheckpoint, selectedQuestion.id) : undefined}
+                      >
+                        {t("run.plan.askNow")}
+                      </button>
+                    </div>
                   </article>
-                );
-              })}
+                )
+              ) : null}
             </div>
           ) : (
-            <p class="hint">{t("run.plan.empty")}</p>
+            <p class="hint">{t("run.plan.noUpcoming")}</p>
           )}
+
+          {historyCheckpoints.length ? (
+            <details class="card muted">
+              <summary>{t("run.plan.history")}</summary>
+              <div class="stack">
+                {historyCheckpoints.map((checkpoint) => (
+                  <div class="row" style="justify-content: space-between; align-items: center;" key={checkpoint.id}>
+                    <span>{checkpointLabel(checkpoint)}</span>
+                    <span class={`pill ${checkpoint.state === "sent" ? "live" : "hidden"}`}>
+                      {checkpoint.state === "sent" ? t("run.plan.alreadyAsked") : t("run.plan.skipped")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
         </div>
       )}
     </section>

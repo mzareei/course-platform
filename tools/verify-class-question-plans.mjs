@@ -71,6 +71,17 @@ assert.match(board, /checkpoint\.state\s*===\s*["']sent["']\s*\|\|\s*checkpoint\
 assert.match(board, /resolvedCandidateQuestions/);
 assert.match(board, /disabled=\{[^}]*!isLive[^}]*\|\|[^}]*!selectedQuestion/);
 assert.match(board, /pushPlanQuestion\(/);
+assert.match(board, /function sortedPlannedCheckpoints\s*\(/);
+assert.match(board, /function checkpointLabel\s*\(/);
+assert.match(board, /t\("run\.plan\.pickSlideLabel"\)/);
+assert.match(board, /t\("run\.plan\.slideOption",/);
+assert.match(board, /t\("run\.plan\.noUpcoming"\)/);
+assert.match(board, /t\("run\.plan\.history"\)/);
+assert.doesNotMatch(
+  board,
+  /t\("run\.plan\.checkpointNumber"/,
+  "the per-checkpoint numbered heading was removed by the slide-first redesign"
+);
 assert.doesNotMatch(
   board,
   /cause instanceof Error && cause\.message/,
@@ -171,7 +182,11 @@ const copyKeys = [
   "run.plan.class_question_plan_session_state_invalid",
   "run.plan.class_question_plan_source_plan_id_invalid",
   "run.plan.class_question_plan_source_plan_not_found",
-  "run.plan.staleCandidates"
+  "run.plan.staleCandidates",
+  "run.plan.pickSlideLabel",
+  "run.plan.slideOption",
+  "run.plan.noUpcoming",
+  "run.plan.history"
 ];
 
 for (const key of copyKeys) {
