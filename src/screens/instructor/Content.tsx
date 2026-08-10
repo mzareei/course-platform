@@ -394,7 +394,21 @@ function loadImportDraft(): ImportDraft | null {
     const raw = localStorage.getItem(IMPORT_DRAFT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<ImportDraft> | null;
-    if (!parsed || typeof parsed !== "object" || !parsed.bank) return null;
+    // A malformed draft (e.g. left over from a future ParsedBank schema
+    // change) must never reach ImportPreview — there is no error boundary
+    // anywhere in this app, and groupBySlide() on a shape it doesn't
+    // recognize would blank the whole SPA on every reload, with the draft
+    // restoring again on the very next mount and no in-app way to clear it.
+    if (
+      !parsed
+      || typeof parsed !== "object"
+      || !parsed.bank
+      || typeof parsed.bank !== "object"
+      || typeof (parsed.bank as ParsedBank).ok !== "boolean"
+      || !Array.isArray((parsed.bank as ParsedBank).questions)
+    ) {
+      return null;
+    }
     return {
       bank: parsed.bank,
       fileText: typeof parsed.fileText === "string" ? parsed.fileText : "",
@@ -424,6 +438,12 @@ function parseHostList(text: string): string[] {
 function ImportPanel() {
   const [bank, setBank] = useState<ParsedBank | null>(null);
   const [fileText, setFileText] = useState("");
+  const [questionFileName, setQuestionFileName] = useState<string | null>(null);
+  // Once a bank has loaded cleanly, the raw file/paste inputs collapse behind
+  // a summary — see loadFromText()/showRawInputs below. `replacing` is the
+  // professor's explicit override to bring them back for a deliberate swap;
+  // it is never what silently exposes them.
+  const [replacing, setReplacing] = useState(false);
   const [slug, setSlug] = useState("");
   const [deckHtml, setDeckHtml] = useState("");
   const [deckFileName, setDeckFileName] = useState<string | null>(null);
@@ -472,13 +492,29 @@ function ImportPanel() {
     if (parsed.ok && !slug.trim()) {
       setSlug(slugify(parsed.title));
     }
+    // A fresh parse always resolves any pending "load a different file"
+    // request — harmless when the parse failed too, since showRawInputs
+    // below keeps the raw inputs open on its own whenever !bank.ok.
+    setReplacing(false);
+  }
+
+  // The paste textarea's own onInput handler: distinct from loadFromText
+  // itself only in that typing/pasting directly means the source is no
+  // longer "a chosen file," so any filename shown in the collapsed summary
+  // has to go with it.
+  function onPasteInput(text: string) {
+    setQuestionFileName(null);
+    loadFromText(text);
   }
 
   function onChooseFile(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => loadFromText(String(reader.result || ""));
+    reader.onload = () => {
+      loadFromText(String(reader.result || ""));
+      setQuestionFileName(file.name);
+    };
     reader.readAsText(file);
   }
 
@@ -496,6 +532,8 @@ function ImportPanel() {
   function resetForm() {
     setBank(null);
     setFileText("");
+    setQuestionFileName(null);
+    setReplacing(false);
     setSlug("");
     setDeckHtml("");
     setDeckFileName(null);
@@ -548,6 +586,13 @@ function ImportPanel() {
     }
   }
 
+  // A bank that failed to parse (bank.ok === false) has no ImportPreview to
+  // protect — there is nothing an accidental keystroke could discard — so the
+  // raw inputs stay open in that case regardless of `replacing`, which is the
+  // only path back to fixing the raw text. Once bank.ok is true, the inputs
+  // are closed unless the professor explicitly asked to replace them.
+  const showRawInputs = !bank || !bank.ok || replacing;
+
   return (
     <div class="stack">
       <div>
@@ -570,19 +615,55 @@ function ImportPanel() {
       <ImportPromptCard />
 
       <div class="card stack">
-        <label class="field">
-          {t("import.chooseFile")}
-          <input type="file" accept="application/json,.json" onChange={onChooseFile} />
-        </label>
-        <label class="field">
-          {t("import.paste")}
-          <textarea
-            rows={6}
-            value={fileText}
-            onInput={(event) => loadFromText((event.target as HTMLTextAreaElement).value)}
-          />
-        </label>
-        {bank && !bank.ok ? <p class="error-text" role="alert">{bank.fileProblem}</p> : null}
+        {showRawInputs ? (
+          <>
+            {/* Only offered when there's a previously-loaded, clean bank to
+                cancel back to — a mid-file-selection change of mind should
+                not lose anything either. */}
+            {replacing && bank && bank.ok ? (
+              <div class="row" style="justify-content: flex-end;">
+                <button class="btn quiet" type="button" onClick={() => setReplacing(false)}>
+                  {t("content.close")}
+                </button>
+              </div>
+            ) : null}
+            <label class="field">
+              {t("import.chooseFile")}
+              <input type="file" accept="application/json,.json" onChange={onChooseFile} />
+            </label>
+            <label class="field">
+              {t("import.paste")}
+              <textarea
+                rows={6}
+                value={fileText}
+                onInput={(event) => onPasteInput((event.target as HTMLTextAreaElement).value)}
+              />
+            </label>
+            {bank && !bank.ok && bank.fileProblemKey ? (
+              <p class="error-text" role="alert">
+                {t(bank.fileProblemKey, { detail: bank.fileProblem ?? "" })}
+              </p>
+            ) : null}
+          </>
+        ) : bank ? (
+          // bank.ok is guaranteed here — showRawInputs is true whenever it
+          // isn't — so this is always the "loaded cleanly" summary, never an
+          // error state. Collapsing behind this (instead of leaving a live,
+          // stale textarea sitting there) is what stops a stray click or a
+          // file re-selection from silently discarding every repair made
+          // below in ImportPreview.
+          <>
+            <p class="hint">{t("import.loadedSummary", { count: bank.questions.length })}</p>
+            {questionFileName ? <p class="hint">{questionFileName}</p> : null}
+            <button
+              class="btn quiet"
+              type="button"
+              onClick={() => { setFileText(""); setQuestionFileName(null); setReplacing(true); }}
+            >
+              {t("import.loadDifferentFile")}
+            </button>
+          </>
+        ) : null}
       </div>
 
       <div class="card stack">
@@ -617,7 +698,7 @@ function ImportPanel() {
         </label>
       </div>
 
-      {bank && bank.ok ? (
+      {bank && bank.ok && !replacing ? (
         <ImportPreview bank={bank} onChange={setBank} onCommit={() => void onCommit()} />
       ) : null}
 

@@ -37,6 +37,7 @@ assert.equal(mod.OPTION_MAX, 2000, "option limit must match the option_text colu
 const ok = mod.parseQuestionFile(file());
 assert.equal(ok.ok, true);
 assert.equal(ok.fileProblem, null);
+assert.equal(ok.fileProblemKey, null, "a clean parse must carry no translatable file-level problem key");
 assert.equal(ok.questions.length, 1);
 assert.equal(ok.questions[0].prompt, "What is least privilege?");
 assert.equal(ok.questions[0].prompt_es, "¿Qué es el menor privilegio?");
@@ -52,7 +53,18 @@ assert.equal(ok.questions[0].options[0].option_text_es, "Acceso mínimo necesari
 const broken = mod.parseQuestionFile("{ not json");
 assert.equal(broken.ok, false);
 assert.ok(broken.fileProblem, "a JSON parse failure must be reported at file level");
+assert.equal(
+  broken.fileProblemKey, "import.problem.notJson",
+  "a JSON parse failure must carry a translatable key — bank.fileProblem is raw V8 text and must never render directly"
+);
 assert.equal(broken.questions.length, 0);
+
+const noQuestionsArray = mod.parseQuestionFile(JSON.stringify({ schema: "tc2007b.bank.v1" }));
+assert.equal(noQuestionsArray.ok, false);
+assert.equal(
+  noQuestionsArray.fileProblemKey, "import.problem.noQuestions",
+  "a missing questions array must carry its own translatable key, distinct from a JSON parse failure"
+);
 
 const spanishOnly = mod.parseQuestionFile(JSON.stringify({
   schema: "tc2007b.bank.v1",
@@ -192,6 +204,62 @@ assert.match(strings, /"import\.problem\.missingSpanish"/);
 assert.match(strings, /"import\.deck\.relative"/);
 assert.match(strings, /"import\.deck\.forbiddenHost"/);
 assert.match(strings, /"import\.noAutoCue"/, "the capability difference must be stated, not discovered");
+
+// Final-review fix #1: a question with the wrong option count must be
+// repairable in the preview itself, not just flagged and left stuck.
+assert.match(preview, /function addOption/, "the preview must offer a way to add a missing option");
+assert.match(preview, /function removeOption/, "the preview must offer a way to remove an extra option");
+assert.match(strings, /"import\.addOption"/);
+assert.match(strings, /"import\.removeOption"/);
+
+// Final-review fix #2: bank.fileProblem is raw, untranslated text (a V8
+// JSON.parse message or the parser's own hardcoded English) — it must never
+// reach the DOM directly. Assert both halves of the contract: the parser
+// emits a translatable key (checked above via broken.fileProblemKey /
+// noQuestionsArray.fileProblemKey), and the screen renders through it.
+assert.match(strings, /"import\.problem\.notJson"/);
+assert.match(strings, /"import\.problem\.noQuestions"/);
+assert.match(
+  content, /t\(bank\.fileProblemKey/,
+  "bank.fileProblem must render through t(bank.fileProblemKey, ...), never as raw text in the DOM"
+);
+
+// Final-review fix #3: choosing a new file or typing into the paste box must
+// never be able to silently discard in-progress repairs made in the preview.
+// The fix collapses the raw inputs behind a summary once a bank has loaded
+// cleanly; `replacing` is the only deliberate way back to a live textarea.
+assert.match(
+  content, /const showRawInputs = !bank \|\| !bank\.ok \|\| replacing/,
+  "the raw file/paste inputs must stay collapsed behind a summary once a bank has loaded, " +
+  "or a stray click / re-selection can silently wipe out every repair made in the preview"
+);
+assert.match(strings, /"import\.loadDifferentFile"/);
+
+// Final-review fix #4: a malformed localStorage draft (e.g. from a future
+// ParsedBank schema change) must never reach ImportPreview — there is no
+// error boundary in this app, and it would blank the whole SPA on reload
+// with no in-app way to clear it, since the draft restores again on mount.
+assert.match(
+  content, /typeof \(parsed\.bank as ParsedBank\)\.ok !== "boolean"/,
+  "a restored import draft must be structurally validated before use, not just checked for truthiness"
+);
+assert.match(
+  content, /!Array\.isArray\(\(parsed\.bank as ParsedBank\)\.questions\)/,
+  "a restored import draft must confirm bank.questions is an array before handing it to groupBySlide()"
+);
+
+// Final-review fix #5: the authoring prompt's lede is the one line a
+// professor reads before trusting this for real — it must not claim
+// validation across providers that hasn't happened, and the honest caveat
+// (already documented in a code comment) must actually be visible in the UI.
+assert.match(
+  strings, /This exact prompt has only been tested against one model so far/,
+  "import.prompt.lede must not read as unqualified cross-provider validation"
+);
+assert.match(
+  promptCard, /t\("import\.prompt\.validationCaveat"\)/,
+  "the validation caveat must be rendered in the UI, not left as a code comment only the next developer reads"
+);
 
 // ------------------------------------------------------------ authoring prompt
 // The platform makes no model call on this path, so the prompt IS the contract.

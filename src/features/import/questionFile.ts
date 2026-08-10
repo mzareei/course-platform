@@ -49,6 +49,11 @@ export interface NormalizedQuestion {
 export interface ParsedBank {
   ok: boolean;
   fileProblem: string | null;
+  // A translatable handle on the same failure `fileProblem` describes.
+  // `fileProblem` stays around as the {detail} interpolation (a raw
+  // JSON.parse message is itself useful detail, just not a whole sentence a
+  // professor should read raw) — this is what a screen renders through t().
+  fileProblemKey: "import.problem.notJson" | "import.problem.noQuestions" | null;
   title: string;
   title_es: string | null;
   language: ImportLanguage;
@@ -200,6 +205,7 @@ export function parseQuestionFile(input: string): ParsedBank {
     return {
       ok: false,
       fileProblem: error instanceof Error ? error.message : "The file is not valid JSON.",
+      fileProblemKey: "import.problem.notJson",
       title: "",
       title_es: null,
       language: "both",
@@ -210,6 +216,7 @@ export function parseQuestionFile(input: string): ParsedBank {
     return {
       ok: false,
       fileProblem: "The file has no questions array.",
+      fileProblemKey: "import.problem.noQuestions",
       title: "",
       title_es: null,
       language: "both",
@@ -222,6 +229,7 @@ export function parseQuestionFile(input: string): ParsedBank {
   return {
     ok: true,
     fileProblem: null,
+    fileProblemKey: null,
     title: title.primary,
     title_es: title.secondary,
     language,

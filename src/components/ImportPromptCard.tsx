@@ -281,6 +281,8 @@ export function ImportPromptCard() {
         </button>
       </div>
 
+      <p class="hint">{t("import.prompt.validationCaveat")}</p>
+
       <p class="hint">{t("import.prompt.attach")}</p>
 
       {copyState === "failed" ? (

@@ -629,7 +629,6 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   font-size: clamp(1.8rem, 4vw, 3.8rem);
   line-height: 1.1;
 }
-.classroom-question-es,
 .classroom-question-instruction,
 .classroom-question-hint {
   color: var(--text-muted);
@@ -660,12 +659,6 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   background: var(--surface-2);
   color: var(--text-muted);
   font-weight: 800;
-}
-.classroom-question-option-es {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--text-muted);
-  font-size: 0.86em;
 }
 .classroom-question-hint { margin-top: 0.5rem; }
 .classroom-question-actions {

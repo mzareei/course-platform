@@ -114,6 +114,32 @@ function setCorrectOption(question: NormalizedQuestion, position: number): Norma
   };
 }
 
+// A question with the wrong option count (a common "deliberate fault" in a
+// hand-edited file) previously had no in-preview repair path at all — the
+// commit button just stayed disabled with no way to actually fix it short of
+// re-authoring raw JSON. These two go through the same onEdit → reparseWithEdit
+// round-trip as every other field, so the fix is re-validated by the real
+// parser exactly like a manual text edit would be.
+function addOption(question: NormalizedQuestion): NormalizedQuestion {
+  const nextPosition = question.options.length;
+  return {
+    ...question,
+    options: [
+      ...question.options,
+      { option_text: "", option_text_es: null, is_correct: false, position: nextPosition }
+    ]
+  };
+}
+
+function removeOption(question: NormalizedQuestion, position: number): NormalizedQuestion {
+  return {
+    ...question,
+    options: question.options
+      .filter((option) => option.position !== position)
+      .map((option, index) => ({ ...option, position: index })) // renumber, no gaps
+  };
+}
+
 export function ImportPreview({
   bank,
   onChange,
@@ -184,7 +210,7 @@ function QuestionEditor({
           {question.difficulty_defaulted ? (
             <span class="pill warn">{t("import.difficultyDefaulted")}</span>
           ) : null}
-          {!importable ? <span class="pill warn">{t("import.fixFirst")}</span> : null}
+          {!importable ? <span class="pill warn">{t("import.needsFix")}</span> : null}
         </div>
         {question.topic ? <span class="hint">{question.topic}</span> : null}
       </div>
@@ -264,9 +290,29 @@ function QuestionEditor({
                 />
               ) : null}
             </div>
+            {/* Only shown once there are more than the required four — never
+                let a professor remove below the count they'd just need to add
+                back, and never show this once the count is already correct. */}
+            {question.options.length > 4 ? (
+              <button
+                class="btn quiet"
+                type="button"
+                style="flex: 0 0 auto;"
+                onClick={() => onEdit((q) => removeOption(q, option.position))}
+              >
+                {t("import.removeOption")}
+              </button>
+            ) : null}
           </div>
         ))}
       </div>
+      {/* Symmetric with the remove control: only offered while short of four,
+          gone the moment the count is exactly right. */}
+      {question.options.length < 4 ? (
+        <button class="btn quiet" type="button" onClick={() => onEdit((q) => addOption(q))}>
+          {t("import.addOption")}
+        </button>
+      ) : null}
     </article>
   );
 }

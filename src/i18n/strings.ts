@@ -1687,15 +1687,22 @@ export const strings = {
   "import.title": ["Import a lecture", "Importar una clase"],
   "import.chooseFile": ["Choose a file", "Elegir un archivo"],
   "import.paste": ["Or paste the file contents", "O pega el contenido del archivo"],
+  "import.loadedSummary": ["Loaded: {count} questions", "Cargadas: {count} preguntas"],
+  "import.loadDifferentFile": ["Load a different file", "Cargar otro archivo"],
   "import.group.upToSlide": ["Covers up to slide {slide}", "Cubre hasta la diapositiva {slide}"],
   "import.group.noSlide": ["No slide given", "Sin diapositiva indicada"],
   "import.difficultyDefaulted": ["Difficulty not given — set to medium", "Sin dificultad — se asignó media"],
   "import.commit": ["Save to the course", "Guardar en el curso"],
   "import.fixFirst": ["Fix the flagged questions first", "Corrige primero las preguntas marcadas"],
+  "import.needsFix": ["Needs a fix", "Requiere corrección"],
+  "import.addOption": ["Add an option", "Agregar una opción"],
+  "import.removeOption": ["Remove this option", "Quitar esta opción"],
   "import.noAutoCue": [
     "An imported deck does not stop at questions on its own. You choose each question from Run Class.",
     "Una presentación importada no se detiene sola en las preguntas. Tú eliges cada pregunta desde Dar clase."
   ],
+  "import.problem.notJson": ["This file is not valid JSON: {detail}", "Este archivo no es JSON válido: {detail}"],
+  "import.problem.noQuestions": ["This file has no questions array.", "Este archivo no tiene un arreglo de preguntas."],
   "import.problem.promptEmpty": ["This question has no text", "Esta pregunta no tiene texto"],
   "import.problem.promptTooLong": ["Question is too long ({detail} characters)", "La pregunta es demasiado larga ({detail} caracteres)"],
   "import.problem.optionEmpty": ["This option is empty", "Esta opción está vacía"],
@@ -1744,8 +1751,12 @@ export const strings = {
   // to a model, not text a person reads.
   "import.prompt.title": ["The authoring prompt", "El prompt de autoría"],
   "import.prompt.lede": [
-    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below.",
-    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo."
+    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below. This exact prompt has only been tested against one model so far — see the note below before trusting it for a real class.",
+    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo. Este prompt exacto solo se ha probado contra un modelo hasta ahora — lee la nota de abajo antes de confiar en él para una clase real."
+  ],
+  "import.prompt.validationCaveat": [
+    "Checked against Claude only, on one real lecture. Not yet confirmed against ChatGPT or Gemini. Try it once on a real lecture with whichever AI you use, and check the result before relying on it in front of a class.",
+    "Verificado solo con Claude, en una clase real. Aún no se ha confirmado con ChatGPT o Gemini. Pruébalo una vez con una clase real en la IA que uses, y revisa el resultado antes de confiar en él frente a un grupo."
   ],
   "import.prompt.attach": [
     "Attach the lecture itself — the PDF or slide export — in the same message, and say how many slides it has so the questions land on the right ones.",
