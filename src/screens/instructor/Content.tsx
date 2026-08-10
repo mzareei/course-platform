@@ -431,6 +431,11 @@ function ImportPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  // Captured at the moment of commit, independent of live `deckHtml` — a
+  // full success calls resetForm() in the same tick as setResult(), which
+  // would otherwise blank deckHtml before this ever renders and make a
+  // successful deck import look like it was never attempted.
+  const [resultHadDeck, setResultHadDeck] = useState(false);
 
   // Restore a draft on mount. Only ever one in-progress import, so no picker.
   useEffect(() => {
@@ -527,6 +532,7 @@ function ImportPanel() {
           : {})
       });
       setResult(response);
+      setResultHadDeck(hasDeck);
       // A bad deck must never hide a good bank, or the reverse — but only
       // clear the draft once nothing attempted has failed, so a partial
       // failure never costs the professor their edits.
@@ -612,7 +618,7 @@ function ImportPanel() {
 
       {busy ? <p class="hint" role="status">{t("import.saving")}</p> : null}
 
-      {result ? <ImportResultSummary result={result} hasDeck={deckHtml.trim().length > 0} /> : null}
+      {result ? <ImportResultSummary result={result} hasDeck={resultHadDeck} /> : null}
     </div>
   );
 }

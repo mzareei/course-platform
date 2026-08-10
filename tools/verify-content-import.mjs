@@ -166,6 +166,23 @@ assert.match(api, /course-content-import/);
 assert.match(preview, /groupBySlide/, "the preview must group by slide range as designed");
 assert.match(preview, /difficulty_defaulted/, "a defaulted difficulty must be visible");
 assert.match(preview, /questionIsImportable/);
+// Regression guard for a real bug: every edit round-trips the WHOLE bank
+// through parseQuestionFile(), so if the serializer ever emits a concrete
+// `difficulty` for a question whose difficulty was never actually declared
+// by the file (question.difficulty_defaulted === true), editing any ONE
+// question silently clears the defaulted flag on every OTHER question too.
+// This can't be caught by executing the component (it imports "../i18n",
+// which imports the bare specifier "@preact/signals" — unresolvable by the
+// dependency-free transpile+data-URI trick used above for the pure parser,
+// with no bundler in this verifier), so it's asserted structurally instead:
+// the serializer must omit `difficulty` — not just fall back to a default
+// — whenever difficulty_defaulted is true.
+assert.match(
+  preview,
+  /difficulty:\s*question\.difficulty_defaulted\s*\?\s*undefined\s*:\s*question\.difficulty/,
+  "serializeQuestion must omit difficulty (not emit the resolved default) when difficulty_defaulted is true, " +
+  "or reparsing after editing one question clears every other question's defaulted flag"
+);
 assert.match(content, /ImportPreview/);
 assert.match(strings, /"import\.problem\.optionCount"/);
 assert.match(strings, /"import\.problem\.correctCount"/);

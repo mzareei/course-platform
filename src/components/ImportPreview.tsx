@@ -38,7 +38,13 @@ function serializeQuestion(question: NormalizedQuestion, language: ImportLanguag
         text: localized(language, option.option_text, option.option_text_es),
         correct: option.is_correct
       })),
-    difficulty: question.difficulty,
+    // Omit entirely — not just falsy — when the professor has not explicitly
+    // chosen a difficulty for THIS question. Emitting the resolved "medium"
+    // fallback here would make every reparse (triggered by editing ANY
+    // question in the bank) look like a real declared difficulty, silently
+    // clearing every other question's difficulty_defaulted flag along with
+    // the one actually being edited.
+    difficulty: question.difficulty_defaulted ? undefined : question.difficulty,
     covers_up_to_slide: question.covers_up_to_slide ?? undefined,
     topic: question.topic ?? undefined,
     intended_use: question.topic_tags[0] ?? undefined
