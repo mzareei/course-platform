@@ -14,7 +14,7 @@ files in order. Together they are meant to replace having been in the room.
 | `05-status.md` | What is finished, what is left, in priority order |
 | `06-runbook.md` | Build, deploy, test, verify — the exact commands |
 | `07-pitfalls.md` | Traps that have already cost hours. **Read this before debugging anything.** |
-| `PROJECT-HANDOFF.md` | Durable current state, decisions, deployments, pending work, and continuation sequence |
+| `PROJECT-HANDOFF.md` | **Current canonical briefing:** deployed state, active worktrees, pending work, and continuation sequence |
 | `HANDOFF-PROMPT.md` | Paste into a fresh session to continue the work |
 | `CONTENT-REPO-SYNC-HANDOFF.md` | The `course-content` clone → edit → push → publish loop: verified current gap and a paste-in prompt to close it |
 
@@ -29,13 +29,16 @@ uploads.
 
 **Live:** https://course-platform-3ko.pages.dev
 
-Two repos, both required:
+Three repos are involved:
 
 - **`~/Documents/GitHub/course-platform`** — the app (Vite + TypeScript +
   Preact SPA). Deploys to Cloudflare Pages on push to `main`.
 - **`~/Documents/GitHub/mzareei.github.io`** — Supabase edge functions
   (`supabase/functions/`), database migrations (`supabase/migrations/`), the
   professor's public academic site, and the original hand-authored lecture decks.
+- **`~/Documents/GitHub/course-content`** — the private Git source for authored
+  course material. It is synchronized into platform storage explicitly; sync
+  does not release material to students.
 
 ## The three rules that matter most
 

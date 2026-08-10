@@ -6,6 +6,22 @@ the UI is silently wrong.**
 
 ---
 
+## 65. A PDF generation title is a label, not source material
+
+A test uploaded malware slides under the temporary title `test mal`. The older
+generation prompt treated the title as meaningful content and produced a deck
+about test failure instead of the uploaded malware PDF. This is a severe
+curriculum-integrity failure: a plausible-looking deck is worse than a visible
+error when it teaches the wrong subject.
+
+**Rule:** the uploaded PDF is the complete curriculum source. Preserve every
+source page and its order in the proposed plan and final deck. The typed title is
+display metadata only. A teaching brief may control pedagogy and placement, not
+invent, omit, or reorder curriculum. Run the independent grounding check before
+persisting any generated content.
+
+---
+
 ## 64. Repository sync needs a server secret and is not a release
 
 The Content screen can offer a **Sync from repository** button, but the browser must

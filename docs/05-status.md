@@ -1,6 +1,35 @@
 # Status
 
-**Last updated:** 2026-08-07
+**Last updated:** 2026-08-09
+
+### Current state supersedes older entries below — PDF teaching plans are deployed
+
+The current consolidated state is in `PROJECT-HANDOFF.md`. Read it before using
+the chronological notes below; some older entries record a discovery that was
+subsequently fixed and must not be read as the present state.
+
+The PDF generation redesign is deployed:
+
+- `0035_pdf_teaching_plans.sql` is applied in Supabase.
+- `course-generation`, `course-generation-worker`, and `course-question-bank`
+  are deployed with the teaching-brief, editable-plan, source-mapped flexible
+  question-bank, and grounding workflow.
+- The Cloudflare Pages UI is live with deck-and-bank/bank-only choice, free-text
+  teaching instructions, and structured checkpoint/question preferences.
+- The production browser has confirmed the new form. A complete fresh PDF upload
+  → plan review → generated deck/bank inspection is still required before calling
+  the end-to-end workflow browser-verified.
+
+One later backend-only compatibility change (`566bbf9`, legacy slide rendering
+without a PDF source map) has passed local verification but was committed after
+the deployed worker. Review/push it and explicitly redeploy
+`course-generation-worker` before considering it live.
+
+The content-authoring loop is complete in the real `course-content` repository:
+24 storage-backed items were pulled, validated, and one safe publish was verified
+through the real student Review path. Its README may still describe the original
+scaffold; use `PROJECT-HANDOFF.md` as the current state until that repository's
+documentation is refreshed.
 
 ### Platform-side repository sync implemented; production rollout is a separate gate
 

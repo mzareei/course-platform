@@ -1,80 +1,197 @@
-# TC2007B platform handoff
+# TC2007B platform — current agent briefing
 
-This file is the durable continuation record. Read it after `00-START-HERE.md`
-when opening the project on a new machine or with a new AI session.
+**Last consolidated:** 2026-08-09
 
-## Mission
+**Live app:** <https://course-platform-3ko.pages.dev>
 
-Build Mahdi Zareei's bilingual teaching platform for Tecnológico de Monterrey's
-TC2007B Information Security course. A professor schedules a class, presents a
-lecture deck, asks generated questions at the points students have reached,
-runs a timed end-of-class quiz, collects a reflection, and reviews grades and
-notes. Students use Today, Review, Grades, and their phone during class.
+**Supabase project:** `ojmbupftdikwmlqvibwt`
 
-Product rules already decided:
+This is the canonical continuation record. Read it after `00-START-HERE.md`
+before changing, deploying, or testing anything. Older status entries and
+handoffs are historical evidence, not a replacement for this file.
 
-- Quizzes are live-only: the professor starts them during a class session.
-- In-lecture questions are pre-generated from the deck's already-taught
-  segments and appear at embedded checkpoints; they are not random questions
-  from the whole lecture.
-- Every question is generated from lecture content; the professor does not
-  author quiz questions.
-- In-lecture participation can make up for missed end-quiz points, but final
-  grades do not exceed 100.
-- Question timers are seconds: 20 easy / 30 medium / 45 hard.
-- A class assignment makes the lecture available for student review after the
-  class; there is no separate required "add to review" action.
-- Projector results hide student identities except the final top-three podium.
-- All user-facing copy is English + Spanish.
+## What the platform does
 
-## Repository map
+Mahdi Zareei uses this bilingual (English/Spanish) platform to run TC2007B
+Information Security classes at Tecnológico de Monterrey.
 
-| Repository | Local path | Deployment |
-|---|---|---|
-| Frontend | `~/Documents/GitHub/course-platform` | Cloudflare Pages on push to `main` |
-| Backend | `~/Documents/GitHub/mzareei.github.io` | Supabase migrations/functions manually |
+- A professor manages groups, class days, content, question banks, and rosters.
+- During class, students join from a QR code, see live questions on their phones,
+  take a timed final quiz, and submit an optional reflection.
+- The professor presents the deck, sends selected pulse questions, sees private
+  results, and reviews attendance, participation, and class grades afterwards.
+- A professor can generate either a bilingual slide deck plus question bank, or a
+  question bank only, from an uploaded PDF.
+- Course materials are authored in the private `mzareei/course-content` repository
+  and can be explicitly synchronized into private platform storage. Syncing never
+  releases content to students.
 
-Supabase project ref: `ojmbupftdikwmlqvibwt`.
+## Repositories and deployment boundaries
 
-The browser never queries tables directly. It calls Supabase Edge Functions.
-Lecture HTML is always opened through the gated `/content?t=...` path; never use
-`srcdoc` or `blob:`.
+| Repository | Local path | Purpose | Deployment |
+|---|---|---|---|
+| Frontend | `~/Documents/GitHub/course-platform` | Vite + TypeScript + Preact SPA, Pages Function that serves gated content | Push to `main` deploys Cloudflare Pages |
+| Backend | `~/Documents/GitHub/mzareei.github.io` | Supabase migrations, Edge Functions, private deck templates; also the separate public academic site | Migrations/functions deploy explicitly; a Git push alone does not deploy them |
+| Content | `~/Documents/GitHub/course-content` | Private, Git-authored source HTML and metadata for course material | GitHub validates pull requests; publishing to platform storage is an explicit CLI/platform action |
 
-## Current deployed state
+Do not treat the public academic site's old `assets/course-materials/` files as
+the active platform source. They are legacy content pending public-site
+retirement.
 
-Frontend `main`: `2fb1a83` (single-screen classroom question layer).
-Backend working tree: clean-reset migrations `0030`/`0031` are prepared for
-future environments; production reset evidence is recorded below.
+## Product rules that are not optional
 
-Live app: https://course-platform-3ko.pages.dev
+1. The browser never queries Supabase tables directly. Edge Functions authorize
+   every data read and write; RLS is enabled with no browser table policies.
+2. All user-facing copy is English and Spanish.
+3. Deck HTML is always opened through gated same-origin `/content?t=…`; never
+   use `srcdoc` or `blob:`.
+4. A class session, not merely a release row, makes a live class visible to
+   students.
+5. Content synchronization and student release are separate, deliberate actions.
+6. Generated questions must be based on course source material. A professor may
+   select/reorder existing generated questions or create a short ad-hoc question
+   for a particular class plan; the general question bank remains reusable.
+7. For PDF generation, the uploaded PDF is the curriculum source of truth. The
+   typed title is only a display label. The model must cover all source pages in
+   order and may clarify with examples/analogies, but must not add new curriculum.
 
-The single-screen classroom feature is deployed:
+## Core architecture
 
-- Run Class renders one lecture deck. A checkpoint question is sent into that
-  same deck as an answer-neutral overlay, so the professor can use ordinary
-  browser fullscreen without a second projector window.
-- Reveal and grading stay private in the Checkpoint panel; Continue removes the
-  overlay and resumes the deck. The generated deck and parent shell validate
-  the protocol and reject correctness or identity leakage.
-- The old projector route and `course-presentation` function remain as
-  compatibility code only; they are not required for the classroom flow.
-- Chrome rehearsal verified the deployed instructor path: bilingual prompt,
-  A/B/C/D options, neutral reveal, and continue/resume were observed in the
-  real deck iframe.
+### Authentication and content delivery
 
-## Verification baseline
+The SPA authenticates with Supabase, but it calls Edge Functions rather than
+database tables. An authorized function mints a short-lived token; the SPA loads
+the lecture through `/content?t=…`. This route has a deck-specific CSP that
+allows the deck engine to run. Bypassing it makes the slide engine silently fail.
 
-From the frontend repository:
+### Class lifecycle
+
+1. The professor creates a group and class day, assigns a lecture/bank, and
+   starts the class.
+2. Students scan the session QR code to check in and join the live classroom.
+3. The professor selects a planned or ad-hoc pulse question, sends it, reveals
+   the result, then continues the lecture.
+4. The professor starts a sequential timed end-of-class quiz and later closes
+   the class. The class assignment makes the lecture available for Review.
+5. Gradebook shows two views per class: participation/attendance and graded
+   work. Attendance is based on QR check-in; engagement is based on live
+   responses. The reflection/exit ticket is not graded but can apply the agreed
+   class-grade penalty when missing.
+
+Question timing is fixed in seconds: easy 20, medium 30, hard 45. Live answers
+receive participation credit; correctness contributes to the class-grade policy.
+The combined grade is capped at 100, with the agreed tolerance for mistakes and
+the configured missing-reflection penalty.
+
+### Question planning
+
+Question banks are reusable and source-mapped. Each question records its topic
+and PDF/slide evidence. A professor makes a separate plan for each class:
+
+- choose existing questions by topic/source location;
+- write one quick class-specific question when useful;
+- place a question at a chosen point in the class plan; or
+- run the platform only for pulse/final questions while presenting an external
+  PDF outside the platform.
+
+This deliberately keeps questions independent from fixed HTML checkpoints.
+Editing a deck does not silently destroy a bank; the professor can adjust the
+class plan freely.
+
+### PDF generation workflow
+
+The Content screen collects a PDF, display title, generation mode, and a
+teaching brief. The brief supports free text plus structured preferences such
+as checkpoint placement/counts and an end-of-class question target.
+
+1. The worker extracts an ordered teaching-plan proposal from the PDF.
+2. The professor reviews and edits that plan before approving generation.
+3. In `deck_and_bank` mode, the worker creates source-mapped bilingual slide
+   JSON, renders deterministic HTML, and creates a flexible question bank.
+   In `bank_only` mode, it creates the bank without a deck.
+4. An independent grounding pass checks the generated output against the
+   original PDF before final persistence.
+5. Only a passed result becomes a private content item/question bank. It still
+   needs the normal explicit availability/release step before students can see it.
+
+Legacy banks retain their exact historic validation. PDF-generated banks use a
+flexible profile: no hard requirement for 18 questions. The amount should fit
+the source and teaching plan.
+
+### AI provider, prompts, and cost
+
+The generation worker uses Anthropic's Messages API with structured tool output.
+Its code default is `claude-sonnet-5`; the Supabase `ANTHROPIC_MODEL` secret can
+override that default. It makes up to four logical calls: teaching-plan proposal,
+slides (deck mode only), questions, and independent grounding. Output caps total
+44,000 tokens, but normal structured jobs use substantially less.
+
+At the current Sonnet introductory API pricing (through 2026-08-31), a normal
+deck plus bank is roughly US$0.40–$1.00; bank-only is roughly US$0.25–$0.60.
+Large/scanned PDFs or retries can be US$1–$2+. This is model API cost only, not
+Cloudflare or Supabase hosting. Treat it as an estimate until per-call token
+usage is recorded in the application.
+
+## Current implementation and deployment state
+
+### Deployed and confirmed in the live browser
+
+- The Content screen contains the new **Teaching brief** form: source-of-truth
+  notice, deck-and-bank/bank-only choice, free-text instructions, checkpoint
+  preferences, and question-count guidance.
+- Content repository sync, sharing/copying, gated private content delivery,
+  class/group management, QR joining, the single-screen presentation flow,
+  gradebook, and the earlier class lifecycle are live.
+- The real `course-content` repository contains the authoring/pull/publish
+  tooling, mirrored deck templates, and 24 pulled storage-backed items. A safe
+  publish-and-student-review test was completed on `week-02-lecture`.
+- Migration `0035_pdf_teaching_plans.sql` was applied to production.
+- Edge Functions `course-generation`, `course-generation-worker`, and
+  `course-question-bank` were deployed with the PDF teaching-plan feature.
+
+### Implemented and locally verified; deployment follow-up required
+
+- Backend worktree
+  `~/Documents/GitHub/mzareei.github.io/.worktrees/pdf-teaching-plan` is on
+  `codex/pdf-teaching-plan`, currently at `566bbf9`. Its final compatibility
+  fix renders legacy slides that have no source-PDF mapping. That commit was
+  made after the function deployment and therefore requires a later explicit
+  re-deploy of `course-generation-worker` before it is live.
+- The PDF pipeline passed local contract checks, Deno checks, frontend
+  typecheck/build, and the combined verifier suite. Do not claim an end-to-end
+  generation is fully browser-verified until a fresh PDF upload completes and
+  its resulting deck/bank are inspected through the real app.
+
+### Browser-test limitation
+
+The signed-in Chrome session can open the live instructor UI. Browser automation
+could not select a local test PDF because Chrome blocks extension access to local
+file URLs. To let an agent choose local files, open `chrome://extensions`, choose
+Details for the ChatGPT/Codex browser extension, and enable **Allow access to
+file URLs**. This is a local browser setting, not an application defect.
+
+## Verification and deployment commands
+
+Run frontend checks from the frontend worktree/repository:
 
 ```bash
-npm install
 npm run typecheck
 COURSE_PLATFORM_BACKEND_ROOT=/absolute/path/to/mzareei.github.io npm run verify
 npm run build
 ```
 
-The current baseline is 13 verifiers passing, typecheck passing, and Vite build
-passing. Backend functions do not deploy on Git push:
+Relevant PDF/class checks include:
+
+```bash
+node tools/verify-pdf-teaching-plan.mjs
+node tools/verify-slide-checkpoints.mjs
+node tools/verify-live-checkpoint-security.mjs
+node tools/verify-class-question-plans.mjs
+node tools/verify-generation-teaching-plan.mjs
+node tools/verify-generation-upload.mjs
+```
+
+Deploy a backend change only after its migration/verification review:
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
@@ -82,141 +199,50 @@ npx supabase db push --include-all --yes
 npx supabase functions deploy <function-name> --project-ref ojmbupftdikwmlqvibwt
 ```
 
-## What is complete
+Cloudflare Pages deploys the frontend when the reviewed frontend commit is pushed
+to `main`. Confirm the live app after deployment; a successful build is not UI
+evidence.
 
-- Auth, bilingual shell, themes, gated decks, generated deck/question-bank
-  pipeline, content availability, class groups and class days.
-- Student Today → Join class → live lecture → pulse → timed quiz → reflection.
-- Instructor Run Class, Gradebook per-class review, Admin, People/CSV roster,
-  private student notes, and end-class lifecycle.
-- Remote projector/controller synchronization and its privacy verifiers.
+## High-priority remaining work
 
-## Production reset and verification
+1. Finish one full browser test of PDF upload → teaching-plan review → generation
+   → inspect deck and bank → make available/assign to a test class only if needed.
+2. Re-deploy `course-generation-worker` after reviewing/pushing backend commit
+   `566bbf9` (or its successor), then record the deployed version.
+3. Conduct a real-phone class rehearsal: QR join, late join, concurrent pulse
+   answers, final quiz, reflection, close/reopen behavior, and projector reload.
+4. Decide and complete the public-site retirement of legacy teaching material
+   only after its gated replacements are verified. Do not delete content as part
+   of routine work.
+5. Consider recording Anthropic token usage/estimated cost per generation job in
+   the teacher interface.
 
-The clean reset was executed on 2026-08-03 in the signed-in Supabase SQL
-Editor, after the guarded owner precondition returned exactly one active owner.
-The count-only postcondition returned: 1 course, 1 profile, 2 memberships, 4
-groups, 1 instructor enrollment, and zero sessions, releases, attempts,
-responses, grades, notes, reflections, and audit rows. Retained TC2007B assets
-are 27 content items, 14 question banks, and 223 questions (plus options and
-generation assets). Group 401 is active; 402, 501, and 502 are planned.
+## Safety and testing rules for every agent
 
-The backend reset implementation is tracked in migrations `0030` and `0031`,
-and `tools/verify-clean-platform-reset.mjs` passes. Production was executed
-directly because the session had no Supabase CLI access token; no synthetic
-class session was created after the reset.
+- Check `git status` in all three repositories before editing. Preserve untracked
+  `.superdesign/`, `AGENTS.md`, and `.DS_Store` files unless explicitly asked.
+- Use an isolated worktree for feature work. The active PDF worktrees above
+  already exist; do not overwrite their unrelated changes.
+- Read actual Edge Function JSON responses, not just frontend TypeScript types.
+- Test through the visible user route: a student starts at Today; an instructor
+  starts at the instructor screens. Do not call an internal URL a sufficient test.
+- Do not disclose or commit access tokens, Anthropic keys, GitHub tokens, student
+  identities, email addresses, answers, grades, or notes.
+- Keep `05-status.md`, this handoff, and `07-pitfalls.md` current when behavior
+  or deployment state changes.
 
-## What is pending
+## Reading order for a new agent
 
-1. Real-phone classroom dress rehearsal with the professor and enrolled
-   students. Cover QR join from Today, late joins, concurrent answers, quiz
-   timing, reflection, podium, and a projector reload. Desktop instructor
-   rehearsal is complete; Chrome's student tab was blocked by an extension UI,
-   so this evidence must be collected with actual phones.
-2. Phase 6 public-site cleanup: remove teaching content from the public academic
-   repository, redirect retired apps, and crawl for gated-content leaks. **The
-   2026-08-05 audit found this cannot be done first** — every private object
-   links back to the public copies, so the objects must be re-published clean
-   before the public site is retired. See pitfall #57.
-3. Private content authoring and publishing — **designed, awaiting approval,
-   not built.** Read `docs/audits/2026-08-05-content-origin-audit.md` and
-   `docs/superpowers/specs/2026-08-05-private-content-publishing-design.md`.
-   No production data, storage object, or repository was created or changed.
+1. `docs/00-START-HERE.md`
+2. This file
+3. `docs/04-decisions.md`
+4. `docs/05-status.md`
+5. `docs/06-runbook.md`
+6. `docs/07-pitfalls.md`
+7. `docs/superpowers/specs/2026-08-09-pdf-teaching-plan-and-grounding-design.md`
+8. `docs/superpowers/plans/2026-08-09-pdf-teaching-plan-and-grounding.md`
+9. `docs/CONTENT-REPO-SYNC-HANDOFF.md` when changing authoring/sync behavior.
 
-## Private content architecture — status as of 2026-08-06
-
-Audit closed, design approved, implementation complete except the public-site
-retirement. **Nothing is deployed.** No production row, storage object, release
-or public page has been changed.
-
-### Verified from production (all five audit queries run 2026-08-06)
-
-27 content items: 12 lectures, 12 missions, 2 `static_path` resources, 1
-activity. 14 question banks, 223 active questions. Matches the reset record.
-
-- **Zero items are released to students.** This inverts the risk on cleaning
-  the decks: the rewrite currently disturbs nobody, and stops being free the
-  moment material is released for a class.
-- Every item points at `deck.html`, not `index.html` as the code-derived audit
-  claimed. 23 superseded `index.html` objects sit in the bucket referenced by
-  nothing (pitfall #58).
-- Only `week-01-lecture` was ever checkpoint-prepared, so 11 lectures and all
-  12 missions carry every public link they were migrated with.
-- `review-coach` and `teacher` point straight at the public first-generation
-  apps and break when those are retired.
-- `created_by` is null on all 27, so ownership was assigned, not recovered.
-
-### Built, on branch `claude/tc2007b-private-content-4cniyb` in both repos
-
-| Piece | Where |
-|---|---|
-| Group lifecycle restricted to the platform owner | both repos |
-| Ownership / sharing / versions schema + delete guard (`0032`) | backend |
-| Ownership backfill (`0033`) | backend |
-| Content scoped to its owner; upload guarded too | backend |
-| `copy_content_item` — copy with its question bank | backend |
-| Generated lectures under the same ownership rules | backend |
-| Legacy nav cleanup, anchors **and** engine script | backend |
-| `course-content-cleanup` — preview + clean, one item per call | backend |
-| The Content screen's cleanup control | frontend |
-| Owned/shared distinction and Copy action | frontend |
-| Content repository scaffold, validator, publish CLI | frontend `tools/content-repo/` |
-
-Measured on all 23 real decks rebuilt from source: **111 public references
-before the cleanup, 0 after**, every script block still parsing.
-
-Verifier baseline: **17 frontend, 62 backend.** Seven backend verifiers fail
-identically on pristine `origin/main` — pre-existing and unrelated. Frontend
-typecheck and build pass.
-
-### Blocked, and on what
-
-1. **`mzareei/course-content` does not exist.** This session's GitHub token
-   cannot create repositories (403). It is a manual step; `tools/content-repo/`
-   holds everything that goes in it.
-2. **D5/D6, retiring the public course tree**, is correctly blocked twice over:
-   the materials need the new repository first, and the stored decks must be
-   cleaned first or every mission's navigation 404s from inside the bucket.
-3. **Nothing has been verified live.** No signed-in instructor session and no
-   network route to Supabase from this environment. Every claim above is from
-   static verification or from the professor's own query output.
-
-### The deployment sequence
-
-`06-runbook.md` carries it in full. The order is not a preference: create the
-content repository, apply `0032` then `0033`, deploy the six edge functions,
-merge the frontend, clean the decks while nothing is released, and only then
-touch the public site.
-
-Destructive steps are enumerated as D1–D8 in the design document with a
-mandatory ordering (D2 → D1 → D4 → D5 → D6). **None have been performed, and
-none should be without explicit approval.** D8 — any deletion of content items,
-question banks, questions, students, grades, attempts, releases or storage
-objects — is not proposed at all.
-
-## Safe continuation sequence
-
-1. Start in `~/Documents/GitHub/course-platform` and read `00-START-HERE.md`,
-   this file, `04-decisions.md`, `05-status.md`, `06-runbook.md`, and
-   `07-pitfalls.md`.
-2. Check both repositories with `git status`, then fetch `origin/main`.
-3. Run the verification baseline before changing code.
-4. Re-read `docs/superpowers/specs/2026-07-30-production-data-reset-design.md`
-   and `docs/superpowers/plans/2026-07-30-production-data-reset.md` before any
-   future reset work.
-5. Keep this file, `05-status.md`, and `07-pitfalls.md` updated in the same
-   commit as meaningful changes. Record commit IDs, deployment IDs, verified
-   behavior, and explicit remaining work. Never record student names, emails,
-   answers, grades, or notes in repository evidence.
-
-## Known constraints and pitfalls
-
-- Instructor test sign-in is intentionally refused; instructor UI verification
-  requires Mahdi's real emailed-code session.
-- Cloudflare frontend deploys on push; Supabase edge functions require an
-  explicit deploy command.
-- The primary local checkout may contain untracked `.superdesign/` and
-  `AGENTS.md`; preserve them.
-- Do not claim a real-phone rehearsal until phones complete the flow. The clean
-  platform claim is backed by the SQL postcondition counts above; create a
-  production class only when the next real class is ready.
+The backend's short `docs/COURSE-PLATFORM-HANDOFF.md` and the content repo's
+older README contain historical material. Use this file for current status when
+they conflict, then update the stale document as part of the work that touches it.
