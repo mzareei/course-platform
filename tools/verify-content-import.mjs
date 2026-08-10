@@ -154,11 +154,12 @@ assert.deepEqual(
   "groups ascend by slide with ungrouped questions last"
 );
 
-const [api, preview, content, strings] = await Promise.all([
+const [api, preview, content, strings, promptCard] = await Promise.all([
   readFile(new URL("src/api/contentImport.ts", root), "utf8"),
   readFile(new URL("src/components/ImportPreview.tsx", root), "utf8"),
   readFile(new URL("src/screens/instructor/Content.tsx", root), "utf8"),
-  readFile(new URL("src/i18n/strings.ts", root), "utf8")
+  readFile(new URL("src/i18n/strings.ts", root), "utf8"),
+  readFile(new URL("src/components/ImportPromptCard.tsx", root), "utf8")
 ]);
 
 assert.match(api, /export async function importContent/);
@@ -191,5 +192,53 @@ assert.match(strings, /"import\.problem\.missingSpanish"/);
 assert.match(strings, /"import\.deck\.relative"/);
 assert.match(strings, /"import\.deck\.forbiddenHost"/);
 assert.match(strings, /"import\.noAutoCue"/, "the capability difference must be stated, not discovered");
+
+// ------------------------------------------------------------ authoring prompt
+// The platform makes no model call on this path, so the prompt IS the contract.
+// Each clause below was added because its absence was shown to break a real
+// import; the worked example is executed against the parser rather than eyeballed.
+assert.match(content, /ImportPromptCard/, "the prompt must be reachable from the Import tab");
+assert.match(
+  promptCard, /^export function ImportPromptCard/m,
+  "ImportPromptCard must be declared at module scope — pitfall #4"
+);
+
+const promptBody = promptCard.match(/export const IMPORT_PROMPT = `([\s\S]*?)`;\n/)?.[1];
+assert.ok(promptBody, "IMPORT_PROMPT must be an exported module-scope template literal");
+
+for (const [clause, why] of [
+  [/attachment wins and the title is ignored/i, "pitfall #65: the title is a label, never subject matter"],
+  [/test mal/, "pitfall #65's actual failure must be named, not paraphrased away"],
+  [/Exactly four, no more and no fewer/i, "four options is a display requirement, not a preference"],
+  [/JSON boolean true or false, unquoted/i, 'a quoted "true" parses and silently yields zero correct answers'],
+  [/never a bare string/i, "bare-string options parse and yield four empty options"],
+  [/Nothing wraps it/i, "a wrapper key makes the whole file import as no questions array"],
+  [/Never put Spanish text under "en"/, "Spanish under an en key is silent and unrecoverable"],
+  [/4000 characters/, "the prompt ceiling is the database column, pitfall #7"],
+  [/2000 characters per option/, "the option ceiling is the database column, pitfall #7"],
+  [/last slide of MY deck/i, "covers_up_to_slide is the professor's own numbering"],
+  [/exactly one JSON code block and nothing else/i, "commentary around the block breaks the paste"]
+]) {
+  assert.match(promptBody, clause, `authoring prompt must state: ${why}`);
+}
+
+// A model that copies the worked example verbatim must produce a loadable file,
+// so the example is parsed by the same parser the import screen uses.
+const exampleStart = promptBody.indexOf('{\n  "schema"');
+const exampleEnd = promptBody.indexOf("\n}\n", exampleStart) + 2;
+assert.ok(exampleStart > -1 && exampleEnd > exampleStart, "the prompt must carry a filled JSON example");
+const exampleBank = mod.parseQuestionFile(promptBody.slice(exampleStart, exampleEnd));
+assert.equal(exampleBank.ok, true, "the prompt's own example must be valid JSON");
+assert.equal(
+  mod.bankIsImportable(exampleBank), true,
+  "the prompt's own worked example must import with zero problems, or it teaches the wrong shape"
+);
+assert.equal(exampleBank.questions[0].options.length, 4);
+assert.equal(exampleBank.questions[0].options.filter((o) => o.is_correct).length, 1);
+
+// The prompt body is deliberately English-only; the chrome around it is not.
+for (const key of ["title", "lede", "attach", "copy", "copied", "copyFailed"]) {
+  assert.match(strings, new RegExp(`"import\\.prompt\\.${key}"`), `import.prompt.${key} must be bilingual`);
+}
 
 console.log("content import parser verified");

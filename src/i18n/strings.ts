@@ -1737,7 +1737,26 @@ export const strings = {
     "Separa varios nombres de dominio con una coma o un salto de línea — por ejemplo example.com"
   ],
   "import.deck.success": ["Lecture deck imported.", "Presentación importada."],
-  "import.deck.failed": ["The lecture deck could not be imported.", "No se pudo importar la presentación."]
+  "import.deck.failed": ["The lecture deck could not be imported.", "No se pudo importar la presentación."],
+
+  // ------------------------------------------------- import · authoring prompt
+  // Chrome only. The prompt body itself stays in English — it is instructions
+  // to a model, not text a person reads.
+  "import.prompt.title": ["The authoring prompt", "El prompt de autoría"],
+  "import.prompt.lede": [
+    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below.",
+    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo."
+  ],
+  "import.prompt.attach": [
+    "Attach the lecture itself — the PDF or slide export — in the same message, and say how many slides it has so the questions land on the right ones.",
+    "Adjunta la clase misma — el PDF o la exportación de diapositivas — en el mismo mensaje, e indica cuántas diapositivas tiene para que las preguntas apunten a las correctas."
+  ],
+  "import.prompt.copy": ["Copy the prompt", "Copiar el prompt"],
+  "import.prompt.copied": ["Copied!", "¡Copiado!"],
+  "import.prompt.copyFailed": [
+    "This browser would not let the page copy for you. Select the text below and copy it yourself.",
+    "Este navegador no permitió que la página copiara por ti. Selecciona el texto de abajo y cópialo tú."
+  ]
 } as const;
 
 export type StringKey = keyof typeof strings;

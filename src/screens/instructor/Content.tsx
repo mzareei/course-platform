@@ -19,6 +19,7 @@ import { GenerationBriefForm } from "../../components/GenerationBriefForm";
 import { GenerationPlanReview } from "../../components/GenerationPlanReview";
 import { QuestionBanks } from "../../components/QuestionBanks";
 import { ImportPreview } from "../../components/ImportPreview";
+import { ImportPromptCard } from "../../components/ImportPromptCard";
 import {
   bankIsImportable, parseQuestionFile, type ParsedBank
 } from "../../features/import/questionFile";
@@ -563,6 +564,10 @@ function ImportPanel() {
       ) : null}
 
       {error ? <p class="error-text" role="alert">{error}</p> : null}
+
+      {/* The prompt comes before the upload because that is the order the work
+          happens in: copy it, run it in your own AI, bring the file back. */}
+      <ImportPromptCard />
 
       <div class="card stack">
         <label class="field">
