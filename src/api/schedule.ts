@@ -100,3 +100,10 @@ export function cancelSession(sessionId: string, reason?: string) {
     reason: reason || "Cancelled from the schedule."
   });
 }
+
+export function deleteSession(sessionId: string) {
+  return callFn<{ deleted: true; sessions: ClassSession[] }>("course-session-management", {
+    action: "delete_session",
+    session_id: sessionId
+  });
+}

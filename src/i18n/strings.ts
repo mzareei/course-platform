@@ -644,6 +644,13 @@ export const strings = {
     "¿Cancelar {title}? Desaparecerá de tu calendario y los estudiantes ya no podrán entrar. Lo ya calificado se conserva."
   ],
   "schedule.cancelled": ["{title} was cancelled.", "Se canceló {title}."],
+  "schedule.delete": ["Delete", "Eliminar"],
+  "schedule.deleteConfirm": [
+    "Permanently delete \"{title}\"? This also removes its pulse-question history and any notes recorded for it. Related grade records will be unlinked, not deleted.",
+    "¿Eliminar permanentemente \"{title}\"? Esto también borra su historial de preguntas en vivo y las notas registradas. Los registros de calificación relacionados se desvincularán, no se eliminarán."
+  ],
+  "schedule.deleted": ["\"{title}\" was deleted.", "\"{title}\" fue eliminado."],
+  "schedule.deleteFailed": ["Could not delete this class day.", "No se pudo eliminar este día de clase."],
   "schedule.run": ["Run this class", "Dar esta clase"],
 
   "people.roster": ["Roster", "Lista del curso"],

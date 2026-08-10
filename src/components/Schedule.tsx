@@ -8,7 +8,7 @@
 // Module scope, per docs/07-pitfalls.md #4.
 import { useEffect, useState } from "preact/hooks";
 import {
-  listSessions, cancelSession, listSections,
+  listSessions, cancelSession, deleteSession, listSections,
   type ClassSession, type CourseSection
 } from "../api/schedule";
 import { createClass } from "../api/classes";
@@ -104,6 +104,23 @@ export function Schedule() {
     }
   }
 
+  async function onDelete(session: ClassSession) {
+    if (!confirm(t("schedule.deleteConfirm", { title: session.title }))) return;
+    setError(null);
+    setNotice(null);
+    setBusy(session.session_id);
+    try {
+      await deleteSession(session.session_id);
+      setNotice(t("schedule.deleted", { title: session.title }));
+      await load();
+      await refreshContext();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("schedule.deleteFailed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function onSessionSaved(session: ClassSession) {
     setEditingSessionId(null);
     setNotice(t("schedule.saved", { title: session.title }));
@@ -118,7 +135,7 @@ export function Schedule() {
 
   const usableSections = sections.filter((s) => ["planned", "active"].includes(s.status));
   const sectionById = new Map(sections.map((s) => [s.id, s]));
-  const visible = sessions.filter((s) => s.state !== "cancelled");
+  const visible = sessions;
 
   return (
     <div class="stack">
@@ -185,6 +202,16 @@ export function Schedule() {
                               onClick={() => void onCancel(session)}
                             >
                               {t("schedule.cancel")}
+                            </button>
+                          ) : null}
+                          {["planned", "cancelled", "closed"].includes(session.state) ? (
+                            <button
+                              class="btn quiet"
+                              type="button"
+                              disabled={busy === session.session_id}
+                              onClick={() => void onDelete(session)}
+                            >
+                              {t("schedule.delete")}
                             </button>
                           ) : null}
                         </div>
