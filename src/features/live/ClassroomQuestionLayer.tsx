@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { PulseRound } from "../../api/pulse";
-import { t } from "../../i18n";
+import { lang, t } from "../../i18n";
 
 /**
  * The audience-facing question layer. It intentionally receives a PulseRound
@@ -10,6 +10,7 @@ import { t } from "../../i18n";
 export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) {
   const layerRef = useRef<HTMLElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const useSpanish = lang.value === "es";
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -54,8 +55,7 @@ export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) 
     >
       <div class="classroom-question-shell">
         <p class="eyebrow">{t("run.classroomQuestion.eyebrow")}</p>
-        <h2>{round.text}</h2>
-        {round.text_es ? <p class="classroom-question-es">{round.text_es}</p> : null}
+        <h2>{(useSpanish && round.text_es) || round.text}</h2>
         <p class="classroom-question-instruction">
           {t("run.classroomQuestion.answerNeutral")}
         </p>
@@ -65,12 +65,7 @@ export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) 
               <span class="classroom-question-key">
                 {String.fromCharCode(65 + index)}
               </span>
-              <span>
-                <span>{option.text}</span>
-                {option.text_es ? (
-                  <span class="classroom-question-option-es">{option.text_es}</span>
-                ) : null}
-              </span>
+              <span>{(useSpanish && option.text_es) || option.text}</span>
             </div>
           ))}
         </div>
