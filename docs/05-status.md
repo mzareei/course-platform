@@ -20,10 +20,11 @@ The PDF generation redesign is deployed:
   → plan review → generated deck/bank inspection is still required before calling
   the end-to-end workflow browser-verified.
 
-One later backend-only compatibility change (`566bbf9`, legacy slide rendering
-without a PDF source map) has passed local verification but was committed after
-the deployed worker. Review/push it and explicitly redeploy
-`course-generation-worker` before considering it live.
+The backend synchronization and deployment follow-up is complete at commit
+`0cb36b6`. The legacy-slide compatibility fix and Deno type-check fixes are now
+in GitHub `main`, the primary backend folder, and the deployed
+`course-generation`, `course-generation-worker`, and `course-question-bank`
+functions.
 
 The content-authoring loop is complete in the real `course-content` repository:
 24 storage-backed items were pulled, validated, and one safe publish was verified

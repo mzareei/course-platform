@@ -149,14 +149,12 @@ usage is recorded in the application.
 - Edge Functions `course-generation`, `course-generation-worker`, and
   `course-question-bank` were deployed with the PDF teaching-plan feature.
 
-### Implemented and locally verified; deployment follow-up required
+### Synchronized and deployed on 2026-08-09
 
-- Backend worktree
-  `~/Documents/GitHub/mzareei.github.io/.worktrees/pdf-teaching-plan` is on
-  `codex/pdf-teaching-plan`, currently at `566bbf9`. Its final compatibility
-  fix renders legacy slides that have no source-PDF mapping. That commit was
-  made after the function deployment and therefore requires a later explicit
-  re-deploy of `course-generation-worker` before it is live.
+- Backend GitHub `main`, the primary backend folder, and the active PDF worktree
+  are synchronized at `0cb36b6`.
+- The final compatibility/type-check fixes are deployed in
+  `course-generation`, `course-generation-worker`, and `course-question-bank`.
 - The PDF pipeline passed local contract checks, Deno checks, frontend
   typecheck/build, and the combined verifier suite. Do not claim an end-to-end
   generation is fully browser-verified until a fresh PDF upload completes and
@@ -207,8 +205,7 @@ evidence.
 
 1. Finish one full browser test of PDF upload → teaching-plan review → generation
    → inspect deck and bank → make available/assign to a test class only if needed.
-2. Re-deploy `course-generation-worker` after reviewing/pushing backend commit
-   `566bbf9` (or its successor), then record the deployed version.
+2. Complete and record one fresh browser test of the PDF generation result.
 3. Conduct a real-phone class rehearsal: QR join, late join, concurrent pulse
    answers, final quiz, reflection, close/reopen behavior, and projector reload.
 4. Decide and complete the public-site retirement of legacy teaching material

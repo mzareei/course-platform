@@ -73,11 +73,9 @@ Current important state:
 - The PDF worker defaults to `claude-sonnet-5` unless `ANTHROPIC_MODEL` overrides
   it. A typical deck+bank costs roughly US$0.40–$1.00 in model API usage;
   bank-only roughly US$0.25–$0.60. Read the handoff for assumptions.
-- Backend worktree
-  `~/Documents/GitHub/mzareei.github.io/.worktrees/pdf-teaching-plan` currently
-  has a later legacy-slide compatibility fix at `566bbf9`. It must be reviewed,
-  pushed, and `course-generation-worker` explicitly re-deployed before that
-  particular fix is live.
+- Backend GitHub `main`, the primary backend folder, and the active PDF worktree
+  are synchronized at `0cb36b6`. The legacy-slide compatibility and Deno
+  type-check fixes are deployed in the three generation-related functions.
 - The next high-value task is a real browser PDF upload → plan review →
   generation → deck/bank inspection. If automation must select a local PDF,
   Chrome needs **Allow access to file URLs** enabled for the Codex/ChatGPT
