@@ -14,6 +14,7 @@
 // real lectures and would silently blank any field not echoed back.
 import { callFn } from "./client";
 import { canReleaseToReview } from "./contentVisibility";
+import type { StringKey } from "../i18n/strings";
 
 export class ContentNotReviewableError extends Error {
   constructor() {
@@ -287,4 +288,23 @@ export function unshareContentItem(contentItemId: string, sectionId: string) {
     content_item_id: contentItemId,
     section_id: sectionId
   });
+}
+
+export function deleteContentItem(contentItemId: string) {
+  return callFn<{ content_item_id: string; deleted: boolean }>("course-content-library", {
+    action: "delete_content_item",
+    content_item_id: contentItemId
+  });
+}
+
+const CONTENT_ITEM_DELETE_ERROR_KEYS = new Set<StringKey>([
+  "content.library.content_item_not_found",
+  "content.library.content_item_not_owned",
+  "content.library.content_item_has_active_release",
+  "content.library.content_item_has_active_bank"
+]);
+
+export function contentItemDeleteErrorKey(code?: string | null): StringKey | null {
+  const next = `content.library.${String(code || "").trim()}` as StringKey;
+  return CONTENT_ITEM_DELETE_ERROR_KEYS.has(next) ? next : null;
 }

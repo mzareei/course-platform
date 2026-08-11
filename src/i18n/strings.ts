@@ -1603,6 +1603,29 @@ export const strings = {
     "{group} ya no puede ver {title}. Una copia que ya hayan tomado sigue siendo suya."
   ],
   "content.library.revokeFailed": ["Could not revoke that share.", "No se pudo revocar ese acceso."],
+  "content.library.delete": ["Delete", "Eliminar"],
+  "content.library.deleteConfirm": [
+    "Permanently delete \"{title}\"? This cannot be undone.",
+    "¿Eliminar permanentemente \"{title}\"? Esto no se puede deshacer."
+  ],
+  "content.library.deleted": ["\"{title}\" was deleted.", "\"{title}\" fue eliminado."],
+  "content.library.deleteFailed": ["Could not delete this material.", "No se pudo eliminar este material."],
+  "content.library.content_item_not_found": [
+    "This item could not be found.",
+    "No se encontró este material."
+  ],
+  "content.library.content_item_not_owned": [
+    "You don't have permission to delete this item.",
+    "No tienes permiso para eliminar este material."
+  ],
+  "content.library.content_item_has_active_release": [
+    "This item is currently available to students and can't be deleted. Remove it from Review first.",
+    "Este material está disponible actualmente para los estudiantes y no se puede eliminar. Quítalo de Revisión primero."
+  ],
+  "content.library.content_item_has_active_bank": [
+    "This item still has an active question bank. Delete the bank first, then this item.",
+    "Este material todavía tiene un banco de preguntas activo. Elimina el banco primero y luego este material."
+  ],
   "content.cancel": ["Cancel", "Cancelar"],
   "content.approvedNote": [
     "Approved — it now appears in your content library as a draft, ready to release for a class.",

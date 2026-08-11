@@ -13,6 +13,7 @@ import {
   contentLibrary, listReleases, updateReleaseState, makeAvailable, studentsCanOpen, ContentNotReviewableError,
   syncContentFromRepository,
   copyContentItem, shareContentItem, unshareContentItem,
+  deleteContentItem, contentItemDeleteErrorKey,
   type ContentItem, type ContentLibrary as Library, type ReleaseRow
 } from "../api/content";
 import { updateClass } from "../api/classes";
@@ -21,6 +22,8 @@ import { canReleaseToReview } from "../api/contentVisibility";
 import { PublicLinkCleanup } from "./PublicLinkCleanup";
 import { refreshContext } from "../state/session";
 import { t, formatDay } from "../i18n";
+import { ApiError } from "../api/client";
+import type { StringKey } from "../i18n/strings";
 
 type Filter = "all" | "available" | "hidden";
 const ASSIGNABLE_SESSION_STATES = ["planned", "open", "continued"];
@@ -72,11 +75,14 @@ export function ContentLibraryView() {
       await work();
       await load();
     } catch (e) {
+      const deleteErrorKey: StringKey | null = e instanceof ApiError ? contentItemDeleteErrorKey(e.code) : null;
       setItemError((current) => ({
         ...current,
         [itemId]: e instanceof ContentNotReviewableError
           ? t("content.library.notReviewable")
-          : e instanceof Error ? e.message : failureMessage
+          : deleteErrorKey !== null
+            ? t(deleteErrorKey)
+            : e instanceof Error ? e.message : failureMessage
       }));
     } finally {
       setBusy(null);
@@ -254,6 +260,22 @@ export function ContentLibraryView() {
                     }}
                   >
                     {t("content.library.share")}
+                  </button>
+                ) : null}
+                {canEdit && !item.is_shared_with_me ? (
+                  <button
+                    class="btn quiet"
+                    type="button"
+                    disabled={busy === item.id}
+                    onClick={() => {
+                      if (!confirm(t("content.library.deleteConfirm", { title: item.title }))) return;
+                      void run(item.id, async () => {
+                        await deleteContentItem(item.id);
+                        setNotice(t("content.library.deleted", { title: item.title }));
+                      }, t("content.library.deleteFailed"));
+                    }}
+                  >
+                    {busy === item.id ? t("content.library.working") : t("content.library.delete")}
                   </button>
                 ) : null}
               </div>
