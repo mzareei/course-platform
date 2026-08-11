@@ -128,7 +128,11 @@ function QuestionBankCard({
     setDeleteError(null);
     try {
       await deleteBank(bank.bank_id);
-      await onRefresh();
+      try {
+        await onRefresh();
+      } catch {
+        // The bank is already deleted server-side; refresh is best effort.
+      }
     } catch (cause) {
       setDeleteError(cause instanceof Error ? cause.message : t("content.banks.deleteBankFailed"));
       setDeleting(false);
