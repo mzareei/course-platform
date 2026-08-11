@@ -134,6 +134,8 @@ export function ContentLibraryView() {
 
   return (
     <div class="stack">
+      {notice ? <p class="hint" role="status">{notice}</p> : null}
+
       {reviewableItems.length ? (
         <>
           <p class="hint">{t("content.library.lede")}</p>
@@ -163,8 +165,6 @@ export function ContentLibraryView() {
             </div>
           </div>
 
-          {notice ? <p class="hint" role="status">{notice}</p> : null}
-
           {items.map((item) => {
             const mine = releasesByItem.get(item.id) ?? [];
             const effectiveReleases = mine.filter((release) => studentsCanOpen(release.state, release.opens_at));
@@ -184,7 +184,7 @@ export function ContentLibraryView() {
             const canEdit = item.can_edit !== false;
 
             return (
-              <div class="card stack">
+              <div class="card stack" key={item.id}>
                 <div class="row" style="justify-content: space-between; align-items: flex-start; gap: 0.8rem;">
                   <div>
                     <h3>{item.title}</h3>
@@ -501,7 +501,7 @@ export function ContentLibraryView() {
             const itemReleases = releasesByItem.get(item.id) ?? [];
             const failure = itemError[item.id];
             return (
-              <div class="card row" style="justify-content: space-between; align-items: center;">
+              <div class="card row" style="justify-content: space-between; align-items: center;" key={item.id}>
                 <span>{item.title}</span>
                 <div class="stack" style="align-items: flex-end; gap: 0.3rem;">
                   <button

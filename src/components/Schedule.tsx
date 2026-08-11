@@ -6,6 +6,7 @@
 // end-of-class quiz, reflections — hangs off a row created here.
 //
 // Module scope, per docs/07-pitfalls.md #4.
+import { Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import {
   listSessions, cancelSession, deleteSession, listSections,
@@ -178,7 +179,7 @@ export function Schedule() {
                 const editable =
                   EDITABLE_SESSION_STATES.includes(session.state) && session.actual_start_at == null;
                 return (
-                  <>
+                  <Fragment key={session.session_id}>
                     <tr>
                       <td>{dayLabel(session.planned_date)}</td>
                       <td>{session.title}</td>
@@ -248,7 +249,7 @@ export function Schedule() {
                         </td>
                       </tr>
                     ) : null}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>

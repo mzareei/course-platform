@@ -1474,8 +1474,8 @@ export const strings = {
   ],
   "content.banks.deleteBankFailed": ["Could not delete this question bank.", "No se pudo eliminar este banco de preguntas."],
   "content.banks.forceDeleteWarning": [
-    "This will also permanently delete every recorded student answer for this bank's questions. There is no undo.",
-    "Esto también eliminará permanentemente cada respuesta de estudiante registrada para las preguntas de este banco. No hay forma de deshacerlo."
+    "This will also permanently delete every recorded student answer for this bank's questions, and every recorded live-question round for any class session that ever used it. There is no undo.",
+    "Esto también eliminará permanentemente cada respuesta de estudiante registrada para las preguntas de este banco, y cada ronda de preguntas en vivo registrada de cualquier sesión de clase que lo haya usado. No hay forma de deshacerlo."
   ],
   "content.banks.questionDeleted": ["Question removed from the active bank.", "Pregunta retirada del banco activo."],
   "content.banks.questionSaved": ["Question saved.", "Pregunta guardada."],
