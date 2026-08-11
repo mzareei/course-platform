@@ -6,6 +6,45 @@ the UI is silently wrong.**
 
 ---
 
+## 70. A session that can start with no lecture must also be able to end with no lecture
+
+**Reported by the professor 2026-08-11: three sessions (`Malware`, `mal code`,
+`mal v2`) stuck live, "Could not end the class", and no delete button ever
+appeared for them.**
+
+`start_class_session_atomic` has no content requirement, and Run Class says so
+explicitly on screen: *"The class can still start, but checkpoints and the
+final quiz need a lecture selected on the class day."* But
+`close_class_session_with_review` (0027) unconditionally threw when
+`content_item_id is null`, because closing always tried to create a review
+release for that content. A session started with no lecture attached could
+therefore never close.
+
+That turned into a genuine dead end, not just a blocked action: `live` has no
+transition to `cancelled` (`allowedSessionTransitions` only allows
+`live → paused | closed`), and `delete_class_session_atomic` refuses any state
+other than `planned | cancelled | closed` **even with `p_force`** — force
+(0038) only bypasses the recorded-pulse-activity check, deliberately never the
+"this is happening right now" state guard. So a live session with no content
+could not close, could not cancel, and could not be deleted, force or not.
+Confirmed against production before fixing: all three sessions had
+`content_item_id = null`; one (`mal code`) also had a real recorded pulse
+round, which is why its eventual delete still needed the force-confirm step
+— that guard was working correctly, the closing guard was not.
+
+**Rule:** when a state machine's entry condition is more permissive than its
+exit condition for the same field, anything that enters through the gap the
+exit doesn't cover gets stuck — check every transition's guards against every
+other transition's guards for the same optional field, not just against that
+one transition's own preconditions. Fixed in migration `0039`: closing with no
+lecture attached skips the content-release write (there's nothing to release
+for review) instead of refusing to close; behavior for sessions that do have a
+lecture is unchanged. Same family as pitfall #16 ("every state machine needs a
+way back"), but here the missing edge was never an edge anyone drew on the
+diagram — a supported *entry* state that had no matching *exit* path.
+
+---
+
 ## 69. A hard-delete's safety story must trace every cascade hop and every write path, not just the first of each
 
 **Caught twice in the same batch of work (class session delete, content item
