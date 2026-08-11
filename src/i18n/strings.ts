@@ -493,8 +493,25 @@ export const strings = {
     "Exporta tu lista de clase como CSV y súbela aquí. No se guarda nada hasta que veas exactamente qué va a cambiar."
   ],
   "roster.import.columns": [
-    "Needs a column for email, name and section. A student id column is optional, and role defaults to student. Common header names in English and Spanish are recognised.",
-    "Necesita una columna de correo, una de nombre y una de grupo. La columna de matrícula es opcional y el rol es estudiante por omisión. Se reconocen los encabezados más comunes en inglés y español."
+    "Four columns: full name, student id, institutional email and group. Name, email and group are required; student id is optional. Common header names in English and Spanish are recognised, and role defaults to student.",
+    "Cuatro columnas: nombre completo, matrícula, correo institucional y grupo. El nombre, el correo y el grupo son obligatorios; la matrícula es opcional. Se reconocen los encabezados más comunes en inglés y español, y el rol es estudiante por omisión."
+  ],
+  "roster.import.example": ["See an example file", "Ver un archivo de ejemplo"],
+  "roster.import.exampleBody": [
+    "One header row, then one row per student:",
+    "Una fila de encabezados y luego una fila por estudiante:"
+  ],
+  "roster.import.exampleGroupNote": [
+    "The group has to match the short code of a group you already created on the Groups screen — a row whose group does not exist is skipped, and the preview tells you which ones.",
+    "El grupo debe coincidir con la clave corta de un grupo que ya hayas creado en la pantalla Grupos — una fila con un grupo que no existe se omite, y la vista previa te dice cuáles."
+  ],
+  "roster.import.exampleHeaderNote": [
+    "The header names do not have to be these exact ones: nombre, matrícula, correo and grupo work too, as do name, id, email and group.",
+    "Los encabezados no tienen que ser exactamente estos: nombre, matrícula, correo y grupo también funcionan, igual que name, id, email y group."
+  ],
+  "roster.import.exampleRoleNote": [
+    "Add a fifth column named role only if the file includes someone who is not a student — student, teaching_assistant, instructor or observer.",
+    "Agrega una quinta columna llamada role solo si el archivo incluye a alguien que no es estudiante — student, teaching_assistant, instructor u observer."
   ],
   "roster.import.choose": ["Choose a CSV file", "Elegir un archivo CSV"],
   "roster.import.reading": ["Reading the file…", "Leyendo el archivo…"],

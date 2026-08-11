@@ -14,6 +14,15 @@ import {
 
 import { t } from "../i18n";
 
+/** Shown as-is in the example table. Header names are the canonical spellings;
+ *  the parser accepts the Spanish and short ones too (see HEADER_ALIASES). */
+const EXAMPLE_HEADERS = ["full_name", "student_identifier", "institutional_email", "section_code"];
+const EXAMPLE_ROWS = [
+  ["Ana Gómez Ruiz", "A01234567", "a01234567@tec.mx", "601"],
+  ["Luis Fernando Peña", "A01765432", "a01765432@tec.mx", "601"],
+  ["Mariana Torres", "A01098765", "a01098765@tec.mx", "602"]
+];
+
 export function RosterImport({ onImported }: { onImported: () => void }) {
   const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<RosterRow[] | null>(null);
@@ -101,6 +110,36 @@ export function RosterImport({ onImported }: { onImported: () => void }) {
       <h2>{t("roster.import.title")}</h2>
       <p class="hint">{t("roster.import.body")}</p>
       <p class="hint">{t("roster.import.columns")}</p>
+
+      <details class="card muted">
+        <summary>{t("roster.import.example")}</summary>
+        <div class="stack">
+          <p class="hint">{t("roster.import.exampleBody")}</p>
+          <div class="table-scroll">
+            <table class="data">
+              <thead>
+                <tr>
+                  {EXAMPLE_HEADERS.map((header) => (
+                    <th key={header}>{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {EXAMPLE_ROWS.map((row) => (
+                  <tr key={row[2]}>
+                    {row.map((cell) => (
+                      <td key={cell}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">{t("roster.import.exampleHeaderNote")}</p>
+          <p class="hint">{t("roster.import.exampleGroupNote")}</p>
+          <p class="hint">{t("roster.import.exampleRoleNote")}</p>
+        </div>
+      </details>
 
       <div class="row">
         <label class="btn">
