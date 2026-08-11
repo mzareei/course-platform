@@ -82,9 +82,16 @@ export function Today() {
         </div>
       )}
 
+      {/*
+        No join button, by design. Scanning the QR code on the projector is the
+        only way into a live class, because the scan IS the attendance record —
+        a button here would let a student "attend" from anywhere and make the
+        professor's attendance table describe a room that was never full.
+      */}
       {sessionIsLive ? (
-        <div class="action-dock">
-          <a class="btn primary" href="/live">{t("today.joinClass")}</a>
+        <div class="card">
+          <p class="eyebrow">{t("today.scanToJoin")}</p>
+          <p>{t("today.scanToJoinBody")}</p>
         </div>
       ) : null}
     </div>

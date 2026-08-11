@@ -2,6 +2,46 @@
 
 **Last updated:** 2026-08-11
 
+### Class record shipped: QR-only check-in, attendance/engagement, per-class grading
+
+Migration `0041` and five edge functions are deployed. Design:
+`docs/superpowers/specs/2026-08-11-class-record-attendance-and-grading-design.md`.
+
+**The QR code is now the only way into a live class.** Scanning writes a
+`class_attendance` row (first scan wins; a re-scan never moves the arrival
+time), and that row is what `course-pulse`, `course-activity-attempt` and
+`course-exit-ticket` all check before letting a student take part. The **Join
+class** button is gone from Today. `/live` renders a scan prompt when the server
+says the caller has not checked in.
+
+**`/teach/class/:sessionId`** — reached from the Gradebook per-class picker —
+carries the two tables:
+
+- **Attendance and engagement**: check-in time, Present / Late / Left early /
+  Absent (late threshold is `class_sessions.late_after_minutes`, default 5),
+  pulse response count, engagement % (answered ÷ pushed), last activity. A
+  **Mark present** control writes an instructor-sourced row with a required
+  note — the recovery path when a phone dies or the projector QR fails.
+- **Class grading**: pulse correct/total, quiz correct/total, submission status,
+  final grade. 30% pulses + 70% quiz, scaled against `MASTERY_THRESHOLD = 0.8`
+  and capped at 100; a missing reflection costs 20%. Every row expands into the
+  arithmetic. Overrides are append-only in `class_grade_overrides` with a
+  database-enforced written reason, and never alter the calculated number.
+
+**Post to the gradebook** is explicit per class: it ensures a `Class grades`
+category and a `gradebook_items` row for the session, then upserts
+`gradebook_scores` (`score_raw` = calculated, `score_final` = effective).
+
+Two consequences worth knowing before the next class:
+
+- **Past sessions show everyone Absent.** There are no historical attendance
+  rows to backfill from — the data never existed.
+- **A class that is live right now locks students out until they re-scan.**
+
+**Not verified by an agent:** everything instructor-facing here needs the
+professor signed in (see the standing constraint below). The student-side gate
+is testable end to end; the two tables are not.
+
 ### Cleanup deletes deployed; unmanaged items + force-delete added and deployed on top
 
 Both batches described below are now fully deployed and live.

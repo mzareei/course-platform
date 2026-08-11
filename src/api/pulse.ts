@@ -53,6 +53,14 @@ export interface PulseResults {
 export interface StudentPulseView {
   session_state: string;
   round: PulseRound | null;
+  /**
+   * Whether this student scanned the class QR code (or was marked present by
+   * the professor). The live screen is gated on this rather than on stored
+   * state, so a second device or a cleared browser still works. Always true for
+   * teachers — they run the class, they do not attend it.
+   */
+  checked_in: boolean;
+  checked_in_at: string | null;
   my_answer: {
     option_key: string;
     answered_at: string;

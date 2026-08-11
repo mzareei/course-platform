@@ -16,7 +16,7 @@
   --surface-2: #eef2f8;
   --surface-3: #e4eaf3;
   --border: #dbe3ee;
-  --border-strong: #c3cee0;
+  --border-strong: #a9b8d6;
 
   --text: #12203a;
   --text-muted: #55637a;
@@ -31,7 +31,7 @@
   --accent: #0a6f65;
   --accent-soft: #e2f5f2;
 
-  --good: #15803d;
+  --good: #157a3d;
   --good-soft: #e6f5ec;
   --warn: #a45a08;
   --warn-soft: #fbefdc;
@@ -45,8 +45,10 @@
 
   --shadow-sm: 0 1px 2px rgba(18, 32, 58, 0.06), 0 1px 3px rgba(18, 32, 58, 0.05);
   --shadow: 0 6px 18px rgba(18, 32, 58, 0.07), 0 2px 6px rgba(18, 32, 58, 0.05);
+  --shadow-lg: 0 20px 44px rgba(18, 32, 58, 0.16), 0 6px 16px rgba(18, 32, 58, 0.08);
   --ring: 0 0 0 3px rgba(37, 99, 235, 0.32);
   --ease: 160ms cubic-bezier(0.2, 0, 0, 1);
+  --ease-press: 100ms cubic-bezier(0.2, 0, 0, 1);
 
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -62,7 +64,7 @@
     --surface-2: #1b2739;
     --surface-3: #223148;
     --border: #29374d;
-    --border-strong: #3a4c68;
+    --border-strong: #4c6285;
     --text: #eaf1fb;
     --text-muted: #a6b4c9;
     --text-subtle: #7f8ea6;
@@ -82,6 +84,7 @@
     --danger-soft: rgba(255, 122, 134, 0.15);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+    --shadow-lg: 0 24px 56px rgba(0, 0, 0, 0.48), 0 8px 20px rgba(0, 0, 0, 0.32);
     --ring: 0 0 0 3px rgba(90, 155, 255, 0.4);
   }
 }
@@ -93,7 +96,7 @@
   --surface-2: #1b2739;
   --surface-3: #223148;
   --border: #29374d;
-  --border-strong: #3a4c68;
+  --border-strong: #4c6285;
   --text: #eaf1fb;
   --text-muted: #a6b4c9;
   --text-subtle: #7f8ea6;
@@ -113,6 +116,7 @@
   --danger-soft: rgba(255, 122, 134, 0.15);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 24px 56px rgba(0, 0, 0, 0.48), 0 8px 20px rgba(0, 0, 0, 0.32);
   --ring: 0 0 0 3px rgba(90, 155, 255, 0.4);
 }
 
@@ -139,7 +143,10 @@ h1 { font-size: 1.6rem; font-weight: 750; letter-spacing: -0.015em; }
 h2 { font-size: 1.2rem; font-weight: 700; }
 h3 { font-size: 1rem; font-weight: 650; }
 p { margin: 0; }
-a { color: var(--primary); }
+a { color: var(--primary); text-underline-offset: 0.15em; }
+a:hover { color: var(--primary-strong); }
+
+::selection { background: var(--primary-soft); color: var(--text); }
 
 :focus-visible { outline: none; box-shadow: var(--ring); border-radius: var(--radius-sm); }
 
@@ -240,10 +247,12 @@ a { color: var(--primary); }
   border-radius: var(--radius-sm);
   cursor: pointer;
   min-height: 44px;
-  transition: background var(--ease), border-color var(--ease);
+  touch-action: manipulation;
+  transition: background var(--ease), border-color var(--ease), transform var(--ease-press), box-shadow var(--ease);
 }
 .btn:hover { background: var(--surface-2); }
-.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn.primary {
   background: var(--primary);
@@ -253,7 +262,9 @@ a { color: var(--primary); }
 .btn.primary:hover { background: var(--primary-strong); border-color: var(--primary-strong); }
 
 .btn.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover { background: var(--danger); border-color: var(--danger); color: var(--text-onfill); }
 .btn.quiet { border-color: transparent; background: transparent; color: var(--primary); }
+.btn.quiet:hover { background: var(--primary-soft); }
 
 /* The one primary action on student phones: full width, bottom anchored. */
 .action-dock {
@@ -289,6 +300,14 @@ input[type="email"], input[type="text"], input[type="number"], textarea, select 
   border-radius: var(--radius-sm);
   padding: 0.6rem 0.75rem;
   min-height: 44px;
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+input[type="email"]:hover, input[type="text"]:hover, input[type="number"]:hover, textarea:hover, select:hover {
+  border-color: var(--text-subtle);
+}
+input[type="email"]:focus-visible, input[type="text"]:focus-visible, input[type="number"]:focus-visible,
+textarea:focus-visible, select:focus-visible {
+  border-color: var(--primary);
 }
 textarea { min-height: 7rem; resize: vertical; }
 
@@ -330,6 +349,8 @@ table.data {
   min-width: 560px;
 }
 table.data th, table.data td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); }
+table.data tbody tr { transition: background var(--ease); }
+table.data tbody tr:hover { background: var(--surface-2); }
 table.data th {
   font-size: 0.72rem;
   letter-spacing: 0.07em;
@@ -340,6 +361,49 @@ table.data th {
 }
 table.data tr:last-child td { border-bottom: none; }
 table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* --------------------------------------------------- class record (2 tables) */
+/* Sortable column headings. A button, not a styled div, so the keyboard and a
+   screen reader get the same affordance the mouse does. */
+.sort-header {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sort-header:hover { color: var(--text); }
+.sort-header.active { color: var(--text); }
+table.data th.num .sort-header { width: 100%; text-align: right; }
+
+.attendance-pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+}
+.attendance-pill.present { background: var(--ok-bg, rgba(34, 160, 100, 0.14)); color: var(--ok, #1c8f5a); }
+.attendance-pill.late { background: rgba(214, 158, 46, 0.16); color: #a06b06; }
+.attendance-pill.left-early { background: rgba(120, 120, 140, 0.16); color: var(--text-muted); }
+.attendance-pill.absent { background: rgba(200, 60, 60, 0.14); color: #b23b3b; }
+
+.grade-breakdown { padding: 0.35rem 0 0.2rem; }
+.grade-breakdown ol {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.grade-breakdown .grade-breakdown-result { color: var(--text); font-weight: 650; }
 
 /* ---------------------------------------------------------------- nav tabs (instructor) */
 .nav-tabs {
@@ -364,12 +428,15 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: background var(--ease), color var(--ease), box-shadow var(--ease);
 }
+.nav-tabs a:hover { color: var(--text); background: var(--surface-1); }
 .nav-tabs a[aria-current="page"] {
   background: var(--surface-1);
   color: var(--text);
   box-shadow: var(--shadow-sm);
 }
+.nav-tabs a[aria-current="page"]:hover { background: var(--surface-1); }
 
 /* ---------------------------------------------------------------- student bottom nav */
 .bottom-nav {
@@ -392,6 +459,8 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   font-weight: 650;
   color: var(--text-subtle);
   text-decoration: none;
+  touch-action: manipulation;
+  transition: color var(--ease);
 }
 .bottom-nav a[aria-current="page"] { color: var(--primary); }
 .bottom-nav .glyph { font-size: 1.25rem; line-height: 1; }
@@ -521,10 +590,10 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.65rem 0.8rem;
-  border: 1px solid var(--warning, #d6a52f);
+  border: 1px solid var(--warn);
   border-radius: 0.75rem;
   background: var(--surface-1);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+  box-shadow: var(--shadow-lg);
 }
 .run-end-confirm {
   flex-basis: 100%;
@@ -757,9 +826,14 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
   padding: 1rem 1.1rem;
   min-height: 60px;
 }
-.pulse-choice.tappable { cursor: pointer; transition: border-color var(--ease), background var(--ease); }
+.pulse-choice.tappable {
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color var(--ease), background var(--ease), transform var(--ease-press);
+}
 .pulse-choice.tappable:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-soft); }
-.pulse-choice.tappable:disabled { opacity: 0.55; cursor: not-allowed; }
+.pulse-choice.tappable:active:not(:disabled) { transform: scale(0.985); }
+.pulse-choice.tappable:disabled { opacity: 0.5; cursor: not-allowed; }
 .pulse-choice.correct { border-color: var(--good); background: var(--good-soft); color: var(--good); }
 
 .pulse-verdict { font-weight: 700; font-size: 1.05rem; }

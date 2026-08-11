@@ -118,21 +118,28 @@ function PerClassReview() {
 
   return (
     <div class="stack">
-      <label class="stack" style="gap: 0.3rem; max-width: 26rem;">
-        <span class="hint">{t("gradebook.perClass.pick")}</span>
-        <select
-          value={sessionId}
-          onChange={(e) => setSessionId((e.target as HTMLSelectElement).value)}
-        >
-          {sessions.map((s) => (
-            <option value={s.session_id}>
-              {s.planned_date ? `${formatDay(s.planned_date)} · ` : ""}
-              {s.title || `#${s.sequence_number}`}
-              {s.section_code ? ` · ${s.section_code}` : ""}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div class="row" style="justify-content: space-between; align-items: flex-end; gap: 1rem;">
+        <label class="stack" style="gap: 0.3rem; max-width: 26rem; flex: 1;">
+          <span class="hint">{t("gradebook.perClass.pick")}</span>
+          <select
+            value={sessionId}
+            onChange={(e) => setSessionId((e.target as HTMLSelectElement).value)}
+          >
+            {sessions.map((s) => (
+              <option value={s.session_id}>
+                {s.planned_date ? `${formatDay(s.planned_date)} · ` : ""}
+                {s.title || `#${s.sequence_number}`}
+                {s.section_code ? ` · ${s.section_code}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        {sessionId ? (
+          <a class="btn primary" href={`/teach/class/${sessionId}`}>
+            {t("gradebook.perClass.openRecord")}
+          </a>
+        ) : null}
+      </div>
 
       {error ? (
         <p class="error-text" role="alert">{error}</p>

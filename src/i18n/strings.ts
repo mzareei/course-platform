@@ -95,7 +95,13 @@ export const strings = {
   // ---------------------------------------------------------------- today
   "today.title": ["Today", "Hoy"],
   "today.classLive": ["Class is live", "La clase está en curso"],
-  "today.joinClass": ["Join class", "Entrar a la clase"],
+  // There is no "join class" button any more: the QR code on the projector is
+  // the only door, because the scan is what records attendance.
+  "today.scanToJoin": ["Scan the QR code", "Escanea el código QR"],
+  "today.scanToJoinBody": [
+    "The class QR code is on the screen at the front. Scan it with your phone camera to join and mark your attendance.",
+    "El código QR de la clase está en la pantalla del frente. Escanéalo con la cámara de tu teléfono para entrar y registrar tu asistencia."
+  ],
   "today.nextClass": ["Next class", "Próxima clase"],
   "today.sessionDetails": ["{date} · Group {code}", "{date} · Grupo {code}"],
   "today.lecture": ["Lecture: {title}", "Lección: {title}"],
@@ -1834,6 +1840,156 @@ export const strings = {
   "import.prompt.copyFailed": [
     "This browser would not let the page copy for you. Select the text below and copy it yourself.",
     "Este navegador no permitió que la página copiara por ti. Selecciona el texto de abajo y cópialo tú."
+  ],
+
+  // ------------------------------------------------------------ class record
+  "live.scanToJoin": ["Scan the QR code to join", "Escanea el código QR para entrar"],
+  "live.scanToJoinBody": [
+    "You have not joined this class yet. Scan the QR code on the screen at the front with your phone camera.",
+    "Todavía no has entrado a esta clase. Escanea el código QR de la pantalla del frente con la cámara de tu teléfono."
+  ],
+  "gradebook.perClass.openRecord": ["Open the class record", "Abrir el registro de la clase"],
+
+  "classRecord.eyebrow": ["Class record", "Registro de la clase"],
+  "classRecord.heading": ["Class {number} · {title}", "Clase {number} · {title}"],
+  "classRecord.loading": ["Loading the class record…", "Cargando el registro de la clase…"],
+  "classRecord.loadFailed": [
+    "The class record could not be loaded.",
+    "No se pudo cargar el registro de la clase."
+  ],
+  "classRecord.noSession": ["Pick a class first", "Primero elige una clase"],
+  "classRecord.backToGrades": ["Back to grades", "Volver a calificaciones"],
+  "classRecord.postToGradebook": ["Post to the gradebook", "Publicar en el libro de calificaciones"],
+  "classRecord.posting": ["Posting…", "Publicando…"],
+  "classRecord.postFailed": [
+    "The grades could not be posted.",
+    "No se pudieron publicar las calificaciones."
+  ],
+  "classRecord.postedResult": [
+    "Posted {posted} grades. {skipped} students have nothing to grade yet.",
+    "Se publicaron {posted} calificaciones. {skipped} estudiantes aún no tienen nada que calificar."
+  ],
+  "classRecord.sortBy": ["Sort by {column}", "Ordenar por {column}"],
+  "classRecord.save": ["Save", "Guardar"],
+  "classRecord.saving": ["Saving…", "Guardando…"],
+  "classRecord.cancel": ["Cancel", "Cancelar"],
+  "classRecord.showDetail": ["How was this calculated?", "¿Cómo se calculó?"],
+  "classRecord.hideDetail": ["Hide the calculation", "Ocultar el cálculo"],
+
+  "classRecord.attendance.title": ["Attendance and engagement", "Asistencia y participación"],
+  "classRecord.attendance.summary": [
+    "{present} present · {late} late · {leftEarly} left early · {absent} absent",
+    "{present} presentes · {late} con retardo · {leftEarly} se retiraron antes · {absent} ausentes"
+  ],
+  "classRecord.attendance.startedAt": [
+    "Class started at {time}. Arriving more than {minutes} minutes later counts as late.",
+    "La clase inició a las {time}. Llegar más de {minutes} minutos después cuenta como retardo."
+  ],
+  "classRecord.attendance.neverStarted": [
+    "This class was never started, so nobody could scan in.",
+    "Esta clase nunca se inició, así que nadie pudo registrarse."
+  ],
+  "classRecord.attendance.footnote": [
+    "{pushed} questions were pushed to the room on {date}. Engagement is the share of them a student answered, right or wrong.",
+    "Se enviaron {pushed} preguntas al grupo el {date}. La participación es la proporción de ellas que el estudiante respondió, con acierto o sin él."
+  ],
+  "classRecord.status.present": ["Present", "Presente"],
+  "classRecord.status.late": ["Late", "Retardo"],
+  "classRecord.status.left_early": ["Left early", "Se retiró antes"],
+  "classRecord.status.absent": ["Absent", "Ausente"],
+  "classRecord.markPresent": ["Mark present", "Marcar presente"],
+  "classRecord.markPresentNote": [
+    "Why? e.g. phone battery died",
+    "¿Por qué? p. ej. se le acabó la batería"
+  ],
+  "classRecord.markPresentFailed": [
+    "That student could not be marked present.",
+    "No se pudo marcar presente a ese estudiante."
+  ],
+  "classRecord.markedByHand": ["marked by hand", "marcado a mano"],
+
+  "classRecord.column.student": ["Student", "Estudiante"],
+  "classRecord.column.studentId": ["Student ID", "Matrícula"],
+  "classRecord.column.checkIn": ["QR check-in", "Registro QR"],
+  "classRecord.column.status": ["Attendance", "Asistencia"],
+  "classRecord.column.pulseResponses": ["Responses", "Respuestas"],
+  "classRecord.column.engagement": ["Engagement", "Participación"],
+  "classRecord.column.lastActivity": ["Last activity", "Última actividad"],
+  "classRecord.column.pulseCorrect": ["Class questions right", "Preguntas de clase correctas"],
+  "classRecord.column.pulseTotal": ["Class questions asked", "Preguntas de clase totales"],
+  "classRecord.column.quizCorrect": ["Quiz questions right", "Preguntas del quiz correctas"],
+  "classRecord.column.quizTotal": ["Quiz questions asked", "Preguntas del quiz totales"],
+  "classRecord.column.submission": ["Final submission", "Entrega final"],
+  "classRecord.column.finalGrade": ["Class grade", "Calificación de la clase"],
+
+  "classRecord.grading.title": ["Class grading", "Calificación de la clase"],
+  "classRecord.grading.formula": [
+    "{pulseWeight}% class questions and {quizWeight}% final quiz. Getting {threshold}% right earns 100; below that the grade scales down proportionally. A missing final submission costs {penalty}%.",
+    "{pulseWeight}% preguntas de clase y {quizWeight}% quiz final. Acertar {threshold}% otorga 100; por debajo de eso la calificación baja de forma proporcional. Una entrega final faltante cuesta {penalty}%."
+  ],
+  "classRecord.grading.totals": [
+    "{pulses} graded class questions of {pushed} pushed · {quiz} quiz questions.",
+    "{pulses} preguntas de clase calificadas de {pushed} enviadas · {quiz} preguntas del quiz."
+  ],
+  "classRecord.submission.submitted": ["Submitted", "Entregada"],
+  "classRecord.submission.missing": ["Missing", "Faltante"],
+
+  "classRecord.override": ["Override this grade", "Ajustar esta calificación"],
+  "classRecord.changeOverride": ["Change the override", "Cambiar el ajuste"],
+  "classRecord.saveOverride": ["Save the override", "Guardar el ajuste"],
+  "classRecord.clearOverride": ["Remove the override", "Quitar el ajuste"],
+  "classRecord.overrideGrade": ["Grade out of 100", "Calificación sobre 100"],
+  "classRecord.overrideReason": ["Reason (recorded permanently)", "Motivo (queda registrado de forma permanente)"],
+  "classRecord.overrideReasonPlaceholder": [
+    "Why is this grade being changed?",
+    "¿Por qué se modifica esta calificación?"
+  ],
+  "classRecord.overrideFailed": [
+    "That grade could not be overridden.",
+    "No se pudo ajustar esa calificación."
+  ],
+  "classRecord.reasonRequired": [
+    "A written reason is required before an override can be saved.",
+    "Se requiere un motivo por escrito antes de guardar un ajuste."
+  ],
+
+  "classRecord.breakdown.pulse": [
+    "Class questions: {correct} of {total} right = {accuracy}, weighted {weight}%.",
+    "Preguntas de clase: {correct} de {total} correctas = {accuracy}, con peso de {weight}%."
+  ],
+  "classRecord.breakdown.quiz": [
+    "Final quiz: {correct} of {total} right = {accuracy}, weighted {weight}%.",
+    "Quiz final: {correct} de {total} correctas = {accuracy}, con peso de {weight}%."
+  ],
+  "classRecord.breakdown.raw": [
+    "Combined raw accuracy: {raw}.",
+    "Precisión combinada sin escalar: {raw}."
+  ],
+  "classRecord.breakdown.scaled": [
+    "Scaled: {raw} ÷ {threshold}% × 100 = {scaled}.",
+    "Escalada: {raw} ÷ {threshold}% × 100 = {scaled}."
+  ],
+  "classRecord.breakdown.capped": ["capped at 100", "limitada a 100"],
+  "classRecord.breakdown.penaltyApplied": [
+    "Final submission missing: {penalty}% deducted.",
+    "Entrega final faltante: se descuenta {penalty}%."
+  ],
+  "classRecord.breakdown.penaltyNone": [
+    "Final submission received, so no deduction.",
+    "Entrega final recibida, sin descuento."
+  ],
+  "classRecord.breakdown.calculated": [
+    "Calculated class grade: {grade}.",
+    "Calificación calculada de la clase: {grade}."
+  ],
+  "classRecord.breakdown.overrideHistory": ["Override history", "Historial de ajustes"],
+  "classRecord.breakdown.historySet": [
+    "Set to {grade} (calculated {calculated}) by {actor} on {when}",
+    "Ajustada a {grade} (calculada {calculated}) por {actor} el {when}"
+  ],
+  "classRecord.breakdown.historyCleared": [
+    "Override removed by {actor} on {when}",
+    "Ajuste eliminado por {actor} el {when}"
   ]
 } as const;
 

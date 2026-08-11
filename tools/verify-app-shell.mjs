@@ -107,7 +107,17 @@ for (const rel of ["src/config.ts", "src/api/client.ts", "src/auth/auth.ts"]) {
 
 // The one-primary-action dock exists for students
 requireMarker("src/styles/app.css", "action-dock", "bottom-anchored primary action");
-requireMarker("src/screens/student/Today.tsx", "action-dock", "Today has exactly one primary action");
+
+// Today must NOT offer a way into a live class. The QR code on the projector is
+// the only door, because scanning it is what records attendance — a button here
+// would let a student "attend" from their sofa and quietly falsify the
+// professor's attendance table. This inverts an earlier rule that required a
+// primary action dock on Today; that action was the join button.
+forbidMarker("src/screens/student/Today.tsx", 'href="/live"', "the QR scan is the only way into a live class");
+requireMarker("src/screens/student/Today.tsx", "today.scanToJoin", "Today tells students to scan the QR code");
+// The gate itself is server-side: the live screen trusts course-pulse, not
+// localStorage, so a second device or a cleared browser still works.
+requireMarker("src/screens/student/Live.tsx", "checked_in", "the live screen gates on the server's check-in");
 
 // Run Class is one cockpit around the session's selected lecture. The deck and
 // checkpoint panel must stay together, and starting must use the atomic session

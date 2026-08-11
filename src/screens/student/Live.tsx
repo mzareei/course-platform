@@ -149,6 +149,27 @@ export function Live() {
     );
   }
 
+  // The gate, and it sits ahead of every branch below on purpose: the pulse
+  // question, the quiz, and the reflection all hang off this screen, so gating
+  // any one of them individually would leave the other two open.
+  //
+  // `checked_in` comes from the server, not from localStorage — a student on a
+  // borrowed laptop or in private browsing has no stored join but does have an
+  // attendance row, and only the server knows it. The matching refusals live in
+  // course-pulse, course-activity-attempt and course-exit-ticket, so this is the
+  // courteous message rather than the enforcement.
+  if (view && !view.checked_in) {
+    return (
+      <LiveShell error={error}>
+        <div class="empty-state card">
+          <h3>{t("live.scanToJoin")}</h3>
+          <p>{t("live.scanToJoinBody")}</p>
+          <a class="btn" href="/">{t("live.backToToday")}</a>
+        </div>
+      </LiveShell>
+    );
+  }
+
   // 1. A pulse question is on screen — highest priority, matches class rhythm.
   if (round) {
     return (

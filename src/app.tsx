@@ -11,6 +11,7 @@ import { Review } from "./screens/student/Review";
 import { Grades } from "./screens/student/Grades";
 import { TeachHome } from "./screens/instructor/Home";
 import { Gradebook } from "./screens/instructor/Gradebook";
+import { ClassRecordRoute } from "./screens/instructor/ClassRecord";
 import { People } from "./screens/instructor/People";
 import { Classes } from "./screens/instructor/Classes";
 import { Content } from "./screens/instructor/Content";
@@ -86,6 +87,7 @@ function InstructorSurface() {
         <Route path="/student/review" component={StudentReviewPreview} />
         <Route path="/student/grades" component={StudentGradesPreview} />
         <Route path="/teach/run/:sessionId" component={RunClass} />
+        <Route path="/teach/class/:sessionId" component={ClassRecordRoute} />
         <Route path="/view/:releaseId" component={Viewer} />
         <Route default component={TeachHome} />
       </Router>

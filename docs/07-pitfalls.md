@@ -1650,3 +1650,43 @@ visibility into every group. The section assignment is the active
 load the permitted section IDs and apply them to reads and writes. A client
 filter is not sufficient because a crafted request could otherwise expose or
 mutate another professor's roster, sessions, releases, or grades.
+
+---
+
+## 57. Attendance is only as real as the door it is measured at
+
+`course-session-join` used to validate a join code and return `joined: true`
+without writing anything, so the platform had no check-in record at all. Two
+paths reached a live class with no scan: a **Join class** button on Today, and
+`selectLiveSessionId()`'s fallback to any live session the student was enrolled
+in.
+
+Adding an attendance table without closing both would have produced a table that
+looks authoritative and is fiction — the worst kind, because a professor would
+act on it.
+
+Two rules came out of this:
+
+- **A gate on one door is not a gate.** A student reaches a live class through
+  three functions: `course-pulse` (answer), `course-activity-attempt`
+  (start_attempt), and `course-exit-ticket` (submit). All three call
+  `_shared/attendance.ts`. Gating only the visible one leaves the other two open.
+- **Selection is not authorisation.** The client still picks *which* session to
+  ask about; only the server decides whether the student may be in it. The
+  client-side check exists to render a courteous message, never to enforce.
+
+A corollary worth remembering: `localStorage` cannot be the gate. A student on a
+borrowed laptop, or in private browsing, has no stored join and every right to
+be in the room.
+
+## 58. "Allow about 20% mistakes" is a threshold, never a count
+
+The class grade scales a raw score against `MASTERY_THRESHOLD = 0.8`. Writing it
+as "three wrong answers are forgiven" would be wrong the moment a class pushes
+ten questions instead of fifteen. The room for error is a *share* of however many
+questions were actually asked.
+
+Related: when a class ran no pulses, or no quiz, the surviving component takes
+the full weight rather than the missing one scoring zero. When neither ran the
+grade is **null**, rendered `—`. A class that graded nothing did not fail
+anybody, and a table that says `0` claims it did.
