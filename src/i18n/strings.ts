@@ -1458,6 +1458,13 @@ export const strings = {
     "Archive this question? It will no longer be used for live questions or end-of-class quizzes.",
     "¿Archivar esta pregunta? Ya no se usará para preguntas durante la clase ni para el quiz de fin de clase."
   ],
+  "content.banks.deleteBank": ["Delete bank", "Eliminar banco"],
+  "content.banks.deleteBankConfirm": [
+    "Permanently delete \"{title}\" and all {count} of its questions? This cannot be undone.",
+    "¿Eliminar permanentemente \"{title}\" y sus {count} preguntas? Esto no se puede deshacer."
+  ],
+  "content.banks.bankDeleted": ["\"{title}\" was deleted.", "\"{title}\" fue eliminado."],
+  "content.banks.deleteBankFailed": ["Could not delete this question bank.", "No se pudo eliminar este banco de preguntas."],
   "content.banks.questionDeleted": ["Question removed from the active bank.", "Pregunta retirada del banco activo."],
   "content.banks.questionSaved": ["Question saved.", "Pregunta guardada."],
   "content.banks.questionSaveFailed": ["Could not save this question.", "No se pudo guardar esta pregunta."],

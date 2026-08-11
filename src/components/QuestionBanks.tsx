@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import {
+  deleteBank,
   listBanks,
   prepareLegacyCheckpoints,
   type BackfillResult,
@@ -83,6 +84,8 @@ function QuestionBankCard({
   const [prepareError, setPrepareError] = useState<string | null>(null);
   const [prepared, setPrepared] = useState<BackfillResult | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const ready = readiness === "ready" || prepared !== null;
   const pending = readiness === "pending";
   const canRefreshDeck = controls.refresh && prepared === null;
@@ -114,6 +117,21 @@ function QuestionBankCard({
       }
     } finally {
       setPreparing(false);
+    }
+  }
+
+  async function remove() {
+    if (!confirm(t("content.banks.deleteBankConfirm", { title: bank.content_title || bank.title, count: bank.total }))) {
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteBank(bank.bank_id);
+      await onRefresh();
+    } catch (cause) {
+      setDeleteError(cause instanceof Error ? cause.message : t("content.banks.deleteBankFailed"));
+      setDeleting(false);
     }
   }
 
@@ -150,15 +168,25 @@ function QuestionBankCard({
       )}
 
       {instructorCanPrepare ? (
-        <button
-          class="btn"
-          type="button"
-          onClick={() => setReviewOpen((open) => !open)}
-        >
-          {reviewOpen
-            ? t("content.banks.closeReview")
-            : t("content.banks.reviewQuestions")}
-        </button>
+        <div class="row">
+          <button
+            class="btn"
+            type="button"
+            onClick={() => setReviewOpen((open) => !open)}
+          >
+            {reviewOpen
+              ? t("content.banks.closeReview")
+              : t("content.banks.reviewQuestions")}
+          </button>
+          <button
+            class="btn quiet"
+            type="button"
+            disabled={deleting}
+            onClick={() => void remove()}
+          >
+            {t("content.banks.deleteBank")}
+          </button>
+        </div>
       ) : null}
 
       {bank.checkpoint_coverage.length ? (
@@ -238,6 +266,10 @@ function QuestionBankCard({
 
       {prepareError ? (
         <p class="error-text" role="alert">{prepareError}</p>
+      ) : null}
+
+      {deleteError ? (
+        <p class="error-text" role="alert">{deleteError}</p>
       ) : null}
 
       {reviewOpen ? (

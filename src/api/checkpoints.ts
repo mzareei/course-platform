@@ -101,6 +101,13 @@ export function deleteQuestion(input: { question_bank_id: string; question_id: s
   );
 }
 
+export function deleteBank(questionBankId: string) {
+  return callFn<{ question_bank_id: string; deleted: boolean }>(
+    "course-question-bank",
+    { action: "delete_bank", question_bank_id: questionBankId }
+  );
+}
+
 export type BackfillResult = {
   content_item_id: string;
   question_bank_id: string;
