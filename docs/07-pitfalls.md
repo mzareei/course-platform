@@ -1690,3 +1690,59 @@ Related: when a class ran no pulses, or no quiz, the surviving component takes
 the full weight rather than the missing one scoring zero. When neither ran the
 grade is **null**, rendered `—`. A class that graded nothing did not fail
 anybody, and a table that says `0` claims it did.
+
+## 59. Two paths posting to the gradebook meant students saw the wrong one
+
+Two functions independently created gradebook categories and posted to them:
+
+| Function | Category | Weight | What it posted |
+|---|---|---|---|
+| `course-class-quiz` | `Quizzes` | 30%, drop-lowest 1 | the raw end-of-class quiz score |
+| `course-class-record` | `Class grades` | **0%** | the real composite grade |
+
+Nothing was broken in either one. The bug lived in the arithmetic *between*
+them: the weighted course total multiplied the composite by its 0% weight, so
+the only number reaching a student's phone was the raw quiz score — 43.7% where
+the class grade was 73.96. The professor's screen showed 74 and the student's
+showed 43.7, and both were reading the database correctly.
+
+Three lessons:
+
+- **A component of a grade is not a peer of it.** The quiz is 70% of the class
+  grade. Posting it beside the class grade entered the same performance twice
+  and invited exactly one of them to be read as the answer.
+- **A 0% weight is not "not configured", it is "worth nothing".** No screen
+  reported that class grades were being discarded, because discarding them was a
+  valid configuration.
+- **Whoever creates a category decides its weight, whether or not they meant
+  to.** Both `ensureGradebookCategory` implementations picked a weight inline;
+  neither author was choosing a course grading policy, but between them they had.
+
+Weighted categories are gone (migration `0043`). One class is one grade and the
+course total is their plain average, so there is nothing left to weight. If
+weighting ever returns, it must be configured in exactly one place and no
+function may invent a default on insert.
+
+## 60. Grading rules must be shared, not copied, once two screens show them
+
+The formula now renders on two screens — the professor's class record and the
+student's My Grades. It lives in `_shared/class-grade.ts` and both call
+`computeGrade`; only the data-loading differs (whole roster vs one student,
+batched across classes).
+
+Do not let the second caller grow its own copy. A student and a professor
+looking at different numbers for the same class is the single most expensive bug
+this system can produce: it is the professor's credibility, not a rendering
+glitch, and it is invisible until someone disputes a grade.
+
+## 61. A backfill that quietly matches nothing is worse than one that fails
+
+`0043` linked each class-grade item to its class session by rebuilding the
+title string `Class <n> — <title>`. An exact-string match against a title that
+can be renamed or truncated at 180 characters — and a `null` result means the
+student's My Grades screen renders *nothing at all*, with no error.
+
+`0044` exists because of that: it re-matches on the class number paired with the
+section its scores were posted into, then **raises** if any class-grade item is
+still unlinked. A migration that asserts its own postcondition turns a silent
+empty screen into a failed `db push`. Prefer that trade every time.

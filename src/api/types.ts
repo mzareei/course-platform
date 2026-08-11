@@ -97,18 +97,51 @@ export interface CourseContext {
   roster_status: "missing_profile" | "active" | "not_enrolled";
 }
 
-export interface WeightedSummary {
-  weighted_course_percent?: number;
-  configured_weight_percent?: number;
-  category_summaries?: Array<{
-    category_id: string;
-    category_name: string;
-    category_weight_percent: number;
-    category_average_percent?: number | null;
-    score_count?: number;
-    kept_score_count?: number;
-    dropped_score_count?: number;
-  }>;
+/**
+ * One class, one grade — with the arithmetic that produced it, so a student can
+ * see the same breakdown the professor sees on the class record.
+ *
+ * Mirrors StudentClassGrade in supabase/functions/_shared/class-grade.ts.
+ */
+export interface ClassGrade {
+  class_session_id: string;
+  sequence_number: number;
+  title: string;
+  planned_date: string | null;
+  pulse_correct: number;
+  pulse_total: number;
+  pulse_accuracy_percent: number | null;
+  pulse_weight_percent: number;
+  quiz_correct: number;
+  quiz_total: number;
+  quiz_accuracy_percent: number | null;
+  quiz_weight_percent: number;
+  raw_score_percent: number | null;
+  mastery_threshold_percent: number;
+  scaled_grade: number | null;
+  capped: boolean;
+  submission_present: boolean;
+  penalty_applied: boolean;
+  penalty_percent: number;
+  calculated_grade: number | null;
+  /** What is actually reported: the posted grade, instructor change included. */
+  grade: number | null;
+  adjusted: boolean;
+  adjustment_reason: string | null;
+}
+
+export interface GradingRule {
+  pulse_percent: number;
+  quiz_percent: number;
+  mastery_threshold_percent: number;
+  missing_submission_penalty_percent: number;
+}
+
+export interface CourseSummary {
+  /** Plain average of the class grades so far — never weighted. */
+  course_percent: number | null;
+  graded_class_count: number;
+  class_count: number;
 }
 
 export interface StudentProgress {
@@ -132,7 +165,9 @@ export interface StudentProgress {
     submitted_at?: string | null;
     attempt_number?: number;
   }>;
-  weighted_summary?: WeightedSummary;
+  class_grades?: ClassGrade[];
+  course_summary?: CourseSummary;
+  grading_rule?: GradingRule;
   recommendations?: Array<{ title?: string; message?: string; reason?: string }>;
   summary?: Record<string, unknown>;
 }
@@ -141,8 +176,6 @@ export interface GradebookSummary {
   categories: Array<{
     id: string;
     name: string;
-    weight_percent: number;
-    drop_lowest_count: number;
     status: string;
   }>;
   items: Array<{
@@ -165,7 +198,6 @@ export interface GradebookSummary {
     status: string;
     submitted_at?: string | null;
   }>;
-  weighted_summary?: unknown;
   actions: string[];
 }
 

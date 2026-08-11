@@ -1,4 +1,9 @@
-// I4 Gradebook — semester matrix (read), weights (read), and per-class review.
+// I4 Gradebook — semester matrix (read) and per-class review.
+//
+// There is no weights tab. A class is worth one grade, every class counts the
+// same, and the course total is their plain average — so there is no category
+// weighting left to display or configure.
+//
 // Adjustments and locking stay in the current app until the Advanced drawer
 // arrives.
 import { useEffect, useState } from "preact/hooks";
@@ -314,7 +319,7 @@ function PerClassReview() {
 export function Gradebook() {
   const [data, setData] = useState<GradebookSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"matrix" | "perClass" | "weights">("matrix");
+  const [tab, setTab] = useState<"matrix" | "perClass">("matrix");
 
   useEffect(() => {
     callFn<GradebookSummary>("course-gradebook-summary")
@@ -368,38 +373,11 @@ export function Gradebook() {
              onClick={(e) => { e.preventDefault(); setTab("perClass"); }}>
             {t("gradebook.tab.perClass")}
           </a>
-          <a href="#" role="tab" aria-current={tab === "weights" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("weights"); }}>
-            {t("gradebook.tab.weights")}
-          </a>
         </div>
       </div>
 
       {tab === "perClass" ? (
         <PerClassReview />
-      ) : tab === "weights" ? (
-        <div class="table-scroll">
-          <table class="data">
-            <thead>
-              <tr>
-                <th>{t("grades.category")}</th>
-                <th>{t("grades.weight")}</th>
-                <th>{t("gradebook.col.dropLowest")}</th>
-                <th>{t("grades.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.categories.map((cat) => (
-                <tr>
-                  <td>{cat.name}</td>
-                  <td class="num">{cat.weight_percent}%</td>
-                  <td class="num">{cat.drop_lowest_count}</td>
-                  <td><StatusPill state={cat.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       ) : students.size === 0 ? (
         <div class="empty-state card">
           <h3>{t("gradebook.emptyTitle")}</h3>

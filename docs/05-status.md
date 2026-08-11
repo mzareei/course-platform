@@ -2,6 +2,42 @@
 
 **Last updated:** 2026-08-11
 
+### One grade per class — weighted categories removed
+
+Migrations `0043` + `0044` and four edge functions are deployed. This closed a
+real defect: students were shown **43.7%** where their class grade was **73.96**.
+
+Two functions had each been creating their own gradebook category and posting to
+it — `course-class-quiz` posted the raw quiz score into `Quizzes` (weight 30%),
+`course-class-record` posted the real composite into `Class grades` (weight
+**0%**). Weighting the composite by zero meant the number on a student's phone
+was the raw quiz score alone: the one figure that ignores the mastery threshold,
+the pulse questions and the exit ticket. See pitfalls #59.
+
+What changed:
+
+- **Weighted categories are gone.** No weights tab, no category weight column,
+  no weighted total. A class is one grade; the course total is their **plain
+  average**. `Quizzes` and its per-lecture items are deleted (`0043`).
+- **`course-class-quiz` no longer creates a gradebook item.** With no item
+  carrying the quiz template, `course-activity-attempt`'s `syncGradebookScore`
+  finds nothing and posts nothing. The class record is the only writer of a
+  grade.
+- **`gradebook_items.class_session_id`** now links a class grade to its class
+  explicitly, instead of the item being found by rebuilding its title string.
+  `0044` asserts every class-grade item is linked and fails the push otherwise.
+- **The formula moved to `_shared/class-grade.ts`.** `course-class-record`
+  (whole roster) and `course-student-progress` (one student, batched across
+  classes) both call `computeGrade`, so the professor and the student can never
+  read different numbers for the same class. See pitfalls #60.
+- **Students now see the breakdown.** My Grades lists every posted class with
+  class questions right, quiz questions right, exit-ticket status and the class
+  grade, each row opening into the same arithmetic the professor sees — plus the
+  instructor's written reason when a grade was changed.
+
+Posting stays a deliberate act: a class appears on My Grades only once the
+professor posts it from the class record.
+
 ### Class record shipped: QR-only check-in, attendance/engagement, per-class grading
 
 Migration `0041` and five edge functions are deployed. Design:

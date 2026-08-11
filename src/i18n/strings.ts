@@ -172,19 +172,27 @@ export const strings = {
   "grades.eyebrow": ["Your standing", "Tu situación"],
   "grades.title": ["My Grades", "Mis Calificaciones"],
   "grades.loading": ["Loading your grades…", "Cargando tus calificaciones…"],
-  "grades.weightedTotal": ["Weighted course total so far", "Total ponderado del curso hasta ahora"],
-  "grades.category": ["Category", "Categoría"],
-  "grades.weight": ["Weight", "Peso"],
-  "grades.yourAverage": ["Your average", "Tu promedio"],
-  "grades.recentWork": ["Recent work", "Trabajo reciente"],
-  "grades.item": ["Item", "Elemento"],
-  "grades.score": ["Score", "Puntaje"],
+  "grades.courseTotal": [
+    "Course average across {count} graded class(es)",
+    "Promedio del curso en {count} clase(s) calificada(s)"
+  ],
+  "grades.byClass": ["Class by class", "Clase por clase"],
+  "grades.class": ["Class", "Clase"],
+  "grades.classLabel": ["Class {number}", "Clase {number}"],
+  "grades.classQuestions": ["Class questions right", "Preguntas de clase correctas"],
+  "grades.quizQuestions": ["Quiz questions right", "Preguntas del quiz correctas"],
+  "grades.exitTicket": ["Exit ticket", "Ficha de salida"],
+  "grades.classGrade": ["Class grade", "Calificación de la clase"],
+  "grades.howCalculated": ["How was this calculated?", "¿Cómo se calculó esto?"],
+  "grades.breakdown.adjusted": [
+    "Your instructor set this class to {grade}.",
+    "Tu profesor ajustó esta clase a {grade}."
+  ],
   "grades.status": ["Status", "Estado"],
-  "grades.gradedItem": ["Graded item", "Elemento calificado"],
   "grades.emptyTitle": ["No grades yet", "Aún no hay calificaciones"],
   "grades.emptyBody": [
-    "Quiz scores and class participation appear here after your first graded class.",
-    "Los puntajes de los quizzes y la participación aparecerán aquí después de tu primera clase calificada."
+    "Your grade for a class appears here once your instructor posts it.",
+    "Tu calificación de una clase aparece aquí en cuanto tu profesor la publica."
   ],
   "grades.revisit": ["Worth revisiting", "Vale la pena repasar"],
 
@@ -346,13 +354,11 @@ export const strings = {
   "gradebook.title": ["Gradebook", "Calificaciones"],
   "gradebook.loading": ["Loading the gradebook…", "Cargando las calificaciones…"],
   "gradebook.tab.semester": ["Semester", "Semestre"],
-  "gradebook.tab.weights": ["Weights", "Pesos"],
   "gradebook.col.student": ["Student", "Estudiante"],
-  "gradebook.col.dropLowest": ["Drop lowest", "Descartar más bajas"],
   "gradebook.emptyTitle": ["No grades yet", "Aún no hay calificaciones"],
   "gradebook.emptyBody": [
-    "Scores flow in automatically as students submit graded activities.",
-    "Los puntajes llegan automáticamente cuando los estudiantes entregan actividades calificadas."
+    "One grade per class appears here once you post it from the class record.",
+    "Una calificación por clase aparece aquí en cuanto la publicas desde el registro de la clase."
   ],
   "gradebook.perClassNote": [
     "Grade adjustments and locking stay in the current course app for now.",
