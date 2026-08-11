@@ -1,8 +1,72 @@
 # Status
 
-**Last updated:** 2026-08-10
+**Last updated:** 2026-08-11
 
-### Class Question Plan auto-checkpoints deployed; cleanup deletes + PDF-gate implemented, review-converged, not yet deployed
+### Cleanup deletes deployed; unmanaged items + force-delete added and deployed on top
+
+Both batches described below are now fully deployed and live.
+
+**Unmanaged items + force-delete** (8 tasks, 0 per-task fix rounds, 1 final
+whole-branch review with 2 frontend fixes + 1 backend fix, no Critical
+findings) closes two gaps found using the delete features in practice:
+
+- A bank-only JSON import (no deck) creates a `content_type: "quiz_bank"`
+  content item that the Content Library screen's `canReleaseToReview` filter
+  hid completely — no card, no Delete button, unreachable even though the
+  row existed. Now shown in a dedicated "Other items" delete-only section.
+- All three delete actions (class session, question bank, content item) now
+  accept a `force` flag, reachable only after a normal delete is refused for
+  *historical* recorded activity, gated behind a "type DELETE to confirm"
+  control (`src/components/ForceDeleteControl.tsx`, shared across all three
+  screens). Force never bypasses a "this is happening right now" guard
+  (session/bank state, live-class usage, currently-released content, the
+  active-bank DB trigger) — only a past-activity refusal.
+
+The final review found two real frontend bugs before deploy: `ContentLibrary`'s
+item lists had no `key` prop, which was harmless until `ForceDeleteControl`
+became the first list child holding its own state — an unkeyed re-render
+could rebind a typed-DELETE confirmation to the wrong item; and the success
+notice was nested inside a wrapper that never renders when a course has only
+unmanaged items, i.e. exactly the case this feature exists for. Both fixed.
+The backend review found none of the three audit_log writes recorded whether
+force was used — fixed, `force` is now in all three metadata objects, since
+it's the only forensic trail this system has for an irreversible operation.
+Deployed in the order the review flagged as load-bearing: migration first,
+then all three function deploys, then the frontend push — deploying a
+function before its migration would have broken the already-live *normal*
+delete outright (PostgREST can't resolve an RPC call carrying an unknown
+`p_force` argument against the old 2-arg function still in the DB).
+
+**Cleanup deletes + PDF-gate** (7 tasks, 2 fix rounds, 1 final whole-branch
+review with 2 Critical findings) is deployed: the "Generate from a PDF" tab
+is hidden (frontend-only, reversible), and real permanent delete actions
+exist for class sessions (only `planned`/`cancelled`/`closed`), question
+banks, and content items — none existed at any layer before this work. Two
+Critical findings were caught and fixed before deploy — see
+`07-pitfalls.md` #69 for the shared root cause (a hard-delete's safety story
+must trace every cascade hop and every write path into the table it
+protects, not just the first of each): deleting a class session originally
+could silently destroy real pulse-round history pushed through the legacy
+(non-plan-checkpoint) flow; deleting a content item originally had no guard
+against destroying real end-of-class quiz attempts via a 4-hop cascade.
+
+**Known, accepted, not fixed in either pass** (all judged non-blocking,
+tracked here for whoever picks this up next): session/bank refusal messages
+stay English-only (raw `Error` messages, per each file's own pre-existing
+convention) while content-item's are bilingual stable codes — closing this
+needs a stable-code convention added to two more backend files. None of the
+six delete/force-delete actions has an executable regression test — the
+single largest production-readiness gap across both batches. Content-item
+force-delete's activity-history detection compares a translated string
+client-side, which drops the "Delete anyway" offer on a live language
+switch (self-heals on retry). None of this has been browser-verified by a
+human — agent test sign-in refuses the instructor role in this project, so
+no subagent can perform that pass. Specifically worth exercising first: a
+closed class day that had live questions, a lecture with quiz history behind
+it, the unmanaged-items section's layout, and a full force-delete flow on
+each of the three entities.
+
+### Class Question Plan auto-checkpoints deployed
 
 **Class Question Plan auto-generated checkpoints** (7 task reviews, 1 fix
 round, 1 final whole-branch review with 0 findings) is deployed: migration
