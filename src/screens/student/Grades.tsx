@@ -9,15 +9,7 @@ import { useEffect, useState } from "preact/hooks";
 import { callFn } from "../../api/client";
 import type { ClassGrade, StudentProgress } from "../../api/types";
 import { t, formatDay } from "../../i18n";
-
-function grade(value: number | null) {
-  return value === null ? "—" : String(Math.round(value * 10) / 10);
-}
-
-function percent(value: number | null) {
-  return value === null ? "—" : `${Math.round(value * 10) / 10}%`;
-}
-
+import { formatGrade as grade, formatPercent as percent } from "../../features/classRecord/format";
 /**
  * How this class grade was reached, step by step — the student's copy of the
  * professor's breakdown, minus the override audit trail, which is the
@@ -112,7 +104,7 @@ export function Grades() {
 
       <div class="card" style="align-items: center; text-align: center;">
         <span class="big-number">
-          {typeof coursePercent === "number" ? `${coursePercent.toFixed(1)}%` : "—"}
+          {percent(coursePercent)}
         </span>
         <p class="hint">
           {t("grades.courseTotal", { count: progress.course_summary?.graded_class_count ?? 0 })}

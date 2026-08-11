@@ -11,6 +11,7 @@ import {
   type GradingTable as GradingTableData
 } from "../api/classRecord";
 import { nextSort, sortRows, type SortState } from "../features/classRecord/sorting";
+import { formatGrade as grade, formatPercent as percent } from "../features/classRecord/format";
 
 type SortKey =
   | "name"
@@ -29,14 +30,6 @@ const naturalDirection: Record<SortKey, "asc" | "desc"> = {
   submission: "asc",
   final_grade: "asc"
 };
-
-function grade(value: number | null) {
-  return value === null ? "—" : String(Math.round(value * 10) / 10);
-}
-
-function percent(value: number | null) {
-  return value === null ? "—" : `${Math.round(value * 10) / 10}%`;
-}
 
 function stamp(iso: string | null) {
   if (!iso) return "—";
