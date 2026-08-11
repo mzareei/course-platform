@@ -6,6 +6,70 @@ the UI is silently wrong.**
 
 ---
 
+## 71. A quiz gate built for standalone content also caught the live in-class quiz
+
+**Reported by the professor 2026-08-11, from a real rehearsal: pushed
+questions fine, then "Activity is not allowed for this section" on the
+end-of-class quiz, 0% grade, empty Gradebook, and the same lecture listed
+three times in Review.**
+
+Two separate bugs, both in the release/content-availability model, neither
+about the test student's sign-in method (that was a red herring — its
+enrollment checked out fine).
+
+**The quiz was blocked by a check that has nothing to do with the class
+being live.** `course-activity-attempt`'s `assertReleasedForStudent` requires
+a `content_releases` row for the underlying lecture in
+`released|live|scheduled` state. That's the right gate for a standalone
+activity a professor publishes from Content — but the end-of-class quiz
+(`course-class-quiz`'s `ensureTemplateAndItem`) reuses the *lecture's own*
+`content_item_id` for its activity_template, so the same gate now also
+guards a live, ephemeral, session-scoped quiz that Run Class creates on the
+fly. Nothing in Start Class touches `content_releases`, so if that lecture's
+release happened to be sitting in `review_only` from earlier work — which it
+was — every attempt was refused, with a message that names "this section,"
+not "this lecture isn't released," so there was no way to guess the real
+cause from the error. The professor's own guide says the opposite is true:
+*"Everything the students see is driven by the class session's own state"* —
+true for pulse questions and reflections, false for this one path. Fixed by
+skipping the release check entirely for a session-scoped instance
+(`class_session_id` set): its own state and `starts_at`/`ends_at` window
+(already checked by `assertActivityOpen`) is authority enough, same as pulse
+and reflection. Standalone activities are unaffected.
+
+**Closing the same lecture in the same section twice created two rows, not
+one.** `close_class_session_with_review`'s reuse lookup and its insert's `ON
+CONFLICT` target both keyed on `(content_item_id, section_id,
+class_session_id)`. Every session has a `class_session_id` nothing has ever
+seen before, so the "reuse" branch could only ever fire for a genuine retry
+of closing the exact same session — any other session closing against the
+same lecture always inserted a fresh row. `course-release-management`'s
+`create_release` already states the intended model in its own comment
+("Reuse a release with the same scope rather than accumulating rows — an
+item showing two releases for the same audience is unreadable") and
+`moveReleasesToContinuation` already reassigns `class_session_id` on an
+existing row instead of making a new one — `close_class_session_with_review`
+was just narrower than its own neighbors. Three rows had piled up for one
+lecture from three separate close events a few days apart; nothing
+de-duplicates on read (`loadVisibleReleases`, `loadReleasedPractice`), so the
+student saw the lecture three times in Review and three identical "Start
+practice" prompts in My Grades. Fixed in migration `0040`: reuse by
+`(content_item_id, section_id)` alone, with `class_session_id` following
+whichever session closed it most recently, plus a one-time consolidation of
+the three existing rows into one.
+
+**Rule:** when the same underlying column (`content_item_id`) is reused by
+two different features for two different purposes — "is this published for
+self-study" versus "is this live class's quiz open right now" — a guard
+written for one purpose will silently apply to the other unless the code
+that creates the second thing is checked too. And when a "reuse existing
+row" comment states the intended dedup key, grep for every other writer of
+that table and confirm each one actually uses the same key — a narrower key
+in just one of several writers reproduces the exact bug the comment says it
+prevents.
+
+---
+
 ## 70. A session that can start with no lecture must also be able to end with no lecture
 
 **Reported by the professor 2026-08-11: three sessions (`Malware`, `mal code`,
