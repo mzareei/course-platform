@@ -268,10 +268,18 @@ export function ContentLibraryView() {
                     type="button"
                     disabled={busy === item.id}
                     onClick={() => {
-                      if (!confirm(t("content.library.deleteConfirm", { title: item.title }))) return;
+                      if (!confirm(t("content.library.deleteConfirm", { title: item.title, releases: mine.length }))) return;
                       void run(item.id, async () => {
                         await deleteContentItem(item.id);
                         setNotice(t("content.library.deleted", { title: item.title }));
+                        // Cached TeacherSession rows in the auth context denormalize
+                        // content_item_id/content_slug/content_title/source_kind/source_ref,
+                        // and Home, RunClass, Projector, and Gradebook all read that
+                        // cache. Deleting this item nulls class_sessions.content_item_id
+                        // server-side, so without a refresh a professor who deletes an
+                        // assigned lecture would keep seeing stale references until a
+                        // full reload.
+                        await refreshContext();
                       }, t("content.library.deleteFailed"));
                     }}
                   >

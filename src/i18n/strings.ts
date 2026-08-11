@@ -640,14 +640,14 @@ export const strings = {
   "schedule.saved": ["{title} was updated.", "Se actualizó {title}."],
   "schedule.cancel": ["Cancel this class", "Cancelar esta clase"],
   "schedule.cancelConfirm": [
-    "Cancel {title}? It disappears from your schedule and students can no longer join it. Anything already graded stays.",
-    "¿Cancelar {title}? Desaparecerá de tu calendario y los estudiantes ya no podrán entrar. Lo ya calificado se conserva."
+    "Cancel {title}? It will be marked cancelled and stay visible in your schedule, but students can no longer join it. Anything already graded stays.",
+    "¿Cancelar {title}? Se marcará como cancelada y seguirá visible en tu calendario, pero los estudiantes ya no podrán entrar. Lo ya calificado se conserva."
   ],
   "schedule.cancelled": ["{title} was cancelled.", "Se canceló {title}."],
   "schedule.delete": ["Delete", "Eliminar"],
   "schedule.deleteConfirm": [
-    "Permanently delete \"{title}\"? This also removes its pulse-question history and any notes recorded for it. Related grade records will be unlinked, not deleted.",
-    "¿Eliminar permanentemente \"{title}\"? Esto también borra su historial de preguntas en vivo y las notas registradas. Los registros de calificación relacionados se desvincularán, no se eliminarán."
+    "Permanently delete \"{title}\"? Only a class day with no recorded live-question activity can be deleted. This also removes any notes recorded for it — related grade records will be unlinked, not deleted.",
+    "¿Eliminar permanentemente \"{title}\"? Solo se puede eliminar un día de clase sin actividad de preguntas en vivo registrada. Esto también borra las notas registradas — los registros de calificación relacionados se desvincularán, no se eliminarán."
   ],
   "schedule.deleted": ["\"{title}\" was deleted.", "\"{title}\" fue eliminado."],
   "schedule.deleteFailed": ["Could not delete this class day.", "No se pudo eliminar este día de clase."],
@@ -1605,8 +1605,8 @@ export const strings = {
   "content.library.revokeFailed": ["Could not revoke that share.", "No se pudo revocar ese acceso."],
   "content.library.delete": ["Delete", "Eliminar"],
   "content.library.deleteConfirm": [
-    "Permanently delete \"{title}\"? This cannot be undone.",
-    "¿Eliminar permanentemente \"{title}\"? Esto no se puede deshacer."
+    "Permanently delete \"{title}\"? Releases on record: {releases}. This cannot be undone.",
+    "¿Eliminar permanentemente \"{title}\"? Publicaciones registradas: {releases}. Esto no se puede deshacer."
   ],
   "content.library.deleted": ["\"{title}\" was deleted.", "\"{title}\" fue eliminado."],
   "content.library.deleteFailed": ["Could not delete this material.", "No se pudo eliminar este material."],
@@ -1625,6 +1625,10 @@ export const strings = {
   "content.library.content_item_has_active_bank": [
     "This item still has an active question bank. Delete the bank first, then this item.",
     "Este material todavía tiene un banco de preguntas activo. Elimina el banco primero y luego este material."
+  ],
+  "content.library.content_item_has_activity_history": [
+    "Students have completed an end-of-class quiz for this item, so it can't be deleted.",
+    "Los estudiantes ya completaron un cuestionario de fin de clase para este material, así que no se puede eliminar."
   ],
   "content.cancel": ["Cancel", "Cancelar"],
   "content.approvedNote": [

@@ -301,7 +301,8 @@ const CONTENT_ITEM_DELETE_ERROR_KEYS = new Set<StringKey>([
   "content.library.content_item_not_found",
   "content.library.content_item_not_owned",
   "content.library.content_item_has_active_release",
-  "content.library.content_item_has_active_bank"
+  "content.library.content_item_has_active_bank",
+  "content.library.content_item_has_activity_history"
 ]);
 
 export function contentItemDeleteErrorKey(code?: string | null): StringKey | null {
