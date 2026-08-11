@@ -2,6 +2,55 @@
 
 **Last updated:** 2026-08-10
 
+### Class Question Plan auto-checkpoints deployed; cleanup deletes + PDF-gate implemented, review-converged, not yet deployed
+
+**Class Question Plan auto-generated checkpoints** (7 task reviews, 1 fix
+round, 1 final whole-branch review with 0 findings) is deployed: migration
+`0036_question_slide_hints.sql` applied; `course-content-import`,
+`course-question-bank`, `course-class-question-plan` redeployed and confirmed
+live (401, not 404); frontend pushed. A professor's imported JSON now keeps
+its `covers_up_to_slide`/`topic` metadata instead of discarding it, a Class
+Question Plan auto-builds its checkpoints from that metadata the moment it's
+created, and the live picker during class is a single "which slide am I on"
+dropdown instead of a scrolling card list. Not yet browser-verified by the
+professor — agent test sign-in refuses the instructor role in this project,
+so no subagent can perform that pass.
+
+**Cleanup deletes + PDF-gate** (7 tasks, 4 fix rounds across the batch, 1
+final whole-branch review + 2 re-review rounds) is implemented, committed to
+local `main` in both repos, and **not yet deployed** — pending the
+professor's explicit go-ahead. What it adds:
+
+- The "Generate from a PDF" tab is hidden (frontend-only, reversible; the AI
+  pipeline itself is untouched).
+- Real, permanent delete actions for class sessions (only `planned` /
+  `cancelled` / `closed`, never live), question banks, and content items —
+  none of the three existed at any layer before this work.
+
+**Two Critical findings, both caught in review before deploy, both fixed and
+re-verified — see `07-pitfalls.md` #69 for the shared root cause:**
+deleting a class session originally could silently destroy real pulse-round
+history pushed through the legacy (non-plan-checkpoint) push flow; deleting a
+content item originally had no guard against destroying real end-of-class
+quiz attempts and answers via the `activity_templates → activity_instances →
+student_attempts → student_responses` cascade. Both delete paths now refuse
+outright on any real activity rather than silently losing it. A third,
+smaller gap (question bank delete could disrupt, not destroy, a live class by
+deleting its running Class Question Plan) was also closed.
+
+**Known, accepted, not fixed in this pass** (all judged non-blocking by the
+final review, tracked here for whoever picks this up next): session-delete
+and bank-delete refusal messages are English-only (raw `Error` messages, per
+each file's own pre-existing convention) while content-item's are bilingual
+stable codes — closing this needs adding a stable-code convention to two more
+backend files, out of scope for this pass. None of the three deletes has an
+executable regression test (`tools/verify-*.mjs` verifies structure/shape
+elsewhere in this codebase, not these); this is the single largest
+production-readiness gap on this work and a good candidate for the next
+increment. Content-item delete's new activity-history guard is two
+round-trips, not one transaction (narrow TOCTOU window). None of this has
+been browser-verified by a human for the same reason noted above.
+
 ### External content import is deployed — instructor browser verification is the professor's, not yet done
 
 Implemented, reviewed (5 task reviews + 2 fix rounds per repo, plus a final

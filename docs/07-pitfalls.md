@@ -6,6 +6,51 @@ the UI is silently wrong.**
 
 ---
 
+## 69. A hard-delete's safety story must trace every cascade hop and every write path, not just the first of each
+
+**Caught twice in the same batch of work (class session delete, content item
+delete), 2026-08-10, before deploy — both in review, not shipped.**
+
+Building real delete actions for class sessions, question banks, and content
+items (for clearing test/QA data), the design's safety premise was: real
+recorded activity blocks the delete via the schema's own restrict-FK
+constraints, never silently cascades away. Two of the three delete paths had
+a genuine hole in that premise, each caught by review rather than caught by
+design:
+
+- **Class session delete:** `pulse_rounds.class_session_id` is `on delete
+  cascade`. The only protection considered was
+  `pulse_rounds.plan_checkpoint_id on delete restrict` — but that only
+  covers a pulse round pushed through the newer Class Question Plan flow.
+  The legacy deck-checkpoint push flow (`course-pulse`'s `pushRound` with
+  `plan_checkpoint_id` null) is still the primary way most real classes push
+  live questions, and produces pulse rounds the restrict FK never sees.
+  Every `closed` session eligible for deletion had necessarily gone through
+  `live`, so this was the common case, not an edge case.
+- **Content item delete:** the design's cascade table stopped at the first
+  hop (`activity_templates | cascades`) and never followed it further. The
+  real chain is `content_items → activity_templates → activity_instances →
+  student_attempts → student_responses`, all `on delete cascade`, and
+  `course-class-quiz`'s `ensureTemplateAndItem` creates that chain on every
+  end-of-class quiz start — live, primary path, not dead schema. A lecture
+  with a long-closed release could still have real graded quiz attempts
+  behind it, silently destroyed.
+
+Both fixes are the same shape: refuse on the *existence* of any row at the
+relevant table (`pulse_rounds` for a session; `activity_instances` for a
+content item), not on a narrower condition that only covers one write path
+into that table.
+
+**Rule:** when a delete's safety depends on "a restrict FK will block this if
+there's real activity," verify that FK actually sits on *every* path that can
+produce the row, not just the one the feature you were just working on uses
+— and follow the cascade past the first `on delete cascade` hop to whatever
+table actually holds the thing a student would be upset to lose (an answer,
+an attempt, a grade), not just the table named in the same migration as the
+column you're deleting.
+
+---
+
 ## 68. Reusing an existing content item's slug can silently corrupt a real production bank
 
 **Caught in the final whole-branch review for external content import,
