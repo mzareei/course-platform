@@ -1636,6 +1636,10 @@ export const strings = {
     "Ya se ejecutó un cuestionario de fin de clase para este material, así que no se puede eliminar."
   ],
   "content.cancel": ["Cancel", "Cancelar"],
+  "forceDelete.trigger": ["Delete anyway", "Eliminar de todos modos"],
+  "forceDelete.placeholder": ["Type DELETE to confirm", "Escribe DELETE para confirmar"],
+  "forceDelete.confirm": ["Permanently delete", "Eliminar permanentemente"],
+  "forceDelete.cancel": ["Cancel", "Cancelar"],
   "content.approvedNote": [
     "Approved — it now appears in your content library as a draft, ready to release for a class.",
     "Aprobada — ya aparece en tu biblioteca de contenido como borrador, lista para publicarse en una clase."
