@@ -177,7 +177,6 @@ export const strings = {
     "Promedio del curso en {count} clase(s) calificada(s)"
   ],
   "grades.byClass": ["Class by class", "Clase por clase"],
-  "grades.class": ["Class", "Clase"],
   "grades.classLabel": ["Class {number}", "Clase {number}"],
   "grades.classQuestions": ["Class questions right", "Preguntas de clase correctas"],
   "grades.quizQuestions": ["Quiz questions right", "Preguntas del quiz correctas"],

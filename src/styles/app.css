@@ -394,6 +394,44 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .attendance-pill.left-early { background: rgba(120, 120, 140, 0.16); color: var(--text-muted); }
 .attendance-pill.absent { background: rgba(200, 60, 60, 0.14); color: #b23b3b; }
 
+/* ------------------------------------------------- student class grades
+
+   A phone is the student's device for this screen, and table.data carries a
+   560px min-width — on a 375px screen that is a horizontal scrollbar hiding
+   the class name behind it. One card per class instead, so nothing is ever
+   off-screen and the grade stays next to what produced it. */
+.class-grade-card { gap: 0.75rem; }
+.class-grade-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.class-grade-title { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.class-grade-title strong { font-size: 0.98rem; line-height: 1.3; }
+.class-grade-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  flex: 0 0 auto;
+}
+.class-grade-stats {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+.class-grade-stat { display: flex; flex-direction: column; gap: 0.2rem; }
+.class-grade-stat dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.class-grade-stat dd { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.class-grade-stat dd .attendance-pill { font-weight: 700; }
+
 .grade-breakdown { padding: 0.35rem 0 0.2rem; }
 .grade-breakdown ol {
   margin: 0 0 0.5rem;

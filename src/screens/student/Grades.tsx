@@ -10,6 +10,7 @@ import { callFn } from "../../api/client";
 import type { ClassGrade, StudentProgress } from "../../api/types";
 import { t, formatDay } from "../../i18n";
 import { formatGrade as grade, formatPercent as percent } from "../../features/classRecord/format";
+
 /**
  * How this class grade was reached, step by step — the student's copy of the
  * professor's breakdown, minus the override audit trail, which is the
@@ -129,67 +130,65 @@ export function Grades() {
           <p>{t("grades.emptyBody")}</p>
         </div>
       ) : (
-        <div class="table-scroll">
-          <table class="data">
-            <thead>
-              <tr>
-                <th>{t("grades.class")}</th>
-                <th class="num">{t("grades.classQuestions")}</th>
-                <th class="num">{t("grades.quizQuestions")}</th>
-                <th>{t("grades.exitTicket")}</th>
-                <th class="num">{t("grades.classGrade")}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {classGrades.map((row) => {
-                const open = openId === row.class_session_id;
-                return [
-                  <tr key={row.class_session_id}>
-                    <td>
-                      {t("grades.classLabel", { number: row.sequence_number })}
-                      {row.title ? ` — ${row.title}` : ""}
-                      {row.planned_date ? (
-                        <>
-                          <br />
-                          <span class="hint" style="font-size: 0.78rem;">
-                            {formatDay(row.planned_date)}
-                          </span>
-                        </>
-                      ) : null}
-                    </td>
-                    <td class="num">{`${row.pulse_correct} / ${row.pulse_total}`}</td>
-                    <td class="num">{`${row.quiz_correct} / ${row.quiz_total}`}</td>
-                    <td>
-                      <span
-                        class={`attendance-pill ${row.submission_present ? "present" : "absent"}`}
-                      >
-                        {row.submission_present
-                          ? t("classRecord.submission.submitted")
-                          : t("classRecord.submission.missing")}
-                      </span>
-                    </td>
-                    <td class="num"><strong>{grade(row.grade)}</strong></td>
-                    <td>
-                      <button
-                        class="btn quiet"
-                        type="button"
-                        onClick={() => setOpenId(open ? null : row.class_session_id)}
-                      >
-                        {open ? t("classRecord.hideDetail") : t("grades.howCalculated")}
-                      </button>
-                    </td>
-                  </tr>,
-                  open ? (
-                    <tr key={`${row.class_session_id}-detail`}>
-                      <td colSpan={6}><Breakdown row={row} /></td>
-                    </tr>
-                  ) : null
-                ];
-              })}
-            </tbody>
-          </table>
-        </div>
+        classGrades.map((row) => {
+          const open = openId === row.class_session_id;
+          return (
+            <section class="card class-grade-card" key={row.class_session_id}>
+              <div class="class-grade-head">
+                <div class="class-grade-title">
+                  <strong>
+                    {t("grades.classLabel", { number: row.sequence_number })}
+                    {row.title ? ` — ${row.title}` : ""}
+                  </strong>
+                  {row.planned_date ? (
+                    <span class="hint" style="font-size: 0.8rem;">
+                      {formatDay(row.planned_date)}
+                    </span>
+                  ) : null}
+                </div>
+                <span class="class-grade-value" aria-label={t("grades.classGrade")}>
+                  {grade(row.grade)}
+                </span>
+              </div>
+
+              <dl class="class-grade-stats">
+                <div class="class-grade-stat">
+                  <dt>{t("grades.classQuestions")}</dt>
+                  <dd>{`${row.pulse_correct} / ${row.pulse_total}`}</dd>
+                </div>
+                <div class="class-grade-stat">
+                  <dt>{t("grades.quizQuestions")}</dt>
+                  <dd>{`${row.quiz_correct} / ${row.quiz_total}`}</dd>
+                </div>
+                <div class="class-grade-stat">
+                  <dt>{t("grades.exitTicket")}</dt>
+                  <dd>
+                    <span
+                      class={`attendance-pill ${row.submission_present ? "present" : "absent"}`}
+                    >
+                      {row.submission_present
+                        ? t("classRecord.submission.submitted")
+                        : t("classRecord.submission.missing")}
+                    </span>
+                  </dd>
+                </div>
+              </dl>
+
+              <div class="row">
+                <button
+                  class="btn quiet"
+                  type="button"
+                  aria-expanded={open}
+                  onClick={() => setOpenId(open ? null : row.class_session_id)}
+                >
+                  {open ? t("classRecord.hideDetail") : t("grades.howCalculated")}
+                </button>
+              </div>
+
+              {open ? <Breakdown row={row} /> : null}
+            </section>
+          );
+        })
       )}
 
       {progress.recommendations?.length ? (
