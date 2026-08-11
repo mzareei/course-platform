@@ -1,5 +1,6 @@
 import { Schedule } from "../../components/Schedule";
 import { Sections } from "../../components/Sections";
+import { CourseReset } from "../../components/CourseReset";
 import { t } from "../../i18n";
 
 export function Classes() {
@@ -13,6 +14,9 @@ export function Classes() {
 
       <Sections />
       <Schedule />
+      {/* Last on the screen on purpose: you reach it by scrolling past
+          everything you actually use, never by accident. */}
+      <CourseReset />
     </div>
   );
 }

@@ -1990,6 +1990,70 @@ export const strings = {
   "classRecord.breakdown.historyCleared": [
     "Override removed by {actor} on {when}",
     "Ajuste eliminado por {actor} el {when}"
+  ],
+
+  // ------------------------------------------------------------ course reset
+  "reset.title": ["Reset the course", "Reiniciar el curso"],
+  "reset.body": [
+    "Clears everything students did — check-ins, answers, quizzes, reflections, grades — and rewinds every class to not-yet-held. Your lectures, question banks, schedule and groups stay exactly as they are.",
+    "Borra todo lo que hicieron los estudiantes — registros, respuestas, quizzes, reflexiones, calificaciones — y regresa cada clase a no impartida. Tus lecciones, bancos de preguntas, calendario y grupos quedan intactos."
+  ],
+  "reset.check": ["See what would be cleared", "Ver qué se borraría"],
+  "reset.checking": ["Counting…", "Contando…"],
+  "reset.previewFailed": [
+    "The count could not be loaded.",
+    "No se pudo cargar el conteo."
+  ],
+  "reset.summary": [
+    "{activity} rows of student activity and {legacy} rows from the old pilot apps. {sessions} classes would be rewound; all {kept} stay in the schedule.",
+    "{activity} registros de actividad de estudiantes y {legacy} registros de las apps piloto anteriores. {sessions} clases se regresarían a no impartidas; las {kept} permanecen en el calendario."
+  ],
+  "reset.col.what": ["What", "Qué"],
+  "reset.col.rows": ["Rows", "Registros"],
+  "reset.col.remove": ["Remove", "Quitar"],
+  "reset.col.checkIns": ["Check-ins", "Registros"],
+  "reset.col.answers": ["Answers", "Respuestas"],
+  "reset.col.quizzes": ["Quiz attempts", "Intentos"],
+  "reset.col.reflections": ["Reflections", "Reflexiones"],
+  "reset.row.checkIns": ["QR check-ins", "Registros por QR"],
+  "reset.row.pulseRounds": ["Questions pushed in class", "Preguntas enviadas en clase"],
+  "reset.row.pulseAnswers": ["Answers to those questions", "Respuestas a esas preguntas"],
+  "reset.row.quizAttempts": ["Quiz attempts", "Intentos de quiz"],
+  "reset.row.quizAnswers": ["Quiz answers", "Respuestas de quiz"],
+  "reset.row.reflections": ["Written reflections", "Reflexiones escritas"],
+  "reset.row.postedGrades": ["Posted grades", "Calificaciones publicadas"],
+  "reset.row.overrides": ["Grade overrides", "Ajustes de calificación"],
+  "reset.row.participation": ["Participation points", "Puntos de participación"],
+  "reset.row.notes": ["Notes about students", "Notas sobre estudiantes"],
+  "reset.row.legacy": ["Old pilot-app records", "Registros de apps piloto anteriores"],
+  "reset.row.rewound": ["Classes rewound to not-yet-held", "Clases regresadas a no impartidas"],
+  "reset.keptNote": [
+    "Kept: lectures, question banks, the schedule, groups, the roster, gradebook categories, and the record that this reset happened.",
+    "Se conservan: lecciones, bancos de preguntas, calendario, grupos, lista de estudiantes, categorías del libro de calificaciones y el registro de que este reinicio ocurrió."
+  ],
+  "reset.students": ["Students in the roster", "Estudiantes en la lista"],
+  "reset.studentsBody": [
+    "Tick anyone invented for a rehearsal to remove their account entirely. Leave real students unticked — their activity is cleared either way.",
+    "Marca a quien hayas inventado para un ensayo para eliminar su cuenta por completo. Deja sin marcar a los estudiantes reales — su actividad se borra de todos modos."
+  ],
+  "reset.noStudents": ["Nobody is enrolled yet.", "Todavía no hay nadie inscrito."],
+  "reset.removeAria": ["Remove {name} from the course", "Quitar a {name} del curso"],
+  "reset.warning": [
+    "This deletes {rows} rows and {students} student accounts, and cannot be undone.",
+    "Esto elimina {rows} registros y {students} cuentas de estudiante, y no se puede deshacer."
+  ],
+  "reset.placeholder": ["Type RESET to confirm", "Escribe RESET para confirmar"],
+  "reset.confirm": ["Reset the course now", "Reiniciar el curso ahora"],
+  "reset.running": ["Resetting…", "Reiniciando…"],
+  "reset.cancel": ["Cancel", "Cancelar"],
+  "reset.failed": ["The reset did not complete.", "El reinicio no se completó."],
+  "reset.done": [
+    "Cleared {rows} rows and removed {removed} accounts.",
+    "Se borraron {rows} registros y se eliminaron {removed} cuentas."
+  ],
+  "reset.refusedTitle": [
+    "Some accounts could not be removed:",
+    "Algunas cuentas no se pudieron eliminar:"
   ]
 } as const;
 
