@@ -14,6 +14,7 @@ import {
 import { t } from "../i18n";
 import { activeRoles } from "../state/session";
 import { QuestionBankReview } from "./QuestionBankReview";
+import { ForceDeleteControl } from "./ForceDeleteControl";
 
 export function QuestionBanks() {
   const [banks, setBanks] = useState<CheckpointBankSummary[] | null>(null);
@@ -86,6 +87,7 @@ function QuestionBankCard({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [forceDelete, setForceDelete] = useState(false);
   const ready = readiness === "ready" || prepared !== null;
   const pending = readiness === "pending";
   const canRefreshDeck = controls.refresh && prepared === null;
@@ -120,21 +122,24 @@ function QuestionBankCard({
     }
   }
 
-  async function remove() {
-    if (!confirm(t("content.banks.deleteBankConfirm", { title: bank.content_title || bank.title, count: bank.total }))) {
+  async function remove(force = false) {
+    if (!force && !confirm(t("content.banks.deleteBankConfirm", { title: bank.content_title || bank.title, count: bank.total }))) {
       return;
     }
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deleteBank(bank.bank_id);
+      await deleteBank(bank.bank_id, { force });
+      setForceDelete(false);
       try {
         await onRefresh();
       } catch {
         // The bank is already deleted server-side; refresh is best effort.
       }
     } catch (cause) {
-      setDeleteError(cause instanceof Error ? cause.message : t("content.banks.deleteBankFailed"));
+      const message = cause instanceof Error ? cause.message : t("content.banks.deleteBankFailed");
+      setDeleteError(message);
+      setForceDelete(message.includes("recorded student answers or live question history"));
       setDeleting(false);
     }
   }
@@ -274,6 +279,14 @@ function QuestionBankCard({
 
       {deleteError ? (
         <p class="error-text" role="alert">{deleteError}</p>
+      ) : null}
+
+      {forceDelete ? (
+        <ForceDeleteControl
+          busy={deleting}
+          warningKey="content.banks.forceDeleteWarning"
+          onConfirm={() => void remove(true)}
+        />
       ) : null}
 
       {reviewOpen ? (

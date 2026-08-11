@@ -101,10 +101,10 @@ export function deleteQuestion(input: { question_bank_id: string; question_id: s
   );
 }
 
-export function deleteBank(questionBankId: string) {
+export function deleteBank(questionBankId: string, options: { force?: boolean } = {}) {
   return callFn<{ question_bank_id: string; deleted: boolean }>(
     "course-question-bank",
-    { action: "delete_bank", question_bank_id: questionBankId }
+    { action: "delete_bank", question_bank_id: questionBankId, force: Boolean(options.force) }
   );
 }
 

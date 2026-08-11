@@ -1473,6 +1473,10 @@ export const strings = {
     "¿Eliminar permanentemente \"{title}\" y sus {count} preguntas? Esto no se puede deshacer."
   ],
   "content.banks.deleteBankFailed": ["Could not delete this question bank.", "No se pudo eliminar este banco de preguntas."],
+  "content.banks.forceDeleteWarning": [
+    "This will also permanently delete every recorded student answer for this bank's questions. There is no undo.",
+    "Esto también eliminará permanentemente cada respuesta de estudiante registrada para las preguntas de este banco. No hay forma de deshacerlo."
+  ],
   "content.banks.questionDeleted": ["Question removed from the active bank.", "Pregunta retirada del banco activo."],
   "content.banks.questionSaved": ["Question saved.", "Pregunta guardada."],
   "content.banks.questionSaveFailed": ["Could not save this question.", "No se pudo guardar esta pregunta."],
