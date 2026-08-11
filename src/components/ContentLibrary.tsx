@@ -20,6 +20,7 @@ import { updateClass } from "../api/classes";
 import { listSessions, type ClassSession } from "../api/schedule";
 import { canReleaseToReview } from "../api/contentVisibility";
 import { PublicLinkCleanup } from "./PublicLinkCleanup";
+import { ForceDeleteControl } from "./ForceDeleteControl";
 import { refreshContext } from "../state/session";
 import { t, formatDay } from "../i18n";
 import { ApiError } from "../api/client";
@@ -473,6 +474,17 @@ export function ContentLibraryView() {
                   </div>
                 ) : null}
                 {failure ? <p class="error-text" role="alert">{failure}</p> : null}
+                {failure === t("content.library.content_item_has_activity_history") ? (
+                  <ForceDeleteControl
+                    busy={busy === item.id}
+                    warningKey="content.library.forceDeleteWarning"
+                    onConfirm={() => void run(item.id, async () => {
+                      await deleteContentItem(item.id, { force: true });
+                      setNotice(t("content.library.deleted", { title: item.title }));
+                      await refreshContext();
+                    }, t("content.library.deleteFailed"))}
+                  />
+                ) : null}
               </div>
             );
           })}
@@ -508,6 +520,17 @@ export function ContentLibraryView() {
                     {busy === item.id ? t("content.library.working") : t("content.library.delete")}
                   </button>
                   {failure ? <p class="error-text" role="alert">{failure}</p> : null}
+                  {failure === t("content.library.content_item_has_activity_history") ? (
+                    <ForceDeleteControl
+                      busy={busy === item.id}
+                      warningKey="content.library.forceDeleteWarning"
+                      onConfirm={() => void run(item.id, async () => {
+                        await deleteContentItem(item.id, { force: true });
+                        setNotice(t("content.library.deleted", { title: item.title }));
+                        await refreshContext();
+                      }, t("content.library.deleteFailed"))}
+                    />
+                  ) : null}
                 </div>
               </div>
             );

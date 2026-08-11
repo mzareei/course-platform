@@ -1643,6 +1643,10 @@ export const strings = {
     "An end-of-class quiz has already been run for this item, so it can't be deleted.",
     "Ya se ejecutó un cuestionario de fin de clase para este material, así que no se puede eliminar."
   ],
+  "content.library.forceDeleteWarning": [
+    "This will also permanently delete every recorded end-of-class quiz attempt and answer for this item. There is no undo.",
+    "Esto también eliminará permanentemente cada intento y respuesta del cuestionario de fin de clase registrado para este material. No hay forma de deshacerlo."
+  ],
   "content.cancel": ["Cancel", "Cancelar"],
   "forceDelete.trigger": ["Delete anyway", "Eliminar de todos modos"],
   "forceDelete.placeholder": ["Type DELETE to confirm", "Escribe DELETE para confirmar"],

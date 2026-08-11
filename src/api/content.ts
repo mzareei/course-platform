@@ -290,10 +290,11 @@ export function unshareContentItem(contentItemId: string, sectionId: string) {
   });
 }
 
-export function deleteContentItem(contentItemId: string) {
+export function deleteContentItem(contentItemId: string, options: { force?: boolean } = {}) {
   return callFn<{ content_item_id: string; deleted: boolean }>("course-content-library", {
     action: "delete_content_item",
-    content_item_id: contentItemId
+    content_item_id: contentItemId,
+    force: Boolean(options.force)
   });
 }
 
