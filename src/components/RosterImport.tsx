@@ -8,7 +8,7 @@
 // Module scope on purpose — see docs/07-pitfalls.md #4.
 import { useState } from "preact/hooks";
 import {
-  rosterFromCsv, previewRoster, applyRoster, MAX_ROSTER_ROWS,
+  rosterFromCsv, decodeCsv, previewRoster, applyRoster, MAX_ROSTER_ROWS,
   type RosterRow, type RosterPreview
 } from "../api/roster";
 
@@ -50,7 +50,8 @@ export function RosterImport({ onImported }: { onImported: () => void }) {
     setBusy(true);
     setFileName(file.name);
     try {
-      const text = await file.text();
+      // Bytes, not file.text() — that assumes UTF-8 and eats every accent.
+      const text = decodeCsv(await file.arrayBuffer());
       const parsed = rosterFromCsv(text);
       if (parsed.missing.length) {
         setRows(null);

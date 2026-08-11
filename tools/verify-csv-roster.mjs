@@ -1,13 +1,13 @@
 // Exercises the CSV roster parser against the messy output real spreadsheets
-// produce: CRLF, a BOM from Excel, quoted fields containing commas and
-// newlines, doubled quotes, Spanish and accented headers, trailing blank lines.
+// produce: legacy code pages, CRLF, a BOM from Excel, quoted fields containing
+// commas and newlines, doubled quotes, accented headers, trailing blank lines.
 //
 // A roster import is the only bulk write in the product. A parser bug here does
 // not throw — it quietly enrols the wrong people, or drops a row and nobody
 // notices until a student cannot sign in.
 //
 // src/api/csv.ts imports nothing, which is what lets this run under plain node.
-import { parseCsv, rosterFromCsv } from "../src/api/csv.ts";
+import { parseCsv, rosterFromCsv, decodeCsv } from "../src/api/csv.ts";
 
 let failures = 0;
 
@@ -19,6 +19,22 @@ function check(label, actual, expected) {
     console.error(`  FAIL ${label}\n    expected ${e}\n    actual   ${a}`);
   }
 }
+
+// --------------------------------------------------------------- decodeCsv
+// Excel's plain CSV export is Windows-1252. Decoding it as UTF-8 replaced every
+// accent with U+FFFD and imported 26 students as "Mar<?>a", "Gonz<?>lez".
+const latin1 = (text) => Uint8Array.from([...text].map((c) => c.codePointAt(0)));
+check("windows-1252 accents survive", decodeCsv(latin1("Diana María Arámburo")), "Diana María Arámburo");
+check("windows-1252 ñ survives", decodeCsv(latin1("Albert Wachi Peña")), "Albert Wachi Peña");
+check("windows-1252 curly quote survives", decodeCsv(Uint8Array.from([0x92])), "’");
+check("utf-8 still wins when valid", decodeCsv(new TextEncoder().encode("Ángela Godínez")), "Ángela Godínez");
+check("plain ascii unaffected", decodeCsv(new TextEncoder().encode("a@tec.mx,401")), "a@tec.mx,401");
+check(
+  "utf-16le BOM honoured",
+  decodeCsv(Uint8Array.from([0xff, 0xfe, 0x4d, 0x00, 0xed, 0x00, 0x61, 0x00])),
+  "Mía"
+);
+check("no replacement character in the decoded roster", decodeCsv(latin1("Nájera")).includes("�"), false);
 
 // ---------------------------------------------------------------- parseCsv
 check("plain rows", parseCsv("a,b\n1,2"), [["a", "b"], ["1", "2"]]);
@@ -67,4 +83,4 @@ if (failures > 0) {
   console.error(`verify-csv-roster: ${failures} check(s) failed.`);
   process.exit(1);
 }
-console.log("verify-csv-roster: OK (21 checks)");
+console.log("verify-csv-roster: OK (28 checks)");

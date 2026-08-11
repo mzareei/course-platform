@@ -8,7 +8,7 @@ import { callFn } from "./client";
 import type { Role, RosterOverview } from "./types";
 import type { RosterRow } from "./csv";
 
-export { parseCsv, rosterFromCsv, MAX_ROSTER_ROWS } from "./csv";
+export { parseCsv, rosterFromCsv, decodeCsv, MAX_ROSTER_ROWS } from "./csv";
 export type { RosterRow, ParsedRoster } from "./csv";
 
 export interface AcceptedRow extends RosterRow {

@@ -2,6 +2,23 @@
 
 **Last updated:** 2026-08-11
 
+### Roster import — encoding fixed, example file added
+
+Two changes to the CSV import on the People screen, both from the professor
+importing group 401 (26 students) for the first time:
+
+- **Accents no longer break.** Excel's plain CSV export is Windows-1252, and the
+  importer was reading every file as UTF-8, so `María` previewed and would have
+  imported as `Mar<?>a`. `decodeCsv` now sniffs UTF-16 BOM → strict UTF-8 →
+  Windows-1252. Seven checks in `verify-csv-roster` cover it. See pitfalls #72.
+- **The instructions show an example.** A collapsible table with a header row
+  and three sample rows, plus the three things that were not written down
+  anywhere: header names are flexible, the group must match a group code that
+  already exists, and `role` is only needed for non-students.
+
+The columns were and remain: full name, student id (optional), institutional
+email, group — with an optional `role`.
+
 ### One grade per class — weighted categories removed
 
 Migrations `0043` + `0044` and four edge functions are deployed. This closed a

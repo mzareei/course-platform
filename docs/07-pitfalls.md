@@ -6,6 +6,31 @@ the UI is silently wrong.**
 
 ---
 
+## 72. `File.text()` assumes UTF-8, and Excel does not write UTF-8
+
+**Reported by the professor 2026-08-11: the roster preview for group 401 said
+"All 26 rows look good" while showing `Diana Mar<?>a Ar<?>mburo Lozano`,
+`Omar <?>vila Meza`, `Diego Israel Dom<?>nguez N<?>jera`.**
+
+`RosterImport` read the file with `await file.text()`. That decodes as UTF-8,
+always, with no way to say otherwise. Excel's plain **CSV (comma delimited)**
+export is the machine's legacy code page — Windows-1252 on the Spanish Windows
+in use — so `í` arrives as the single byte `0xED`, which is not a valid UTF-8
+sequence and becomes U+FFFD before the parser sees a single comma.
+
+Nothing errored, and nothing could: by the time `rosterFromCsv` ran, the
+mangled name was just a name. Every validation passed, and the import would
+have written 26 permanent student records with replacement characters in them.
+
+`decodeCsv` in `src/api/csv.ts` sniffs instead: UTF-16 BOM, then strict UTF-8
+(`{ fatal: true }`), then Windows-1252. The fallback is safe precisely because
+accented Latin-1 bytes are never valid UTF-8 — a real UTF-8 file always decodes
+on the first attempt, so this cannot corrupt a correctly-saved file.
+
+The general rule: **any byte source that came from a desktop application is not
+UTF-8 until proven otherwise.** `file.text()`, `response.text()` and
+`Buffer.toString()` all guess, and all guess the same wrong way.
+
 ## 71. A quiz gate built for standalone content also caught the live in-class quiz
 
 **Reported by the professor 2026-08-11, from a real rehearsal: pushed

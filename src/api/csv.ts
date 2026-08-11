@@ -25,6 +25,30 @@ export interface ParsedRoster {
 }
 
 /**
+ * Excel's plain "CSV (comma delimited)" is not UTF-8 — it is the machine's
+ * legacy code page, Windows-1252 on the Spanish Windows the professors use.
+ * Reading those bytes as UTF-8 (what `File.text()` does, unconditionally) turns
+ * every accent into a replacement character: "María" arrives as "Mar�a"
+ * and gets imported that way, because a mangled name is still a valid name.
+ *
+ * So sniff instead of assuming: honour a UTF-16 BOM, try strict UTF-8, and fall
+ * back to Windows-1252 when the bytes cannot be UTF-8. Accented Latin-1 bytes
+ * are never valid UTF-8 sequences, which is what makes the fallback safe —
+ * a genuine UTF-8 file always decodes on the first attempt.
+ */
+export function decodeCsv(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  // Excel's "Unicode Text" and some LMS exports are UTF-16 with a BOM.
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(bytes);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be").decode(bytes);
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
+}
+
+/**
  * Minimal RFC-4180 CSV: quoted fields, doubled quotes inside them, commas and
  * newlines inside quotes. Written out rather than pulled in because the app has
  * no runtime dependencies beyond Preact and supabase-js.
