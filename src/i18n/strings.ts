@@ -1255,6 +1255,11 @@ export const strings = {
     "Lectures, missions, case files, and resources with a student delivery route appear here.",
     "Aquí aparecen las clases, misiones, casos y recursos que tienen una ruta de entrega para estudiantes."
   ],
+  "content.library.unmanagedTitle": ["Other items", "Otros elementos"],
+  "content.library.unmanagedHint": [
+    "These aren't shown to students in Review and have no availability controls here — for example, a question-bank-only import with no lecture deck. Delete is available if you no longer need one.",
+    "Estos no se muestran a los estudiantes en Revisión y no tienen controles de disponibilidad aquí — por ejemplo, una importación de solo banco de preguntas sin diapositivas. Puedes eliminarlo si ya no lo necesitas."
+  ],
   "content.library.lede": [
     "Materials here have a student delivery route. \"Available\" means students can open them from Review. Take a material back whenever you want — nothing they have already done is lost.",
     "Los materiales aquí tienen una ruta de entrega para estudiantes. \"Disponible\" significa que pueden abrirlos desde Repasar. Puedes quitar un material cuando quieras — no se pierde nada de lo que ya hayan hecho."
