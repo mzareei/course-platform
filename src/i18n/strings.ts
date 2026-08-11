@@ -1605,8 +1605,8 @@ export const strings = {
   "content.library.revokeFailed": ["Could not revoke that share.", "No se pudo revocar ese acceso."],
   "content.library.delete": ["Delete", "Eliminar"],
   "content.library.deleteConfirm": [
-    "Permanently delete \"{title}\"? Releases on record: {releases}. This cannot be undone.",
-    "¿Eliminar permanentemente \"{title}\"? Publicaciones registradas: {releases}. Esto no se puede deshacer."
+    "Permanently delete \"{title}\"? It has been made available to students {releases} time(s) before. This cannot be undone.",
+    "¿Eliminar permanentemente \"{title}\"? Se ha puesto a disposición de los estudiantes {releases} veces antes. Esto no se puede deshacer."
   ],
   "content.library.deleted": ["\"{title}\" was deleted.", "\"{title}\" fue eliminado."],
   "content.library.deleteFailed": ["Could not delete this material.", "No se pudo eliminar este material."],
@@ -1627,8 +1627,8 @@ export const strings = {
     "Este material todavía tiene un banco de preguntas activo. Elimina el banco primero y luego este material."
   ],
   "content.library.content_item_has_activity_history": [
-    "Students have completed an end-of-class quiz for this item, so it can't be deleted.",
-    "Los estudiantes ya completaron un cuestionario de fin de clase para este material, así que no se puede eliminar."
+    "An end-of-class quiz has already been run for this item, so it can't be deleted.",
+    "Ya se ejecutó un cuestionario de fin de clase para este material, así que no se puede eliminar."
   ],
   "content.cancel": ["Cancel", "Cancelar"],
   "content.approvedNote": [
