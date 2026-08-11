@@ -101,9 +101,10 @@ export function cancelSession(sessionId: string, reason?: string) {
   });
 }
 
-export function deleteSession(sessionId: string) {
+export function deleteSession(sessionId: string, options: { force?: boolean } = {}) {
   return callFn<{ deleted: true; sessions: ClassSession[] }>("course-session-management", {
     action: "delete_session",
-    session_id: sessionId
+    session_id: sessionId,
+    force: Boolean(options.force)
   });
 }

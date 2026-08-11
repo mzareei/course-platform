@@ -15,6 +15,7 @@ import { createClass } from "../api/classes";
 import { contentLibrary, type ContentItem } from "../api/content";
 import { canReleaseToReview } from "../api/contentVisibility";
 import { StatusPill } from "./StatusPill";
+import { ForceDeleteControl } from "./ForceDeleteControl";
 import { SessionEditor } from "./SessionEditor";
 import { refreshContext } from "../state/session";
 import { t, formatDay } from "../i18n";
@@ -31,6 +32,7 @@ export function Schedule() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [forceDeleteSessionId, setForceDeleteSessionId] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
   const [date, setDate] = useState("");
@@ -104,18 +106,23 @@ export function Schedule() {
     }
   }
 
-  async function onDelete(session: ClassSession) {
-    if (!confirm(t("schedule.deleteConfirm", { title: session.title }))) return;
+  async function onDelete(session: ClassSession, force = false) {
+    if (!force && !confirm(t("schedule.deleteConfirm", { title: session.title }))) return;
     setError(null);
     setNotice(null);
     setBusy(session.session_id);
     try {
-      await deleteSession(session.session_id);
+      await deleteSession(session.session_id, { force });
       setNotice(t("schedule.deleted", { title: session.title }));
+      setForceDeleteSessionId(null);
       await load();
       await refreshContext();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("schedule.deleteFailed"));
+      const message = e instanceof Error ? e.message : t("schedule.deleteFailed");
+      setError(message);
+      setForceDeleteSessionId(
+        message.includes("recorded live-question activity") ? session.session_id : null
+      );
     } finally {
       setBusy(null);
     }
@@ -226,6 +233,17 @@ export function Schedule() {
                             lectures={lectures}
                             onSaved={(saved) => void onSessionSaved(saved)}
                             onCancel={() => setEditingSessionId(null)}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                    {forceDeleteSessionId === session.session_id ? (
+                      <tr>
+                        <td colSpan={6}>
+                          <ForceDeleteControl
+                            busy={busy === session.session_id}
+                            warningKey="schedule.forceDeleteWarning"
+                            onConfirm={() => void onDelete(session, true)}
                           />
                         </td>
                       </tr>

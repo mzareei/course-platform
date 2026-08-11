@@ -651,6 +651,10 @@ export const strings = {
   ],
   "schedule.deleted": ["\"{title}\" was deleted.", "\"{title}\" fue eliminado."],
   "schedule.deleteFailed": ["Could not delete this class day.", "No se pudo eliminar este día de clase."],
+  "schedule.forceDeleteWarning": [
+    "This will also permanently delete every recorded pulse-question round and answer for this class. There is no undo.",
+    "Esto también eliminará permanentemente cada ronda y respuesta de preguntas en vivo registrada para esta clase. No hay forma de deshacerlo."
+  ],
   "schedule.run": ["Run this class", "Dar esta clase"],
 
   "people.roster": ["Roster", "Lista del curso"],
