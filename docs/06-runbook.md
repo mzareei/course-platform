@@ -217,6 +217,78 @@ Classes, Gradebook history, Review releases, notes, students and attempts are
 empty. Do not create a synthetic production class merely to make the clean
 state appear non-empty.
 
+## Sending sign-in emails to a whole class
+
+**Why this exists.** The first real class (2026-08-11/12) could not sign in:
+every student saw a rate-limit error. The project still uses Supabase's
+**built-in** email service, which is capped at a couple of messages per hour for
+the entire project and is documented by Supabase as testing-only. Thirty
+students pressing **Send** in one minute means two get a code and the rest are
+refused. No code change raises this — `course-test-signin` exists precisely
+because of it, and its own header says so.
+
+**Step 0.** Open Supabase → **Project Settings → Authentication → SMTP Settings**
+and check whether *Enable Custom SMTP* is already on. Everything below assumes
+it is off, which is what hitting the built-in ceiling implies.
+
+### Choosing a provider
+
+Resend and most transactional providers require a **verified DNS domain**, and
+we do not control DNS for `tec.mx`. Two that do not:
+
+**Brevo — recommended.** Free tier, 300 emails/day, verifies a *single sender
+address*.
+
+1. Create an account at brevo.com.
+2. **Senders, Domains & Dedicated IPs → Senders → Add a sender**, using
+   `m.zareei@tec.mx`.
+3. Click the confirmation link Brevo emails to that address.
+4. **SMTP & API → SMTP**: copy the server, port `587`, the login, and the
+   generated SMTP key.
+
+**Gmail — second choice.** Needs 2-Step Verification on the Google account, then
+an **App Password** from myaccount.google.com/apppasswords. Host
+`smtp.gmail.com`, port `465`, username the full Gmail address, password the
+16-character app password. Roughly 500 recipients a day.
+
+### Configuring Supabase
+
+Project Settings → Authentication → **SMTP Settings** → enable Custom SMTP →
+paste host, port, username, password. **Sender email must be the address
+verified with the provider**, or every message is rejected. Save.
+
+Then Authentication → **Rate Limits** → raise *Rate limit for sending emails*
+from the built-in default to **300 per hour** — comfortably above one class, and
+low enough that a runaway loop is still capped.
+
+### Verify before a class, not during one
+
+From a phone that has never signed in, on the live site, request a code with a
+real student address and confirm it arrives within a minute. **Then have a
+second and third address request one inside the same minute and confirm all
+three arrive.** One success proves nothing about the ceiling — that is exactly
+what a single professor's test proved on day one, while the class was locked out.
+
+### Then close the test sign-in door
+
+Only after that verification, and as a change of its own:
+
+```bash
+# In the SPA repo: set testSignIn to false in src/config.ts, then
+npm run typecheck && npm run verify
+git commit -am "Close test sign-in now that real email works"
+```
+
+and clear the `COURSE_TEST_SIGNIN_UNTIL` secret in the Supabase dashboard. Until
+both are done, anyone who knows a rostered address can sign in as that student,
+and their grades hang off that account. Record the date in `docs/05-status.md`.
+
+### If a class still sees refusals afterwards
+
+The whole room shares one campus NAT address. Some Supabase auth endpoints are
+rate-limited **per IP**, independently of email. That is the next thing to
+check — not a reason to conclude the SMTP change failed.
+
 ## Test accounts
 
 | Who | Email | How |
