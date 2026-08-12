@@ -17,6 +17,8 @@ export function CheckpointPanel({
   activeCheckpoint,
   bridgeFailure,
   busy,
+  autoSend,
+  onToggleAutoSend,
   onSend,
   onReveal,
   onContinue,
@@ -31,6 +33,8 @@ export function CheckpointPanel({
   activeCheckpoint: ActiveCheckpoint | null;
   bridgeFailure: string | null;
   busy: boolean;
+  autoSend: boolean;
+  onToggleAutoSend: (next: boolean) => void;
   onSend: () => void;
   onReveal: () => void;
   onContinue: () => void;
@@ -71,6 +75,24 @@ export function CheckpointPanel({
             })}
           </span>
         ) : null}
+      </div>
+
+      <div class="checkpoint-autosend">
+        <label class="checkpoint-autosend-switch">
+          <input
+            type="checkbox"
+            checked={autoSend}
+            onChange={(event) =>
+              onToggleAutoSend((event.target as HTMLInputElement).checked)
+            }
+          />
+          <span>{t("run.checkpoint.autoSend")}</span>
+        </label>
+        <p class="hint">
+          {t(autoSend
+            ? "run.checkpoint.autoSendOn"
+            : "run.checkpoint.autoSendOff")}
+        </p>
       </div>
 
       {bridgeFailure ? (
@@ -171,7 +193,11 @@ export function CheckpointPanel({
               {t("run.checkpoint.skip")}
             </button>
           </div>
-          <p class="hint">{t("run.checkpoint.spaceHint")}</p>
+          <p class="hint">
+            {autoSend
+              ? t("run.checkpoint.autoSendHeld")
+              : t("run.checkpoint.spaceHint")}
+          </p>
         </div>
       ) : null}
 

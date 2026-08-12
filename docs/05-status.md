@@ -867,6 +867,27 @@ Everything below was exercised through the real UI, not by calling endpoints.
 - The validator caught a real bad generation in the wild ("Q3 has 5 options")
   and the retry produced a valid bank.
 
+### Auto-send at a checkpoint slide (2026-08-11) — **built, not yet run in a class**
+
+The professor lectures from the platform's own deck in fullscreen. Sending a
+poll used to mean leaving fullscreen, finding the cockpit, and clicking **Send
+to the class** — three moves in front of the room for something the deck already
+knew was due.
+
+Reaching a slide with `data-checkpoint-key` now draws its question and pushes it
+to student phones automatically. Space still reveals the answer and Right Arrow
+still continues, so the whole checkpoint runs without leaving the deck. It is a
+switch in the checkpoint panel (`cp.auto-send-checkpoints`, on by default,
+per-device) because auto-send is a promise to the room: a professor who reads
+the question aloud first turns it off and gets the old behaviour back.
+
+Nothing changed on the server — this is the same `course-pulse` `push`. The
+guard rails live in `shouldAutoSendCheckpointQuestion` and are covered by
+`verify-deck-protocol`; see pitfall 62 for why they are worth keeping strict.
+
+Last mile is the professor's: instructor screens cannot be driven by an agent
+(see the standing constraint below).
+
 ---
 
 ## Remaining work, in priority order

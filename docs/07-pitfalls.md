@@ -1771,3 +1771,22 @@ student's My Grades screen renders *nothing at all*, with no error.
 section its scores were posted into, then **raises** if any class-grade item is
 still unlinked. A migration that asserts its own postcondition turns a silent
 empty screen into a failed `db push`. Prefer that trade every time.
+
+## 62. Auto-send must be decided against where the deck stands *now*
+
+Reaching an authored checkpoint slide now pushes its question to the class on
+its own, so the professor never leaves fullscreen. The trap is that the draw is
+a network round-trip: by the time it resolves, the professor may already have
+pressed Right Arrow past the checkpoint. Sending then would put a question on
+sixty phones for a slide nobody is looking at.
+
+`shouldAutoSendCheckpointQuestion` in `features/live/checkpointState.ts` fails
+closed on every one of those: auto-send is off, the class is not live, the draw
+came from the manual list or "draw again", a newer draw superseded it, this
+checkpoint already sent once, or the deck has moved. `RunClass` feeds it
+`liveDeckCheckpoint.current` — a ref reassigned every render — precisely because
+the render-time `bridge.checkpoint` captured in the closure is stale by then.
+
+Only the deck's own arrival passes `fromDeckArrival: true`. Never add it to a
+retry or to `selectManualCheckpoint`: those are the paths a professor uses when
+the automatic one has already gone wrong.

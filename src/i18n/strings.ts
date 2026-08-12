@@ -1104,6 +1104,22 @@ export const strings = {
     "Press Space in the deck to send. Right Arrow skips.",
     "Presiona Espacio en la presentación para enviar. Flecha derecha omite."
   ],
+  "run.checkpoint.autoSend": [
+    "Send each question when I reach its slide",
+    "Enviar cada pregunta al llegar a su diapositiva"
+  ],
+  "run.checkpoint.autoSendOn": [
+    "You can teach from fullscreen: reaching a checkpoint slide puts its question on student phones. Space then shows the answer, Right Arrow continues.",
+    "Puedes dar clase en pantalla completa: al llegar a una diapositiva de control, su pregunta aparece en los teléfonos. Después, Espacio muestra la respuesta y Flecha derecha continúa."
+  ],
+  "run.checkpoint.autoSendOff": [
+    "Questions wait here until you send them, from this panel or with Space in the deck.",
+    "Las preguntas esperan aquí hasta que las envíes, desde este panel o con Espacio en la presentación."
+  ],
+  "run.checkpoint.autoSendHeld": [
+    "This one was not sent automatically. Press Space in the deck or send it here. Right Arrow skips.",
+    "Esta no se envió automáticamente. Presiona Espacio en la presentación o envíala aquí. Flecha derecha omite."
+  ],
   "run.checkpoint.spaceRevealHint": [
     "Press Space in the deck to show the answer.",
     "Presiona Espacio en la presentación para mostrar la respuesta."

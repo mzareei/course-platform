@@ -28,6 +28,45 @@ export function checkpointQuestionMatches(
   );
 }
 
+/** Stable identity for "this checkpoint, in this class". */
+export function checkpointIdentity(checkpoint: ActiveCheckpoint) {
+  return `${checkpoint.key}@${checkpoint.afterSlide}`;
+}
+
+/**
+ * Auto-send exists for the professor who lectures from the deck itself: landing
+ * on an authored checkpoint slide should put the question on student phones
+ * without leaving fullscreen for the cockpit.
+ *
+ * It fires only for a draw the deck itself asked for, and only while the deck
+ * is still standing on that checkpoint. A manual draw, a "draw again", a
+ * superseded draw, or a professor who has already walked past the slide must
+ * never push a question at the class by surprise.
+ */
+export function shouldAutoSendCheckpointQuestion(input: {
+  enabled: boolean;
+  isLive: boolean;
+  /** False for manual checkpoint selection and for "draw again". */
+  drawnFromDeckArrival: boolean;
+  /** False once a newer draw has replaced this one. */
+  drawIsCurrent: boolean;
+  /** Where the deck is standing right now, not where it was when we drew. */
+  deckCheckpoint: ActiveCheckpoint | null;
+  checkpoint: ActiveCheckpoint;
+  /** At most one automatic push per checkpoint per class. */
+  alreadyAutoSent: boolean;
+}): boolean {
+  if (!input.enabled || !input.isLive) return false;
+  if (!input.drawnFromDeckArrival || !input.drawIsCurrent) return false;
+  if (input.alreadyAutoSent) return false;
+  const deck = input.deckCheckpoint;
+  return Boolean(
+    deck
+    && deck.key === input.checkpoint.key
+    && deck.afterSlide === input.checkpoint.afterSlide
+  );
+}
+
 /**
  * Space is an intent from the deck, never an instruction. The parent cockpit
  * resolves it against its current server-backed UI state.

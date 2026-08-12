@@ -683,6 +683,31 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   padding: 0.65rem 0.75rem;
   font-size: 0.9rem;
 }
+.checkpoint-autosend {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.checkpoint-autosend-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.checkpoint-autosend-switch input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.checkpoint-autosend .hint {
+  margin: 0;
+}
 .checkpoint-manual {
   padding: 0.75rem;
   border: 1px solid var(--warn);

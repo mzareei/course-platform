@@ -25,14 +25,20 @@ import { useDeckBridge } from "../../features/deck/useDeckBridge";
 import { CheckpointPanel } from "../../features/live/CheckpointPanel";
 import { ClassroomQuestionLayer } from "../../features/live/ClassroomQuestionLayer";
 import {
+  checkpointIdentity,
   checkpointQuestionMatches,
   isCheckpointOperationCurrent,
   resolveCheckpointActionSequence,
+  shouldAutoSendCheckpointQuestion,
   spaceIntentForCheckpoint,
   type ActiveCheckpoint,
   type CheckpointUiState
 } from "../../features/live/checkpointState";
 import { t } from "../../i18n";
+import {
+  autoSendCheckpoints,
+  setAutoSendCheckpoints
+} from "../../state/preferences";
 import { context, refreshContext } from "../../state/session";
 import { EndOfClass } from "./EndOfClass";
 
@@ -130,6 +136,11 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
 
   const resultsPoll = useRef<number | undefined>(undefined);
   const previousDeckCheckpoint = useRef<ActiveCheckpoint | null>(null);
+  // Where the deck is standing *now*. A draw is asynchronous, and the professor
+  // may have walked past the checkpoint while it was in flight, so auto-send
+  // reads this ref rather than the render-time bridge value.
+  const liveDeckCheckpoint = useRef<ActiveCheckpoint | null>(null);
+  const autoSentCheckpoints = useRef<Set<string>>(new Set());
   const previousBridgeNavigation = useRef(bridge.navigationSequence);
   const handledCheckpointAction = useRef(0);
   const checkpointDrawSequence = useRef(0);
@@ -139,6 +150,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const recovery = useRef<RecoveryAction | null>(null);
   const recoveredSession = useRef<string | null>(null);
 
+  const autoSend = autoSendCheckpoints.value;
   const isLive = session?.state === "live";
   const ended = session?.state === "closed";
   const canStart = Boolean(
@@ -158,6 +170,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     checkpointState.type === "open" || checkpointState.type === "revealed"
       ? checkpointState.round
       : null;
+
+  liveDeckCheckpoint.current = bridge.checkpoint;
 
   function sendClassroomQuestion(round: PulseRound, checkpoint: ActiveCheckpoint) {
     if (!bridge.deckReady) return;
@@ -285,6 +299,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     checkpointDrawSequence.current += 1;
     recoveredSession.current = null;
     recovery.current = null;
+    autoSentCheckpoints.current = new Set();
     setActiveCheckpoint(null);
     setAskedKeys([]);
     setShowFinalQuiz(false);
@@ -352,7 +367,9 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   }, [bridge.deckReady]);
 
   // The deck stops at an authored checkpoint. Draw only from that exact
-  // checkpoint, then tell the deck presentation that its question is ready.
+  // checkpoint, then tell the deck presentation that its question is ready —
+  // and, when auto-send is on, push it to the class without waiting for a
+  // click the professor would have to leave fullscreen to make.
   useEffect(() => {
     if (!isLive || recoveringCurrentRound || !bridge.checkpoint || !bank) return;
     if (
@@ -370,7 +387,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       return;
     }
     setActiveCheckpoint(next);
-    void loadQuestion(next);
+    void loadQuestion(next, askedKeys, { fromDeckArrival: true });
   }, [
     isLive,
     recoveringCurrentRound,
@@ -488,7 +505,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
 
   async function loadQuestion(
     checkpoint: ActiveCheckpoint,
-    excluded = askedKeys
+    excluded = askedKeys,
+    options: { fromDeckArrival?: boolean } = {}
   ) {
     const requestSequence = ++checkpointDrawSequence.current;
     if (!bank?.content_slug) {
@@ -523,6 +541,21 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           type: "checkpoint.question_ready",
           checkpoint_key: checkpoint.key
         });
+      }
+      const identity = checkpointIdentity(checkpoint);
+      if (
+        shouldAutoSendCheckpointQuestion({
+          enabled: autoSendCheckpoints.value,
+          isLive,
+          drawnFromDeckArrival: Boolean(options.fromDeckArrival),
+          drawIsCurrent: requestSequence === checkpointDrawSequence.current,
+          deckCheckpoint: liveDeckCheckpoint.current,
+          checkpoint,
+          alreadyAutoSent: autoSentCheckpoints.current.has(identity)
+        })
+      ) {
+        autoSentCheckpoints.current.add(identity);
+        await sendQuestion(checkpoint, question);
       }
     } catch {
       if (requestSequence !== checkpointDrawSequence.current) return;
@@ -960,6 +993,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                 activeCheckpoint={activeCheckpoint}
                 bridgeFailure={bridgeFailure}
                 busy={busy}
+                autoSend={autoSend}
+                onToggleAutoSend={setAutoSendCheckpoints}
                 onSend={() => void sendReadyQuestion()}
                 onReveal={() => void revealOpenRound()}
                 onContinue={() => void continueCheckpoint()}

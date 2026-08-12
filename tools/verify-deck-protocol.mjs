@@ -8,8 +8,10 @@ import {
   questionBankReadiness
 } from "../src/features/deck/bankReadiness.ts";
 import {
+  checkpointIdentity,
   checkpointQuestionMatches,
   resolveCheckpointActionSequence,
+  shouldAutoSendCheckpointQuestion,
   spaceIntentForCheckpoint
 } from "../src/features/live/checkpointState.ts";
 import {
@@ -425,6 +427,54 @@ assert.deepEqual(
   "a duplicate action sequence must remain a no-op"
 );
 
+// ------------------------------------------------- auto-send at a checkpoint
+const deckArrival = {
+  enabled: true,
+  isLive: true,
+  drawnFromDeckArrival: true,
+  drawIsCurrent: true,
+  deckCheckpoint: { key: "cia-triad", afterSlide: 2 },
+  checkpoint: { key: "cia-triad", afterSlide: 2 },
+  alreadyAutoSent: false
+};
+assert.equal(
+  checkpointIdentity({ key: "cia-triad", afterSlide: 2 }),
+  "cia-triad@2",
+  "a checkpoint's identity must carry both its key and its slide"
+);
+assert.notEqual(
+  checkpointIdentity({ key: "cia-triad", afterSlide: 2 }),
+  checkpointIdentity({ key: "cia-triad", afterSlide: 9 }),
+  "a repeated segment key at another slide is a different checkpoint"
+);
+assert.equal(
+  shouldAutoSendCheckpointQuestion(deckArrival),
+  true,
+  "reaching an authored checkpoint slide must push its question without a click"
+);
+for (const [reason, override] of [
+  ["the professor turned auto-send off", { enabled: false }],
+  ["the class is not live", { isLive: false }],
+  ["the draw came from the manual checkpoint list", { drawnFromDeckArrival: false }],
+  ["a newer draw superseded this one", { drawIsCurrent: false }],
+  ["this checkpoint already sent itself once", { alreadyAutoSent: true }],
+  ["the deck left the checkpoint while the draw was in flight", { deckCheckpoint: null }],
+  [
+    "the deck moved on to a different checkpoint",
+    { deckCheckpoint: { key: "threat-chain", afterSlide: 7 } }
+  ],
+  [
+    "the deck is standing on the same segment at another slide",
+    { deckCheckpoint: { key: "cia-triad", afterSlide: 9 } }
+  ]
+]) {
+  assert.equal(
+    shouldAutoSendCheckpointQuestion({ ...deckArrival, ...override }),
+    false,
+    `auto-send must fail closed when ${reason}`
+  );
+}
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bankUiSource = readFileSync(
   path.join(root, "src/components/QuestionBanks.tsx"),
@@ -528,4 +578,53 @@ assert.doesNotMatch(
   /setBridgeError\("[A-Z]/,
   "the deck bridge must not return hardcoded English errors"
 );
+const runClassSource = readFileSync(
+  path.join(root, "src/screens/instructor/RunClass.tsx"),
+  "utf8"
+);
+assert.match(
+  runClassSource,
+  /loadQuestion\(next, askedKeys, \{ fromDeckArrival: true \}\)/,
+  "only the deck's own checkpoint arrival may request an automatic send"
+);
+assert.match(
+  runClassSource,
+  /liveDeckCheckpoint\.current = bridge\.checkpoint/,
+  "auto-send must read where the deck stands now, not where it stood at draw time"
+);
+assert.match(
+  runClassSource,
+  /deckCheckpoint: liveDeckCheckpoint\.current/,
+  "the auto-send decision must be fed the live deck position"
+);
+assert.match(
+  runClassSource,
+  /autoSentCheckpoints\.current\.add\(identity\)/,
+  "a checkpoint must record its automatic push before awaiting it, so a retry cannot double-push"
+);
+assert.match(
+  runClassSource,
+  /autoSentCheckpoints\.current = new Set\(\)/,
+  "switching class sessions must forget which checkpoints already sent themselves"
+);
+assert.doesNotMatch(
+  runClassSource,
+  /loadQuestion\(\s*action\.checkpoint,[^)]*fromDeckArrival/,
+  "a retry must never auto-send"
+);
+const panelSource = readFileSync(
+  path.join(root, "src/features/live/CheckpointPanel.tsx"),
+  "utf8"
+);
+assert.match(
+  panelSource,
+  /t\("run\.checkpoint\.autoSend"\)/,
+  "auto-send must stay a visible, bilingual switch the professor can turn off"
+);
+assert.match(
+  panelSource,
+  /onToggleAutoSend\(\(event\.target as HTMLInputElement\)\.checked\)/,
+  "the auto-send switch must report its own checked state"
+);
+
 console.log("verify-deck-protocol: OK");
