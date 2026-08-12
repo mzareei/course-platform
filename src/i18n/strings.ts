@@ -1137,6 +1137,54 @@ export const strings = {
     "This one was not sent automatically. Press Space in the deck or send it here. Right Arrow skips.",
     "Esta no se envió automáticamente. Presiona Espacio en la presentación o envíala aquí. Flecha derecha omite."
   ],
+  "run.reopen": ["Reopen this class", "Reabrir esta clase"],
+  "run.reopening": ["Reopening…", "Reabriendo…"],
+  "run.reopenReason": [
+    "Reopened by the professor from Run class.",
+    "Reabierta por el profesor desde Dar clase."
+  ],
+  "run.reopenFailed": [
+    "Could not reopen this class.",
+    "No se pudo reabrir esta clase."
+  ],
+  "run.reset.title": ["Reset this class day", "Reiniciar este día de clase"],
+  "run.reset.body": [
+    "Clears everything this class recorded — questions asked, answers, attendance, the quiz, reflections and its grade — and arms the planned polls again. The class day, its lecture and its question plan stay exactly as they are.",
+    "Borra todo lo que registró esta clase — preguntas lanzadas, respuestas, asistencia, el quiz, las reflexiones y su calificación — y deja las encuestas planeadas listas otra vez. El día de clase, su presentación y su plan de preguntas se conservan."
+  ],
+  "run.reset.action": ["Reset this class day", "Reiniciar este día de clase"],
+  "run.reset.confirmAction": [
+    "Yes, erase this class day",
+    "Sí, borrar este día de clase"
+  ],
+  "run.reset.confirm": [
+    "This cannot be undone. Press again to confirm.",
+    "Esto no se puede deshacer. Presiona otra vez para confirmar."
+  ],
+  "run.reset.endFirst": [
+    "End the class first — a live class cannot be reset from under the students.",
+    "Termina la clase primero: no se puede reiniciar una clase en vivo con estudiantes dentro."
+  ],
+  "run.reset.done": [
+    "Cleared {rounds} question(s), {answers} answer(s) and {attendance} check-in(s). {polls} planned poll(s) are ready to ask again.",
+    "Se borraron {rounds} pregunta(s), {answers} respuesta(s) y {attendance} registro(s) de asistencia. {polls} encuesta(s) planeada(s) están listas de nuevo."
+  ],
+  "run.reset.failed": [
+    "Could not reset this class day.",
+    "No se pudo reiniciar este día de clase."
+  ],
+  "run.answeredOfPresent": [
+    "{answered} of {present} in the room · {enrolled} on the roster",
+    "{answered} de {present} en el salón · {enrolled} en la lista"
+  ],
+  "run.checkpoint.autoRevealHint": [
+    "The answer shows itself when the timer ends, when everyone in the room has answered, or once you move three slides past the question. Students then see whether they were right.",
+    "La respuesta se muestra sola cuando termina el tiempo, cuando todos en el salón han respondido, o al avanzar tres diapositivas después de la pregunta. Entonces cada quien ve si acertó."
+  ],
+  "run.checkpoint.revealedAutoHint": [
+    "Students can see whether they were right. It clears from their phones on its own; the next question closes this one.",
+    "Cada quien ve si acertó. Se quita solo de los teléfonos; la siguiente pregunta cierra esta."
+  ],
   "run.checkpoint.spaceRevealHint": [
     "Press Space in the deck to show the answer.",
     "Presiona Espacio en la presentación para mostrar la respuesta."

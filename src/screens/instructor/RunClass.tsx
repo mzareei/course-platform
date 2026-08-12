@@ -16,12 +16,21 @@ import {
   type PulseRound
 } from "../../api/pulse";
 import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
-import { endClassSession } from "../../api/session";
+import {
+  endClassSession,
+  reopenClassSession,
+  resetClassSession,
+  type ClassResetSummary
+} from "../../api/session";
 import { ClassQuestionPlanBoard } from "../../components/ClassQuestionPlanBoard";
 import { StatusPill } from "../../components/StatusPill";
 import { InstructorDeck } from "../../features/deck/InstructorDeck";
 import type { CheckpointQuestion } from "../../features/deck/protocol";
 import { useDeckBridge } from "../../features/deck/useDeckBridge";
+import {
+  autoRevealReason,
+  countAdvance
+} from "../../features/live/autoReveal";
 import { CheckpointPanel } from "../../features/live/CheckpointPanel";
 import { ClassroomQuestionLayer } from "../../features/live/ClassroomQuestionLayer";
 import {
@@ -133,6 +142,9 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState(false);
   const [recoveringCurrentRound, setRecoveringCurrentRound] = useState(false);
+  const [advancesSinceAsked, setAdvancesSinceAsked] = useState(0);
+  const [resetConfirming, setResetConfirming] = useState(false);
+  const [resetSummary, setResetSummary] = useState<ClassResetSummary | null>(null);
 
   const resultsPoll = useRef<number | undefined>(undefined);
   const previousDeckCheckpoint = useRef<ActiveCheckpoint | null>(null);
@@ -141,6 +153,17 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   // reads this ref rather than the render-time bridge value.
   const liveDeckCheckpoint = useRef<ActiveCheckpoint | null>(null);
   const autoSentCheckpoints = useRef<Set<string>>(new Set());
+  const previousRevealSlide = useRef<number | null>(null);
+  // Read by a 1s interval, so it must be a ref: a closure captured at mount
+  // would keep judging the question on the answer count it had a minute ago.
+  const autoRevealInputs = useRef({
+    state: "closed" as "open" | "revealed" | "closed",
+    endsAt: null as string | null,
+    openedAtMs: null as number | null,
+    answered: 0,
+    present: 0,
+    advancesSinceAsked: 0
+  });
   const previousBridgeNavigation = useRef(bridge.navigationSequence);
   const handledCheckpointAction = useRef(0);
   const checkpointDrawSequence = useRef(0);
@@ -469,6 +492,58 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       ? checkpointState.round.round_id
       : null
   ]);
+
+  // A question nobody reveals leaves every phone saying "recorded" and never
+  // "you were right". The professor is in fullscreen and cannot click, so the
+  // cockpit ends the question itself: the clock ran out, the room has all
+  // answered, or he has plainly moved on. It reveals and stops there — closing
+  // would pull the answer off the phones in the same instant.
+  const openRoundId =
+    checkpointState.type === "open" ? checkpointState.round.round_id : null;
+
+  useEffect(() => {
+    setAdvancesSinceAsked(0);
+    previousRevealSlide.current = bridge.slide;
+  }, [openRoundId]);
+
+  useEffect(() => {
+    if (!openRoundId) return;
+    setAdvancesSinceAsked((current) =>
+      countAdvance(current, previousRevealSlide.current, bridge.slide));
+    previousRevealSlide.current = bridge.slide;
+  }, [bridge.slide, openRoundId]);
+
+  autoRevealInputs.current = {
+    state: checkpointState.type === "open" ? "open" : "closed",
+    endsAt:
+      checkpointState.type === "open"
+        ? checkpointState.round.ends_at ?? null
+        : null,
+    openedAtMs:
+      checkpointState.type === "open" && checkpointState.round.opened_at
+        ? new Date(checkpointState.round.opened_at).getTime()
+        : null,
+    answered: checkpointState.type === "open"
+      ? checkpointState.results?.answered ?? 0
+      : 0,
+    present: checkpointState.type === "open"
+      ? checkpointState.results?.present ?? 0
+      : 0,
+    advancesSinceAsked
+  };
+
+  useEffect(() => {
+    if (!openRoundId || !isLive) return;
+    const tick = () => {
+      const reason = autoRevealReason({
+        ...autoRevealInputs.current,
+        nowMs: Date.now()
+      });
+      if (reason) void revealOpenRound();
+    };
+    const id = setInterval(tick, 1000) as unknown as number;
+    return () => clearInterval(id);
+  }, [openRoundId, isLive]);
 
   useEffect(() => {
     if (
@@ -830,6 +905,53 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     }
   }
 
+  async function onReopenClass() {
+    setBusy(true);
+    setError(null);
+    try {
+      await reopenClassSession(sessionId!, t("run.reopenReason"));
+      await refreshContext();
+    } catch {
+      setError(t("run.reopenFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onResetClass() {
+    if (!resetConfirming) {
+      setResetConfirming(true);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const { removed } = await resetClassSession(sessionId!);
+      setResetSummary(removed);
+      setResetConfirming(false);
+      // Everything the cockpit is holding describes a class that no longer
+      // happened: the drawn question, the asked-keys, the auto-send latches.
+      checkpointLifecycleSequence.current += 1;
+      checkpointDrawSequence.current += 1;
+      autoSentCheckpoints.current = new Set();
+      recovery.current = null;
+      recoveredSession.current = null;
+      setActiveCheckpoint(null);
+      setAskedKeys([]);
+      setShowFinalQuiz(false);
+      setCheckpointState({ type: "idle" });
+      await refreshContext();
+    } catch (cause) {
+      setError(
+        cause instanceof Error && cause.message
+          ? cause.message
+          : t("run.reset.failed")
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onEndClass() {
     if (!endConfirming) {
       setEndConfirming(true);
@@ -961,6 +1083,51 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                 >
                   {busy ? t("run.starting") : t("run.start")}
                 </button>
+              ) : null}
+              {ended ? (
+                <button
+                  class="btn primary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void onReopenClass()}
+                >
+                  {busy ? t("run.reopening") : t("run.reopen")}
+                </button>
+              ) : null}
+            </section>
+
+            {/* Rehearsing consumes a class: polls go to "asked", students to
+                "present", a grade gets posted. Without this the second run of
+                the same lecture starts from a used-up session. */}
+            <section class="card stack">
+              <h2>{t("run.reset.title")}</h2>
+              <p class="hint">{t("run.reset.body")}</p>
+              {resetSummary ? (
+                <p class="hint" role="status">
+                  {t("run.reset.done", {
+                    rounds: resetSummary.pulse_rounds,
+                    answers: resetSummary.pulse_answers,
+                    polls: resetSummary.plan_checkpoints_reset,
+                    attendance: resetSummary.attendance
+                  })}
+                </p>
+              ) : null}
+              {isLive ? (
+                <p class="hint">{t("run.reset.endFirst")}</p>
+              ) : (
+                <button
+                  class="btn danger"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void onResetClass()}
+                >
+                  {resetConfirming
+                    ? t("run.reset.confirmAction")
+                    : t("run.reset.action")}
+                </button>
+              )}
+              {resetConfirming ? (
+                <p class="hint">{t("run.reset.confirm")}</p>
               ) : null}
             </section>
           </div>

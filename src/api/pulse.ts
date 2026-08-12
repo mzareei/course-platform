@@ -36,7 +36,13 @@ export interface PulseResults {
   state: string;
   answered: number;
   correct: number;
+  /** Everyone on the section roster, present or not. */
   enrolled: number;
+  /**
+   * Students who actually scanned into this class. Only they can answer, so
+   * this — not `enrolled` — is what "everyone has answered" has to measure.
+   */
+  present: number;
   distribution: Array<{ key: string; text: string; count: number }>;
   correct_key: string | null;
   respondents: Array<{

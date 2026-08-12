@@ -1846,3 +1846,39 @@ inside the iframe. Running the same code from the parent's console does not work
 `postMessage` then carries the *parent* as `event.source`, and `useDeckBridge`
 correctly rejects anything whose source is not its own iframe. That looks exactly
 like a broken feature and cost a debugging cycle.
+
+## 66. Revealing ends a question; closing it takes the answer away
+
+`course-pulse` serves a student only a round that is `open` or `revealed`
+(`loadCurrentPulse`). So "reveal the answer and close the question" — the
+obvious reading of what a professor wants — destroys the thing he asked for: the
+verdict flashes and vanishes before anyone reads it.
+
+Reveal is the end state. It already stops answers (`answer` refuses a round that
+is not `open`), and it is what flips the phone from "recorded" to "you were
+right". A revealed round retires itself after `revealDisplayMinutes` (3), and the
+next push closes whatever is left. Auto-reveal therefore reveals and stops.
+
+## 67. `enrolled` is the roster, not the room
+
+`loadResults` counts `section_enrollments` — 28 students whether nine turned up
+or none. Any rule of the form "everyone has answered" measured against it can
+never be true, so it silently never fires. `present` (added alongside it, from
+`class_attendance`) is the count that matters: only students who scanned in can
+answer at all.
+
+Guard the completeness rule with a floor as well. One student checked in, tapping
+instantly, satisfies "everyone answered" one second in — and the rest of the room
+never sees the question.
+
+## 68. Reset is not delete, and delete is not reset
+
+`delete_class_session_atomic` (0037) removes a class day and **refuses** when it
+has pulse activity. `reset_class_session_atomic` (0047) exists for the opposite
+need — pulse activity is precisely what it clears — and it keeps the class day,
+its lecture, and its question plan.
+
+Order matters inside it: `pulse_rounds.plan_checkpoint_id` is ON DELETE RESTRICT,
+so rounds must go before their plan checkpoints are touched. And the checkpoints
+are *reset to `planned`*, never deleted: deleting them would throw away the six
+polls the professor wrote, which is the one thing he wanted to keep.
