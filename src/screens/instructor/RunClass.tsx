@@ -18,8 +18,10 @@ import {
 import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
 import {
   endClassSession,
+  pauseClassSession,
   reopenClassSession,
   resetClassSession,
+  resumeClassSession,
   type ClassResetSummary
 } from "../../api/session";
 import { ClassQuestionPlanBoard } from "../../components/ClassQuestionPlanBoard";
@@ -185,6 +187,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
 
   const autoSend = autoSendCheckpoints.value;
   const isLive = session?.state === "live";
+  const isPaused = session?.state === "paused";
   const ended = session?.state === "closed";
   const canStart = Boolean(
     session && ["planned", "open", "continued"].includes(session.state)
@@ -1058,6 +1061,40 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     }
   }
 
+  async function onPauseClass() {
+    setBusy(true);
+    setError(null);
+    try {
+      // The same courtesy End class already performs. A question left open is a
+      // question thirty students sit staring at until it times out — and while
+      // paused, nobody can reveal it.
+      const activeRound =
+        checkpointState.type === "open" || checkpointState.type === "revealed"
+          ? checkpointState.round
+          : null;
+      if (activeRound) await closePulse(activeRound.round_id).catch(() => {});
+      await pauseClassSession(sessionId!);
+      await refreshContext();
+    } catch {
+      setError(t("run.pauseFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onResumeClass() {
+    setBusy(true);
+    setError(null);
+    try {
+      await resumeClassSession(sessionId!);
+      await refreshContext();
+    } catch {
+      setError(t("run.resumeFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const deck = session.content_item_id ? (
     <InstructorDeck
       contentItemId={session.content_item_id}
@@ -1098,6 +1135,19 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
           </a>
           {isLive ? (
             <>
+              {/* Reachable before End class, and deliberately plainer: pausing
+                  is reversible in one click and creates nothing, while ending
+                  posts every grade and publishes the lecture. Giving them the
+                  same weight is what pushes a professor who has run out of time
+                  toward the irreversible one. */}
+              <button
+                class="btn"
+                type="button"
+                disabled={busy}
+                onClick={() => void onPauseClass()}
+              >
+                {busy ? t("run.pausing") : t("run.pause")}
+              </button>
               <button
                 class="btn danger"
                 type="button"
@@ -1133,15 +1183,33 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
             ) : null}
             <section class="card stack">
               <h2>
-                {ended ? t("run.ended") : t("run.start.title")}
+                {isPaused
+                  ? t("run.paused")
+                  : ended
+                    ? t("run.ended")
+                    : t("run.start.title")}
               </h2>
               <p class="hint">
-                {ended
-                  ? t("run.endedBody")
-                  : canStart
-                    ? t("run.start.body")
-                    : t("run.start.unavailable")}
+                {isPaused
+                  ? t("run.pausedBody")
+                  : ended
+                    ? t("run.endedBody")
+                    : canStart
+                      ? t("run.start.body")
+                      : t("run.start.unavailable")}
               </p>
+              {/* `canStart` is false for a paused session, so this and the
+                  start button can never both appear. */}
+              {isPaused ? (
+                <button
+                  class="btn primary"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void onResumeClass()}
+                >
+                  {busy ? t("run.resuming") : t("run.resume")}
+                </button>
+              ) : null}
               {canStart ? (
                 <button
                   class="btn primary"

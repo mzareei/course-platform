@@ -179,6 +179,18 @@ export function AttendanceEngagementTable({
                       · {t("classRecord.markedByHand")}
                     </span>
                   ) : null}
+                  {/* Only when there is more than one. A "Days attended: Aug 12"
+                      line under every row of an ordinary class is noise on a
+                      table the professor reads at a glance. */}
+                  {row.attendance_days.length > 1 ? (
+                    <div class="hint">
+                      {t("classRecord.attendedDays", {
+                        days: row.attendance_days
+                          .map((day) => formatDay(day, { month: "short", day: "numeric" }))
+                          .join(" · ")
+                      })}
+                    </div>
+                  ) : null}
                 </td>
                 <td>
                   <span class={`attendance-pill ${row.status.replace("_", "-")}`}>

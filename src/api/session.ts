@@ -62,6 +62,30 @@ export async function reopenClassSession(sessionId: string, reason: string) {
   );
 }
 
+/**
+ * Stop for today without concluding the class.
+ *
+ * The difference that matters is what pausing does *not* do: closing runs
+ * `close_class_session_with_review`, which publishes the lecture to Review and
+ * posts every student's grade for the day. A class that ran out of time has
+ * earned neither. Pausing leaves the session standing so the same class — same
+ * polls, same lecture, same single grade — can be finished next session.
+ */
+export function pauseClassSession(sessionId: string) {
+  return callFn<{ session: { id: string; state: string } }>(
+    "course-session-management",
+    { action: "update_session_state", session_id: sessionId, next_state: "paused" }
+  );
+}
+
+/** Back to live. One hop: the server allows paused → live directly. */
+export function resumeClassSession(sessionId: string) {
+  return callFn<{ session: { id: string; state: string } }>(
+    "course-session-management",
+    { action: "update_session_state", session_id: sessionId, next_state: "live" }
+  );
+}
+
 /** What a reset destroyed, so the professor is told rather than reassured. */
 export interface ClassResetSummary {
   pulse_rounds: number;

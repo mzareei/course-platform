@@ -33,7 +33,12 @@ export function Today() {
 
   const today = localDateKey(new Date());
   const sessions = ctx.student_sessions;
-  const liveSession = sessions.find((session) => ["live", "paused"].includes(session.state));
+  // Kept apart on purpose. A paused class is still the student's class — it
+  // continues next session — but telling them it is live sends them to a
+  // waiting screen for a room nobody is in.
+  const liveSession = sessions.find((session) => session.state === "live");
+  const pausedSession = sessions.find((session) => session.state === "paused");
+  const activeSession = liveSession ?? pausedSession ?? null;
   const todaysSession = sessions.find(
     (session) =>
       session.planned_date === today &&
@@ -44,8 +49,11 @@ export function Today() {
       session.planned_date >= today &&
       ["planned", "open", "continued"].includes(session.state)
   );
-  const currentSession = liveSession ?? todaysSession ?? nextPlanned ?? null;
+  const currentSession = activeSession ?? todaysSession ?? nextPlanned ?? null;
   const sessionIsLive = Boolean(liveSession && currentSession?.session_id === liveSession.session_id);
+  const sessionIsPaused = Boolean(
+    pausedSession && currentSession?.session_id === pausedSession.session_id
+  );
   // The one exception to "no join button": someone the server already recorded
   // as present. They cannot manufacture an attendance they do not have, because
   // this reads the attendance row, not their intent.
@@ -57,7 +65,13 @@ export function Today() {
         <p class="eyebrow">
           {new Date().toLocaleDateString(locale(), { weekday: "long", month: "long", day: "numeric" })}
         </p>
-        <h1>{sessionIsLive ? t("today.classLive") : t("today.title")}</h1>
+        <h1>
+          {sessionIsLive
+            ? t("today.classLive")
+            : sessionIsPaused
+              ? t("today.classPaused")
+              : t("today.title")}
+        </h1>
       </div>
 
       {!currentSession ? (
@@ -69,7 +83,13 @@ export function Today() {
         <div class={`card student-session-card ${sessionIsLive ? "live" : ""}`}>
           <div class="row" style="justify-content: space-between;">
             <div>
-              <p class="eyebrow">{sessionIsLive ? t("today.classLive") : t("today.nextClass")}</p>
+              <p class="eyebrow">
+                {sessionIsLive
+                  ? t("today.classLive")
+                  : sessionIsPaused
+                    ? t("today.classPaused")
+                    : t("today.nextClass")}
+              </p>
               <h2>{currentSession.title}</h2>
             </div>
             <StatusPill state={currentSession.state} />
@@ -92,7 +112,12 @@ export function Today() {
         a button here would let a student "attend" from anywhere and make the
         professor's attendance table describe a room that was never full.
       */}
-      {canReturnToClass ? (
+      {sessionIsPaused ? (
+        <div class="card">
+          <p class="eyebrow">{t("today.classPaused")}</p>
+          <p>{t("today.classPausedBody")}</p>
+        </div>
+      ) : canReturnToClass ? (
         <div class="card">
           <p class="eyebrow">{t("today.returnToClass")}</p>
           <p>{t("today.returnToClassBody")}</p>
