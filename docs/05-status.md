@@ -867,7 +867,22 @@ Everything below was exercised through the real UI, not by calling endpoints.
 - The validator caught a real bad generation in the wild ("Q3 has 5 options")
   and the retry produced a valid bank.
 
-### Polls send themselves at their slide (2026-08-11) — **built, not yet run in a class**
+### Polls send themselves at their slide (2026-08-11) — **verified end to end in production**
+
+Proven against the live Week 1 session, instructor in the professor's own Chrome
+and a student signed in from a second browser: the deck reached slide 22, the
+planned poll pushed itself with no click, and the question appeared on the
+student screen with its four options and countdown. The round was then closed and
+the consumed checkpoint re-added, so the plan still holds all six polls.
+
+Third finding from that run, and the reason the first two fixes still did nothing:
+his deck is **mute**. See pitfall 65 — `functions/content.ts` now injects a
+slide reporter, which is what finally closed the loop.
+
+Note for whoever tests next: instructor screens ARE reachable by an agent through
+the professor's own logged-in Chrome. The standing constraint below applies to
+test sign-in, not to his browser.
+
 
 The professor tested the first version and no question reached the phones. Two
 reasons, both found before touching code again:
