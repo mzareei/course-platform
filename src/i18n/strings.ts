@@ -55,6 +55,14 @@ export const strings = {
     "Acabamos de enviar un correo de acceso. Puedes pedir otro en {seconds}s."
   ],
   "signIn.sendFailed": ["Could not send the email.", "No se pudo enviar el correo."],
+  "signIn.rateLimitedWait": [
+    "Too many sign-in emails at once. Wait {seconds} seconds, then press Send again. If your code already arrived, type it below.",
+    "Demasiados correos de acceso a la vez. Espera {seconds} segundos y vuelve a presionar Enviar. Si tu código ya llegó, escríbelo abajo."
+  ],
+  "signIn.rateLimitedBusy": [
+    "Too many people are signing in at the same time. Wait a minute and press Send again. If your code already arrived, type it below.",
+    "Demasiadas personas están entrando al mismo tiempo. Espera un minuto y vuelve a presionar Enviar. Si tu código ya llegó, escríbelo abajo."
+  ],
   "signIn.codeFailed": [
     "That code didn't work. Check it and try again.",
     "Ese código no funcionó. Revísalo e inténtalo de nuevo."

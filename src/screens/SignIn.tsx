@@ -7,6 +7,7 @@ import {
   testSignIn,
   isEmailAllowedLocally
 } from "../auth/auth";
+import { classifySendFailure } from "../features/auth/signInErrors";
 import { t } from "../i18n";
 
 const COOLDOWN_KEY = "cp.auth-send-cooldown";
@@ -59,9 +60,23 @@ export function SignIn() {
       setSent(true);
       setMessage({ kind: "info", text: t("signIn.sent") });
     } catch (error) {
+      const failure = classifySendFailure(error);
+      if (failure.kind === "rateLimited") {
+        // The code box stays hidden until a send succeeds, which locks out the
+        // student whose email *did* arrive while a classmate's request was the
+        // one refused. A rate limit is the one failure where that is wrong.
+        setSent(true);
+        setMessage({
+          kind: "error",
+          text: failure.seconds
+            ? t("signIn.rateLimitedWait", { seconds: failure.seconds })
+            : t("signIn.rateLimitedBusy")
+        });
+        return;
+      }
       setMessage({
         kind: "error",
-        text: error instanceof Error ? error.message : t("signIn.sendFailed")
+        text: failure.message || t("signIn.sendFailed")
       });
     } finally {
       setBusy(false);
