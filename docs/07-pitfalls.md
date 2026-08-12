@@ -1882,3 +1882,28 @@ Order matters inside it: `pulse_rounds.plan_checkpoint_id` is ON DELETE RESTRICT
 so rounds must go before their plan checkpoints are touched. And the checkpoints
 are *reset to `planned`*, never deleted: deleting them would throw away the six
 polls the professor wrote, which is the one thing he wanted to keep.
+
+## 69. The reveal guard has two halves: the phones and the projector
+
+Auto-reveal (pitfall 66) governs what students see on their phones. It says
+nothing about the slide, and the slide is what the room is looking at.
+
+A poll slide carries its own answer as a click-to-reveal fragment —
+`.answer-reveal` in the current decks, `.reveal-answer` in the older template —
+and a deck engine shows the next hidden fragment on the *first* forward press.
+So the three-advance guard protected the platform while one stray press on a
+clicker put the correct answer on the projector mid-vote. Verified on the real
+deck: one click set `revealed` on the fragment while the round was still open.
+
+The injected reporter now ships a CSS gate the cockpit drives —
+`html[data-answer-lock="1"]` hides those two selectors — locked exactly while a
+round is `open` and released on reveal. Two things to preserve:
+
+- **`visibility`, not `display`.** The answer keeps its space, so the slide does
+  not reflow under the class when it finally appears.
+- **Gate, don't fight.** The engine may mark the fragment revealed whenever it
+  likes; the gate only refuses to paint it. Racing the engine with a
+  MutationObserver that strips `revealed` would loop against its own mutations.
+
+Absent any message the deck is unlocked, so presenting outside a live class is
+completely unchanged.
