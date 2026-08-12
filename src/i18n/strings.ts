@@ -1145,6 +1145,10 @@ export const strings = {
     "This lecture has no ready checkpoint bank. The deck still works, but live questions and the final quiz are unavailable.",
     "Esta presentación no tiene un banco de puntos listo. La presentación funciona, pero las preguntas en vivo y el quiz final no están disponibles."
   ],
+  "run.checkpoint.planDrivenBank": [
+    "This deck does not stop for questions on its own. Use the class question plan below to ask each one, then start the quiz when you are finished.",
+    "Esta presentación no se detiene sola en las preguntas. Usa el plan de preguntas de la clase para lanzar cada una y después inicia el quiz cuando termines."
+  ],
   "run.checkpoint.openContent": [
     "Check the question bank",
     "Revisar el banco de preguntas"

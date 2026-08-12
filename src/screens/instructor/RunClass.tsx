@@ -967,6 +967,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                 onRetry={(checkpoint) => void retryCheckpoint(checkpoint)}
                 onManualCheckpoint={selectManualCheckpoint}
                 onOpenFinalQuiz={() => setShowFinalQuiz(true)}
+                finalQuizAvailable={Boolean(bank?.content_slug)}
               />
             )}
 

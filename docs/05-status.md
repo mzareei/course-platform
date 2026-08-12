@@ -2,6 +2,58 @@
 
 **Last updated:** 2026-08-11
 
+### A pulse question is spent for that class's quiz
+
+`_shared/asked-questions.ts` (new) + `course-class-quiz` + `course-activity-attempt`,
+deployed 2026-08-11. Professor's rule: a question the room already answered on
+their phones must not reappear in the same class's end-of-class quiz.
+
+Both sides of the quiz had to change together, and that is the part worth
+remembering. `course-class-quiz` sizes the instance (`question_count`) when the
+instructor presses **Start the quiz**; `course-activity-attempt` picks the actual
+rows per attempt. Filtering in only one of them would have handed students a quiz
+whose progress indicator outlived its questions — "3 of 10" that ends at 5.
+
+`askedQuestionIds` reads `pulse_rounds` for the session, in any state: a round
+opened and closed early was still put in front of the room. `withoutAsked` falls
+back to the unfiltered pool when the subtraction would leave nothing — a short
+bank whose every question was used as a pulse check must still produce a quiz.
+
+Scope is one class session on purpose. The same question stays available to a
+different group and to next semester; "already asked" is a fact about this room
+today, not about the question.
+
+Consequence worth knowing: quiz size is now `min(bank − asked, 12)`, so it moves
+with how many pulse checks actually get sent. Week 1 Class 2 (15-question bank,
+5 planned pulses) yields 10 if all five are sent, 12 if none are.
+
+**Not yet exercised at runtime** — the filter needs real `pulse_rounds`, so it is
+reviewed and type-checked but unproven until a class is actually run.
+
+### Week 1 for Group 401 imported (2026-08-11)
+
+Two classes created for 401 with externally authored decks and banks:
+
+| | Aug 12 | Aug 13 |
+|---|---|---|
+| Lecture | `security-mindset-and-the-cia-triad` | `legal-aspect-of-cybersecurity` |
+| Deck | 54 slides | 41 slides |
+| Bank | 20 | 15 |
+| Pulse checkpoints | 7 (slides 17/22/27/35/42/48/53) | 5 (slides 4/7/15/21/38) |
+
+Every pulse check is a question **slide inserted into the deck**, carrying the
+same four options as its bank question, so the projector and the phones show the
+same thing. The plans were created through `course-class-question-plan`'s
+`create` action while both sessions were still `planned` — `editableSessionStates`
+allows it, but `RunClass` only renders `ClassQuestionPlanBoard` when
+`isLive`, so there is no way to plan a class before teaching it from the UI.
+**Worth fixing**: pre-class is exactly when a professor wants to plan.
+
+Also found while doing this: `ClassQuestionPlan.final_quiz_question_count` in
+`src/api/classQuestionPlans.ts` has **no backing column and no backend code
+anywhere**. It is a dead field; quiz length comes from `course-class-quiz`'s own
+`defaultQuestionCount = 12`, and `EndOfClass` never sends a count.
+
 ### Roster import — encoding fixed, example file added
 
 Two changes to the CSV import on the People screen, both from the professor

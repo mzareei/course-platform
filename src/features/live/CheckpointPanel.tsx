@@ -23,7 +23,8 @@ export function CheckpointPanel({
   onDrawAgain,
   onRetry,
   onManualCheckpoint,
-  onOpenFinalQuiz
+  onOpenFinalQuiz,
+  finalQuizAvailable
 }: {
   state: CheckpointUiState;
   coverage: CheckpointCoverage[];
@@ -37,6 +38,9 @@ export function CheckpointPanel({
   onRetry: (checkpoint: number) => void;
   onManualCheckpoint: (coverage: CheckpointCoverage) => void;
   onOpenFinalQuiz: () => void;
+  /** There is an active question bank behind this lecture. That, and only
+   *  that, is what the end-of-class quiz needs — not deck checkpoints. */
+  finalQuizAvailable: boolean;
 }) {
   const [, setClock] = useState(Date.now());
   const useSpanish = lang.value === "es";
@@ -289,14 +293,29 @@ export function CheckpointPanel({
         </div>
       ) : null}
 
+      {/* `coverage` is the LEGACY deck-checkpoint map, and only a
+          platform-generated deck has one. An imported deck has none by design
+          (migration 0036), so gating the quiz on it told a professor
+          mid-class that the quiz was unavailable when the bank was sitting
+          right there — the quiz only ever needed an active bank. Empty
+          coverage now means "this deck will not stop by itself", nothing
+          more; the Class question plan below drives the questions. */}
       {!coverage.length ? (
         <div class="checkpoint-no-bank">
-          <p class="hint">{t("run.checkpoint.noBank")}</p>
-          <a class="btn quiet" href="/teach/content">
-            {t("run.checkpoint.openContent")}
-          </a>
+          <p class="hint">
+            {finalQuizAvailable
+              ? t("run.checkpoint.planDrivenBank")
+              : t("run.checkpoint.noBank")}
+          </p>
+          {finalQuizAvailable ? null : (
+            <a class="btn quiet" href="/teach/content">
+              {t("run.checkpoint.openContent")}
+            </a>
+          )}
         </div>
-      ) : (
+      ) : null}
+
+      {finalQuizAvailable ? (
         <button
           class="btn quiet checkpoint-final-action"
           type="button"
@@ -304,7 +323,7 @@ export function CheckpointPanel({
         >
           {t("endOfClass.title")}
         </button>
-      )}
+      ) : null}
     </aside>
   );
 }
