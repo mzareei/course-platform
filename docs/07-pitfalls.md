@@ -1822,3 +1822,27 @@ Two decks in this course can talk to the platform at all: only
 `postMessage` in it, nothing injects the engine at import or serve time, and so
 no poll can send itself there. The plan board says so out loud rather than
 leaving the professor waiting for a question that cannot come.
+
+## 65. Most decks are mute, so the cockpit gets its slide from an injected reporter
+
+Measured in the live cockpit: the Week 1 deck the professor actually teaches from
+is 54 slides, ~5 MB, and contains **zero** `postMessage` — no `deck.ready`, no
+`deck.slide_changed`, no protocol marker. Only `week-01-lecture` in the content
+repo carries the bridge engine, and nothing injected it at import or serve time.
+Every platform-side feature that needs a slide position was therefore dead on
+arrival for his real lectures.
+
+`functions/content.ts` now appends a small reporter to any HTML it serves, via
+HTMLRewriter so a 5 MB deck still streams. Two rules keep it safe:
+
+- **It observes, never drives.** No key bindings, no navigation, no class
+  mutation, no checkpoint messages. Those belong to the full engine.
+- **It stands down when the real engine is present** (`script[data-course-deck-engine]`),
+  so generated decks keep reporting their own teaching-slide numbers and
+  checkpoints instead of being overwritten with `teaching_slide: null`.
+
+When testing a shim like this by hand, inject it as a real `<script>` element
+inside the iframe. Running the same code from the parent's console does not work:
+`postMessage` then carries the *parent* as `event.source`, and `useDeckBridge`
+correctly rejects anything whose source is not its own iframe. That looks exactly
+like a broken feature and cost a debugging cycle.
