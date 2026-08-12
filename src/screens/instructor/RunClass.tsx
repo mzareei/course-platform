@@ -28,6 +28,7 @@ import { InstructorDeck } from "../../features/deck/InstructorDeck";
 import type { CheckpointQuestion } from "../../features/deck/protocol";
 import { useDeckBridge } from "../../features/deck/useDeckBridge";
 import {
+  autoContinueReason,
   autoRevealReason,
   countAdvance
 } from "../../features/live/autoReveal";
@@ -143,6 +144,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [qrError, setQrError] = useState(false);
   const [recoveringCurrentRound, setRecoveringCurrentRound] = useState(false);
   const [advancesSinceAsked, setAdvancesSinceAsked] = useState(0);
+  const [advancesSinceRevealed, setAdvancesSinceRevealed] = useState(0);
   const [resetConfirming, setResetConfirming] = useState(false);
   const [resetSummary, setResetSummary] = useState<ClassResetSummary | null>(null);
 
@@ -163,6 +165,14 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     answered: 0,
     present: 0,
     advancesSinceAsked: 0
+  });
+  const previousContinueSlide = useRef<number | null>(null);
+  // Same reason the auto-reveal inputs are a ref: a 1s interval reading a
+  // closure captured at mount would judge the question on stale numbers.
+  const autoContinueInputs = useRef({
+    state: "closed" as "open" | "revealed" | "closed",
+    revealedAtMs: null as number | null,
+    advancesSinceRevealed: 0
   });
   const previousBridgeNavigation = useRef(bridge.navigationSequence);
   const handledCheckpointAction = useRef(0);
@@ -514,6 +524,8 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   // would pull the answer off the phones in the same instant.
   const openRoundId =
     checkpointState.type === "open" ? checkpointState.round.round_id : null;
+  const revealedRoundId =
+    checkpointState.type === "revealed" ? checkpointState.round.round_id : null;
 
   useEffect(() => {
     setAdvancesSinceAsked(0);
@@ -526,6 +538,21 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       countAdvance(current, previousRevealSlide.current, bridge.slide));
     previousRevealSlide.current = bridge.slide;
   }, [bridge.slide, openRoundId]);
+
+  // Counted separately from the advances before the reveal. Reusing that
+  // counter would retire the answer instantly, because reaching the reveal by
+  // "movedOn" already means three slides have gone by.
+  useEffect(() => {
+    setAdvancesSinceRevealed(0);
+    previousContinueSlide.current = bridge.slide;
+  }, [revealedRoundId]);
+
+  useEffect(() => {
+    if (!revealedRoundId) return;
+    setAdvancesSinceRevealed((current) =>
+      countAdvance(current, previousContinueSlide.current, bridge.slide));
+    previousContinueSlide.current = bridge.slide;
+  }, [bridge.slide, revealedRoundId]);
 
   autoRevealInputs.current = {
     state: checkpointState.type === "open" ? "open" : "closed",
@@ -546,6 +573,15 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     advancesSinceAsked
   };
 
+  autoContinueInputs.current = {
+    state: checkpointState.type === "revealed" ? "revealed" : "closed",
+    revealedAtMs:
+      checkpointState.type === "revealed" && checkpointState.round.revealed_at
+        ? new Date(checkpointState.round.revealed_at).getTime()
+        : null,
+    advancesSinceRevealed
+  };
+
   useEffect(() => {
     if (!openRoundId || !isLive) return;
     const tick = () => {
@@ -558,6 +594,24 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     const id = setInterval(tick, 1000) as unknown as number;
     return () => clearInterval(id);
   }, [openRoundId, isLive]);
+
+  // Revealing shows the answer; it does not end the question. The only
+  // automatic end was a deck message an imported lecture cannot send, so on
+  // every lecture after Week 1 the panel held the last question until it was
+  // clicked — which the professor only ever saw when fullscreen dropped.
+  useEffect(() => {
+    if (!revealedRoundId || !isLive) return;
+    const tick = () => {
+      if (checkpointContinueInFlight.current) return;
+      const reason = autoContinueReason({
+        ...autoContinueInputs.current,
+        nowMs: Date.now()
+      });
+      if (reason) void continueCheckpoint(false);
+    };
+    const id = setInterval(tick, 1000) as unknown as number;
+    return () => clearInterval(id);
+  }, [revealedRoundId, isLive]);
 
   useEffect(() => {
     if (

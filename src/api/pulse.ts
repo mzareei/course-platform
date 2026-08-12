@@ -22,6 +22,8 @@ export interface PulseRound {
   time_limit_seconds: number;
   opened_at: string;
   ends_at: string;
+  /** When the instructor revealed. Null while open, or on an older round. */
+  revealed_at?: string | null;
   text: string;
   text_es?: string | null;
   options: PulseOption[];

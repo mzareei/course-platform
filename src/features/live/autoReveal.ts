@@ -74,3 +74,44 @@ export function countAdvance(
   if (previousSlide === null || nextSlide === null) return current;
   return nextSlide > previousSlide ? current + 1 : current;
 }
+
+/**
+ * How long `course-pulse` keeps serving a revealed round to students
+ * (`revealDisplayMinutes = 3`). The cockpit has to use the same number: showing
+ * a question the phones have already dropped is how the professor ended up
+ * looking at last checkpoint's question with a Continue button under it.
+ */
+export const REVEAL_DISPLAY_MS = 3 * 60 * 1000;
+
+export type AutoContinueReason = "displayWindowElapsed" | "movedOn";
+
+/**
+ * When the cockpit should let go of a revealed question by itself.
+ *
+ * Retiring used to have exactly one automatic trigger: the deck reporting that
+ * it resumed past an authored checkpoint. Only a deck carrying the full engine
+ * sends that, and every imported lecture carries just the slide reporter — so
+ * on the decks the professor actually teaches from, nothing ever retired the
+ * panel, and he met the last question the moment fullscreen dropped.
+ *
+ * Deliberately not keyed on the round's `checkpoint_after_slide`: `course-pulse`
+ * treats `plan_checkpoint_id` and `checkpoint_after_slide` as mutually
+ * exclusive, so a plan-driven round carries no slide at all — and plan-driven
+ * rounds are exactly the ones this fixes.
+ */
+export function autoContinueReason(input: {
+  state: "open" | "revealed" | "closed";
+  /** Null when recovered after a reload and the server did not say. */
+  revealedAtMs: number | null;
+  nowMs: number;
+  /** Slides advanced since the reveal, not since the question was asked. */
+  advancesSinceRevealed: number;
+}): AutoContinueReason | null {
+  if (input.state !== "revealed") return null;
+  if (input.advancesSinceRevealed >= ADVANCES_BEFORE_REVEAL) return "movedOn";
+  if (input.revealedAtMs === null) return null;
+  if (input.nowMs - input.revealedAtMs >= REVEAL_DISPLAY_MS) {
+    return "displayWindowElapsed";
+  }
+  return null;
+}
