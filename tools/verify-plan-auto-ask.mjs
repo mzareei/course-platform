@@ -258,3 +258,22 @@ assert.match(
 );
 
 console.log("verify-plan-auto-ask: OK");
+
+// Two polls may legitimately share a slide. Sending the first refreshes the
+// plan and re-runs the effect against the same slide; without an arrival latch
+// the second lands on the phones a second later.
+assert.match(
+  boardSource,
+  /if \(lastAskedArrival\.current === slideArrival\.current\) return;/,
+  "only one poll may send itself per arrival at a slide"
+);
+assert.match(
+  boardSource,
+  /lastAskedArrival\.current = slideArrival\.current;\s*\n\s*void handleAskNow\(/,
+  "the arrival must be latched before the push, not after it resolves"
+);
+assert.match(
+  boardSource,
+  /slideArrival\.current \+= 1;\s*\n\s*\}, \[deckSlide, deckTeachingSlide\]\)/,
+  "arriving at a new slide must re-arm the automatic ask"
+);

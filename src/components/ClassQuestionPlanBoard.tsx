@@ -132,6 +132,12 @@ export function ClassQuestionPlanBoard({
   // Latched the instant a poll is chosen for an automatic push, before any
   // await. A plan refresh, a re-render, or paging back must not push it twice.
   const autoAskedCheckpoints = useRef<Set<string>>(new Set());
+  // One automatic ask per arrival at a slide. Two polls may legitimately share
+  // a slide hint; without this, sending the first refreshes the plan, the
+  // effect re-runs against the same slide, and the second fires on its heels —
+  // two questions on the phones a second apart.
+  const slideArrival = useRef(0);
+  const lastAskedArrival = useRef(-1);
 
   const activeBankId = plan?.question_bank_id || selectedBankId;
   const bankById = useMemo(
@@ -224,7 +230,12 @@ export function ClassQuestionPlanBoard({
   // planned for comes up, ask it — through exactly the path the Ask now button
   // uses, so nothing here can do what a click could not.
   useEffect(() => {
+    slideArrival.current += 1;
+  }, [deckSlide, deckTeachingSlide]);
+
+  useEffect(() => {
     if (!autoAsk || !isLive) return;
+    if (lastAskedArrival.current === slideArrival.current) return;
     const checkpoint = planCheckpointForSlide(plan?.checkpoints || [], {
       slide: deckSlide,
       teachingSlide: deckTeachingSlide
@@ -244,6 +255,7 @@ export function ClassQuestionPlanBoard({
       return;
     }
     autoAskedCheckpoints.current.add(checkpoint.id);
+    lastAskedArrival.current = slideArrival.current;
     void handleAskNow(checkpoint, questionId);
   }, [autoAsk, isLive, deckSlide, deckTeachingSlide, plan, questions]);
 
