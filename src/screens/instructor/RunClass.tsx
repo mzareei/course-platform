@@ -1010,6 +1010,10 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
               <ClassQuestionPlanBoard
                 classSessionId={sessionId}
                 isLive={isLive}
+                autoAsk={autoSend}
+                deckReady={bridge.deckReady}
+                deckSlide={bridge.slide}
+                deckTeachingSlide={bridge.teachingSlide}
                 onRefresh={() => void refreshPlanBoardState()}
               />
             ) : null}

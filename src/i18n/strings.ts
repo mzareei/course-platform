@@ -918,6 +918,23 @@ export const strings = {
   "run.plan.save": ["Save", "Guardar"],
   "run.plan.cancel": ["Cancel", "Cancelar"],
   "run.plan.askNow": ["Ask now", "Preguntar ahora"],
+  "run.plan.deckOnSlide": ["Deck on slide {slide}", "Presentación en la diapositiva {slide}"],
+  "run.plan.deckWaiting": [
+    "Waiting for the deck to report its slide",
+    "Esperando a que la presentación indique su diapositiva"
+  ],
+  "run.plan.autoAskNext": [
+    "next poll sends itself at slide {slide} ({topic})",
+    "la siguiente encuesta se envía sola en la diapositiva {slide} ({topic})"
+  ],
+  "run.plan.autoAskNoneLeft": [
+    "no more polls are tied to a slide",
+    "ya no hay encuestas ligadas a una diapositiva"
+  ],
+  "run.plan.deckSilent": [
+    "This deck cannot tell the platform which slide you are on, so polls will not send themselves. Ask each one from here, or use a lecture built with the current deck engine.",
+    "Esta presentación no puede indicar a la plataforma en qué diapositiva estás, así que las encuestas no se enviarán solas. Lanza cada una desde aquí o usa una presentación con el motor actual."
+  ],
   "run.plan.afterSlide": [
     "After slide {slide}",
     "Después de la diapositiva {slide}"
@@ -1109,12 +1126,12 @@ export const strings = {
     "Enviar cada pregunta al llegar a su diapositiva"
   ],
   "run.checkpoint.autoSendOn": [
-    "You can teach from fullscreen: reaching a checkpoint slide puts its question on student phones. Space then shows the answer, Right Arrow continues.",
-    "Puedes dar clase en pantalla completa: al llegar a una diapositiva de control, su pregunta aparece en los teléfonos. Después, Espacio muestra la respuesta y Flecha derecha continúa."
+    "You can teach from fullscreen: reaching the slide a poll is planned for puts its question on student phones. Applies to the class question plan below and to decks that stop by themselves.",
+    "Puedes dar clase en pantalla completa: al llegar a la diapositiva de una encuesta planeada, su pregunta aparece en los teléfonos. Aplica al plan de preguntas de abajo y a las presentaciones que se detienen solas."
   ],
   "run.checkpoint.autoSendOff": [
-    "Questions wait here until you send them, from this panel or with Space in the deck.",
-    "Las preguntas esperan aquí hasta que las envíes, desde este panel o con Espacio en la presentación."
+    "Questions wait until you send them, from this panel, from the plan below, or with Space in the deck.",
+    "Las preguntas esperan hasta que las envíes, desde este panel, desde el plan de abajo o con Espacio en la presentación."
   ],
   "run.checkpoint.autoSendHeld": [
     "This one was not sent automatically. Press Space in the deck or send it here. Right Arrow skips.",

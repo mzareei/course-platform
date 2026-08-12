@@ -1790,3 +1790,35 @@ the render-time `bridge.checkpoint` captured in the closure is stale by then.
 Only the deck's own arrival passes `fromDeckArrival: true`. Never add it to a
 retry or to `selectManualCheckpoint`: those are the paths a professor uses when
 the automatic one has already gone wrong.
+
+## 63. The professor's polls live in the plan, not in the deck's checkpoint map
+
+Auto-send was first built on `deck.checkpoint_entered` + `drawCheckpointQuestion`.
+That path is real but it is not the one Week 1 runs on. An imported lecture has
+no checkpoint coverage by design (migration 0036, and pitfall/commit b291572),
+so the draw has nothing to draw and the professor never sees a question. Week 1's
+deck has exactly five checkpoint slides (15/23/28/40/45) — "Poll 6" is not one of
+them. It is checkpoint **position 6 in the class question plan**.
+
+So the poll path that matters is: plan checkpoint `slide_hint` → the slide the
+deck reports → `pushPlanQuestion`. Before adding anything to the checkpoint-bank
+path, check whether the lecture in front of you actually has coverage.
+
+## 64. A deck reports two different slide numbers, and only one is the professor's
+
+Measured on the Week 1 deck through a postMessage harness: at DOM slide 40 the
+deck reports `{ slide: 40, teaching_slide: 37 }`. Teaching numbering skips the
+checkpoint slides already passed, so the two drift apart by one per checkpoint
+crossed. On a checkpoint slide itself, `teaching_slide` is `null`.
+
+`slide_hint` is hand-typed into "Which slide are you on?", so it is always the
+number on the deck's own counter — the DOM position. Matching a hint against
+`teaching_slide` as well looks harmless and generous; on this deck it fires poll 6
+three slides early. Match the counter, and treat the teaching number only as a
+fallback for a deck that reports no counter at all.
+
+Two decks in this course can talk to the platform at all: only
+`week-01-lecture` carries the bridge engine. Every deck from week 02 on has no
+`postMessage` in it, nothing injects the engine at import or serve time, and so
+no poll can send itself there. The plan board says so out loud rather than
+leaving the professor waiting for a question that cannot come.

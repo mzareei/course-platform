@@ -867,7 +867,30 @@ Everything below was exercised through the real UI, not by calling endpoints.
 - The validator caught a real bad generation in the wild ("Q3 has 5 options")
   and the retry produced a valid bank.
 
-### Auto-send at a checkpoint slide (2026-08-11) — **built, not yet run in a class**
+### Polls send themselves at their slide (2026-08-11) — **built, not yet run in a class**
+
+The professor tested the first version and no question reached the phones. Two
+reasons, both found before touching code again:
+
+1. It was never deployed. The commit sat on `design/ui-redesign-2026-08-11`;
+   Pages deploys from `main`.
+2. It hung off the wrong path. Auto-send fired on deck checkpoints and drew from
+   the bank's checkpoint coverage — which Week 1, an imported deck, does not
+   have. His polls are class-question-plan checkpoints ("Poll 6" is position 6),
+   keyed by `slide_hint`. See pitfalls 63 and 64.
+
+What now runs: the plan board watches the slide the deck reports and pushes the
+matching planned poll through the same `pushPlanQuestion` the Ask now button
+uses. A poll fires once, only while `planned`, and never re-fires when the
+professor pages back over its slide. The board also shows, before class, which
+slide the deck is on and which poll is armed next — and says plainly when a deck
+cannot report its slide at all, which is every lecture after Week 1.
+
+Verified: 27 verifiers including a lecture-walk simulation, and a postMessage
+harness against the real Week 1 deck that established the slide-numbering rule.
+Not verified: the instructor screens themselves (see the standing constraint).
+
+### Auto-send at a checkpoint slide (2026-08-11) — the deck-checkpoint path
 
 The professor lectures from the platform's own deck in fullscreen. Sending a
 poll used to mean leaving fullscreen, finding the cockpit, and clicking **Send

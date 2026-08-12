@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   addClassQuestionPlanCheckpoint,
   classQuestionPlanErrorMessage,
@@ -12,6 +12,11 @@ import {
 } from "../api/classQuestionPlans";
 import { listBanks, pushPlanQuestion, type BankSummary } from "../api/pulse";
 import { listQuestions, type BankQuestion } from "../api/checkpoints";
+import {
+  deckCannotReportSlides,
+  planCheckpointForSlide,
+  shouldAutoAskPlanCheckpoint
+} from "../features/live/planAutoAsk";
 import { t } from "../i18n";
 import type { StringKey } from "../i18n/strings";
 
@@ -97,10 +102,19 @@ function checkpointLabel(checkpoint: PlanCheckpoint): string {
 export function ClassQuestionPlanBoard({
   classSessionId,
   isLive,
+  autoAsk,
+  deckReady,
+  deckSlide,
+  deckTeachingSlide,
   onRefresh
 }: {
   classSessionId: string;
   isLive: boolean;
+  /** The professor's "send each question when I reach its slide" switch. */
+  autoAsk: boolean;
+  deckReady: boolean;
+  deckSlide: number | null;
+  deckTeachingSlide: number | null;
   onRefresh?: () => void | Promise<void>;
 }) {
   const [plan, setPlan] = useState<ClassQuestionPlan | null>(null);
@@ -115,6 +129,9 @@ export function ClassQuestionPlanBoard({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedCheckpointId, setSelectedCheckpointId] = useState("");
+  // Latched the instant a poll is chosen for an automatic push, before any
+  // await. A plan refresh, a re-render, or paging back must not push it twice.
+  const autoAskedCheckpoints = useRef<Set<string>>(new Set());
 
   const activeBankId = plan?.question_bank_id || selectedBankId;
   const bankById = useMemo(
@@ -160,6 +177,7 @@ export function ClassQuestionPlanBoard({
   useEffect(() => {
     setEditor(null);
     setNotice(null);
+    autoAskedCheckpoints.current = new Set();
     void loadPlanAndBanks();
   }, [classSessionId]);
 
@@ -201,6 +219,33 @@ export function ClassQuestionPlanBoard({
       planned.some((checkpoint) => checkpoint.id === current) ? current : (planned[0]?.id || "")
     );
   }, [plan]);
+
+  // The professor teaches from the deck in fullscreen. When the slide a poll was
+  // planned for comes up, ask it — through exactly the path the Ask now button
+  // uses, so nothing here can do what a click could not.
+  useEffect(() => {
+    if (!autoAsk || !isLive) return;
+    const checkpoint = planCheckpointForSlide(plan?.checkpoints || [], {
+      slide: deckSlide,
+      teachingSlide: deckTeachingSlide
+    });
+    if (!checkpoint) return;
+    const candidates = candidateQuestions(checkpoint);
+    const questionId =
+      selectedCandidateIds[checkpoint.id] || candidates[0]?.id || "";
+    if (
+      !shouldAutoAskPlanCheckpoint({
+        enabled: autoAsk,
+        isLive,
+        questionId,
+        alreadyAsked: autoAskedCheckpoints.current.has(checkpoint.id)
+      })
+    ) {
+      return;
+    }
+    autoAskedCheckpoints.current.add(checkpoint.id);
+    void handleAskNow(checkpoint, questionId);
+  }, [autoAsk, isLive, deckSlide, deckTeachingSlide, plan, questions]);
 
   async function refreshPlan() {
     const nextPlan = await getClassQuestionPlan(classSessionId);
@@ -353,6 +398,15 @@ export function ClassQuestionPlanBoard({
   const selectedHasStaleCandidates = selectedCheckpoint
     ? selectedCheckpoint.candidate_question_ids.length > resolvedCandidateQuestions.length
     : false;
+  const nextAutoAsk = plannedCheckpoints.find(
+    (checkpoint) => typeof checkpoint.slide_hint === "number"
+  );
+  const deckIsSilent = deckCannotReportSlides({
+    enabled: autoAsk,
+    deckReady,
+    position: { slide: deckSlide, teachingSlide: deckTeachingSlide },
+    checkpoints: plan?.checkpoints || []
+  });
 
   return (
     <section class="card muted stack">
@@ -368,6 +422,28 @@ export function ClassQuestionPlanBoard({
 
       {error ? <p class="error-text" role="alert">{error}</p> : null}
       {notice ? <p class="hint" role="status">{notice}</p> : null}
+
+      {/* The professor cannot see this panel while presenting, so it has to be
+          verifiable *before* class: is the deck talking, and which poll is armed
+          next. A silent deck is the one failure that looks exactly like nothing
+          happening, so it gets said out loud rather than left to guess. */}
+      {isLive && plan ? (
+        deckIsSilent ? (
+          <p class="error-text" role="alert">{t("run.plan.deckSilent")}</p>
+        ) : autoAsk ? (
+          <p class="hint" role="status">
+            {deckSlide === null
+              ? t("run.plan.deckWaiting")
+              : t("run.plan.deckOnSlide", { slide: deckSlide })}
+            {nextAutoAsk?.slide_hint != null
+              ? ` · ${t("run.plan.autoAskNext", {
+                slide: nextAutoAsk.slide_hint,
+                topic: nextAutoAsk.topic
+              })}`
+              : ` · ${t("run.plan.autoAskNoneLeft")}`}
+          </p>
+        ) : null
+      ) : null}
 
       {loadingPlan || banks === null ? (
         <p class="hint" role="status">{t("run.loadingBanks")}</p>
