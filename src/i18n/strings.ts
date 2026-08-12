@@ -110,6 +110,11 @@ export const strings = {
     "The class QR code is on the screen at the front. Scan it with your phone camera to join and mark your attendance.",
     "El código QR de la clase está en la pantalla del frente. Escanéalo con la cámara de tu teléfono para entrar y registrar tu asistencia."
   ],
+  "today.returnToClass": ["Return to class", "Regresar a la clase"],
+  "today.returnToClassBody": [
+    "You already scanned in. Go back to the question screen.",
+    "Ya registraste tu entrada. Regresa a la pantalla de preguntas."
+  ],
   "today.nextClass": ["Next class", "Próxima clase"],
   "today.sessionDetails": ["{date} · Group {code}", "{date} · Grupo {code}"],
   "today.lecture": ["Lecture: {title}", "Lección: {title}"],

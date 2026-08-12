@@ -46,6 +46,10 @@ export function Today() {
   );
   const currentSession = liveSession ?? todaysSession ?? nextPlanned ?? null;
   const sessionIsLive = Boolean(liveSession && currentSession?.session_id === liveSession.session_id);
+  // The one exception to "no join button": someone the server already recorded
+  // as present. They cannot manufacture an attendance they do not have, because
+  // this reads the attendance row, not their intent.
+  const canReturnToClass = sessionIsLive && Boolean(liveSession?.checked_in);
 
   return (
     <div class="stack">
@@ -88,7 +92,13 @@ export function Today() {
         a button here would let a student "attend" from anywhere and make the
         professor's attendance table describe a room that was never full.
       */}
-      {sessionIsLive ? (
+      {canReturnToClass ? (
+        <div class="card">
+          <p class="eyebrow">{t("today.returnToClass")}</p>
+          <p>{t("today.returnToClassBody")}</p>
+          <a class="btn primary" href="/live">{t("today.returnToClass")}</a>
+        </div>
+      ) : sessionIsLive ? (
         <div class="card">
           <p class="eyebrow">{t("today.scanToJoin")}</p>
           <p>{t("today.scanToJoinBody")}</p>
