@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { ApiError } from "../../api/client";
 import { resolveJoinCode } from "../../api/join";
 import { rememberJoinedClassSession } from "../../api/session";
@@ -7,7 +7,7 @@ import {
   saveAuthReturnPath
 } from "../../features/auth/returnPath";
 import { t } from "../../i18n";
-import { refreshContext, session } from "../../state/session";
+import { context, refreshContext, session } from "../../state/session";
 import { SignIn } from "../SignIn";
 
 type JoinIssue = "invalid" | "closed" | "access" | "unknown";
@@ -15,6 +15,8 @@ type JoinIssue = "invalid" | "closed" | "access" | "unknown";
 export function JoinClass({ joinCode }: { joinCode?: string }) {
   const signedIn = Boolean(session.value);
   const [issue, setIssue] = useState<JoinIssue | null>(null);
+  const claimed = Boolean(context.value);
+  const retried = useRef(false);
 
   useEffect(() => {
     const code = String(joinCode || "").trim();
@@ -22,6 +24,10 @@ export function JoinClass({ joinCode }: { joinCode?: string }) {
       saveAuthReturnPath(`/join/${code}`);
       return;
     }
+    // course-auth-context is what links a brand-new account to its rostered
+    // profile. The server claims it too now, but a browser still holding an
+    // older bundle would race it and be told it is in the wrong group.
+    if (!claimed) return;
 
     // A magic-link return boots already signed in and bypasses finishSignIn().
     // Consume the stored path here too so it cannot hijack a later sign-in.
@@ -29,6 +35,14 @@ export function JoinClass({ joinCode }: { joinCode?: string }) {
 
     let cancelled = false;
     resolveJoinCode(code)
+      .catch(async (error) => {
+        const unclaimed =
+          error instanceof ApiError && error.status === 403 && !retried.current;
+        if (!unclaimed || cancelled) throw error;
+        retried.current = true;
+        await refreshContext();
+        return resolveJoinCode(code);
+      })
       .then(async (joined) => {
         if (cancelled) return;
         rememberJoinedClassSession(joined.session_id);
@@ -51,7 +65,7 @@ export function JoinClass({ joinCode }: { joinCode?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [joinCode, signedIn]);
+  }, [joinCode, signedIn, claimed]);
 
   if (!signedIn) return <SignIn />;
 
