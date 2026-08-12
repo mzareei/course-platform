@@ -15,7 +15,46 @@ as pitfalls #73–#76. The sixth is a feature and is planned, not built.
 | "The class is live" but no way in | Today had no route back for a student who had already scanned | Fixed, deployed |
 | Fullscreen closed itself mid-lecture | The deck iframe reloaded every 9 minutes to refresh a token it no longer needed (#75) | Fixed, deployed |
 | Last checkpoint's question waiting with "Continue" | Nothing retired a revealed poll on an imported deck (#73, #74) | Fixed, deployed |
-| Wanted to pause a class, not end it | Never built; the backend already supports it | Planned — see below |
+| Wanted to pause a class, not end it | Never built; the backend already supports it | **Built and verified** — see below |
+
+### Pause, resume, and attendance by day — shipped 2026-08-12
+
+Run Class has **Pause the class** beside End the class, and **Resume the class**
+on the pre-live panel. Pause is deliberately the plainer button and has no
+confirm step: it is reversible in one click and creates nothing, while ending
+posts every grade and publishes the lecture. Giving them equal weight is what
+pushes a professor who has run out of time toward the irreversible one. A
+verifier fails if pause ever gains danger styling or a confirm step.
+
+Pausing closes any open question first — while paused nobody can reveal it.
+Students stop being told a paused class is live; their class screen says paused
+and keeps polling, so resuming drops them back into the questions with nothing
+to tap. A running class now outranks a paused one when both exist on one day,
+which happens as soon as a resumed half shares a date with a new lecture.
+
+**Attendance is a day; engagement and grading stay per class** (the professor's
+own split). `class_attendance` gained `attendance_date` and moved its unique
+constraint to `(class_session_id, profile_id, attendance_date)` — migrations
+0048 and 0049, deliberately two, see pitfall #77. Students rescan on the day a
+class resumes; that scan is what records presence for that day. The class record
+shows the days only when there is more than one.
+
+Verified against production in a throwaway class, deleted afterwards:
+
+- Pausing a class with a question open on a student's phone → session `paused`,
+  the question closed rather than stranded, the student still checked in.
+- While paused: **zero** student-visible releases and **zero** posted grades, so
+  the lecture is not in Review and nobody is graded.
+- Resuming → `live`, and a new poll was accepted. That last part is the real
+  proof: `course-pulse` refuses any push unless the session is exactly `live`.
+- Three scans in a row → one attendance row, arrival time unchanged. The new
+  per-day constraint is in force and first-scan-wins still holds.
+
+**Not yet observed:** a scan on a genuinely later day producing a second row.
+That needs an actual second day. The schema guarantees it (the old two-column
+unique is dropped, both migrations confirmed on the remote ledger), but it has
+not been watched happen. Worth checking the first time a class is really
+resumed.
 
 **All four code fixes were verified against production on 2026-08-12**, in a
 throwaway class ("ZZ SANDBOX") created in empty group 502 and deleted afterwards.

@@ -6,6 +6,47 @@ the UI is silently wrong.**
 
 ---
 
+## 77. A unique constraint encodes a product rule, and relaxing it breaks every writer and reader at once
+
+**Built 2026-08-12 for pause/resume. Caught by sweeping, not by symptoms.**
+
+`class_attendance` was `unique (class_session_id, profile_id)` — one row per
+student per class. The professor's rule is that **attendance is a day** while
+engagement and grading stay per class, so a lecture paused today and finished
+next week needs two rows. Relaxing that constraint touches five places, and only
+one of them is the migration:
+
+- `_shared/attendance.ts`'s `loadCheckInAt` used `.maybeSingle()`, which throws
+  on more than one row — so it would have failed for exactly the student who
+  attended *most*.
+- `course-class-record`'s `loadAttendance` built a `Map` straight from the rows,
+  silently keeping whichever came last and losing the real arrival time.
+- `course-pulse`'s `present` count counted rows, not people, so anyone who came
+  both days counted twice — pushing "everyone has answered" permanently out of
+  reach and quietly disabling auto-reveal, the thing that lets the professor
+  stay in fullscreen.
+- Both writers (`course-session-join`'s scan, `course-class-record`'s Mark
+  present) named the old two-column `ON CONFLICT` target, which stops existing
+  the moment the constraint is dropped.
+
+Two greps find all of it: `grep -rn "class_attendance" supabase/functions/` and
+`grep -rn "class_session_id,profile_id" supabase/functions/`.
+
+**Rule:** a unique constraint is a product rule the whole codebase has been
+written against. Before relaxing one, find every reader that assumes at-most-one
+(`.maybeSingle()`, `new Map(rows.map(...))`, `count`) and every writer that names
+it in `ON CONFLICT`. Same family as pitfall #69 — follow every path into the
+table, not just the one you are changing.
+
+**And roll it out in two migrations, not one.** Dropping the old constraint in
+the same step as adding the new one leaves a window where the deployed functions
+name a conflict target that no longer exists: every check-in fails with a raw
+database error, mid-class, for a student standing in front of a QR code. Add the
+new constraint first (it is redundant while the old one stands, which is the
+point), deploy the functions, then drop the old one. Migrations 0048 and 0049.
+
+---
+
 ## 76. A one-time promotion that lives in one endpoint blocks every other door
 
 **Reported by the professor 2026-08-12, after the first real class: every
