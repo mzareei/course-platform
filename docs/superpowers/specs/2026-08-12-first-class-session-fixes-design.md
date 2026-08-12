@@ -57,14 +57,17 @@ Supabase's raw English error string. It also reveals the verification-code field
 on that failure, so a student whose email *did* arrive is not blocked behind a
 classmate's refusal.
 
-### Deliberately not done
+### Closing the test-sign-in door
 
-`config.testSignIn` is **not** flipped to `false` and
-`COURSE_TEST_SIGNIN_UNTIL` is **not** cleared by this work. Both should happen
-once real email is confirmed working, and that is the professor's call to make
-knowingly: while test sign-in is enabled, anyone who knows a rostered address can
-sign in as that student, and grades hang off those accounts. This is recorded
-here so the decision is explicit rather than forgotten.
+The professor decided (2026-08-12) to **close it once email is confirmed
+working**, not before — his classes must stay runnable if SMTP is not ready by
+the next class day.
+
+So: set `config.testSignIn` to `false` and clear `COURSE_TEST_SIGNIN_UNTIL`
+**after** a real student inbox has received a real sign-in code, and not as part
+of the same change that configures SMTP. Until then, anyone who knows a rostered
+address can sign in as that student and their grades hang off that account —
+which is why this is a tracked step with a trigger, not a someday-item.
 
 ---
 
@@ -339,11 +342,39 @@ continuing to poll. When the professor resumes, students land back in the
 question flow with nothing to tap. This ranks above the waiting branch and below
 the `checked_in` gate, matching the existing branch order.
 
-**Attendance carries over.** A pause keeps the same `class_sessions` row, so
-`class_attendance` rows survive untouched and a resumed class recognises everyone
-who scanned. No code change; recorded here because it was an explicit decision,
-and because it means the attendance record reads "attended this class" across
-both days rather than per day.
+**Attendance is per day; engagement and grading stay per class.** The professor
+was explicit (2026-08-12): *"attendance can be day based not class based… you can
+keep track of the class if they were present during the class, and then the date
+too… also the engagement you calculate should be based on the class, not date…
+maybe today I finish half way and the next class I finish the remaining half and
+also a new class."*
+
+Three consequences, and only the first needs schema work:
+
+1. **`class_attendance` needs a date.** Its unique constraint is today
+   `(class_session_id, profile_id)` — one row per student per class, which
+   cannot express "present on both days". A new migration adds a stored
+   `attendance_date` (the local class date of `checked_in_at`) and moves the
+   constraint to `(class_session_id, profile_id, attendance_date)`. The existing
+   "first scan wins" behaviour is preserved *within* a day, so a re-scan after a
+   page reload still keeps the true arrival time; a scan on a later day creates a
+   second row rather than being discarded. Students therefore rescan the QR on
+   the resumed day — that scan is precisely what records presence for that day.
+   Backfill sets `attendance_date` from each existing row's `checked_in_at`, so
+   no historical row changes meaning.
+
+2. **Grading and engagement are already per class** — every score,
+   participation event, and grade row keys on `class_session_id`, which a pause
+   does not change. Nothing to do; verified rather than assumed.
+
+3. **One day can hold two sessions.** A resumed half and a brand-new lecture may
+   both belong to the same date. `selectLiveSessionId` /
+   `firstLiveSessionId` in `src/features/join/sessionState.ts` currently take the
+   first session whose state is `live` **or** `paused`, ordered by planned date —
+   which would hand a student the older paused session while the new lecture is
+   the one actually running. Prefer `live` over `paused`, falling back to
+   `paused` only when nothing is live. The stored joined-session id still wins
+   over both, so a student who scanned into a specific class stays in it.
 
 New strings in EN + ES pairs.
 
