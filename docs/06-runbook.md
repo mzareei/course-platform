@@ -289,6 +289,44 @@ The whole room shares one campus NAT address. Some Supabase auth endpoints are
 rate-limited **per IP**, independently of email. That is the next thing to
 check — not a reason to conclude the SMTP change failed.
 
+## Testing against production without touching a real class
+
+**Never rehearse on a real class session.** A session left `live` for hours is
+usually half-taught on purpose and will be continued next session; ending it
+posts every student's grade and publishes the lecture to Review. Closing a class
+the professor intended to resume is not recoverable by re-opening it.
+
+Use a throwaway instead. Group **502** is empty (`planned`, zero enrolments) and
+exists for this:
+
+1. Add one disposable student to 502 — `add_person` with a `@tec.mx` address.
+   They land as `status: 'invited'` with no auth link, which is also exactly the
+   state needed to test a first-ever sign-in.
+2. Create a session in 502, title it obviously (`ZZ SANDBOX — delete me`), and
+   attach whichever lecture you need. For anything about polls retiring
+   themselves, pick a lecture whose bank has **zero checkpoint coverage** — that
+   is the imported-deck shape where the plan-driven path runs.
+3. Start it, test, then clean up **all four** of these:
+   - close and `delete_session` with `force: true` (it will have pulse rounds),
+   - `remove_person` for the disposable student,
+   - archive the `review_only` release that closing the session created for 502,
+   - confirm `list_sessions` shows no `SANDBOX` rows left.
+
+`remove_person` deactivates the membership and deliberately keeps the profile
+row (see pitfall #20), so the roster count stays one higher. That is expected,
+not leftover mess.
+
+To drive a student and an instructor at once without losing the instructor
+session, do not sign in and out — both share one `localStorage` key per origin.
+Get a student session with `course-test-signin` and exchange the OTP at
+`/auth/v1/verify` with `fetch`, keeping the token in a variable. The instructor
+session in `localStorage` is never touched.
+
+**Make the probe fail loudly.** A verification script that greps the UI must
+assert the strings it greps for actually exist, and must treat a non-200 response
+as a failure rather than as "nothing on screen". Both mistakes were made on
+2026-08-12 and both made a broken cockpit look healthy.
+
 ## Test accounts
 
 | Who | Email | How |

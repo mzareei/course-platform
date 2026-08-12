@@ -17,6 +17,41 @@ as pitfalls #73–#76. The sixth is a feature and is planned, not built.
 | Last checkpoint's question waiting with "Continue" | Nothing retired a revealed poll on an imported deck (#73, #74) | Fixed, deployed |
 | Wanted to pause a class, not end it | Never built; the backend already supports it | Planned — see below |
 
+**All four code fixes were verified against production on 2026-08-12**, in a
+throwaway class ("ZZ SANDBOX") created in empty group 502 and deleted afterwards.
+Never against a real class — see the note on half-finished sessions below.
+
+- *First-ever sign-in joins.* A student added to the roster and never signed in
+  (`status = 'invited'`, no `auth_user_id`) called `course-session-join` **with no
+  `course-auth-context` call first** — the exact QR-scan sequence that failed —
+  and got HTTP 200, `joined: true`. Their profile went `invited → active` by
+  itself. The same student using group 401's join code still got 403 *"You are
+  not enrolled in the group for this class"*, so the guard is intact and the
+  message is now only shown when it is true.
+- *Return to class.* Verified through the real entry point as a student: Today →
+  button → the live question screen. `student_sessions[].checked_in` was `true`
+  for the scanned class and `false` for the next one.
+- *A revealed question retires itself.* Measured, with both surfaces sampled by
+  one probe: `21:39:07` cockpit and student both showing the revealed question →
+  `21:40:42` the student's three-minute window expires → `21:41:16` the cockpit
+  lets go on its own, with no click. The panel only reaches `idle` after
+  `closePulse` resolves, so the round was genuinely closed.
+- *Fullscreen survives the token refresh.* With `document.fullscreenElement`
+  stubbed to the deck iframe (the one value the code reads; the timer, mint and
+  apply decision are all real), the deck was **not reloaded once** across the
+  540-second refresh deadline. Dropping the stub and firing `fullscreenchange`
+  applied the held token exactly once — which also proves the mint had fired and
+  was being held rather than the timer being throttled. The replacement URL still
+  carried its slide hash.
+
+**A method note worth keeping.** The first attempt at the retire test reported
+success while proving nothing: the probe read the panel for buttons labelled
+"Continue with the class" and "Reveal" when the real labels are **"Continue
+lecture"** and **"Show the answer"**, and it mapped an expired student token to
+"no question on screen" instead of failing. Both made a broken cockpit look
+healthy. A verification probe needs its own negative check — assert the labels it
+greps for exist, and make an auth failure loud.
+
 **The email ceiling is still open, and it is the one that will bite next.** No
 code change can raise it: the project uses Supabase's built-in mailer, capped at
 a couple of messages per hour for the whole project. `docs/06-runbook.md` →
