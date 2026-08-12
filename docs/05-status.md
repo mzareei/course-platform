@@ -867,7 +867,28 @@ Everything below was exercised through the real UI, not by calling endpoints.
 - The validator caught a real bad generation in the wild ("Q3 has 5 options")
   and the retry produced a valid bank.
 
-### Polls send themselves at their slide (2026-08-11) — **verified end to end in production**
+### A poll runs itself start to finish (2026-08-11) — **verified end to end in production**
+
+Auto-reveal, reopen and per-class reset were all exercised against the live Week 1
+session, instructor in the professor's Chrome and a student in a second browser:
+
+- **Timer expiry** — round left to run out, revealed itself, phone showed the
+  correct answer.
+- **Everyone in the room answered** — with one student checked in, revealed
+  seconds after the answer, well inside the 60s window. Phone read
+  "Respondiste bien · +1 puntos". That verdict was the original bug: without a
+  reveal the phone says "recorded" forever.
+- **Three advances** — poll opened on slide 48, stayed open through 49 and 50,
+  revealed exactly on 51.
+- **Reopen** — Closed → Live in one click.
+- **Reset** — "Cleared 3 question(s), 1 answer(s) and 1 check-in(s). 7 planned
+  poll(s) are ready to ask again", session back to Planned, plan intact.
+
+One bug found and fixed during that run: two plan checkpoints sharing a slide
+hint fired back to back, because sending the first refreshed the plan and the
+effect re-ran against the same slide. Latched per arrival, not per checkpoint.
+
+### Polls send themselves at their slide (2026-08-11) — the earlier pass
 
 Proven against the live Week 1 session, instructor in the professor's own Chrome
 and a student signed in from a second browser: the deck reached slide 22, the
