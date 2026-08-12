@@ -493,6 +493,20 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       : null
   ]);
 
+  // A poll slide carries its own answer as a click-to-reveal fragment, and the
+  // deck shows it on the first forward press — one slip on the clicker and the
+  // answer is on the projector while the class is still voting. Hold it back
+  // for exactly as long as the question is open, and let it through the instant
+  // the question is revealed, which is when the room should see it anyway.
+  useEffect(() => {
+    if (!bridge.deckReady) return;
+    bridge.send({
+      version: 1,
+      type: "answer.lock",
+      locked: checkpointState.type === "open"
+    });
+  }, [bridge.deckReady, checkpointState.type]);
+
   // A question nobody reveals leaves every phone saying "recorded" and never
   // "you were right". The professor is in fullscreen and cannot click, so the
   // cockpit ends the question itself: the clock ran out, the room has all

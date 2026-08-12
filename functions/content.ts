@@ -26,6 +26,23 @@ const SUPABASE_URL = "https://ojmbupftdikwmlqvibwt.supabase.co";
  * Kept to the reporting half of the protocol on purpose. Checkpoint messages
  * belong to the full engine, which owns the navigation this shim refuses to do.
  */
+/**
+ * A poll slide carries its own answer as a click-to-reveal fragment
+ * (`.answer-reveal` in the current decks, `.reveal-answer` in the older
+ * template). The deck's engine shows the next hidden fragment on the *first*
+ * forward press — so one stray click on a hand-held clicker puts the correct
+ * answer on the projector while the class is still voting on it.
+ *
+ * A CSS gate rather than a fight with the engine: the engine may mark the
+ * fragment revealed whenever it likes, and this simply refuses to paint it
+ * while a question is live on the phones. `visibility` and not `display`, so
+ * the slide does not reflow when the answer finally appears.
+ */
+const ANSWER_LOCK_STYLE = `<style>
+  html[data-answer-lock="1"] .answer-reveal,
+  html[data-answer-lock="1"] .reveal-answer { visibility: hidden !important; }
+</style>`;
+
 const SLIDE_REPORTER = `<script>(function () {
   if (parent === window) return;
   if (window.__deckSlideReporter) return;
@@ -33,6 +50,21 @@ const SLIDE_REPORTER = `<script>(function () {
   // and checkpoints. Never compete with it.
   if (document.querySelector('script[data-course-deck-engine]')) return;
   window.__deckSlideReporter = 1;
+
+  // The cockpit owns this: locked while a question is open on student phones,
+  // released the moment it is revealed. Absent any instruction the deck behaves
+  // exactly as it always has, so presenting outside a live class is unchanged.
+  addEventListener('message', function (event) {
+    if (event.origin !== location.origin || event.source !== parent) return;
+    var data = event.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type !== 'answer.lock' || data.version !== 1) return;
+    if (data.locked === true) {
+      document.documentElement.setAttribute('data-answer-lock', '1');
+    } else if (data.locked === false) {
+      document.documentElement.removeAttribute('data-answer-lock');
+    }
+  });
 
   var last = -1;
   var readySent = false;
@@ -116,7 +148,7 @@ export const onRequestGet: PagesFunction = async ({ request }) => {
   return new HTMLRewriter()
     .on("body", {
       element(element) {
-        element.append(SLIDE_REPORTER, { html: true });
+        element.append(ANSWER_LOCK_STYLE + SLIDE_REPORTER, { html: true });
       }
     })
     .transform(response);
