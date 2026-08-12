@@ -84,6 +84,8 @@ export interface StudentSession {
   content_item_id: string | null;
   content_slug: string | null;
   content_title: string | null;
+  /** The server's own attendance fact: this student scanned into this class. */
+  checked_in: boolean;
 }
 
 export interface CourseContext {

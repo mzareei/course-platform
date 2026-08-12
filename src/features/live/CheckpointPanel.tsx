@@ -248,10 +248,18 @@ export function CheckpointPanel({
             })}
           </div>
           <p class="hint">
-            {t("run.answeredOf", {
-              answered: results?.answered ?? 0,
-              enrolled: results?.enrolled ?? 0
-            })}
+            {/* Against the roster this reads "3 of 28" in a room of nine and
+                looks like failure. The count that matters is who scanned in. */}
+            {results?.present
+              ? t("run.answeredOfPresent", {
+                answered: results.answered,
+                present: results.present,
+                enrolled: results.enrolled
+              })
+              : t("run.answeredOf", {
+                answered: results?.answered ?? 0,
+                enrolled: results?.enrolled ?? 0
+              })}
             {state.type === "revealed" && results
               ? ` · ${t("run.correctCount", { correct: results.correct })}`
               : ""}
@@ -289,8 +297,12 @@ export function CheckpointPanel({
           </div>
           <p class="hint">
             {state.type === "open"
-              ? t("run.checkpoint.spaceRevealHint")
-              : t("run.checkpoint.arrowHint")}
+              ? autoSend
+                ? t("run.checkpoint.autoRevealHint")
+                : t("run.checkpoint.spaceRevealHint")
+              : autoSend
+                ? t("run.checkpoint.revealedAutoHint")
+                : t("run.checkpoint.arrowHint")}
           </p>
         </div>
       ) : null}

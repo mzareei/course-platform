@@ -6,6 +6,112 @@ the UI is silently wrong.**
 
 ---
 
+## 76. A one-time promotion that lives in one endpoint blocks every other door
+
+**Reported by the professor 2026-08-12, after the first real class: every
+student saw "This class is for another group" and had to reload two or three
+times before the class opened.**
+
+`loadOrClaimProfile` links a rostered `profiles` row to an auth account and
+promotes `invited → active`. It lived inside `course-auth-context`, so the only
+way to become active was to load the course context first.
+
+`course-session-join` requires a profile that is *already* linked and *already*
+active. A student scanning the class QR on a **first-ever sign-in** reaches the
+join before the context has ever run, so it was refused with 403 — which
+`JoinClass` renders as `join.access.title`, "This class is for another group". A
+reload worked because a reload runs `course-auth-context` first.
+
+On day one this was not an edge case: no student had ever signed in, so it was
+every student in the room. And the message named the wrong cause entirely, so
+there was no way to guess the real one from what anybody saw — same disease as
+pitfall #71.
+
+**Rule:** when one endpoint performs a one-time promotion that every *other*
+endpoint requires, it belongs in `_shared/`, and every endpoint a user can
+arrive at **first** must call it. Ask "what is the earliest request a brand-new
+account can make?" — not "what does the app usually call first?" A QR code, a
+deep link, and a magic-link return all skip the boot order the app assumes.
+
+---
+
+## 75. Refreshing a credential must not reload the thing that is using it
+
+**Reported by the professor 2026-08-12: "sometimes when I was in full screen
+during the presentation, the full screen would be closed automatically, and then
+I had to come back to my laptop and click again."**
+
+`InstructorDeck` re-mints the deck's content token on a timer and assigned the
+result straight to the iframe's `src`. `course-content-access` mints with
+`SIGNED_URL_SECONDS = 600` and the refresh is scheduled at `expires_in - 60`, so
+this fired **every 540 seconds**. Assigning `src` reloads the iframe document,
+and the browser exits fullscreen the instant the fullscreen element is
+destroyed. A two-hour lecture therefore threw him out roughly a dozen times, at
+no fixed moment, which is why it read as random.
+
+The refresh bought nothing while the deck was up. `functions/content.ts` serves
+the deck as **one self-contained HTML document**; the token gates that single
+fetch and the loaded document never uses it again.
+
+**Rule:** a credential refresh for a self-contained document is worth *holding*,
+not applying. Apply it only when the thing really has to reload, and never while
+`document.fullscreenElement` is set. More generally: before scheduling any
+periodic refresh, ask what the refreshed value is still being used for. If the
+answer is "only the initial load", the refresh must not touch the live view.
+
+---
+
+## 74. A server-side display window needs a client-side twin
+
+**Same report, 2026-08-12: "when it jumps out of the full screen, I see this
+previous question that I did in my page and it has this button that continue
+with the class."**
+
+`course-pulse`'s `loadCurrentPulse` stops serving a revealed round to students
+after `revealDisplayMinutes = 3` (that window is itself pitfall #8's fix). The
+cockpit had no equivalent: `CheckpointPanel`'s `revealed` branch renders until
+`continueCheckpoint()` runs. So the two surfaces disagreed by design — the
+phones moved on, the panel kept the question indefinitely.
+
+**Rule:** when the server bounds how long something is shown, every other
+surface showing the same thing needs the same bound, and the number must come
+from one place. Two independent timeouts are a bug waiting for one of them to
+change; one timeout and one un-bounded view is a bug already.
+
+---
+
+## 73. An automatic path that depends on an optional capability is not automatic
+
+**Same symptom as #74, and the reason it was never noticed in testing.**
+
+Retiring a revealed question automatically had exactly one trigger in
+`RunClass`: `bridge.checkpoint` going from set to null, which happens when the
+deck reports it resumed past an authored checkpoint. **Only a deck carrying the
+full engine sends checkpoint messages.** Imported lectures carry only the
+slide-reporter shim that `functions/content.ts` injects, which reports position
+and nothing else — and an imported deck has no checkpoint coverage *by design*
+under migration 0036.
+
+So the automatic path worked on Week 1's generated deck, which is what every
+rehearsal used, and could never work on the imported decks that are the normal
+case from Week 2 onward. Plan-driven polls — the whole point of
+`ClassQuestionPlanBoard` — are exactly the path that never had it.
+
+A related trap sits inside the fix. `autoRevealReason` fires `"movedOn"` at
+three slide advances, so a question revealed that way arrives with its advance
+counter *already at the threshold*. Reusing that counter to decide when to
+retire would have closed the answer in the same second it appeared. The retire
+counter resets on the reveal, not on the question opening, and a verifier now
+fails if anyone wires the two together.
+
+**Rule:** before relying on a bridge message, a capability flag, or an optional
+protocol extension, check which artefacts **in production** can actually produce
+it. "The deck sends this" was true of one deck out of a dozen. Test the
+automatic path on the artefact the professor actually teaches from, not the one
+the feature was built against.
+
+---
+
 ## 72. `File.text()` assumes UTF-8, and Excel does not write UTF-8
 
 **Reported by the professor 2026-08-11: the roster preview for group 401 said
@@ -1846,3 +1952,64 @@ inside the iframe. Running the same code from the parent's console does not work
 `postMessage` then carries the *parent* as `event.source`, and `useDeckBridge`
 correctly rejects anything whose source is not its own iframe. That looks exactly
 like a broken feature and cost a debugging cycle.
+
+## 66. Revealing ends a question; closing it takes the answer away
+
+`course-pulse` serves a student only a round that is `open` or `revealed`
+(`loadCurrentPulse`). So "reveal the answer and close the question" — the
+obvious reading of what a professor wants — destroys the thing he asked for: the
+verdict flashes and vanishes before anyone reads it.
+
+Reveal is the end state. It already stops answers (`answer` refuses a round that
+is not `open`), and it is what flips the phone from "recorded" to "you were
+right". A revealed round retires itself after `revealDisplayMinutes` (3), and the
+next push closes whatever is left. Auto-reveal therefore reveals and stops.
+
+## 67. `enrolled` is the roster, not the room
+
+`loadResults` counts `section_enrollments` — 28 students whether nine turned up
+or none. Any rule of the form "everyone has answered" measured against it can
+never be true, so it silently never fires. `present` (added alongside it, from
+`class_attendance`) is the count that matters: only students who scanned in can
+answer at all.
+
+Guard the completeness rule with a floor as well. One student checked in, tapping
+instantly, satisfies "everyone answered" one second in — and the rest of the room
+never sees the question.
+
+## 68. Reset is not delete, and delete is not reset
+
+`delete_class_session_atomic` (0037) removes a class day and **refuses** when it
+has pulse activity. `reset_class_session_atomic` (0047) exists for the opposite
+need — pulse activity is precisely what it clears — and it keeps the class day,
+its lecture, and its question plan.
+
+Order matters inside it: `pulse_rounds.plan_checkpoint_id` is ON DELETE RESTRICT,
+so rounds must go before their plan checkpoints are touched. And the checkpoints
+are *reset to `planned`*, never deleted: deleting them would throw away the six
+polls the professor wrote, which is the one thing he wanted to keep.
+
+## 69. The reveal guard has two halves: the phones and the projector
+
+Auto-reveal (pitfall 66) governs what students see on their phones. It says
+nothing about the slide, and the slide is what the room is looking at.
+
+A poll slide carries its own answer as a click-to-reveal fragment —
+`.answer-reveal` in the current decks, `.reveal-answer` in the older template —
+and a deck engine shows the next hidden fragment on the *first* forward press.
+So the three-advance guard protected the platform while one stray press on a
+clicker put the correct answer on the projector mid-vote. Verified on the real
+deck: one click set `revealed` on the fragment while the round was still open.
+
+The injected reporter now ships a CSS gate the cockpit drives —
+`html[data-answer-lock="1"]` hides those two selectors — locked exactly while a
+round is `open` and released on reveal. Two things to preserve:
+
+- **`visibility`, not `display`.** The answer keeps its space, so the slide does
+  not reflow under the class when it finally appears.
+- **Gate, don't fight.** The engine may mark the fragment revealed whenever it
+  likes; the gate only refuses to paint it. Racing the engine with a
+  MutationObserver that strips `revealed` would loop against its own mutations.
+
+Absent any message the deck is unlocked, so presenting outside a live class is
+completely unchanged.

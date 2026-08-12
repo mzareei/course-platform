@@ -22,6 +22,8 @@ export interface PulseRound {
   time_limit_seconds: number;
   opened_at: string;
   ends_at: string;
+  /** When the instructor revealed. Null while open, or on an older round. */
+  revealed_at?: string | null;
   text: string;
   text_es?: string | null;
   options: PulseOption[];
@@ -36,7 +38,13 @@ export interface PulseResults {
   state: string;
   answered: number;
   correct: number;
+  /** Everyone on the section roster, present or not. */
   enrolled: number;
+  /**
+   * Students who actually scanned into this class. Only they can answer, so
+   * this — not `enrolled` — is what "everyone has answered" has to measure.
+   */
+  present: number;
   distribution: Array<{ key: string; text: string; count: number }>;
   correct_key: string | null;
   respondents: Array<{

@@ -108,12 +108,45 @@ for (const rel of ["src/config.ts", "src/api/client.ts", "src/auth/auth.ts"]) {
 // The one-primary-action dock exists for students
 requireMarker("src/styles/app.css", "action-dock", "bottom-anchored primary action");
 
-// Today must NOT offer a way into a live class. The QR code on the projector is
-// the only door, because scanning it is what records attendance — a button here
-// would let a student "attend" from their sofa and quietly falsify the
-// professor's attendance table. This inverts an earlier rule that required a
-// primary action dock on Today; that action was the join button.
-forbidMarker("src/screens/student/Today.tsx", 'href="/live"', "the QR scan is the only way into a live class");
+// Today must not offer a way *into* a live class. The QR code on the projector
+// is the only door, because scanning it is what records attendance — an
+// unconditional button here would let a student "attend" from their sofa and
+// quietly falsify the professor's attendance table. This inverts an earlier
+// rule that required a primary action dock on Today; that action was the join
+// button.
+//
+// The single exception, added 2026-08-12 after the first real class: a student
+// the server has *already* recorded as present may return to the class they are
+// already in. Students were closing the tab mid-class and finding no route back
+// — Today told them to scan a code they had already scanned. That is a way
+// *back*, not a way in, and it cannot manufacture an attendance because it
+// reads the attendance row rather than the student's intent.
+//
+// So the rule is no longer "no link to /live"; it is "no link to /live that is
+// not gated on the server's own check-in fact". Both markers below are
+// load-bearing: drop the first and the exception silently widens into the
+// button this rule exists to forbid.
+requireMarker(
+  "src/screens/student/Today.tsx",
+  "const canReturnToClass = sessionIsLive && Boolean(liveSession?.checked_in)",
+  "a way back into class must be gated on the server's recorded check-in"
+);
+requireMarker(
+  "src/screens/student/Today.tsx",
+  "canReturnToClass ? (",
+  "the only /live link on Today must sit behind that gate"
+);
+// Exactly one. A second link is how the exception grows a sibling that nobody
+// gated — the counted assertion survives refactors that a text match would not.
+{
+  const liveLinks = read("src/screens/student/Today.tsx").split('href="/live"').length - 1;
+  if (liveLinks !== 1) {
+    failures.push(
+      `src/screens/student/Today.tsx has ${liveLinks} links to /live, expected exactly 1 `
+      + "(the way back, behind canReturnToClass)"
+    );
+  }
+}
 requireMarker("src/screens/student/Today.tsx", "today.scanToJoin", "Today tells students to scan the QR code");
 // The gate itself is server-side: the live screen trusts course-pulse, not
 // localStorage, so a second device or a cleared browser still works.

@@ -40,6 +40,14 @@ export type ParentToDeckMessage =
   }
   | { version: 1; type: "checkpoint.question_clear"; checkpoint_key: string }
   | { version: 1; type: "checkpoint.resume"; checkpoint_key: string }
+  /**
+   * Holds back a poll slide's own click-to-reveal answer while the question is
+   * open on student phones, so a stray press on a clicker cannot put the
+   * answer on the projector mid-vote. Consumed by the injected slide reporter
+   * (functions/content.ts); decks running the full engine ignore it, because
+   * their answers are driven by the checkpoint messages above.
+   */
+  | { version: 1; type: "answer.lock"; locked: boolean }
   // This command intentionally has no protocol version so it matches the
   // presentation-state wire contract shared by controller and projector.
   | {

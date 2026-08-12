@@ -96,4 +96,59 @@ for (const teaching of [null, 19]) {
   );
 }
 
+
+// --------------------------------------------------- the answer lock
+// A poll slide's answer is a click-to-reveal fragment; the deck shows it on the
+// first forward press. While the class is voting, that is a leak.
+assert.match(
+  source,
+  /html\[data-answer-lock="1"\] \.answer-reveal,\s*\n\s*html\[data-answer-lock="1"\] \.reveal-answer \{ visibility: hidden !important; \}/,
+  "both the current and template answer markers must be covered by the gate"
+);
+assert.match(
+  source,
+  /visibility: hidden/,
+  "hide with visibility, not display: the slide must not reflow when the answer lands"
+);
+assert.doesNotMatch(
+  source,
+  /display:\s*none[^;]*;\s*\}\s*<\/style>/,
+  "display:none would collapse the answer's space and jump the slide on reveal"
+);
+assert.match(
+  source,
+  /if \(event\.origin !== location\.origin \|\| event\.source !== parent\) return;/,
+  "the lock may only be driven by this origin's own cockpit"
+);
+assert.match(
+  source,
+  /if \(data\.type !== 'answer\.lock' \|\| data\.version !== 1\) return;/,
+  "the shim must ignore every message that is not its own"
+);
+assert.match(
+  source,
+  /data\.locked === true[\s\S]{0,200}?data\.locked === false/,
+  "lock and unlock must both be explicit; a malformed message must change nothing"
+);
+assert.match(
+  source,
+  /element\.append\(ANSWER_LOCK_STYLE \+ SLIDE_REPORTER/,
+  "the gate's stylesheet must ship with the reporter that drives it"
+);
+
+const runClassSrc = readFileSync(
+  path.join(root, "src/screens/instructor/RunClass.tsx"),
+  "utf8"
+);
+assert.match(
+  runClassSrc,
+  /type: "answer\.lock",\s*\n\s*locked: checkpointState\.type === "open"/,
+  "the answer is locked exactly while the question is open, and released on reveal"
+);
+assert.match(
+  runClassSrc,
+  /if \(!bridge\.deckReady\) return;[\s\S]{0,200}?type: "answer\.lock"/,
+  "a deck that reloads mid-question must be told the lock again"
+);
+
 console.log("verify-slide-reporter: OK");
