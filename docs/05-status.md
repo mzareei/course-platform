@@ -1,6 +1,44 @@
 # Status
 
-**Last updated:** 2026-08-11
+**Last updated:** 2026-08-12
+
+### The first real class, and the five things it broke
+
+The professor taught the first live session with students on 2026-08-11/12 and
+reported six problems. Five were defects and are fixed, deployed, and recorded
+as pitfalls #73–#76. The sixth is a feature and is planned, not built.
+
+| What he saw | Cause | State |
+|---|---|---|
+| Every student hit a rate limit on Sign in | Supabase's built-in email ceiling — a configuration limit, not a bug | **Not fixed by code.** See below |
+| "This class is for another group", cleared by reloading | The join ran before anything had claimed a first-ever profile (#76) | Fixed, deployed |
+| "The class is live" but no way in | Today had no route back for a student who had already scanned | Fixed, deployed |
+| Fullscreen closed itself mid-lecture | The deck iframe reloaded every 9 minutes to refresh a token it no longer needed (#75) | Fixed, deployed |
+| Last checkpoint's question waiting with "Continue" | Nothing retired a revealed poll on an imported deck (#73, #74) | Fixed, deployed |
+| Wanted to pause a class, not end it | Never built; the backend already supports it | Planned — see below |
+
+**The email ceiling is still open, and it is the one that will bite next.** No
+code change can raise it: the project uses Supabase's built-in mailer, capped at
+a couple of messages per hour for the whole project. `docs/06-runbook.md` →
+*"Sending sign-in emails to a whole class"* has the provider comparison (Brevo,
+because Resend needs a DNS domain we do not control), the dashboard steps, and
+the verification that must happen **before** a class rather than during one.
+The sign-in screen now explains the failure in both languages instead of
+printing Supabase's raw English, but that is legibility, not capacity.
+
+**Test sign-in is still on**, deliberately. The professor's decision: close it
+only once a real student inbox has received a real code, so a class is not
+stranded if email is not ready. The exact steps and their trigger are in the
+same runbook section. While it is on, anyone who knows a rostered address can
+sign in as that student, and grades hang off that account.
+
+**Pause/resume is planned, not built:**
+`docs/superpowers/plans/2026-08-12-pause-resume-and-day-attendance.md`. It needs
+a migration, because `class_attendance` is keyed one row per student per class
+and the professor's rule is that **attendance is per day while engagement and
+grading stay per class** — a lecture paused today and finished next week is one
+grade and two days in a room. Design:
+`docs/superpowers/specs/2026-08-12-first-class-session-fixes-design.md`.
 
 ### A pulse question is spent for that class's quiz
 
