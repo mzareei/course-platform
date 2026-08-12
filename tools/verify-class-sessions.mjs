@@ -227,6 +227,71 @@ assert.match(sessionEditor, /onSaved\(saved\)/);
 assert.match(sectionEditor, /const \{ section: saved \} = await saveSection/);
 assert.match(sectionEditor, /onSaved\(saved\)/);
 
+// ------------------------------------------- a live class outranks a paused one
+//
+// One day can hold both: last week's lecture being finished, and a brand-new
+// one. Sessions arrive in planned-date order, so the paused older class is
+// first — and taking the first live-or-paused entry would put the whole room in
+// the wrong class.
+{
+  const sessions = [
+    { session_id: "paused-older", state: "paused" },
+    { session_id: "live-newer", state: "live" }
+  ];
+  assert.equal(
+    selectLiveSessionId(sessions, null),
+    "live-newer",
+    "a class actually running must outrank one that is paused"
+  );
+  assert.equal(
+    selectLiveSessionId(sessions, "paused-older"),
+    "paused-older",
+    "a student who scanned into a specific class stays in it"
+  );
+  assert.equal(
+    selectLiveSessionId([{ session_id: "only-paused", state: "paused" }], null),
+    "only-paused",
+    "a paused class is still the student's class when nothing else is running"
+  );
+  assert.equal(
+    fallbackLiveSessionId(sessions, "live-newer"),
+    "paused-older",
+    "falling back off a stale session must still find the paused one"
+  );
+  assert.equal(
+    fallbackLiveSessionId(sessions, "paused-older"),
+    "live-newer",
+    "and falling back off the paused one must find the live one"
+  );
+}
+
+// ------------------------------------------------- a paused class says paused
+assert.match(
+  today,
+  /const pausedSession = /,
+  "Today must know a paused class apart from a running one"
+);
+assert.doesNotMatch(
+  today,
+  /\["live", ?"paused"\]\.includes\(session\.state\)/,
+  "a paused class must not be announced as live"
+);
+assert.match(
+  today,
+  /t\("today\.classPaused"\)/,
+  "a paused class must say so, in both languages"
+);
+assert.match(
+  live,
+  /view\?\.session_state === "paused"/,
+  "the live screen must read the paused state the poll already returns"
+);
+assert.match(
+  live,
+  /t\("live\.pausedTitle"\)/,
+  "the paused card must be translated"
+);
+
 if (originalLocalStorage) {
   Object.defineProperty(globalThis, "localStorage", originalLocalStorage);
 } else {

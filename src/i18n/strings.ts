@@ -110,6 +110,11 @@ export const strings = {
     "The class QR code is on the screen at the front. Scan it with your phone camera to join and mark your attendance.",
     "El código QR de la clase está en la pantalla del frente. Escanéalo con la cámara de tu teléfono para entrar y registrar tu asistencia."
   ],
+  "today.classPaused": ["Class paused", "Clase pausada"],
+  "today.classPausedBody": [
+    "Your professor paused this class. It continues in your next session — nothing you have done is lost.",
+    "Tu profesor pausó esta clase. Continúa en tu próxima sesión; nada de lo que hiciste se pierde."
+  ],
   "today.returnToClass": ["Return to class", "Regresar a la clase"],
   "today.returnToClassBody": [
     "You already scanned in. Go back to the question screen.",
@@ -1302,6 +1307,11 @@ export const strings = {
   // ---------------------------------------------------------------- student live
   "live.title": ["In class", "En clase"],
   "live.eyebrow": ["Live", "En vivo"],
+  "live.pausedTitle": ["Class paused", "Clase pausada"],
+  "live.pausedBody": [
+    "Your professor paused the class. Stay on this screen — the next question appears here as soon as it continues.",
+    "Tu profesor pausó la clase. Quédate en esta pantalla: la siguiente pregunta aparecerá aquí en cuanto continúe."
+  ],
   "live.waitingTitle": ["You're in. Watch the screen.", "Ya estás dentro. Mira la pantalla."],
   "live.waitingBody": [
     "When your professor asks a question it appears here. Keep this page open.",
@@ -1351,6 +1361,23 @@ export const strings = {
     "Cierra la clase para los estudiantes: deja de ofrecerse la pantalla en vivo y se cierra cualquier pregunta abierta o quiz en curso."
   ],
   "run.endClass": ["End the class", "Terminar la clase"],
+  "run.pause": ["Pause the class", "Pausar la clase"],
+  "run.pausing": ["Pausing…", "Pausando…"],
+  "run.pauseFailed": [
+    "The class could not be paused. Try again.",
+    "No se pudo pausar la clase. Inténtalo de nuevo."
+  ],
+  "run.resume": ["Resume the class", "Reanudar la clase"],
+  "run.resuming": ["Resuming…", "Reanudando…"],
+  "run.resumeFailed": [
+    "The class could not be resumed. Try again.",
+    "No se pudo reanudar la clase. Inténtalo de nuevo."
+  ],
+  "run.paused": ["Class paused", "Clase pausada"],
+  "run.pausedBody": [
+    "Nothing has been graded and the lecture has not been published. Your students keep this class as theirs. Resume it whenever you are ready — later today or next session.",
+    "Nada se ha calificado y la clase no se ha publicado. Tus estudiantes conservan esta clase como suya. Reanúdala cuando quieras, hoy mismo o en la próxima sesión."
+  ],
   "run.endConfirm": [
     "End the class now? Any open question and any running quiz will be closed, and students will no longer be able to join. Reflections stay open for a few more minutes.",
     "¿Terminar la clase ahora? Se cerrará cualquier pregunta abierta y cualquier quiz en curso, y los estudiantes ya no podrán unirse. Las reflexiones siguen abiertas unos minutos más."
@@ -2027,6 +2054,7 @@ export const strings = {
     "No se pudo marcar presente a ese estudiante."
   ],
   "classRecord.markedByHand": ["marked by hand", "marcado a mano"],
+  "classRecord.attendedDays": ["Days attended: {days}", "Días asistidos: {days}"],
 
   "classRecord.column.student": ["Student", "Estudiante"],
   "classRecord.column.studentId": ["Student ID", "Matrícula"],

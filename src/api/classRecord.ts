@@ -27,6 +27,9 @@ export interface AttendanceRow {
   checked_in_at: string | null;
   check_in_source: "qr" | "instructor" | null;
   check_in_note: string | null;
+  /** Every day this student was in the room for this class, ascending. More
+   *  than one means the class was paused and finished on another day. */
+  attendance_days: string[];
   status: AttendanceStatus;
   pulse_responses: number;
   /** Null when no pulse questions were pushed — not 0. */

@@ -170,6 +170,22 @@ export function Live() {
     );
   }
 
+  // Paused, not over. Ranked above every activity branch because while a class
+  // is paused none of them can move: the server refuses a new question, and the
+  // quiz and reflection belong to a class that has not finished. The poll keeps
+  // running underneath, so the moment the professor resumes, the next question
+  // lands here with nothing for the student to tap.
+  if (view?.session_state === "paused") {
+    return (
+      <LiveShell error={error}>
+        <div class="empty-state card">
+          <h3>{t("live.pausedTitle")}</h3>
+          <p>{t("live.pausedBody")}</p>
+        </div>
+      </LiveShell>
+    );
+  }
+
   // 1. A pulse question is on screen — highest priority, matches class rhythm.
   if (round) {
     return (
