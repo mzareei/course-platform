@@ -13,12 +13,16 @@ the professor:
   rewound to planned** through the real UI (pause → Reset this class day). Its
   one test question was cleared; nothing student-visible remains.
 - **A class cut short no longer misgrades or mislabels anyone.** When a session
-  never reached its end-of-class phase (no quiz attempt and no reflection from
-  anyone), the quiz nobody took stops being a 12-question zero, the missing
-  reflection stops costing 20% (`submissionRequired` in `_shared/class-grade.ts`,
-  session-level `loadEndOfClassRan`), and attendance stops calling the whole
-  room "left early". Both tables show it; the exit-ticket pill reads "Not
-  required". Aug 12's record now shows pulse-only grades and sane attendance.
+  never really ran its quiz — nobody submitted an attempt and nobody answered a
+  single question; a merely *opened* attempt does not count (`be9b744` — on Aug
+  12 two students opened it in the last seconds, which the first cut of this
+  rule wrongly took as proof the quiz ran) — the quiz stops being a 12-question
+  zero, the missing reflection stops costing 20% (`submissionRequired` in
+  `_shared/class-grade.ts`, session-level `loadEndOfClassRan`), and attendance
+  stops calling the whole room "left early". Both tables show it; the
+  exit-ticket pill reads "Not required". Verified on Aug 12's live record:
+  22 present / 5 late / 1 absent (was 0 present / 25 left early), pulse-only
+  grades, no penalty.
 - **Backend errors reach users in their language.** The old
   `e instanceof Error ? e.message : t(…)` fallback was dead code (ApiError
   extends Error), so every refusal was English. New `apiErrorText` in
