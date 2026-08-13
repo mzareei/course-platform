@@ -15,7 +15,7 @@ export const config = {
   // Testing only. Mirrors the server's COURSE_TEST_SIGNIN_UNTIL gate: this flag
   // alone grants nothing — the server refuses unless the secret names a future
   // date. Set to false before the semester starts.
-  testSignIn: true,
+  testSignIn: false,
 
   /**
    * "Sign in with Microsoft" — the institutional login students already use.
