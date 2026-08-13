@@ -217,7 +217,89 @@ Classes, Gradebook history, Review releases, notes, students and attempts are
 empty. Do not create a synthetic production class merely to make the clean
 state appear non-empty.
 
+## Sign in with the Tec account (Microsoft) — setup
+
+**Read this before the email section below.** Emailed codes were investigated
+first and cannot be made to work here. Three independent walls, all confirmed
+on 2026-08-12:
+
+1. The built-in Supabase mailer is capped at **2 emails/hour** for the whole
+   project, and the field is greyed out until custom SMTP is configured.
+2. `tec.mx` publishes `DMARC p=reject` with `SPF -all`, allowing only Outlook,
+   Google and one Tec IP. **No third-party sender may ever send as a tec.mx
+   address.** Brevo refuses the sender outright for this reason.
+3. Tec's tenant has **app passwords disabled** (not offered under *Add sign-in
+   method*) and **app registration blocked** (401 in both the Azure portal and
+   the Entra admin center).
+
+So the sender cannot be a Tec address, the Tec mailbox cannot be used as a
+relay, and nothing can be registered inside Tec's tenant. Microsoft sign-in
+avoids all three: no mail is sent, and the app registration lives in a personal
+tenant while students still authenticate against Tec.
+
+### What the professor does (once)
+
+Sign in to [entra.microsoft.com](https://entra.microsoft.com) with a **personal**
+Microsoft account (outlook.com / hotmail.com / live.com) — **not** the tec.mx
+one, which is blocked. A private window helps if it keeps auto-signing-in as
+Tec.
+
+### What to register
+
+**Entra → App registrations → New registration**
+
+- **Name:** `TC2007B Course Platform`
+- **Supported account types:** *Accounts in any organizational directory
+  (Any Microsoft Entra ID tenant — Multitenant) and personal Microsoft accounts*.
+  This is the load-bearing choice: a single-tenant app would only admit the
+  personal tenant, and every student is in Tec's.
+- **Redirect URI:** Web →
+  `https://ojmbupftdikwmlqvibwt.supabase.co/auth/v1/callback`
+  (Supabase's callback, not the app's — the app URL is already allow-listed
+  separately under Authentication → URL Configuration.)
+
+Then **Certificates & secrets → New client secret** (24 months). Copy the
+secret **Value**, not the Secret ID. It is shown once.
+
+### Wiring it up
+
+Supabase → Authentication → **Sign In / Providers → Azure**:
+
+- Application (client) ID — from the app's Overview page
+- Secret Value — from the step above
+- **Azure Tenant URL:** leave blank, or `https://login.microsoftonline.com/common`.
+  `common` is what lets a Tec account sign in to an app registered elsewhere.
+
+Then in the SPA, set `microsoftSignIn: true` in `src/config.ts` and push. Keep
+those two steps together — the flag exists so the button never appears before
+the provider answers.
+
+### The test that actually proves it
+
+Sign in as a **real student** (a tec.mx account that is on the roster and has
+never signed in) on the deployed site, and confirm they reach Today. Two
+things can still go wrong at this point, and both are Tec-side:
+
+- **"Need admin approval."** Tec restricts user consent to outside apps. The
+  student cannot self-approve. That would need Tec IT — at which point the
+  honest options are asking IT for consent, or a manual per-student code scheme.
+- **Signed in, but "not on the roster."** The token carried no `email` claim, so
+  there was nothing to match. Confirm the `email` scope is being requested
+  (`src/auth/auth.ts`) and that the account has a mailbox.
+
+### Then close the test-sign-in door
+
+Once a real student has signed in through Microsoft, set `testSignIn: false` in
+`src/config.ts` and clear the `COURSE_TEST_SIGNIN_UNTIL` secret. Until both are
+done, anyone who knows a rostered address can sign in as that student and open
+their grades. Record the date in `docs/05-status.md`.
+
 ## Sending sign-in emails to a whole class
+
+> **Superseded.** Kept for the reasoning and for accounts outside the
+> university. The route we actually took is Microsoft sign-in, above — a
+> third-party sender can never send as a `tec.mx` address, so no amount of SMTP
+> configuration fixes the student path.
 
 **Why this exists.** The first real class (2026-08-11/12) could not sign in:
 every student saw a rate-limit error. The project still uses Supabase's
