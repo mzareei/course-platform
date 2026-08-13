@@ -31,7 +31,7 @@ export const config = {
    * that opens a provider-not-enabled error is worse than no button. Flip this
    * to true in the same change that enables the provider, never before.
    */
-  microsoftSignIn: false,
+  microsoftSignIn: true,
 
   // Per-device unlock for QA addresses (see qa-test-accounts.md in the old repo).
   testAccessStorageKey: "cp.test-access-emails",
