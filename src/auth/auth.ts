@@ -82,6 +82,34 @@ export async function sendOtp(email: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Sign in with the university's own Microsoft account.
+ *
+ * Nothing is emailed, so the project's 2/hour mail ceiling never applies — the
+ * whole room can sign in at once. It is also the only method here that a
+ * classmate cannot defeat by knowing someone's address: the secret is the
+ * student's own Tec password and MFA, held by Microsoft, never by us.
+ *
+ * `redirectTo` is the page the student is standing on, so a QR deep link
+ * (`/join/ABCD`) returns to that same join and completes it. `redirectUrl()`
+ * strips the query and hash, which is what the allow-list in Supabase's URL
+ * configuration matches against.
+ *
+ * The `email` scope is requested explicitly and is load-bearing: without an
+ * email claim there is nothing to match against the roster, and the student
+ * would land on "not on the roster" holding a perfectly valid session.
+ */
+export async function signInWithMicrosoft(): Promise<void> {
+  const { error } = await client().auth.signInWithOAuth({
+    provider: "azure",
+    options: {
+      scopes: "openid profile email offline_access",
+      redirectTo: redirectUrl()
+    }
+  });
+  if (error) throw error;
+}
+
 export async function verifyOtp(email: string, token: string): Promise<Session> {
   const { data, error } = await client().auth.verifyOtp({ email, token, type: "email" });
   if (error) throw error;

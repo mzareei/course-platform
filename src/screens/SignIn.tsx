@@ -3,6 +3,7 @@ import { config } from "../config";
 import {
   finishSignIn,
   sendOtp,
+  signInWithMicrosoft,
   verifyOtp,
   testSignIn,
   isEmailAllowedLocally
@@ -99,6 +100,21 @@ export function SignIn() {
     }
   }
 
+  async function onMicrosoft() {
+    setMessage(null);
+    setBusy(true);
+    try {
+      // Redirects away on success, so there is no "finished" state to handle.
+      await signInWithMicrosoft();
+    } catch (error) {
+      setMessage({
+        kind: "error",
+        text: error instanceof Error ? error.message : t("signIn.microsoftFailed")
+      });
+      setBusy(false);
+    }
+  }
+
   async function onTestSignIn() {
     setMessage(null);
     setBusy(true);
@@ -120,10 +136,33 @@ export function SignIn() {
       <div>
         <p class="eyebrow">{t("signIn.eyebrow")}</p>
         <h1>{t("signIn.title")}</h1>
-        <p class="hint">{t("signIn.lede")}</p>
+        <p class="hint">
+          {t(config.microsoftSignIn ? "signIn.ledeMicrosoft" : "signIn.lede")}
+        </p>
       </div>
 
+      {/* First, and on its own, because it is the route that actually works for
+          a full class: nothing is emailed, so no rate limit applies. The email
+          code below stays for accounts outside the university — QA students and
+          invited instructors — who have no Microsoft account to use. */}
+      {config.microsoftSignIn ? (
+        <div class="card">
+          <button
+            class="btn primary"
+            type="button"
+            disabled={busy}
+            onClick={() => void onMicrosoft()}
+          >
+            {t("signIn.microsoft")}
+          </button>
+          <p class="hint">{t("signIn.microsoftBody")}</p>
+        </div>
+      ) : null}
+
       <div class="card">
+        {config.microsoftSignIn ? (
+          <p class="eyebrow">{t("signIn.otherWays")}</p>
+        ) : null}
         <label class="field">
           {t("signIn.emailLabel")}
           <input
