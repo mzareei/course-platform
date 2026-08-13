@@ -6,6 +6,44 @@ the UI is silently wrong.**
 
 ---
 
+## 78. Recording a failed attempt and then raising throws the record away
+
+**Built and caught by testing, 2026-08-12, before any student used it — but it
+was deployed and live for about ten minutes first.**
+
+Student PIN sign-in throttles guessing: five wrong PINs and the account locks
+for fifteen minutes. Six digits is a million combinations and student IDs are
+semi-public, so that lockout is the only thing making a short PIN defensible.
+
+`verify_student_pin` in migration 0051 did this:
+
+```sql
+update public.profiles set pin_failed_attempts = pin_failed_attempts + 1 ...;
+raise exception 'pin_invalid';
+```
+
+A raised exception aborts the transaction, and the `UPDATE` goes with it. The
+counter was **always zero**, the lock never armed, and the scheme was quietly
+weaker than the emailed codes it replaced.
+
+Nothing looked wrong. The function returned the right error, the client showed
+the right message, and every individual line was correct. It was caught only by
+a test that made five deliberate wrong attempts and then tried the *correct*
+PIN — which still worked. A test that only checked "wrong PIN is rejected"
+would have passed.
+
+Fixed in `0052`: the functions return a `result` code and the caller maps it.
+Exceptions are reserved for genuine faults.
+
+**Rule:** never write a record and then raise in the same transaction — the
+raise destroys the write. This applies to failed-login counters, audit rows,
+rate-limit tallies, and anything else whose whole purpose is to survive the
+failure that triggered it. And when testing a lockout, assert that the
+**correct** credential is refused once locked; asserting that wrong ones are
+rejected proves nothing about whether the counter persisted.
+
+---
+
 ## 77. A unique constraint encodes a product rule, and relaxing it breaks every writer and reader at once
 
 **Built 2026-08-12 for pause/resume. Caught by sweeping, not by symptoms.**

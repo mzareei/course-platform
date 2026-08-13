@@ -91,7 +91,43 @@ lecture"** and **"Show the answer"**, and it mapped an expired student token to
 healthy. A verification probe needs its own negative check — assert the labels it
 greps for exist, and make an auth failure loud.
 
-### Sign-in: email is a dead end, Microsoft is built and waiting on Tec
+### Sign-in: solved — student ID + a PIN the student chooses
+
+**This is the answer, and it is live.** Students sign in with their student ID
+and a six-digit PIN they set themselves. No email is sent at any point, so the
+2/hour ceiling that locked out the first real class cannot apply, and nothing
+depends on Tec's IT.
+
+- **First class:** scan the QR, choose a PIN. Claiming only works while a class
+  is **live** — that is what puts the student in the room, and it is the single
+  guard against taking a classmate's account.
+- **Every class after:** student ID + PIN, anywhere, no QR needed.
+- **Forgotten PIN:** *Reset PIN* on People. Clears the PIN and nothing else —
+  attendance, answers, quiz attempts, reflections and grades all survive.
+
+Guards: five wrong PINs locks the account for fifteen minutes (see pitfall #78 —
+the first implementation of this silently did nothing); an unknown student ID
+returns the *identical* error to a wrong PIN, so the endpoint cannot be used to
+discover which IDs exist; PINs are bcrypt-hashed and compared inside Postgres,
+so neither the PIN nor its hash ever leaves the database.
+
+Verified end to end against production in a throwaway class: QR → set PIN →
+straight into the live class; then signed out and back in with student ID + PIN
+alone; lowercase IDs accepted; and the correct PIN correctly refused while
+locked out.
+
+**Honest limits.** This is as strong as a paper exam password, not as strong as
+real identity verification. A student who gives away their PIN has given away
+their account. The residual risk is the first claim — whoever claims a student
+ID first sets its PIN — bounded by having to be in the room during a live class,
+and detectable and reversible when it happens. That is the right standard for
+coursework; it is not the standard a bank needs.
+
+**Still to do: turn off test sign-in.** `config.testSignIn` is still `true` and
+`COURSE_TEST_SIGNIN_UNTIL` is still set, which means the old no-secret door is
+open beside the new one. It should close once students have set their PINs.
+
+### Superseded: email is a dead end, Microsoft is built and waiting on Tec
 
 Investigated to the end on 2026-08-12. **Emailed codes cannot be made to work
 here**, and it took four confirmed walls to be sure — none of them ours:
