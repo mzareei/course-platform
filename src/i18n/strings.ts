@@ -30,8 +30,8 @@ export const strings = {
   "signIn.eyebrow": ["Course Platform", "Plataforma del Curso"],
   "signIn.title": ["Sign in", "Iniciar sesión"],
   "signIn.lede": [
-    "No password. Enter your course email and we'll send you a one-time sign-in link.",
-    "Sin contraseña. Escribe tu correo del curso y te enviaremos un enlace de acceso de un solo uso."
+    "Sign in with your student ID and your PIN.",
+    "Entra con tu matrícula y tu PIN."
   ],
   "signIn.ledeMicrosoft": [
     "Use the Tec account you already have. No password to remember, and nothing to wait for in your inbox.",
@@ -58,6 +58,70 @@ export const strings = {
     "A sign-in email was just sent. You can request another in {seconds}s.",
     "Acabamos de enviar un correo de acceso. Puedes pedir otro en {seconds}s."
   ],
+  // ---------------------------------------------------------------- PIN sign-in
+  "pin.studentId": ["Student ID", "Matrícula"],
+  "pin.studentIdHint": ["The one on your student card, like A01234567.", "La de tu credencial, por ejemplo A01234567."],
+  "pin.pin": ["Your 6-digit PIN", "Tu PIN de 6 dígitos"],
+  "pin.choosePin": ["Choose a 6-digit PIN", "Elige un PIN de 6 dígitos"],
+  "pin.choosePinHint": [
+    "Pick any 6 digits you'll remember. You'll use it every class. Don't use your birthday.",
+    "Elige 6 dígitos que recuerdes. Los usarás en cada clase. No uses tu fecha de nacimiento."
+  ],
+  "pin.signIn": ["Sign in", "Entrar"],
+  "pin.signingIn": ["Signing in…", "Entrando…"],
+  "pin.setAndJoin": ["Set my PIN and join", "Guardar mi PIN y entrar"],
+  "pin.firstTimeTitle": ["First time? Set your PIN", "¿Primera vez? Crea tu PIN"],
+  "pin.firstTimeBody": [
+    "You only do this once, and only during class. After today you just need your student ID and this PIN.",
+    "Esto se hace una sola vez, y solo durante la clase. Después solo necesitas tu matrícula y este PIN."
+  ],
+  "pin.haveAPin": ["I already have a PIN", "Ya tengo un PIN"],
+  "pin.needAPin": ["I haven't set a PIN yet", "Todavía no tengo un PIN"],
+  "pin.error.pin_invalid": [
+    "That student ID and PIN do not match.",
+    "Esa matrícula y ese PIN no coinciden."
+  ],
+  "pin.error.pin_locked": [
+    "Too many wrong PINs. Wait 15 minutes, or ask your professor to reset it.",
+    "Demasiados PIN incorrectos. Espera 15 minutos o pide a tu profesor que lo reinicie."
+  ],
+  "pin.error.pin_not_set": [
+    "You haven't set a PIN yet. Scan the class QR code during class to set one.",
+    "Todavía no tienes un PIN. Escanea el código QR durante la clase para crearlo."
+  ],
+  "pin.error.pin_already_set": [
+    "This student ID already has a PIN. If it isn't yours, tell your professor.",
+    "Esta matrícula ya tiene un PIN. Si no fuiste tú, avisa a tu profesor."
+  ],
+  "pin.error.pin_format": ["Your PIN must be exactly 6 digits.", "Tu PIN debe tener exactamente 6 dígitos."],
+  "pin.error.join_invalid": [
+    "That class code isn't valid. Scan the QR code on the screen again.",
+    "Ese código de clase no es válido. Escanea de nuevo el código QR de la pantalla."
+  ],
+  "pin.error.join_not_live": [
+    "You can only set your PIN while the class is running. Ask your professor to start it.",
+    "Solo puedes crear tu PIN mientras la clase está en curso. Pide a tu profesor que la inicie."
+  ],
+  "pin.error.student_unknown": [
+    "That student ID isn't on the course roster. Check it, or ask your professor.",
+    "Esa matrícula no está en la lista del curso. Revísala o pregunta a tu profesor."
+  ],
+  "pin.error.not_in_this_class": [
+    "You're not in the group for this class.",
+    "No perteneces al grupo de esta clase."
+  ],
+  "pin.error.pin_unavailable": [
+    "We couldn't sign you in. Try again.",
+    "No pudimos iniciar tu sesión. Inténtalo de nuevo."
+  ],
+  "pin.resetTitle": ["Reset PIN", "Reiniciar PIN"],
+  "pin.resetConfirm": [
+    "Clear this student's PIN? They set a new one at the next class. Their attendance, answers and grades are not touched.",
+    "¿Borrar el PIN de este estudiante? Creará uno nuevo en la próxima clase. Su asistencia, respuestas y calificaciones no se tocan."
+  ],
+  "pin.resetDone": ["PIN cleared", "PIN borrado"],
+  "pin.resetFailed": ["Could not reset the PIN.", "No se pudo reiniciar el PIN."],
+
   "signIn.microsoft": ["Sign in with your Tec account", "Entrar con tu cuenta del Tec"],
   "signIn.microsoftBody": [
     "The same Microsoft account you use for your Tec email and Teams. Nothing is emailed to you.",
@@ -67,7 +131,10 @@ export const strings = {
     "Could not open the Tec sign-in page. Check your connection and try again.",
     "No se pudo abrir la página de acceso del Tec. Revisa tu conexión e inténtalo de nuevo."
   ],
-  "signIn.otherWays": ["Or sign in with a code", "O entra con un código"],
+  "signIn.otherWays": [
+    "Instructors and guests: sign in with an emailed code",
+    "Profesores e invitados: entrar con un código por correo"
+  ],
   "signIn.sendFailed": ["Could not send the email.", "No se pudo enviar el correo."],
   "signIn.rateLimitedWait": [
     "Too many sign-in emails at once. Wait {seconds} seconds, then press Send again. If your code already arrived, type it below.",

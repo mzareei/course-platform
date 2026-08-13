@@ -72,6 +72,21 @@ export function removeRosterPerson(profileId: string) {
   );
 }
 
+/**
+ * Clear a student's sign-in PIN so they can set a new one.
+ *
+ * Deliberately narrow: it touches the PIN and nothing else. Attendance,
+ * answers, quiz attempts, reflections and grades all survive, so a forgotten
+ * PIN never costs a student their record. They set a new one by scanning the QR
+ * code at the next live class.
+ */
+export function resetStudentPin(profileId: string) {
+  return callFn<{ reset: boolean; profile_id: string }>(
+    "course-roster-management",
+    { action: "reset_student_pin", profile_id: profileId }
+  );
+}
+
 export function resendInstructorInvitation(profileId: string) {
   return callFn<{
     sent: boolean;

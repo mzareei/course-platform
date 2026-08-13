@@ -67,7 +67,10 @@ export function JoinClass({ joinCode }: { joinCode?: string }) {
     };
   }, [joinCode, signedIn, claimed]);
 
-  if (!signedIn) return <SignIn />;
+  // Signed out at a QR code is the one moment a student may claim a PIN: the
+  // code proves a class is live, which is what puts them in the room. Passing it
+  // down is what unlocks the first-time branch of the form.
+  if (!signedIn) return <SignIn joinCode={String(joinCode || "").trim()} />;
 
   if (issue) {
     return (
