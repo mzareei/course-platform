@@ -33,6 +33,10 @@ export const strings = {
     "No password. Enter your course email and we'll send you a one-time sign-in link.",
     "Sin contraseña. Escribe tu correo del curso y te enviaremos un enlace de acceso de un solo uso."
   ],
+  "signIn.ledeMicrosoft": [
+    "Use the Tec account you already have. No password to remember, and nothing to wait for in your inbox.",
+    "Usa la cuenta del Tec que ya tienes. Sin contraseñas nuevas y sin esperar ningún correo."
+  ],
   "signIn.emailLabel": ["Course email", "Correo del curso"],
   "signIn.send": ["Email me a sign-in link", "Enviarme un enlace de acceso"],
   "signIn.resend": ["Resend sign-in email", "Reenviar el correo de acceso"],
@@ -54,6 +58,16 @@ export const strings = {
     "A sign-in email was just sent. You can request another in {seconds}s.",
     "Acabamos de enviar un correo de acceso. Puedes pedir otro en {seconds}s."
   ],
+  "signIn.microsoft": ["Sign in with your Tec account", "Entrar con tu cuenta del Tec"],
+  "signIn.microsoftBody": [
+    "The same Microsoft account you use for your Tec email and Teams. Nothing is emailed to you.",
+    "La misma cuenta de Microsoft que usas para tu correo del Tec y Teams. No se te envía ningún correo."
+  ],
+  "signIn.microsoftFailed": [
+    "Could not open the Tec sign-in page. Check your connection and try again.",
+    "No se pudo abrir la página de acceso del Tec. Revisa tu conexión e inténtalo de nuevo."
+  ],
+  "signIn.otherWays": ["Or sign in with a code", "O entra con un código"],
   "signIn.sendFailed": ["Could not send the email.", "No se pudo enviar el correo."],
   "signIn.rateLimitedWait": [
     "Too many sign-in emails at once. Wait {seconds} seconds, then press Send again. If your code already arrived, type it below.",

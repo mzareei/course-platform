@@ -17,6 +17,22 @@ export const config = {
   // date. Set to false before the semester starts.
   testSignIn: true,
 
+  /**
+   * "Sign in with Microsoft" — the institutional login students already use.
+   *
+   * Why this exists at all: emailed codes cannot work here. The built-in mailer
+   * is capped at 2/hour for the whole project, and tec.mx publishes
+   * `DMARC p=reject`, so no third-party service may send as a tec.mx address.
+   * Tec also blocks app passwords and app registration in their own tenant.
+   * Letting Microsoft do the verifying is the only route that needs nothing
+   * from their IT department and sends no mail at all.
+   *
+   * Off until the Azure provider is actually configured in Supabase — a button
+   * that opens a provider-not-enabled error is worse than no button. Flip this
+   * to true in the same change that enables the provider, never before.
+   */
+  microsoftSignIn: false,
+
   // Per-device unlock for QA addresses (see qa-test-accounts.md in the old repo).
   testAccessStorageKey: "cp.test-access-emails",
   themeStorageKey: "cp.theme"
