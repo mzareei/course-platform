@@ -232,6 +232,11 @@ export const strings = {
     "You're signed in, but your active enrollment is not in this class group. Ask your professor to check the roster.",
     "Tu sesión está iniciada, pero tu inscripción activa no pertenece al grupo de esta clase. Pide a tu profesor que revise la lista."
   ],
+  "join.pinRequired.title": ["Choose your PIN to continue", "Elige tu PIN para continuar"],
+  "join.pinRequired.body": [
+    "You're in the right class. Set the 6-digit PIN you'll use from now on — it takes a moment and this is the only place you can choose it. Your class opens as soon as you do.",
+    "Estás en la clase correcta. Crea el PIN de 6 dígitos que usarás de ahora en adelante: toma un momento y este es el único lugar donde puedes elegirlo. Tu clase se abre en cuanto lo hagas."
+  ],
   "join.unknown.title": ["We couldn't open this class", "No pudimos abrir esta clase"],
   "join.unknown.body": [
     "Check your connection and scan the classroom QR code again.",

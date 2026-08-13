@@ -19,7 +19,7 @@ assert.match(
 );
 assert.match(
   join,
-  /\}, \[joinCode, signedIn, claimed\]\)/,
+  /\}, \[joinCode, signedIn, claimed(?:, \w+)*\]\)/,
   "the effect must re-run once the context arrives, or waiting would hang forever"
 );
 assert.match(
@@ -31,6 +31,22 @@ assert.match(
   join,
   /retried/,
   "the retry must be latched so a genuine wrong-group 403 cannot loop"
+);
+
+// The PIN gate. course-session-join refuses a scan by a student who has never
+// chosen a PIN, which is how a student carried past the sign-in screen by an old
+// session is made to set one. Both halves below are load-bearing.
+assert.ok(
+  join.indexOf('error.code === "pin_required"') > -1
+    && join.indexOf('error.code === "pin_required"') < join.indexOf("error.status === 409"),
+  'pin_required shares its 409 with "this class is closed" and must be matched '
+    + "first, or the student is shown a dead end instead of the PIN form"
+);
+assert.match(
+  join,
+  /setAttempt\(\(n\) => n \+ 1\)/,
+  "claiming a PIN must bump the attempt counter: signing in again leaves "
+    + "signedIn and claimed both true, so nothing else re-runs the join"
 );
 
 console.log("verify-join-claim: OK");

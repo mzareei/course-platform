@@ -41,6 +41,26 @@ npx supabase functions deploy <function-name>  # deploy one function
 
 Functions do **not** deploy on git push — deploy them explicitly.
 
+### Before class day: check production matches the repo
+
+```bash
+node supabase/tools/check-function-deploys.mjs
+```
+
+Downloads every deployed function and diffs it against this repo, including the
+`_shared/*.ts` each one bundled. Exit code 1 means production is running
+something other than what is committed, and it prints the deploy commands.
+
+This is not optional housekeeping. A function bundles its `_shared` imports at
+**deploy** time, so fixing a shared file and redeploying only some of its
+importers leaves the rest running the old copy with no signal anywhere — that is
+exactly how the end-of-class quiz broke mid-lecture (pitfall #79). After editing
+anything in `_shared/`, find every importer before you deploy:
+
+```bash
+grep -rl "attendance.ts" supabase/functions/     # substitute the file you changed
+```
+
 New function checklist:
 1. Create `supabase/functions/<name>/index.ts`.
 2. Add to `supabase/config.toml`:

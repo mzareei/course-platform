@@ -6,8 +6,14 @@ import {
   consumeAuthReturnPath,
   saveAuthReturnPath
 } from "../../features/auth/returnPath";
+import { PinForm } from "../../features/auth/PinForm";
 import { t } from "../../i18n";
-import { context, refreshContext, session } from "../../state/session";
+import {
+  context,
+  refreshContext,
+  refreshSessionAndContext,
+  session
+} from "../../state/session";
 import { SignIn } from "../SignIn";
 
 type JoinIssue = "invalid" | "closed" | "access" | "unknown";
@@ -15,6 +21,11 @@ type JoinIssue = "invalid" | "closed" | "access" | "unknown";
 export function JoinClass({ joinCode }: { joinCode?: string }) {
   const signedIn = Boolean(session.value);
   const [issue, setIssue] = useState<JoinIssue | null>(null);
+  // The server refuses the scan until this student has chosen a PIN. Held
+  // separately from `issue` because it is not a dead end — the form below is
+  // the way through it.
+  const [pinRequired, setPinRequired] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const claimed = Boolean(context.value);
   const retried = useRef(false);
 
@@ -51,7 +62,11 @@ export function JoinClass({ joinCode }: { joinCode?: string }) {
       })
       .catch((error) => {
         if (cancelled) return;
-        if (error instanceof ApiError && [400, 404].includes(error.status)) {
+        // Checked before the plain 409 below, which means "this class is
+        // closed" — the two share a status and only the code tells them apart.
+        if (error instanceof ApiError && error.code === "pin_required") {
+          setPinRequired(true);
+        } else if (error instanceof ApiError && [400, 404].includes(error.status)) {
           setIssue("invalid");
         } else if (error instanceof ApiError && error.status === 409) {
           setIssue("closed");
@@ -65,12 +80,40 @@ export function JoinClass({ joinCode }: { joinCode?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [joinCode, signedIn, claimed]);
+    // `attempt` is what re-runs the join after a PIN is claimed: signing in
+    // again leaves signedIn and claimed both true, so nothing else in this list
+    // changes and the effect would otherwise never fire a second time.
+  }, [joinCode, signedIn, claimed, attempt]);
 
   // Signed out at a QR code is the one moment a student may claim a PIN: the
   // code proves a class is live, which is what puts them in the room. Passing it
   // down is what unlocks the first-time branch of the form.
   if (!signedIn) return <SignIn joinCode={String(joinCode || "").trim()} />;
+
+  // Signed in, in the room, but with no PIN: the students who signed in before
+  // PIN sign-in existed, whose old session carried them past the sign-in screen
+  // entirely. Claiming re-signs them in as the same person, so the only visible
+  // effect is that they now have a PIN — and the join runs again by itself.
+  if (pinRequired) {
+    return (
+      <div class="stack" style="max-width: 30rem; margin: 0 auto; width: 100%;">
+        <div>
+          <p class="eyebrow">{t("join.eyebrow")}</p>
+          <h1>{t("join.pinRequired.title")}</h1>
+          <p class="hint">{t("join.pinRequired.body")}</p>
+        </div>
+        <PinForm
+          joinCode={String(joinCode || "").trim()}
+          startClaiming
+          onSignedIn={async () => {
+            await refreshSessionAndContext();
+            setPinRequired(false);
+            setAttempt((n) => n + 1);
+          }}
+        />
+      </div>
+    );
+  }
 
   if (issue) {
     return (

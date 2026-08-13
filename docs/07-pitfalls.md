@@ -6,6 +6,108 @@ the UI is silently wrong.**
 
 ---
 
+## 80. A student's session outlives the sign-in method that created it
+
+**Reported by the professor 2026-08-13, from the second real class: "for two,
+three students it asks them to set the PIN … but for the majority they scanned
+the QR code and went directly into the course without being forced to set a
+PIN."**
+
+PIN sign-in shipped 2026-08-12, the day after the first class. It changed
+nothing for anybody already signed in. A Supabase session lives in the phone's
+local storage and refreshes itself indefinitely, and `JoinClass` renders the
+sign-in screen on exactly one condition:
+
+```tsx
+if (!signedIn) return <SignIn joinCode={…} />;
+```
+
+So every student who had signed in during class 1 — by emailed code, by the test
+door, by Microsoft — was carried straight past the new sign-in screen and into
+the class. The two or three who *did* set a PIN were simply the ones who
+happened to be signed out. Nothing failed, nothing errored, and there was no
+session bug: the sessions were working exactly as designed. The design just had
+no way to say "this credential is superseded."
+
+Neither of the obvious remedies is right. Deleting and re-registering the
+students destroys attendance, answers and grades to fix a credential. Revoking
+every session mid-semester logs the room out at whatever moment it lands, and
+still relies on each student then choosing to set a PIN.
+
+The fix is to gate the **scan**, not the sign-in screen: `course-session-join`
+refuses with `pin_required` when the student has no `pin_set_at`, and the join
+screen renders the claim form in place. The QR code is the one thing every
+student in the room passes through no matter what state their session is in, and
+a student who already has a PIN never sees it.
+
+Two exits are deliberate, because a gate a student cannot pass is worse than no
+gate (pitfall #70's shape): `claim_student_pin` requires a `live` class, so a
+`paused` one is never gated; and a rostered profile with no student ID cannot
+claim, so it is let through and audited rather than locked out of a lecture.
+
+**Rule:** changing how people authenticate does not change anyone already
+authenticated. Before shipping a new sign-in method, ask what happens to the
+sessions minted by the old one — they will still be valid, and the new screen is
+the one place that cannot reach them. Enforce the change at a door every user
+must re-enter, not at the door they already walked through.
+
+---
+
+## 79. An edge function bundles `_shared` at deploy time, so fixing a shared file ages every importer you don't redeploy
+
+**Reported by the professor 2026-08-13: "when we get to the end of the quiz and
+I push it, the students got a JSON error … two, three of them could see their
+quiz, but the majority got this JSON error thing." The end-of-class quiz had to
+be abandoned.**
+
+Migration 0048 let one class hold more than one `class_attendance` row per
+student, so a lecture paused one day and resumed the next records both days.
+`_shared/attendance.ts`'s `loadCheckInAt` was fixed the same day to read a list
+instead of a row (pitfall #77). Three of the five functions importing it —
+`course-pulse`, `course-session-join`, `course-class-record` — were redeployed.
+`course-activity-attempt` and `course-exit-ticket` were not.
+
+**A deployed function carries the copy of `_shared/*.ts` that existed when *it*
+was deployed.** So those two kept running `.maybeSingle()` against a table that
+now legitimately holds two rows, and PostgREST answered:
+
+```
+JSON object requested, multiple (or no) rows returned
+```
+
+`course-activity-attempt` returns `error.message` verbatim, and `QuizPlayer`
+renders it. Every student who had scanned in on **both** class days — the
+majority, since this was a resumed class — got that sentence instead of their
+quiz. The two or three who saw the quiz were the ones with a single attendance
+row. `course-exit-ticket` was stale too, so the reflection would have failed
+identically had it been reached.
+
+Nothing pointed at this. The source in the repo was correct, reviewed, and
+committed; the migration was applied; `git log` was clean; the fix's own pitfall
+entry (#77) was already written. The only wrong thing in the world was a deploy
+that had not happened, and no tool in either repo could see it.
+
+Timestamps cannot settle it either — the commit for a change is routinely made a
+minute *after* the deploy that shipped it, which reads as stale. Confirmed by
+downloading the live bundle and diffing it, which is now a script:
+
+```bash
+node supabase/tools/check-function-deploys.mjs
+```
+
+It downloads every deployed function into a scratch directory (never the working
+tree) and diffs the real source, including the `_shared` files each one bundled.
+**Run it before class day.** It found this in one pass.
+
+**Rule:** after editing anything in `_shared/`, redeploy *every* function that
+imports it, not the ones you happened to be working on —
+`grep -rl "<file>.ts" supabase/functions/` lists them. And treat "the fix is in
+the repo" as saying nothing at all about what production is running. Same family
+as pitfall #21, one layer down: there the browser held a stale bundle, here the
+server does.
+
+---
+
 ## 78. Recording a failed attempt and then raising throws the record away
 
 **Built and caught by testing, 2026-08-12, before any student used it — but it

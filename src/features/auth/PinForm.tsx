@@ -15,15 +15,20 @@ import { t } from "../../i18n";
 
 export function PinForm({
   joinCode,
+  startClaiming = false,
   onSignedIn
 }: {
   /** Present only when the student arrived by scanning a live class QR code.
    *  Without it there is no way to claim a PIN — by design. */
   joinCode?: string;
+  /** Open straight into the choose-a-PIN branch. Set when the server has
+   *  already said this student has no PIN, so the form does not ask them to
+   *  type one they have never chosen and then explain why it was wrong. */
+  startClaiming?: boolean;
   onSignedIn: () => void | Promise<void>;
 }) {
   const canClaim = Boolean(joinCode);
-  const [claiming, setClaiming] = useState(false);
+  const [claiming, setClaiming] = useState(startClaiming && canClaim);
   const [studentId, setStudentId] = useState("");
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
