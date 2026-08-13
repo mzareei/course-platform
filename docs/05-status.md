@@ -91,6 +91,36 @@ lecture"** and **"Show the answer"**, and it mapped an expired student token to
 healthy. A verification probe needs its own negative check — assert the labels it
 greps for exist, and make an auth failure loud.
 
+### Sign-in: email is a dead end, Microsoft is built and waiting on Tec
+
+Investigated to the end on 2026-08-12. **Emailed codes cannot be made to work
+here**, and it took four confirmed walls to be sure — none of them ours:
+
+1. Supabase's built-in mailer is capped at **2 emails/hour** project-wide, and
+   the field is locked until custom SMTP is configured.
+2. `tec.mx` publishes `DMARC p=reject` with `SPF -all`. **No third party may
+   ever send as a tec.mx address.** Brevo refuses the sender outright.
+3. Tec's tenant has **app passwords disabled**, so their mailbox cannot be used
+   as a relay either.
+4. Tec **blocks app registration** in their tenant (401 in both portals).
+
+So the route taken is **Sign in with Microsoft** — students authenticate against
+Tec's own identity system, no mail is sent, and the impersonation hole closes
+properly (today's "secret" is the student's email address, which the whole class
+knows; there it is their Tec password and MFA).
+
+Built, deployed behind `config.microsoftSignIn`, and **currently off**. The app
+registration lives in the professor's personal Azure directory; the Supabase
+Azure provider is enabled and configured. The one thing outstanding is **Tec's
+admin approving the app** — signing in reaches Microsoft's "Approval required"
+screen, and a request has been drafted through Microsoft's own flow. Flipping
+the flag to `true` is the only remaining step. Full detail, including fallbacks
+if Tec refuses, in `docs/06-runbook.md`.
+
+**Test sign-in therefore stays on for now**, and remains the open security
+issue: anyone who knows a rostered address can sign in as that student and open
+their grades. It closes the moment a real student signs in through Microsoft.
+
 **The email ceiling is still open, and it is the one that will bite next.** No
 code change can raise it: the project uses Supabase's built-in mailer, capped at
 a couple of messages per hour for the whole project. `docs/06-runbook.md` →

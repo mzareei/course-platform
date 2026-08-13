@@ -274,6 +274,34 @@ Then in the SPA, set `microsoftSignIn: true` in `src/config.ts` and push. Keep
 those two steps together — the flag exists so the button never appears before
 the provider answers.
 
+### Current state (2026-08-12): built, configured, waiting on Tec
+
+Everything on our side is done and verified:
+
+- **App registration** — `TC2007B Course Platform`, client ID
+  `374e2afe-1419-443a-8f38-bbdcbe1e0b39`, in the professor's personal Default
+  Directory under `mahdi.zareei@hotmail.com`. Multitenant, redirect URI set to
+  the Supabase callback.
+- **Supabase** — Azure provider enabled, client ID and secret saved, tenant URL
+  `https://login.microsoftonline.com/common`.
+- **The app** — button written, bilingual, behind `config.microsoftSignIn`,
+  currently **false**.
+
+**Tec requires admin approval.** Signing in as `m.zareei@tec.mx` reaches
+Microsoft's *"Approval required — TC2007B Course Platform (unverified). This app
+requires your admin's approval to: View users' basic profile"*. A request was
+drafted through Microsoft's own request-approval flow, which delivers it to
+Tec's admin console with the app and its permissions attached.
+
+**The flag is false on purpose.** With it true, every student who taps the
+button hits that wall — worse than no button. Flipping it to `true` and pushing
+is the only remaining step once Tec approves.
+
+**If Tec refuses**, the honest fallbacks in order: ask them to register the app
+in their own tenant instead (same result, their ownership); or a per-student
+code scheme, which the professor has already rejected as too manual; or buy a
+domain and go back to emailed codes.
+
 ### The test that actually proves it
 
 Sign in as a **real student** (a tec.mx account that is on the roster and has
