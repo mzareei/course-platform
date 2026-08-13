@@ -8,6 +8,7 @@ import {
   testSignIn,
   isEmailAllowedLocally
 } from "../auth/auth";
+import { PinForm } from "../features/auth/PinForm";
 import { classifySendFailure } from "../features/auth/signInErrors";
 import { t } from "../i18n";
 
@@ -31,7 +32,7 @@ function startCooldown() {
   }
 }
 
-export function SignIn() {
+export function SignIn({ joinCode }: { joinCode?: string } = {}) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -141,10 +142,12 @@ export function SignIn() {
         </p>
       </div>
 
-      {/* First, and on its own, because it is the route that actually works for
-          a full class: nothing is emailed, so no rate limit applies. The email
-          code below stays for accounts outside the university — QA students and
-          invited instructors — who have no Microsoft account to use. */}
+      {/* The students' route, first and on its own. Nothing is emailed, so the
+          2/hour ceiling never applies and a full room signs in at once. The
+          email code below is now only for people who are not students: invited
+          instructors and QA accounts, who have no student ID. */}
+      <PinForm joinCode={joinCode} onSignedIn={finishSignIn} />
+
       {config.microsoftSignIn ? (
         <div class="card">
           <button
@@ -159,10 +162,8 @@ export function SignIn() {
         </div>
       ) : null}
 
-      <div class="card">
-        {config.microsoftSignIn ? (
-          <p class="eyebrow">{t("signIn.otherWays")}</p>
-        ) : null}
+      <div class="card muted">
+        <p class="eyebrow">{t("signIn.otherWays")}</p>
         <label class="field">
           {t("signIn.emailLabel")}
           <input

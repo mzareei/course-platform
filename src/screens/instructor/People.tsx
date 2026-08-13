@@ -9,6 +9,7 @@ import {
   assignPersonSection,
   listRoster,
   removeRosterPerson,
+  resetStudentPin,
   resendInstructorInvitation
 } from "../../api/roster";
 import { StatusPill } from "../../components/StatusPill";
@@ -106,6 +107,7 @@ export function People() {
   const [reason, setReason] = useState("");
 
   const [removing, setRemoving] = useState<string | null>(null);
+  const [resettingPin, setResettingPin] = useState<string | null>(null);
   const [inviting, setInviting] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
   const [profileToAssign, setProfileToAssign] = useState("");
@@ -175,6 +177,22 @@ export function People() {
       setError(e instanceof Error ? e.message : t("people.removeFailed"));
     } finally {
       setRemoving(null);
+    }
+  }
+
+  async function resetPin(profileId: string, fullName: string) {
+    if (!confirm(t("pin.resetConfirm"))) return;
+    setNotice(null);
+    setError(null);
+    setResettingPin(profileId);
+    try {
+      await resetStudentPin(profileId);
+      setNotice(`${t("pin.resetDone")}: ${fullName}`);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("pin.resetFailed"));
+    } finally {
+      setResettingPin(null);
     }
   }
 
@@ -466,6 +484,18 @@ export function People() {
                           onClick={() => void removePerson(person.profile_id, person.full_name)}
                         >
                           {removing === person.profile_id ? t("people.removing") : t("people.remove")}
+                        </button>
+                      ) : null}
+                      {/* Only students sign in with a PIN, and only one who has
+                          set one has anything to clear. */}
+                      {person.course_role === "student" && person.student_identifier ? (
+                        <button
+                          class="btn quiet"
+                          type="button"
+                          disabled={resettingPin === person.profile_id}
+                          onClick={() => void resetPin(person.profile_id, person.full_name)}
+                        >
+                          {t("pin.resetTitle")}
                         </button>
                       ) : null}
                     </div>
