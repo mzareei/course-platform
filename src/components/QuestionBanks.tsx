@@ -11,7 +11,7 @@ import {
   questionBankControlCapabilities,
   questionBankReadiness
 } from "../features/deck/bankReadiness";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 import { activeRoles } from "../state/session";
 import { QuestionBankReview } from "./QuestionBankReview";
 import { ForceDeleteControl } from "./ForceDeleteControl";
@@ -30,7 +30,7 @@ export function QuestionBanks() {
   useEffect(() => {
     refreshBanks()
       .catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : t("content.banks.loadFailed"));
+        setError(apiErrorText(reason, "content.banks.loadFailed"));
       });
   }, []);
 
@@ -137,7 +137,7 @@ function QuestionBankCard({
         // The bank is already deleted server-side; refresh is best effort.
       }
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : t("content.banks.deleteBankFailed");
+      const message = apiErrorText(cause, "content.banks.deleteBankFailed");
       setDeleteError(message);
       setForceDelete(message.includes("recorded student answers or live question history"));
       setDeleting(false);

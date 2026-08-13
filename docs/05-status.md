@@ -1,6 +1,86 @@
 # Status
 
-**Last updated:** 2026-08-12
+**Last updated:** 2026-08-13
+
+### Full-platform audit acted on: cut-short classes, Spanish errors, four closed doors (2026-08-13, evening)
+
+The complete audit is `docs/audits/2026-08-13-full-platform-audit.md` — read it
+before starting new improvement work; most of its B/C/D items are still open.
+What shipped tonight (backend `af1db17`, frontend this commit), all approved by
+the professor:
+
+- **The accidentally-live Aug 19 class ("Week02 Class 01 – Authentication") was
+  rewound to planned** through the real UI (pause → Reset this class day). Its
+  one test question was cleared; nothing student-visible remains.
+- **A class cut short no longer misgrades or mislabels anyone.** When a session
+  never reached its end-of-class phase (no quiz attempt and no reflection from
+  anyone), the quiz nobody took stops being a 12-question zero, the missing
+  reflection stops costing 20% (`submissionRequired` in `_shared/class-grade.ts`,
+  session-level `loadEndOfClassRan`), and attendance stops calling the whole
+  room "left early". Both tables show it; the exit-ticket pill reads "Not
+  required". Aug 12's record now shows pulse-only grades and sane attendance.
+- **Backend errors reach users in their language.** The old
+  `e instanceof Error ? e.message : t(…)` fallback was dead code (ApiError
+  extends Error), so every refusal was English. New `apiErrorText` in
+  `src/i18n/index.ts` is the one way to render a caught error: known codes get
+  their bilingual sentence, Spanish UI leads with Spanish and keeps the backend
+  sentence in parentheses. Applied across ~26 files; `t()` no longer throws on
+  an unknown key (white-screen guard).
+- **Timezone bug:** Teach Home computed "today" in UTC, so the today's-class
+  card vanished after 6 PM in Monterrey. Now `localDateKey()` (shared with
+  student Today).
+- **Security:** `reset_student_pin` is now scoped to the actor's own sections
+  (was: any instructor could clear and re-claim any student's PIN in any
+  group); `course-generation-worker` fails closed and
+  `GENERATION_WORKER_SECRET` is actually set (was: unset, so the
+  Anthropic-spending worker accepted the public anon key — verified 403 now);
+  `course-test-signin` and the seven legacy no-auth/static-PIN endpoints
+  (`quiz-start-attempt`, `quiz-submit-attempt`, `course-submit-reflection`,
+  `course-submit-portfolio`, three `*-summary`) are deleted from production.
+  The old public-site quiz/reflection/portfolio pages lose their backend; they
+  were superseded by the platform. Unknown roster-management actions now 400.
+- **Correction to the entries below:** test sign-in is OFF (`config.testSignIn`
+  is `false` and the endpoint is now deleted). Older paragraphs claiming it is
+  still on are historical.
+
+### Instructor email works now — custom SMTP is live (2026-08-13)
+
+**The 2/hour email ceiling is gone.** An invited professor for group 402
+activated his invitation and then could not sign in: every code request came
+back as the rate-limit message. Nothing was wrong with the code. The invitation
+email itself had consumed the built-in mailer's tiny hourly allowance, so his
+own sign-in code had nothing left to send with.
+
+Fixed in the Supabase dashboard, not in code:
+
+- **Custom SMTP enabled** — `smtp.gmail.com:465`, sender and username
+  `mah.zareei@gmail.com`, authenticated with a Google **app password** named
+  "Mahdi Teaching Platform". The professor's personal Gmail, deliberately: a
+  tec.mx sender is impossible (`DMARC p=reject`, and Tec disables app passwords
+  in their own tenant), and Gmail needs no DNS domain.
+- **Rate limit for sending emails raised to 300/hour** (Authentication → Rate
+  Limits). Enabling custom SMTP alone only lifts it to 30 — the manual raise is
+  the step that actually matters.
+
+Verified against production the way `06-runbook.md` demands, not with a single
+optimistic send: **eight OTP requests to eight distinct addresses inside 30
+seconds, all HTTP 200.** Under the old ceiling the second one would have been a
+429. Plus-addressed variants of the professor's own Gmail were used so every
+message reached a real inbox and nothing bounced.
+
+Two consequences worth knowing:
+
+- Sign-in mail now arrives **from a gmail.com address**, not tec.mx. Supabase
+  warns that a personal mail service is not a transactional one; deliverability
+  is adequate for a handful of instructors and QA accounts, not for mailing a
+  whole cohort. Brevo remains the upgrade path if that day comes.
+- The test burst created eight throwaway auth users
+  (`mah.zareei+cptest1..8@gmail.com`). They hold no profile and RLS denies the
+  anon key everything, so they can reach nothing — but they are litter and
+  should be deleted from Authentication → Users.
+
+This changes nothing for students: they sign in with student ID + PIN and no
+mail is sent on their path at all.
 
 ### The first real class, and the five things it broke
 
@@ -10,7 +90,7 @@ as pitfalls #73–#76. The sixth is a feature and is planned, not built.
 
 | What he saw | Cause | State |
 |---|---|---|
-| Every student hit a rate limit on Sign in | Supabase's built-in email ceiling — a configuration limit, not a bug | **Not fixed by code.** See below |
+| Every student hit a rate limit on Sign in | Supabase's built-in email ceiling — a configuration limit, not a bug | Fixed twice over: students no longer use email at all (ID + PIN), and custom SMTP now lifts the ceiling for instructors — see above |
 | "This class is for another group", cleared by reloading | The join ran before anything had claimed a first-ever profile (#76) | Fixed, deployed |
 | "The class is live" but no way in | Today had no route back for a student who had already scanned | Fixed, deployed |
 | Fullscreen closed itself mid-lecture | The deck iframe reloaded every 9 minutes to refresh a token it no longer needed (#75) | Fixed, deployed |

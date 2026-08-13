@@ -2,7 +2,7 @@
 // belong to Review and never determine whether a class exists.
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
-import { t, locale, formatDay } from "../../i18n";
+import { t, locale, formatDay, localDateKey } from "../../i18n";
 import type { ReleaseItem } from "../../api/types";
 
 export function releaseHref(release: ReleaseItem): string {
@@ -18,13 +18,6 @@ export function releaseHref(release: ReleaseItem): string {
 
 export function releaseTarget(release: ReleaseItem): string | undefined {
   return release.source_kind === "storage_object" ? undefined : "_blank";
-}
-
-function localDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 export function Today() {

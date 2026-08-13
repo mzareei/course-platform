@@ -2,7 +2,7 @@
 // professor's word range (50-100 by default). The counter updates live so a
 // student knows before they try to submit, not after a rejection.
 import { useState } from "preact/hooks";
-import { t } from "../../i18n";
+import { t, apiErrorText } from "../../i18n";
 import { submitReflection } from "../../api/reflection";
 
 function countWords(text: string): number {
@@ -36,7 +36,7 @@ export function Reflection({
       await submitReflection({ class_session_id: classSessionId, one_thing: text.trim() });
       onSubmitted();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("reflection.submitFailed"));
+      setError(apiErrorText(e, "reflection.submitFailed"));
     } finally {
       setBusy(false);
     }

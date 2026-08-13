@@ -46,7 +46,7 @@ import {
   type ActiveCheckpoint,
   type CheckpointUiState
 } from "../../features/live/checkpointState";
-import { t } from "../../i18n";
+import { t, apiErrorText } from "../../i18n";
 import {
   autoSendCheckpoints,
   setAutoSendCheckpoints
@@ -1013,11 +1013,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
       setCheckpointState({ type: "idle" });
       await refreshContext();
     } catch (cause) {
-      setError(
-        cause instanceof Error && cause.message
-          ? cause.message
-          : t("run.reset.failed")
-      );
+      setError(apiErrorText(cause, "run.reset.failed"));
     } finally {
       setBusy(false);
     }

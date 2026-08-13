@@ -72,6 +72,8 @@ export interface GradingRow {
   capped: boolean;
 
   submission_present: boolean;
+  /** False when the class never reached its end-of-class phase — no penalty. */
+  submission_required: boolean;
   submission_at: string | null;
   penalty_applied: boolean;
   penalty_percent: number;

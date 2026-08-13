@@ -4,7 +4,7 @@
 // cannot explain on the spot is a grade they cannot defend, so the breakdown is
 // part of the table rather than something to reconstruct later.
 import { useMemo, useState } from "preact/hooks";
-import { t, locale } from "../i18n";
+import { t, locale, apiErrorText } from "../i18n";
 import {
   overrideClassGrade,
   type GradingRow,
@@ -185,7 +185,7 @@ export function ClassGradingTable({
       setDraftGrade("");
       setDraftReason("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("classRecord.overrideFailed"));
+      setError(apiErrorText(e, "classRecord.overrideFailed"));
     } finally {
       setBusy(false);
     }
@@ -245,11 +245,15 @@ export function ClassGradingTable({
                   <td class="num">{row.quiz_correct}</td>
                   <td class="num">{row.quiz_total}</td>
                   <td>
-                    <span class={`attendance-pill ${row.submission_present ? "present" : "absent"}`}>
-                      {row.submission_present
-                        ? t("classRecord.submission.submitted")
-                        : t("classRecord.submission.missing")}
-                    </span>
+                    {row.submission_required === false && !row.submission_present ? (
+                      <span class="attendance-pill">{t("classRecord.submission.notRequired")}</span>
+                    ) : (
+                      <span class={`attendance-pill ${row.submission_present ? "present" : "absent"}`}>
+                        {row.submission_present
+                          ? t("classRecord.submission.submitted")
+                          : t("classRecord.submission.missing")}
+                      </span>
+                    )}
                   </td>
                   <td class="num">
                     {row.override_grade !== null ? (

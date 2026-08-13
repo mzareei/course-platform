@@ -36,7 +36,7 @@ export async function callFn<T = unknown>(
   body: Record<string, unknown> = {}
 ): Promise<T> {
   const session = await getSession();
-  if (!session) throw new ApiError("You are signed out. Sign in again to continue.", 401);
+  if (!session) throw new ApiError("You are signed out. Sign in again to continue.", 401, "signed_out");
 
   const response = await fetch(`${config.supabaseUrl}/functions/v1/${name}`, {
     method: "POST",

@@ -4,7 +4,7 @@
 // professor opens this from the gradebook after a class to see who was there,
 // who was participating, and what each of them earned.
 import { useEffect, useState } from "preact/hooks";
-import { t, formatDay } from "../../i18n";
+import { t, formatDay, apiErrorText } from "../../i18n";
 import { context } from "../../state/session";
 import { AttendanceEngagementTable } from "../../components/AttendanceEngagementTable";
 import { ClassGradingTable } from "../../components/ClassGradingTable";
@@ -52,7 +52,7 @@ export function ClassRecord({ sessionId }: { sessionId?: string }) {
       const result = await postClassGradesToGradebook(sessionId);
       setPosted({ posted: result.posted, skipped: result.skipped });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("classRecord.postFailed"));
+      setError(apiErrorText(e, "classRecord.postFailed"));
     } finally {
       setPosting(false);
     }

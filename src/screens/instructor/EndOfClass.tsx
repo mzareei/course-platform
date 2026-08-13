@@ -11,7 +11,7 @@
 // disappear permanently after the first quiz of a session was closed. Starting
 // another quiz has to stay possible for the whole class.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { t } from "../../i18n";
+import { t, apiErrorText } from "../../i18n";
 import {
   startClassQuiz, closeClassQuiz, classQuizStatus, currentClassQuiz,
   type QuizStatus
@@ -89,7 +89,7 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
       setStatus(null);
       setInstanceId(instance_id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("endOfClass.startFailed"));
+      setError(apiErrorText(e, "endOfClass.startFailed"));
     } finally {
       setBusy(false);
     }
@@ -106,7 +106,7 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
       setStatus(null);
       setInstanceId(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("endOfClass.closeFailed"));
+      setError(apiErrorText(e, "endOfClass.closeFailed"));
     } finally {
       setBusy(false);
     }

@@ -2,7 +2,7 @@ import { useState } from "preact/hooks";
 import { updateClass } from "../api/classes";
 import type { ContentItem } from "../api/content";
 import type { ClassSession, CourseSection } from "../api/schedule";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 type SessionEditorProps = {
   session: ClassSession;
@@ -35,7 +35,7 @@ export function SessionEditor({ session, sections, lectures, onSaved, onCancel }
       });
       onSaved(saved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("schedule.saveFailed"));
+      setError(apiErrorText(cause, "schedule.saveFailed"));
     } finally {
       setSaving(false);
     }

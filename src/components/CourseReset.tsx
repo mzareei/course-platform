@@ -6,7 +6,7 @@
 // with the screen: this control should cost nothing to anyone who is not
 // deliberately looking for it.
 import { useState } from "preact/hooks";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 import {
   executeCourseReset,
   previewCourseReset,
@@ -39,7 +39,7 @@ export function CourseReset() {
       setSelected(new Set());
       setOpen(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("reset.previewFailed"));
+      setError(apiErrorText(e, "reset.previewFailed"));
     } finally {
       setBusy(false);
     }
@@ -60,7 +60,7 @@ export function CourseReset() {
       if (fresh) setPreview(fresh);
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("reset.failed"));
+      setError(apiErrorText(e, "reset.failed"));
     } finally {
       setBusy(false);
     }

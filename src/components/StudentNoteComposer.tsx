@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 import { createStudentNote } from "../api/studentNotes";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 export function StudentNoteComposer({
   classSessionId,
@@ -34,7 +34,7 @@ export function StudentNoteComposer({
       setNeedsFollowUp(false);
       onCreated?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("studentNotes.createFailed"));
+      setError(apiErrorText(e, "studentNotes.createFailed"));
     } finally {
       setBusy(false);
     }

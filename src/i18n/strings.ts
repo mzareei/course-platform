@@ -16,6 +16,17 @@ export const strings = {
   "app.themeToLight": ["Switch to light theme", "Cambiar a tema claro"],
   "app.themeToDark": ["Switch to dark theme", "Cambiar a tema oscuro"],
   "app.language": ["Language", "Idioma"],
+
+  // Fallbacks for backend errors that arrive without a translatable code.
+  "errors.signedOut": [
+    "You are signed out. Sign in again to continue.",
+    "Tu sesión se cerró. Vuelve a entrar para continuar."
+  ],
+  "errors.requestFailed": [
+    "The request could not be completed.",
+    "No se pudo completar la solicitud."
+  ],
+  "errors.courseLoadFailed": ["Unable to load your course.", "No se pudo cargar tu curso."],
   "app.switchToSpanish": ["Ver en español", "Ver en español"],
   "app.switchToEnglish": ["View in English", "View in English"],
   "app.contextError.title": ["We couldn't load your course", "No pudimos cargar tu curso"],
@@ -276,6 +287,10 @@ export const strings = {
   "grades.eyebrow": ["Your standing", "Tu situación"],
   "grades.title": ["My Grades", "Mis Calificaciones"],
   "grades.loading": ["Loading your grades…", "Cargando tus calificaciones…"],
+  "grades.loadFailed": [
+    "Your grades could not be loaded.",
+    "No se pudieron cargar tus calificaciones."
+  ],
   "grades.courseTotal": [
     "Course average across {count} graded class(es)",
     "Promedio del curso en {count} clase(s) calificada(s)"
@@ -1430,6 +1445,8 @@ export const strings = {
   "live.viewGrades": ["View my grades", "Ver mis calificaciones"],
 
   // ---------------------------------------------------------------- quiz
+  "quiz.startFailed": ["Could not start the quiz.", "No se pudo iniciar el quiz."],
+  "quiz.submitFailed": ["Could not submit the quiz.", "No se pudo enviar el quiz."],
   "quiz.loading": ["Loading the quiz…", "Cargando el quiz…"],
   "quiz.questionN": ["Question {n} of {total}", "Pregunta {n} de {total}"],
   "quiz.next": ["Next", "Siguiente"],
@@ -2167,6 +2184,7 @@ export const strings = {
   ],
   "classRecord.submission.submitted": ["Submitted", "Entregada"],
   "classRecord.submission.missing": ["Missing", "Faltante"],
+  "classRecord.submission.notRequired": ["Not required", "No requerida"],
 
   "classRecord.override": ["Override this grade", "Ajustar esta calificación"],
   "classRecord.changeOverride": ["Change the override", "Cambiar el ajuste"],

@@ -8,7 +8,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { callFn } from "../../api/client";
 import type { ClassGrade, StudentProgress } from "../../api/types";
-import { t, formatDay } from "../../i18n";
+import { t, formatDay, apiErrorText } from "../../i18n";
 import { formatGrade as grade, formatPercent as percent } from "../../features/classRecord/format";
 
 /**
@@ -77,7 +77,7 @@ export function Grades() {
   useEffect(() => {
     callFn<StudentProgress>("course-student-progress")
       .then(setProgress)
-      .catch((e: Error) => setError(e.message));
+      .catch((e: unknown) => setError(apiErrorText(e, "grades.loadFailed")));
   }, []);
 
   if (error) {
@@ -163,13 +163,17 @@ export function Grades() {
                 <div class="class-grade-stat">
                   <dt>{t("grades.exitTicket")}</dt>
                   <dd>
-                    <span
-                      class={`attendance-pill ${row.submission_present ? "present" : "absent"}`}
-                    >
-                      {row.submission_present
-                        ? t("classRecord.submission.submitted")
-                        : t("classRecord.submission.missing")}
-                    </span>
+                    {row.submission_required === false && !row.submission_present ? (
+                      <span class="attendance-pill">{t("classRecord.submission.notRequired")}</span>
+                    ) : (
+                      <span
+                        class={`attendance-pill ${row.submission_present ? "present" : "absent"}`}
+                      >
+                        {row.submission_present
+                          ? t("classRecord.submission.submitted")
+                          : t("classRecord.submission.missing")}
+                      </span>
+                    )}
                   </dd>
                 </div>
               </dl>

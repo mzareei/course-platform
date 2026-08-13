@@ -22,7 +22,7 @@ import { canReleaseToReview } from "../api/contentVisibility";
 import { PublicLinkCleanup } from "./PublicLinkCleanup";
 import { ForceDeleteControl } from "./ForceDeleteControl";
 import { refreshContext } from "../state/session";
-import { t, formatDay } from "../i18n";
+import { t, formatDay, apiErrorText } from "../i18n";
 import { ApiError } from "../api/client";
 import type { StringKey } from "../i18n/strings";
 
@@ -60,7 +60,7 @@ export function ContentLibraryView() {
       setReleases(rel.releases);
       setSessions(classes.sessions);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : t("content.library.loadFailed"));
+      setLoadError(apiErrorText(e, "content.library.loadFailed"));
     }
   }
 

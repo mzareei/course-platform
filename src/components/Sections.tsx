@@ -21,7 +21,7 @@ import { listSections, saveSection, sectionErrorKey, type CourseSection } from "
 import { StatusPill } from "./StatusPill";
 import { SectionEditor } from "./SectionEditor";
 import { isOwner, refreshContext } from "../state/session";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 export function Sections() {
   const [sections, setSections] = useState<CourseSection[] | null>(null);
@@ -38,7 +38,7 @@ export function Sections() {
     try {
       setSections((await listSections()).sections);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("sections.saveFailed"));
+      setError(apiErrorText(e, "sections.saveFailed"));
     }
   }
 

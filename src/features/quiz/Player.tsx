@@ -8,7 +8,7 @@
 // server (course-activity-attempt); this component just presents them in the
 // order it received them, each timed by its own difficulty.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { t, lang } from "../../i18n";
+import { t, lang, apiErrorText } from "../../i18n";
 import { startQuizAttempt, submitQuizAttempt, type QuizQuestion, type SubmitAttemptResponse } from "../../api/quiz";
 
 const SECONDS_BY_DIFFICULTY: Record<string, number> = { easy: 20, medium: 30, hard: 45 };
@@ -47,7 +47,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
           setQuestionDeadline(Date.now() + secondsFor(res.questions[0]) * 1000);
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Could not start the quiz."));
+      .catch((e) => setError(apiErrorText(e, "quiz.startFailed")));
 
     const onBlur = () => { integrity.current.focus_loss_count += 1; };
     const onPaste = () => { integrity.current.paste_count += 1; };
@@ -81,7 +81,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
       });
       setResult(response.score);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not submit the quiz.");
+      setError(apiErrorText(e, "quiz.submitFailed"));
     } finally {
       setBusy(false);
     }

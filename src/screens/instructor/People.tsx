@@ -25,7 +25,7 @@ import {
   isAssignableStudentProfileStatus
 } from "../../features/roster/assignment";
 import { context, refreshContext } from "../../state/session";
-import { t } from "../../i18n";
+import { t, apiErrorText } from "../../i18n";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
 const GROUP_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -138,7 +138,7 @@ export function People() {
         return available?.section_code || "";
       });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("people.loadFailed"));
+      setError(apiErrorText(cause, "people.loadFailed"));
     }
   }
 
@@ -174,7 +174,7 @@ export function People() {
       setNotice(t("people.removed", { name: fullName }));
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("people.removeFailed"));
+      setError(apiErrorText(e, "people.removeFailed"));
     } finally {
       setRemoving(null);
     }
@@ -190,7 +190,7 @@ export function People() {
       setNotice(`${t("pin.resetDone")}: ${fullName}`);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("pin.resetFailed"));
+      setError(apiErrorText(e, "pin.resetFailed"));
     } finally {
       setResettingPin(null);
     }
@@ -221,7 +221,7 @@ export function People() {
       setEmail(""); setName(""); setStudentId(""); setReason("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("people.addFailed"));
+      setError(apiErrorText(e, "people.addFailed"));
     } finally {
       setBusy(false);
     }
@@ -239,7 +239,7 @@ export function People() {
           : t("people.invitationResendFailed", { name: person.full_name })
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("people.invitationResendFailed", { name: person.full_name }));
+      setError(apiErrorText(cause, "people.invitationResendFailed", { name: person.full_name }));
     } finally {
       setInviting(null);
     }

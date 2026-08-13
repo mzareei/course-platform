@@ -10,7 +10,7 @@ import {
 } from "../auth/auth";
 import { PinForm } from "../features/auth/PinForm";
 import { classifySendFailure } from "../features/auth/signInErrors";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 const COOLDOWN_KEY = "cp.auth-send-cooldown";
 const COOLDOWN_MS = 60_000;
@@ -94,7 +94,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
     } catch (error) {
       setMessage({
         kind: "error",
-        text: error instanceof Error ? error.message : t("signIn.codeFailed")
+        text: apiErrorText(error, "signIn.codeFailed")
       });
     } finally {
       setBusy(false);
@@ -110,7 +110,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
     } catch (error) {
       setMessage({
         kind: "error",
-        text: error instanceof Error ? error.message : t("signIn.microsoftFailed")
+        text: apiErrorText(error, "signIn.microsoftFailed")
       });
       setBusy(false);
     }
@@ -125,7 +125,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
     } catch (error) {
       setMessage({
         kind: "error",
-        text: error instanceof Error ? error.message : t("signIn.testFailed")
+        text: apiErrorText(error, "signIn.testFailed")
       });
     } finally {
       setBusy(false);

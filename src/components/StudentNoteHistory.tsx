@@ -5,7 +5,7 @@ import {
   resolveStudentNote,
   type ClassStudentNote
 } from "../api/studentNotes";
-import { formatDay, locale, t } from "../i18n";
+import { formatDay, locale, t, apiErrorText } from "../i18n";
 
 function noteTime(iso: string) {
   return new Date(iso).toLocaleTimeString(locale(), { hour: "numeric", minute: "2-digit" });
@@ -53,7 +53,7 @@ export function StudentNoteHistory({
         : listStudentNotes(profileId));
       setNotes(updatedNotes);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("studentNotes.resolveFailed"));
+      setError(apiErrorText(e, "studentNotes.resolveFailed"));
     } finally {
       setResolving(null);
     }

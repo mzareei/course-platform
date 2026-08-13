@@ -5,7 +5,7 @@ import {
   updateQuestion,
   type BankQuestion
 } from "../api/checkpoints";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 type DraftOption = {
   text: string;
@@ -42,7 +42,7 @@ export function QuestionBankReview({
       const response = await listQuestions(bankId);
       setQuestions(response.questions);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("content.banks.questionsLoadFailed"));
+      setError(apiErrorText(cause, "content.banks.questionsLoadFailed"));
     }
   }
 
@@ -107,7 +107,7 @@ export function QuestionBankReview({
       setNotice(t("content.banks.questionSaved"));
       await Promise.all([load(), onChanged()]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("content.banks.questionSaveFailed"));
+      setError(apiErrorText(cause, "content.banks.questionSaveFailed"));
     } finally {
       setBusy(false);
     }
@@ -124,7 +124,7 @@ export function QuestionBankReview({
       setNotice(t("content.banks.questionDeleted"));
       await Promise.all([load(), onChanged()]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("content.banks.questionDeleteFailed"));
+      setError(apiErrorText(cause, "content.banks.questionDeleteFailed"));
     } finally {
       setBusy(false);
     }

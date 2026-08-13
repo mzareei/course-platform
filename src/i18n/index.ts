@@ -6,6 +6,7 @@
 // language as the app (decks are served same-origin, so they share storage).
 import { signal } from "@preact/signals";
 import { strings, type StringKey } from "./strings";
+import { ApiError } from "../api/client";
 
 export type Lang = "en" | "es";
 
@@ -54,6 +55,10 @@ document.documentElement.lang = lang.value;
  */
 export function t(key: StringKey, vars?: Record<string, string | number>): string {
   const pair = strings[key];
+  // A key that reaches here from server data (difficulty, status, role) may not
+  // exist. Rendering the key itself is ugly but visible; throwing white-screens
+  // the subtree mid-class.
+  if (!pair) return String(key);
   const text = (lang.value === "es" ? pair[1] : pair[0]) || pair[0];
   if (!vars) return text;
   return text.replace(/\{(\w+)\}/g, (match, name) =>
@@ -64,6 +69,49 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
 /** Locale tag for Intl / toLocaleDateString. */
 export function locale(): string {
   return lang.value === "es" ? "es-MX" : "en-US";
+}
+
+/**
+ * Today (or any Date) as a local-timezone `YYYY-MM-DD` key, for comparing
+ * against `planned_date`. `toISOString().slice(0, 10)` is the UTC date — in
+ * Monterrey that flips to tomorrow at 6 PM, which once made the professor's
+ * "today's class" card vanish during an evening class.
+ */
+export function localDateKey(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Backend error codes that have a bilingual sentence of their own. */
+const ERROR_CODE_KEYS: Partial<Record<string, StringKey>> = {
+  signed_out: "errors.signedOut",
+  request_failed: "errors.requestFailed"
+};
+
+/**
+ * The one way to turn a caught backend error into user-facing text.
+ *
+ * The old pattern — `e instanceof Error ? e.message : t(fallback)` — never
+ * reached its translated branch, because ApiError extends Error: every backend
+ * refusal was shown in the backend's English, even to a Spanish classroom.
+ * Here: a known error code gets its translated sentence; otherwise English UI
+ * shows the backend's specific sentence, and Spanish UI leads with the Spanish
+ * fallback and keeps the specific sentence in parentheses so nothing is lost.
+ */
+export function apiErrorText(
+  error: unknown,
+  fallbackKey: StringKey,
+  vars?: Record<string, string | number>
+): string {
+  if (error instanceof ApiError && error.code) {
+    const mapped = ERROR_CODE_KEYS[error.code];
+    if (mapped) return t(mapped);
+  }
+  const message = error instanceof Error && error.message ? error.message : "";
+  if (!message) return t(fallbackKey, vars);
+  return lang.value === "es" ? `${t(fallbackKey, vars)} (${message})` : message;
 }
 
 /**

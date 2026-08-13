@@ -5,7 +5,7 @@
 // release, so the lecture still has to be released for a class like any other
 // content. Nothing here is ever visible to a student before that.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { t } from "../../i18n";
+import { t, apiErrorText } from "../../i18n";
 import type { StringKey } from "../../i18n/strings";
 import {
   listJobs, jobStatus, advanceJob, createJob, cancelJob,
@@ -89,7 +89,7 @@ export function Content() {
       await refresh();
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("content.uploadFailed"));
+      setError(apiErrorText(e, "content.uploadFailed"));
       return false;
     } finally {
       setBusy(null);
@@ -279,7 +279,7 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
       await approveJob(jobId);
       onApproved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("content.approveFailed"));
+      setError(apiErrorText(e, "content.approveFailed"));
       setBusy(false);
     }
   }
@@ -576,7 +576,7 @@ function ImportPanel() {
         resetForm();
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("import.commitFailed"));
+      setError(apiErrorText(e, "import.commitFailed"));
     } finally {
       setBusy(false);
     }

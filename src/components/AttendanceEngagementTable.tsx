@@ -4,7 +4,7 @@
 // asked is not the same as getting the answers right, and a professor defending
 // one should never have to untangle it from the other.
 import { useMemo, useState } from "preact/hooks";
-import { t, locale, formatDay } from "../i18n";
+import { t, locale, formatDay, apiErrorText } from "../i18n";
 import {
   markPresent,
   type AttendanceRow,
@@ -120,7 +120,7 @@ export function AttendanceEngagementTable({
       setMarkingId(null);
       setNote("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("classRecord.markPresentFailed"));
+      setError(apiErrorText(e, "classRecord.markPresentFailed"));
     } finally {
       setBusy(false);
     }

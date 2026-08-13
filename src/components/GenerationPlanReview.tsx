@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { approvePlan, reviewPlan, type TeachingPlan } from "../api/generation";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 function optionalGoal(value: string) {
   const goal = Number(value);
@@ -36,7 +36,7 @@ export function GenerationPlanReview({
         if (!cancelled) setPlan(job.proposed_plan);
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : t("content.plan.loadFailed"));
+        if (!cancelled) setError(apiErrorText(cause, "content.plan.loadFailed"));
       });
     return () => { cancelled = true; };
   }, [jobId]);
@@ -58,7 +58,7 @@ export function GenerationPlanReview({
       await approvePlan({ job_id: jobId, approved_plan: plan });
       onApproved();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("content.plan.approveFailed"));
+      setError(apiErrorText(cause, "content.plan.approveFailed"));
       setBusy(false);
     }
   }

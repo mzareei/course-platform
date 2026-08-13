@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { context } from "../../state/session";
-import { t, lang } from "../../i18n";
+import { t, lang, apiErrorText } from "../../i18n";
 import { ApiError } from "../../api/client";
 import { currentPulse, answerPulse, shuffleOptions, type StudentPulseView } from "../../api/pulse";
 import { QuizPlayer } from "../../features/quiz/Player";
@@ -131,7 +131,7 @@ export function Live() {
       });
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("live.answerFailed"));
+      setError(apiErrorText(e, "live.answerFailed"));
     } finally {
       setBusy(false);
     }

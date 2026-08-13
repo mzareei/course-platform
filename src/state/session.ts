@@ -2,6 +2,7 @@
 import { signal, computed } from "@preact/signals";
 import type { Session } from "@supabase/supabase-js";
 import { client, callFn, getSession } from "../api/client";
+import { apiErrorText } from "../i18n";
 import type { CourseContext, Role } from "../api/types";
 
 export const session = signal<Session | null>(null);
@@ -40,7 +41,7 @@ export async function refreshContext(): Promise<void> {
     context.value = await callFn<CourseContext>("course-auth-context");
   } catch (error) {
     context.value = null;
-    contextError.value = error instanceof Error ? error.message : "Unable to load your course.";
+    contextError.value = apiErrorText(error, "errors.courseLoadFailed");
   }
 }
 

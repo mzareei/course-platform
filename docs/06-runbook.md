@@ -344,10 +344,15 @@ their grades. Record the date in `docs/05-status.md`.
 
 ## Sending sign-in emails to a whole class
 
-> **Superseded.** Kept for the reasoning and for accounts outside the
-> university. The route we actually took is Microsoft sign-in, above — a
-> third-party sender can never send as a `tec.mx` address, so no amount of SMTP
-> configuration fixes the student path.
+> **Done for instructors, superseded for students.** Custom SMTP is configured
+> and verified as of 2026-08-13 — Gmail (`smtp.gmail.com:465`, sender
+> `mah.zareei@gmail.com`, Google app password), with the email rate limit raised
+> to 300/hour. Eight sends in 30 seconds all succeeded. The steps below are kept
+> because they are how it was done and how to redo it.
+>
+> It stays superseded for the **student** path: a third-party sender can never
+> send as a `tec.mx` address, and students sign in with student ID + PIN, which
+> sends no mail at all.
 
 **Why this exists.** The first real class (2026-08-11/12) could not sign in:
 every student saw a rate-limit error. The project still uses Supabase's

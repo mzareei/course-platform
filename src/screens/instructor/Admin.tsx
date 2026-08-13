@@ -10,7 +10,7 @@ import {
   type AdminCourse, type AdminProfessor
 } from "../../api/admin";
 import { StatusPill } from "../../components/StatusPill";
-import { t } from "../../i18n";
+import { t, apiErrorText } from "../../i18n";
 
 type InviteRole = "instructor" | "teaching_assistant";
 const INVITE_ROLES: InviteRole[] = ["instructor", "teaching_assistant"];
@@ -50,7 +50,7 @@ export function Admin() {
       // Default the invite form to the first course so the common case is one click.
       setInviteCourse((current) => current || courseData.courses[0]?.id || "");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("admin.loadFailed"));
+      setError(apiErrorText(e, "admin.loadFailed"));
     }
   }
 
@@ -77,7 +77,7 @@ export function Admin() {
       setInviteCourse(course.id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("admin.loadFailed"));
+      setError(apiErrorText(e, "admin.loadFailed"));
     } finally {
       setBusy(false);
     }
@@ -103,7 +103,7 @@ export function Admin() {
       setInviteName("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("admin.loadFailed"));
+      setError(apiErrorText(e, "admin.loadFailed"));
     } finally {
       setBusy(false);
     }
@@ -120,7 +120,7 @@ export function Admin() {
       setNotice(t("admin.removed", { name, course: person.course_id }));
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("admin.loadFailed"));
+      setError(apiErrorText(e, "admin.loadFailed"));
     } finally {
       setBusy(false);
     }

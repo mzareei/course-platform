@@ -1,14 +1,14 @@
 // I1 Teach Home — the instructor landing: today's session front and center.
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
-import { t, formatDay } from "../../i18n";
+import { t, formatDay, localDateKey } from "../../i18n";
 
 export function TeachHome() {
   const ctx = context.value;
   if (!ctx) return null;
 
   const sessions = ctx.teacher_sessions ?? [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey();
   const todaySessions = sessions.filter((s) => (s.planned_date ?? "").slice(0, 10) === today);
   const upcoming = sessions
     .filter((s) => ["planned", "open", "live", "paused"].includes(s.state))

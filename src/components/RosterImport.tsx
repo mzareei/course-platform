@@ -12,7 +12,7 @@ import {
   type RosterRow, type RosterPreview
 } from "../api/roster";
 
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 /** Shown as-is in the example table. Header names are the canonical spellings;
  *  the parser accepts the Spanish and short ones too (see HEADER_ALIASES). */
@@ -73,7 +73,7 @@ export function RosterImport({ onImported }: { onImported: () => void }) {
       setPreview(await previewRoster(parsed.rows));
     } catch (e) {
       setRows(null);
-      setError(e instanceof Error ? e.message : t("roster.import.failed"));
+      setError(apiErrorText(e, "roster.import.failed"));
     } finally {
       setBusy(false);
       // Let the same file be chosen again after a fix.
@@ -100,7 +100,7 @@ export function RosterImport({ onImported }: { onImported: () => void }) {
       reset();
       onImported();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("roster.import.failed"));
+      setError(apiErrorText(e, "roster.import.failed"));
     } finally {
       setBusy(false);
     }

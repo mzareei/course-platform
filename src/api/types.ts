@@ -123,6 +123,8 @@ export interface ClassGrade {
   scaled_grade: number | null;
   capped: boolean;
   submission_present: boolean;
+  /** False when the class never reached its end-of-class phase — no penalty. */
+  submission_required: boolean;
   penalty_applied: boolean;
   penalty_percent: number;
   calculated_grade: number | null;

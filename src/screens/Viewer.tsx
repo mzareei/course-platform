@@ -4,7 +4,7 @@
 // so the deck's inline engine can actually run. No gate pass — no content.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { callFn, ApiError } from "../api/client";
-import { t } from "../i18n";
+import { t, apiErrorText } from "../i18n";
 
 interface AccessResponse {
   access: string;
@@ -42,9 +42,7 @@ export function Viewer({ releaseId }: { releaseId?: string }) {
       setError(
         e instanceof ApiError && e.status === 403
           ? e.message // the gate's own plain-language reason ("not released for your section", …)
-          : e instanceof Error
-            ? e.message
-            : t("viewer.openFailed")
+          : apiErrorText(e, "viewer.openFailed")
       );
     }
   }

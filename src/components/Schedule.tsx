@@ -19,7 +19,7 @@ import { StatusPill } from "./StatusPill";
 import { ForceDeleteControl } from "./ForceDeleteControl";
 import { SessionEditor } from "./SessionEditor";
 import { refreshContext } from "../state/session";
-import { t, formatDay } from "../i18n";
+import { t, formatDay, apiErrorText } from "../i18n";
 
 const RUNNABLE = ["planned", "open", "live", "paused", "continued"];
 const EDITABLE_SESSION_STATES = ["planned", "open", "continued"];
@@ -56,7 +56,7 @@ export function Schedule() {
         current || sec.sections.find((x) => x.status === "active")?.id || sec.sections[0]?.id || ""
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("schedule.loadFailed"));
+      setError(apiErrorText(e, "schedule.loadFailed"));
     }
   }
 
@@ -84,7 +84,7 @@ export function Schedule() {
       // auth context, so a new class day is invisible until that is refetched.
       await refreshContext();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("schedule.addFailed"));
+      setError(apiErrorText(e, "schedule.addFailed"));
     } finally {
       setBusy(null);
     }
@@ -101,7 +101,7 @@ export function Schedule() {
       await load();
       await refreshContext();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("schedule.addFailed"));
+      setError(apiErrorText(e, "schedule.addFailed"));
     } finally {
       setBusy(null);
     }
@@ -119,7 +119,7 @@ export function Schedule() {
       await load();
       await refreshContext();
     } catch (e) {
-      const message = e instanceof Error ? e.message : t("schedule.deleteFailed");
+      const message = apiErrorText(e, "schedule.deleteFailed");
       setError(message);
       setForceDeleteSessionId(
         message.includes("recorded live-question activity") ? session.session_id : null
