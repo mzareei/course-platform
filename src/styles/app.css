@@ -361,7 +361,8 @@ textarea { min-height: 7rem; resize: vertical; }
 .pill.open { background: var(--good-soft); color: var(--good); }
 .pill.scheduled { background: var(--primary-soft); color: var(--primary); }
 .pill.review { background: var(--accent-soft); color: var(--accent); }
-.pill.hidden { background: var(--surface-3); color: var(--text-subtle); }
+/* --text-muted, not --text-subtle: subtle-on-surface-3 was 4.47:1, a hair under AA. */
+.pill.hidden { background: var(--surface-3); color: var(--text-muted); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.live {
   background: var(--danger-soft);
@@ -542,7 +543,8 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   align-items: center;
   gap: 0.15rem;
   padding: 0.5rem 0 0.6rem;
-  font-size: 0.72rem;
+  min-height: 44px;
+  font-size: 0.75rem;
   font-weight: 650;
   color: var(--text-subtle);
   text-decoration: none;
@@ -917,7 +919,7 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   font-weight: 700;
   letter-spacing: 0.06em;
   padding: 0.5rem 0.6rem;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--border-strong);
   color: var(--text-muted);
 }
