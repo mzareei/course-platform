@@ -2,6 +2,55 @@
 
 **Last updated:** 2026-08-14
 
+### Grades post themselves; the student meets theirs the second they finish (2026-08-14)
+
+Reported with a screenshot: a student who had answered the class questions, sat
+the quiz and written the reflection was looking at **"No grades yet."** Nothing
+was broken. The grade had existed the whole time — it only reached a student
+when the professor pressed **Post to the gradebook** on that class's record, one
+class at a time, and he does not. His ask: "eliminate that process."
+
+Posting is now a consequence of finishing:
+
+| When | Who is posted |
+|---|---|
+| A student submits their reflection | **That student only** |
+| The professor ends the class | Everyone else, penalties included |
+| A grade is overridden | That student, so the correction reaches their phone |
+| A closed class's record is opened | Anyone a failed write missed |
+
+The single-student scoping on the first row is the whole reason
+`postClassGrades` takes `profileIds`. Posting the roster when one person
+finishes would hand every classmate still writing their reflection a grade
+carrying the 20% missing-submission penalty — for something they have not
+failed to do yet.
+
+The done screen now shows the number instead of pointing at My Grades: the
+grade rides back on the submit response, so there is no second round trip to
+race. **Post to the gradebook is gone**, along with its five strings; the
+Gradebook's unposted nudge stays but now reads as a failure report with a repair
+("open the class record and it will post") rather than a reminder.
+
+The roster loaders, the grading rows and the gradebook write moved out of
+`course-class-record` into `_shared/class-grade.ts` — three functions post now
+and an edge function cannot import another. `course-class-record`,
+`course-exit-ticket` and `course-session-management` deployed. New verifier
+`verify-auto-posted-grades`; 40 green.
+
+**Verified in production** in Group 402 with two QA students, then reset, class
+day deleted, both students back to Removed. Student one answered the poll (1/1)
+and the quiz (2/12), wrote the reflection, and the done screen showed **52.08**
+immediately — `0.3×100 + 0.7×16.67 = 41.67`, `÷0.8 = 52.08`, no penalty — with
+My Grades and the professor's gradebook both carrying it seconds later, nothing
+pressed. Student two was enrolled and did nothing; ending the class posted their
+**0**. Overriding that 0 to **70** reached the gradebook on its own.
+
+**One thing left for the professor.** The three Group 401 classes taught before
+this change (Aug 12, Aug 13, Aug 14) were closed under the old rules and have no
+grades in the gradebook, so their students still see nothing. Opening each
+class record posts it. Deliberately not done here: it publishes real grades to
+real students, which is his call, not a cleanup step.
+
 ### The answer hands the lecture back by itself; the room's count sits over the QR (2026-08-14)
 
 Two things the professor asked for after teaching with the cockpit:

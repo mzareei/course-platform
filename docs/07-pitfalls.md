@@ -6,6 +6,43 @@ the UI is silently wrong.**
 
 ---
 
+## 84. A gate whose only key is a habit is not a gate, it is a dead end
+
+**Reported 2026-08-14 with a screenshot of "No grades yet" on a phone whose
+owner had just finished the whole class.**
+
+`studentClassGrades` deliberately showed only classes with a posted
+`gradebook_scores` row, and the comment above it defended the choice well: "a
+grade should not appear on a phone because a screen was opened." The only thing
+that ever wrote that row was a **Post to the gradebook** button, on each class
+record, one class at a time.
+
+The policy was sound. The mechanism was a human remembering to press a button
+twenty-eight times a semester, and he never did — so a feature that worked
+perfectly produced, for every student, the experience of a broken one. Nothing
+errored, no test failed, and the numbers were correct and sitting in the
+database the entire time.
+
+Two things to carry:
+
+- **When a deliberate gate has exactly one key and that key is somebody's
+  discipline, the gate will be shut forever.** Either bind it to an event that
+  already happens (here: finishing the reflection, ending the class) or accept
+  that the feature behind it does not exist.
+- **Automating the write reintroduces the gate's original job.** Grades still
+  must not appear early, so the trigger has to be the *right* event per person:
+  the exit ticket posts one student, never the roster, because posting the room
+  when one person finishes hands everyone still writing a grade carrying the
+  20% missing-submission penalty. "Post automatically" was never the whole
+  answer — "post whom, and when" was.
+
+And removing the button removes the recovery path with it. `postClassGrades` is
+called through a `…Quietly` wrapper so it can never fail a reflection submit or
+a class close, which means a failed write is silent; opening a closed class's
+record re-posts it, so there is still a way out (pitfall #70).
+
+---
+
 ## 83. "Make it automatic" is a question about *when*, not about *whether*
 
 **Asked 2026-08-14: "when the answer is already shown … that button should be
