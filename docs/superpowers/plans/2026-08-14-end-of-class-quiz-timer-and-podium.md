@@ -2932,12 +2932,22 @@ Expected: no pending migrations. If `0053` is still listed, stop — do not depl
 Then the functions:
 
 ```bash
+npx supabase functions deploy course-session-management
 npx supabase functions deploy course-class-quiz
 npx supabase functions deploy course-activity-attempt
 npx supabase functions deploy course-pulse
 ```
 
-Expected: three successful deploys. Edge functions do **not** deploy on git push — this step is the only thing that ships them.
+Expected: FOUR successful deploys.
+
+All four, together, non-negotiably. `_shared/quiz-close.ts` is bundled into each
+function that imports it at deploy time (pitfall #79), so deploying a subset
+leaves the others running an older copy of the shared rules — the auto-close and
+the submit grace would disagree with each other mid-class.
+
+`course-session-management` is the one it is easiest to forget: it carries the
+fix that puts a paused quiz back to `live` on resume. Without it, pausing during
+a quiz strands the whole room with no exit ticket. Edge functions do **not** deploy on git push — this step is the only thing that ships them.
 
 - [ ] **Step 3: Push the frontend**
 
