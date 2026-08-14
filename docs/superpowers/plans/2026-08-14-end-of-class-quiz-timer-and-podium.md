@@ -2138,7 +2138,7 @@ import { clockText } from "./clock";
 In `src/i18n/strings.ts`, matching the surrounding shape exactly (read a neighbouring pair first):
 
 ```typescript
-  "quiz.totalLeft": { en: "{time} left in total", es: "{time} en total" },
+  "quiz.totalLeft": ["{time} left in total", "{time} en total"],
 ```
 
 - [ ] **Step 7: Run the test and typecheck**
@@ -2270,16 +2270,10 @@ In the `lastResult` block, beside the average:
 - [ ] **Step 5: Add the strings**
 
 ```typescript
-  "endOfClass.timeLeft": { en: "{time} left", es: "Quedan {time}" },
-  "endOfClass.submittedOfPresent": {
-    en: "{started} started · {present} checked in today",
-    es: "{started} empezaron · {present} registrados hoy"
-  },
-  "endOfClass.closedEveryone": {
-    en: "Closed — everyone in the room finished",
-    es: "Cerrado: todos en el salón terminaron"
-  },
-  "endOfClass.closedTime": { en: "Closed — time ran out", es: "Cerrado: se acabó el tiempo" },
+  "endOfClass.timeLeft": ["{time} left", "Quedan {time}"],
+  "endOfClass.submittedOfPresent": ["{started} started · {present} checked in today", "{started} empezaron · {present} registrados hoy"],
+  "endOfClass.closedEveryone": ["Closed — everyone in the room finished", "Cerrado: todos en el salón terminaron"],
+  "endOfClass.closedTime": ["Closed — time ran out", "Cerrado: se acabó el tiempo"],
 ```
 
 Remove `endOfClass.submittedOf` if nothing else uses it — check with `grep -rn "endOfClass.submittedOf" src/`, and if the only hit is the definition and the line just replaced, delete the pair.
@@ -2549,14 +2543,14 @@ And at the very end of the returned `<section>`:
 - [ ] **Step 6: Add the strings**
 
 ```typescript
-  "podium.title": { en: "Top of the class", es: "Los mejores de la clase" },
-  "podium.empty": { en: "No one finished the quiz.", es: "Nadie terminó el examen." },
-  "podium.place": { en: "#{rank}", es: "#{rank}" },
-  "podium.noId": { en: "Student", es: "Estudiante" },
-  "podium.showToClass": { en: "Show the winners to the class", es: "Mostrar a los ganadores a la clase" },
-  "podium.backToClass": { en: "Back to class", es: "Volver a la clase" },
-  "podium.classroomEyebrow": { en: "End of class quiz", es: "Examen de fin de clase" },
-  "podium.classroomTitle": { en: "Top of the class", es: "Los mejores de la clase" },
+  "podium.title": ["Top of the class", "Los mejores de la clase"],
+  "podium.empty": ["No one finished the quiz.", "Nadie terminó el examen."],
+  "podium.place": ["#{rank}", "#{rank}"],
+  "podium.noId": ["Student", "Estudiante"],
+  "podium.showToClass": ["Show the winners to the class", "Mostrar a los ganadores a la clase"],
+  "podium.backToClass": ["Back to class", "Volver a la clase"],
+  "podium.classroomEyebrow": ["End of class quiz", "Examen de fin de clase"],
+  "podium.classroomTitle": ["Top of the class", "Los mejores de la clase"],
 ```
 
 - [ ] **Step 7: Style it**
@@ -2792,17 +2786,11 @@ In branch 4 (the done screen), immediately inside `<div class="empty-state card"
 - [ ] **Step 4: Add the strings**
 
 ```typescript
-  "podium.yourPlace": { en: "You finished #{rank} of {of}", es: "Terminaste #{rank} de {of}" },
-  "podium.revealMyName": { en: "Show my name to the class", es: "Mostrar mi nombre a la clase" },
-  "podium.hideMyName": { en: "Hide my name again", es: "Ocultar mi nombre otra vez" },
-  "podium.nameShowing": {
-    en: "Your name is on the class screen.",
-    es: "Tu nombre está en la pantalla de la clase."
-  },
-  "podium.revealFailed": {
-    en: "That did not save. Try again.",
-    es: "No se guardó. Inténtalo de nuevo."
-  },
+  "podium.yourPlace": ["You finished #{rank} of {of}", "Terminaste #{rank} de {of}"],
+  "podium.revealMyName": ["Show my name to the class", "Mostrar mi nombre a la clase"],
+  "podium.hideMyName": ["Hide my name again", "Ocultar mi nombre otra vez"],
+  "podium.nameShowing": ["Your name is on the class screen.", "Tu nombre está en la pantalla de la clase."],
+  "podium.revealFailed": ["That did not save. Try again.", "No se guardó. Inténtalo de nuevo."],
 ```
 
 - [ ] **Step 5: Style it**
