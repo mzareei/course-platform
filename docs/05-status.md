@@ -28,6 +28,19 @@ Two things the professor asked for after teaching with the cockpit:
 `course-pulse` deployed. New verifier `verify-live-attendance-count`;
 `verify-auto-continue` rewritten around the new window. 39 verifiers green.
 
+**Verified in production**, throwaway class day in Group 402 with the QA
+sandbox student (instructor in Chrome, student in a separate browser), then
+reset, class day deleted, student back to Removed. Sampling the cockpit once a
+second: question open → auto-revealed at t+20 s (everyone answered) → countdown
+16…1 with the button reading **Continue now** → panel idle at t+36 s, nothing
+clicked. A second round left to run out its 60 s timer retired itself the same
+way, so both auto-reveal triggers hand the lecture back. On the student's phone
+the verdict ("La respuesta correcta era …") appeared and stayed for the window
+rather than flashing — the pitfall #66 regression this was designed around did
+not happen. The headcount read `0 / of 0 on the roster` before the QA student
+was enrolled, `0 / of 1` after, and climbed to `1` on its own within ~5 s of
+the student scanning in, with no reload.
+
 ### Full E2E sweep, PIN-claim fix, per-group isolation, Inter ships (2026-08-13, late night)
 
 ### Full E2E sweep, PIN-claim fix, per-group isolation, Inter ships (2026-08-13, late night)
