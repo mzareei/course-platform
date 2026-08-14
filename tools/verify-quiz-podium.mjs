@@ -137,9 +137,18 @@ check(
   /set_name_reveal/.test(attempt),
   "students need an action to opt in"
 );
+// Deliberately not a bare token match. `/podiumCut|top 3|PODIUM_PLACES/` would
+// pass on an unused import or a stray comment while the actual refusal was
+// missing — and the thing being gated is a privacy control: without it any
+// student can flip their own name onto the screen at the front of the room.
+// Match the refusal itself, following a real podiumCut call.
 check(
-  /podiumCut|top\s*3|PODIUM_PLACES/.test(attempt),
-  "set_name_reveal must refuse a student who is not actually on the podium"
+  /podiumCut\([\s\S]{0,400}?throw new Error\("Only the top three can be named on the podium\./.test(attempt),
+  "set_name_reveal must REFUSE a caller who is not on the podium, after a real podiumCut — not merely mention one"
+);
+check(
+  /throw new Error\("The quiz is still running\./.test(attempt),
+  "set_name_reveal must refuse while the quiz is still running"
 );
 
 // The client must not be the thing hiding a name.
