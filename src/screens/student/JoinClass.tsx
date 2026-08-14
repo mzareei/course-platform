@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { ApiError } from "../../api/client";
 import { resolveJoinCode } from "../../api/join";
 import { rememberJoinedClassSession } from "../../api/session";
@@ -19,6 +20,7 @@ import { SignIn } from "../SignIn";
 type JoinIssue = "invalid" | "closed" | "access" | "unknown";
 
 export function JoinClass({ joinCode }: { joinCode?: string }) {
+  const { route } = useLocation();
   const signedIn = Boolean(session.value);
   const [issue, setIssue] = useState<JoinIssue | null>(null);
   // The server refuses the scan until this student has chosen a PIN. Held
@@ -58,7 +60,9 @@ export function JoinClass({ joinCode }: { joinCode?: string }) {
         if (cancelled) return;
         rememberJoinedClassSession(joined.session_id);
         await refreshContext();
-        if (!cancelled) location.href = "/live";
+        // In-app navigation: context is already fresh, so a full reload would
+        // only re-download the app on classroom Wi-Fi at the worst moment.
+        if (!cancelled) route("/live");
       })
       .catch((error) => {
         if (cancelled) return;

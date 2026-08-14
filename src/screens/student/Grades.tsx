@@ -74,12 +74,15 @@ export function Grades() {
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
+    setProgress(null);
+    setError(null);
     callFn<StudentProgress>("course-student-progress")
       .then(setProgress)
       .catch((e: unknown) => setError(apiErrorText(e, "grades.loadFailed")));
-  }, []);
+  }, [loadAttempt]);
 
   if (error) {
     // An instructor previewing the student surface is not enrolled anywhere —
@@ -96,7 +99,7 @@ export function Grades() {
       <div class="card">
         <h2>{t("grades.title")}</h2>
         <p class="error-text" role="alert">{error}</p>
-        <button class="btn" type="button" onClick={() => location.reload()}>
+        <button class="btn" type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
           {t("app.tryAgain")}
         </button>
       </div>
