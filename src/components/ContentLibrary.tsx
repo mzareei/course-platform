@@ -171,16 +171,16 @@ export function ContentLibraryView() {
               style="max-width: 16rem;"
               onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
             />
-            <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">
+            <div class="nav-tabs" style="flex: 0 0 auto;">
               {(["all", "available", "hidden"] as Filter[]).map((value) => (
-                <a href="#" role="tab" aria-current={filter === value ? "page" : undefined}
-                   onClick={(e) => { e.preventDefault(); setFilter(value); }}>
+                <button key={value} type="button" class="nav-tab-btn" aria-pressed={filter === value}
+                   onClick={() => setFilter(value)}>
                   {value === "all"
                     ? t("content.library.filterAll")
                     : value === "available"
                       ? t("content.library.filterAvailable")
                       : t("content.library.filterHidden")}
-                </a>
+                </button>
               ))}
             </div>
           </div>

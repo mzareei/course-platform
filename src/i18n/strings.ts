@@ -489,6 +489,7 @@ export const strings = {
   "gradebook.title": ["Gradebook", "Calificaciones"],
   "gradebook.loading": ["Loading the gradebook…", "Cargando las calificaciones…"],
   "gradebook.tab.semester": ["Semester", "Semestre"],
+  "gradebook.tabsLabel": ["Gradebook views", "Vistas de calificaciones"],
   "gradebook.col.student": ["Student", "Estudiante"],
   "gradebook.emptyTitle": ["No grades yet", "Aún no hay calificaciones"],
   "gradebook.emptyBody": [
@@ -1557,6 +1558,7 @@ export const strings = {
   ],
   // ------------------------------------------------- content · your library
   "content.tab.library": ["Materials", "Materiales"],
+  "content.tabsLabel": ["Content sections", "Secciones de contenido"],
   "content.tab.banks": ["Question banks", "Bancos de preguntas"],
   "content.tab.generate": ["Generate from a PDF", "Generar desde un PDF"],
   "content.tab.import": ["Import", "Importar"],

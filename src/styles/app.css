@@ -487,7 +487,8 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   background: var(--surface-2);
   border-radius: var(--radius);
 }
-.nav-tabs a {
+.nav-tabs a,
+.nav-tabs .nav-tab-btn {
   flex: 1;
   text-align: center;
   text-decoration: none;
@@ -503,13 +504,26 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   justify-content: center;
   transition: background var(--ease), color var(--ease), box-shadow var(--ease);
 }
-.nav-tabs a:hover { color: var(--text); background: var(--surface-1); }
-.nav-tabs a[aria-current="page"] {
+.nav-tabs a:hover,
+.nav-tabs .nav-tab-btn:hover { color: var(--text); background: var(--surface-1); }
+.nav-tabs a[aria-current="page"],
+.nav-tabs .nav-tab-btn[aria-pressed="true"] {
   background: var(--surface-1);
   color: var(--text);
   box-shadow: var(--shadow-sm);
 }
-.nav-tabs a[aria-current="page"]:hover { background: var(--surface-1); }
+.nav-tabs a[aria-current="page"]:hover,
+.nav-tabs .nav-tab-btn[aria-pressed="true"]:hover { background: var(--surface-1); }
+/* The filter variant is a real button — strip the UA chrome, keep the tab look. */
+.nav-tabs .nav-tab-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  touch-action: manipulation;
+}
 
 /* ---------------------------------------------------------------- student bottom nav */
 .bottom-nav {
