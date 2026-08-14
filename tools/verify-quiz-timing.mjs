@@ -142,6 +142,15 @@ check(
   "the player must take each question's time from the server's `seconds` field"
 );
 
+// Two effects share one stateRef snapshot per tick, so `busy` (state) cannot
+// stop the second from submitting after the first already has. Only a ref
+// latches synchronously.
+check(
+  /const submitting = useRef\(false\)/.test(player)
+    && /if \(submitting\.current\) return;/.test(player),
+  "submitNow must latch on a ref against re-entry within a single clock tick"
+);
+
 // The two callers must both go through the shared rule.
 const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
 const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");

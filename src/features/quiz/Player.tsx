@@ -40,6 +40,11 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   const startedAt = useRef(Date.now());
   const questionRef = useRef<HTMLHeadingElement | null>(null);
   const integrity = useRef({ focus_loss_count: 0, paste_count: 0, copy_count: 0 });
+  // The one thing that can stop a double submit inside a single tick. `busy` is
+  // state — it is not visible to the sibling effect that runs microseconds later
+  // off the same stateRef snapshot. Reset only on failure, so a successful
+  // submit stays latched for good.
+  const submitting = useRef(false);
   // Refs mirror the latest state so the auto-advance effect (keyed only on the
   // clock tick) always reads current values without re-subscribing every render.
   const stateRef = useRef({ index: 0, questions: null as QuizQuestion[] | null, answers: {} as Record<string, string>, busy: false, result: null as SubmitAttemptResponse["score"] | null, resumed: null as { percent: number | null } | null, error: null as string | null });
@@ -96,6 +101,8 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
 
   async function submitNow(finalAnswers: Record<string, string>) {
     if (!attemptId || !stateRef.current.questions) return;
+    if (submitting.current) return;
+    submitting.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -109,6 +116,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
       setResult(response.score);
     } catch (e) {
       setError(apiErrorText(e, "quiz.submitFailed"));
+      submitting.current = false;
     } finally {
       setBusy(false);
     }
@@ -118,6 +126,13 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
     const { index: i, questions: qs, answers: a } = stateRef.current;
     if (!qs) return;
     if (i >= qs.length - 1) {
+      // Same rule as the deadline effect: the server refuses an empty
+      // submission, so a student who answered nothing must not be handed an
+      // error for never having started.
+      if (Object.keys(a).length === 0) {
+        setResumed({ percent: null });
+        return;
+      }
       void submitNow(a);
       return;
     }
