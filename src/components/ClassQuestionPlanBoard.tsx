@@ -298,7 +298,7 @@ export function ClassQuestionPlanBoard({
         question_bank_id: selectedBankId
       });
       applyPlan(createdPlan);
-      setNotice(null);
+      setNotice(t("run.plan.created"));
     } catch (cause) {
       setError(localizedPlanError(cause, "run.plan.createFailed"));
     } finally {
@@ -344,6 +344,7 @@ export function ClassQuestionPlanBoard({
 
       applyPlan(nextPlan);
       setEditor(null);
+      setNotice(t("run.plan.savedNotice"));
     } catch (cause) {
       setError(localizedPlanError(cause, "run.plan.saveFailed"));
     } finally {
@@ -382,6 +383,7 @@ export function ClassQuestionPlanBoard({
       });
       await refreshPlan();
       await onRefresh?.();
+      setNotice(t("run.plan.askedNotice"));
     } catch (cause) {
       setError(localizedPlanError(cause, "run.plan.saveFailed"));
     } finally {

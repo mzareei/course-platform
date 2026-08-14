@@ -26,6 +26,7 @@ import {
 } from "../../features/roster/assignment";
 import { context, refreshContext } from "../../state/session";
 import { t, apiErrorText } from "../../i18n";
+import { ConfirmButton } from "../../components/ConfirmButton";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
 const GROUP_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -107,6 +108,7 @@ export function People() {
   const [reason, setReason] = useState("");
 
   const [removing, setRemoving] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [resettingPin, setResettingPin] = useState<string | null>(null);
   const [inviting, setInviting] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -150,9 +152,16 @@ export function People() {
     role !== "instructor" &&
     email.trim() !== "" &&
     !(data?.allowed_domains ?? []).some((d) => email.trim().toLowerCase().endsWith(`@${d}`));
-  const roster = groupId
+  const searchNeedle = searchQuery.trim().toLowerCase();
+  const matchesSearch = (person: RosterPerson) =>
+    !searchNeedle ||
+    person.full_name.toLowerCase().includes(searchNeedle) ||
+    (person.institutional_email || "").toLowerCase().includes(searchNeedle) ||
+    (person.student_identifier || "").toLowerCase().includes(searchNeedle);
+  const roster = (groupId
     ? (data?.roster ?? []).filter((person) => hasActiveStudentEnrollment(person.sections, groupId))
-    : (data?.roster ?? []);
+    : (data?.roster ?? [])
+  ).filter(matchesSearch);
   const studentsOutsideGroup = groupId && selectedGroupAssignable
     ? (data?.roster ?? []).filter((person, index, rows) =>
         person.course_role === "student" &&
@@ -165,7 +174,6 @@ export function People() {
     : [];
 
   async function removePerson(profileId: string, fullName: string) {
-    if (!confirm(t("people.removeConfirm", { name: fullName }))) return;
     setNotice(null);
     setError(null);
     setRemoving(profileId);
@@ -181,7 +189,6 @@ export function People() {
   }
 
   async function resetPin(profileId: string, fullName: string) {
-    if (!confirm(t("pin.resetConfirm"))) return;
     setNotice(null);
     setError(null);
     setResettingPin(profileId);
@@ -388,12 +395,28 @@ export function People() {
           </div>
         </>
       ) : null}
+      {data && (data.roster?.length ?? 0) > 5 ? (
+        <input
+          type="search"
+          value={searchQuery}
+          placeholder={t("people.searchPlaceholder")}
+          aria-label={t("people.searchPlaceholder")}
+          style="max-width: 20rem;"
+          onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+        />
+      ) : null}
       {!data || !groups ? (
         <div class="empty-state"><p>{t("people.loadingRoster")}</p></div>
       ) : roster.length === 0 ? (
         <div class="empty-state card">
           <h3>{t("people.emptyTitle")}</h3>
-          <p>{groupId ? t("people.groupEmpty") : t("people.emptyBody")}</p>
+          <p>
+            {searchNeedle
+              ? t("people.noSearchMatches")
+              : groupId
+                ? t("people.groupEmpty")
+                : t("people.emptyBody")}
+          </p>
         </div>
       ) : (
         <div class="table-scroll">
@@ -477,26 +500,22 @@ export function People() {
                         </button>
                       ) : null}
                       {person.profile_id !== myProfileId && person.membership_status === "active" ? (
-                        <button
-                          class="btn quiet"
-                          type="button"
+                        <ConfirmButton
+                          label={removing === person.profile_id ? t("people.removing") : t("people.remove")}
+                          confirmLabel={t("people.removeConfirmAction")}
                           disabled={removing === person.profile_id || Boolean(inviting)}
-                          onClick={() => void removePerson(person.profile_id, person.full_name)}
-                        >
-                          {removing === person.profile_id ? t("people.removing") : t("people.remove")}
-                        </button>
+                          onConfirm={() => void removePerson(person.profile_id, person.full_name)}
+                        />
                       ) : null}
                       {/* Only students sign in with a PIN, and only one who has
                           set one has anything to clear. */}
                       {person.course_role === "student" && person.student_identifier ? (
-                        <button
-                          class="btn quiet"
-                          type="button"
+                        <ConfirmButton
+                          label={t("pin.resetTitle")}
+                          confirmLabel={t("pin.resetConfirmAction")}
                           disabled={resettingPin === person.profile_id}
-                          onClick={() => void resetPin(person.profile_id, person.full_name)}
-                        >
-                          {t("pin.resetTitle")}
-                        </button>
+                          onConfirm={() => void resetPin(person.profile_id, person.full_name)}
+                        />
                       ) : null}
                     </div>
                   </td>

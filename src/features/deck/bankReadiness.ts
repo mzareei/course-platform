@@ -10,6 +10,7 @@ type CheckpointBankReadinessInput = {
   checkpoint_metadata_status: "missing" | "valid" | "invalid";
   checkpoint_coverage: CheckpointCoverageInput[];
   source_pdf_mapping_status: "missing" | "valid";
+  source_pdf_pages?: number[];
   content_item_id?: string | null;
 };
 
@@ -20,9 +21,13 @@ export function questionBankReadiness(
 ): QuestionBankReadiness {
   const profile = bank.generation_validation_profile;
   if (profile === "flexible") {
-    return bank.total > 0 && bank.source_pdf_mapping_status === "valid"
-      ? "ready"
-      : "invalid";
+    if (bank.total <= 0) return "invalid";
+    if (bank.source_pdf_mapping_status === "valid") return "ready";
+    // An imported bank never had a source PDF — its grounding is the slide
+    // hints it was authored with. Judging it by PDF page mappings flagged
+    // every imported bank "Needs attention" forever. Only a bank that HAS
+    // source pages with a broken mapping is genuinely wrong.
+    return (bank.source_pdf_pages?.length ?? 0) === 0 ? "ready" : "invalid";
   }
   const balanced = bank.total === 18
     && bank.by_difficulty.easy === 6

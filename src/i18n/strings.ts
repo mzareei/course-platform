@@ -87,6 +87,14 @@ export const strings = {
     "Esto se hace una sola vez, y solo durante la clase. Después solo necesitas tu matrícula y este PIN."
   ],
   "pin.haveAPin": ["I already have a PIN", "Ya tengo un PIN"],
+  "pin.forgotHint": [
+    "Forgot your PIN? Ask your professor to reset it.",
+    "¿Olvidaste tu PIN? Pídele a tu profesor que lo restablezca."
+  ],
+  "pin.firstTimeHint": [
+    "First time here? Scan the QR code shown in class to choose your PIN.",
+    "¿Primera vez? Escanea el código QR que se muestra en clase para elegir tu PIN."
+  ],
   "pin.needAPin": ["I haven't set a PIN yet", "Todavía no tengo un PIN"],
   "pin.error.pin_invalid": [
     "That student ID and PIN do not match.",
@@ -291,6 +299,14 @@ export const strings = {
     "Your grades could not be loaded.",
     "No se pudieron cargar tus calificaciones."
   ],
+  "gradebook.unpostedNudge": [
+    "Closed but not posted yet: {titles}. Students see a class grade only after you post it from its class record.",
+    "Cerradas pero sin publicar: {titles}. Tus estudiantes ven la calificación de una clase solo cuando la publicas desde su registro."
+  ],
+  "grades.instructorPreview": [
+    "You are previewing the student surface. Students see their posted class grades here, with the arithmetic behind each one.",
+    "Estás viendo la vista de estudiante. Aquí tus estudiantes ven sus calificaciones publicadas, con la aritmética detrás de cada una."
+  ],
   "grades.courseTotal": [
     "Course average across {count} graded class(es)",
     "Promedio del curso en {count} clase(s) calificada(s)"
@@ -356,13 +372,13 @@ export const strings = {
   "teach.col.status": ["Status", "Estado"],
   "teach.card.content": ["Content", "Contenido"],
   "teach.card.contentBody": [
-    "Weekly materials, release control, and (soon) PDF upload.",
-    "Materiales semanales, control de publicación y (pronto) carga de PDF."
+    "Weekly materials, question banks, and imports.",
+    "Materiales semanales, bancos de preguntas e importaciones."
   ],
   "teach.card.grades": ["Gradebook", "Calificaciones"],
   "teach.card.gradesBody": [
-    "Semester matrix, per-class review, weights.",
-    "Matriz del semestre, revisión por clase, pesos."
+    "Semester overview and per-class records.",
+    "Resumen del semestre y registros por clase."
   ],
   "teach.card.people": ["People", "Personas"],
   "teach.card.peopleBody": [
@@ -576,6 +592,16 @@ export const strings = {
     "Para una lista completa, usa la importación desde hoja de cálculo que está abajo. Este formulario sirve para inscripciones tardías, invitados y cuentas de prueba."
   ],
   "people.email": ["Email", "Correo"],
+  "people.removeConfirmAction": ["Press again to remove", "Presiona otra vez para quitar"],
+  "pin.resetConfirmAction": ["Press again to reset the PIN", "Presiona otra vez para restablecer el PIN"],
+  "people.searchPlaceholder": [
+    "Search by name, email or student ID…",
+    "Buscar por nombre, correo o matrícula…"
+  ],
+  "people.noSearchMatches": [
+    "Nobody on the roster matches that search.",
+    "Nadie en la lista coincide con esa búsqueda."
+  ],
   "people.fullName": ["Full name", "Nombre completo"],
   "people.studentId": ["Student / staff ID (optional)", "Matrícula o ID de personal (opcional)"],
   "people.section": ["Section", "Grupo"],
@@ -962,6 +988,11 @@ export const strings = {
   "run.start": ["Start class", "Iniciar clase"],
   "run.starting": ["Starting class…", "Iniciando la clase…"],
   "run.startFailed": ["Could not start the class.", "No se pudo iniciar la clase."],
+  "run.start.confirmFuture": ["Yes, start it early", "Sí, iniciarla antes"],
+  "run.start.futureWarning": [
+    "This class is scheduled for {date}, not today. Starting it now shows it as live to your students.",
+    "Esta clase está programada para {date}, no hoy. Si la inicias ahora, tus estudiantes la verán en vivo."
+  ],
   "run.controller.eyebrow": ["Projector control", "Control del proyector"],
   "run.controller.title": ["Classroom display", "Pantalla del salón"],
   "run.controller.body": ["Open the projector view on the classroom screen, then move the lecture from here.", "Abre la vista del proyector en la pantalla del salón y mueve la clase desde aquí."],
@@ -1035,6 +1066,9 @@ export const strings = {
     "¿Quitar este punto de control del plan de la clase?"
   ],
   "run.plan.save": ["Save", "Guardar"],
+  "run.plan.created": ["Plan created.", "Plan creado."],
+  "run.plan.savedNotice": ["Checkpoint saved.", "Punto de control guardado."],
+  "run.plan.askedNotice": ["Question sent to the room.", "Pregunta enviada al salón."],
   "run.plan.cancel": ["Cancel", "Cancelar"],
   "run.plan.askNow": ["Ask now", "Preguntar ahora"],
   "run.plan.deckOnSlide": ["Deck on slide {slide}", "Presentación en la diapositiva {slide}"],
@@ -1536,6 +1570,7 @@ export const strings = {
   "content.library.statusHidden": ["Not available to students", "No disponible para estudiantes"],
 
   "content.library.makeAvailable": ["Make available now", "Ponerlo disponible ahora"],
+  "content.library.searchPlaceholder": ["Search materials…", "Buscar materiales…"],
   "content.library.removeFromReview": ["Remove from Review", "Quitar de Repasar"],
   "content.library.cancelScheduled": ["Cancel scheduled access", "Cancelar acceso programado"],
   "content.library.assignToClass": ["Assign to a class", "Asignar a una clase"],

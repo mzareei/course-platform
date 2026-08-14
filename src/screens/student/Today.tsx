@@ -25,7 +25,11 @@ export function Today() {
   if (!ctx) return null;
 
   const today = localDateKey(new Date());
-  const sessions = ctx.student_sessions;
+  // Sorted by date so "next class" really is the next one, whatever order the
+  // server returned.
+  const sessions = [...ctx.student_sessions].sort((a, b) =>
+    String(a.planned_date ?? "").localeCompare(String(b.planned_date ?? ""))
+  );
   // Kept apart on purpose. A paused class is still the student's class — it
   // continues next session — but telling them it is live sends them to a
   // waiting screen for a room nobody is in.

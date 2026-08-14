@@ -46,7 +46,7 @@ import {
   type ActiveCheckpoint,
   type CheckpointUiState
 } from "../../features/live/checkpointState";
-import { t, apiErrorText } from "../../i18n";
+import { t, apiErrorText, localDateKey, formatDay } from "../../i18n";
 import {
   autoSendCheckpoints,
   setAutoSendCheckpoints
@@ -148,6 +148,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [advancesSinceAsked, setAdvancesSinceAsked] = useState(0);
   const [advancesSinceRevealed, setAdvancesSinceRevealed] = useState(0);
   const [resetConfirming, setResetConfirming] = useState(false);
+  const [startConfirming, setStartConfirming] = useState(false);
   const [resetSummary, setResetSummary] = useState<ClassResetSummary | null>(null);
 
   const resultsPoll = useRef<number | undefined>(undefined);
@@ -1177,6 +1178,20 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                 qrError={qrError}
               />
             ) : null}
+            {/* Pre-class is exactly when a professor wants to plan questions —
+                the backend has always allowed editing a planned session. Ask
+                now stays disabled until the class is live. */}
+            {sessionId && banksLoaded ? (
+              <ClassQuestionPlanBoard
+                classSessionId={sessionId}
+                isLive={isLive}
+                autoAsk={autoSend}
+                deckReady={bridge.deckReady}
+                deckSlide={bridge.slide}
+                deckTeachingSlide={bridge.teachingSlide}
+                onRefresh={() => void refreshPlanBoardState()}
+              />
+            ) : null}
             <section class="card stack">
               <h2>
                 {isPaused
@@ -1207,14 +1222,43 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
                 </button>
               ) : null}
               {canStart ? (
-                <button
-                  class="btn primary"
-                  type="button"
-                  disabled={busy}
-                  onClick={onStartClass}
-                >
-                  {busy ? t("run.starting") : t("run.start")}
-                </button>
+                (() => {
+                  // Starting a future-dated class silently is how a class for
+                  // next week once went live with a test question in it. One
+                  // extra press when the date isn't today.
+                  const futureDated = Boolean(
+                    session.planned_date && session.planned_date > localDateKey()
+                  );
+                  return (
+                    <>
+                      <button
+                        class="btn primary"
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          if (futureDated && !startConfirming) {
+                            setStartConfirming(true);
+                            return;
+                          }
+                          void onStartClass();
+                        }}
+                      >
+                        {busy
+                          ? t("run.starting")
+                          : startConfirming
+                            ? t("run.start.confirmFuture")
+                            : t("run.start")}
+                      </button>
+                      {startConfirming ? (
+                        <p class="hint">
+                          {t("run.start.futureWarning", {
+                            date: formatDay(session.planned_date!)
+                          })}
+                        </p>
+                      ) : null}
+                    </>
+                  );
+                })()
               ) : null}
               {ended ? (
                 <button

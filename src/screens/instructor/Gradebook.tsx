@@ -376,6 +376,24 @@ export function Gradebook() {
         </div>
       </div>
 
+      {(() => {
+        // A closed class whose grades were never posted is invisible here —
+        // nothing used to say so, and a whole class went unposted unnoticed.
+        const postedSessionIds = new Set(
+          items.map((item) => item.class_session_id).filter(Boolean)
+        );
+        const unposted = (context.value?.teacher_sessions ?? []).filter(
+          (session) => session.state === "closed" && !postedSessionIds.has(session.session_id)
+        );
+        return unposted.length ? (
+          <p class="hint" role="status">
+            {t("gradebook.unpostedNudge", {
+              titles: unposted.map((session) => session.title).join(" · ")
+            })}
+          </p>
+        ) : null;
+      })()}
+
       {tab === "perClass" ? (
         <PerClassReview />
       ) : students.size === 0 ? (

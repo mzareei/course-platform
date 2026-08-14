@@ -9,6 +9,7 @@ import { useEffect, useState } from "preact/hooks";
 import { callFn } from "../../api/client";
 import type { ClassGrade, StudentProgress } from "../../api/types";
 import { t, formatDay, apiErrorText } from "../../i18n";
+import { surface } from "../../state/session";
 import { formatGrade as grade, formatPercent as percent } from "../../features/classRecord/format";
 
 /**
@@ -81,10 +82,23 @@ export function Grades() {
   }, []);
 
   if (error) {
+    // An instructor previewing the student surface is not enrolled anywhere —
+    // that is expected, not an error worth alarming them with.
+    if (surface.value === "instructor") {
+      return (
+        <div class="card">
+          <h2>{t("grades.title")}</h2>
+          <p class="hint">{t("grades.instructorPreview")}</p>
+        </div>
+      );
+    }
     return (
       <div class="card">
         <h2>{t("grades.title")}</h2>
-        <p class="error-text">{error}</p>
+        <p class="error-text" role="alert">{error}</p>
+        <button class="btn" type="button" onClick={() => location.reload()}>
+          {t("app.tryAgain")}
+        </button>
       </div>
     );
   }

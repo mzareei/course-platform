@@ -162,7 +162,7 @@ export function CheckpointPanel({
           </h3>
           <div class="stack checkpoint-options">
             {state.question.options.map((option) => (
-              <div class="pulse-choice">
+              <div class="pulse-choice" key={option.key}>
                 {(useSpanish && option.text_es) || option.text}
               </div>
             ))}
@@ -233,7 +233,7 @@ export function CheckpointPanel({
                 state.type === "revealed"
                 && option.key === round.correct_key;
               return (
-                <div class={`pulse-bar${isCorrect ? " correct" : ""}`}>
+                <div class={`pulse-bar${isCorrect ? " correct" : ""}`} key={option.key}>
                   <div
                     class="pulse-bar-fill"
                     style={`width: ${results?.answered ? share : 0}%`}

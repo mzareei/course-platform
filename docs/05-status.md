@@ -2,6 +2,43 @@
 
 **Last updated:** 2026-08-13
 
+### Audit batches 2–4: teaching workflow + student experience (2026-08-13, late evening)
+
+Continuation of the same audit (`docs/audits/2026-08-13-full-platform-audit.md`).
+Shipped in this frontend push plus backend `96bd622`:
+
+- **Plan questions before class** (B1): `ClassQuestionPlanBoard` now renders in
+  Run Class's pre-live column too; Ask now stays disabled until live. The
+  board's previously-dead `!isLive` branches are now the live UI.
+- **Imported banks stop crying wolf** (B4): `bankReadiness` no longer judges a
+  flexible bank with zero `source_pdf_pages` by PDF mappings — only a bank that
+  HAS pages with a broken mapping is invalid. Verifier updated with both cases.
+- **Content library**: numeric-collated title sort + search box (B2). **People**:
+  search by name/email/ID with a no-matches state (B5). Both lists were
+  creation-ordered with no way to find anything.
+- **Future-dated classes need a second press to start** (B7) — the guard that
+  would have prevented the accidental Aug 19 live class. **Plan-board actions
+  confirm** ("Plan created / Checkpoint saved / Question sent", B10).
+- **Gradebook nudges about closed-but-unposted classes** (B6) — needed
+  `class_session_id` in `course-gradebook-summary`'s items (deployed).
+- Student side: real `<form>`s so the phone keyboard's Go key signs in, PIN and
+  date inputs styled (C1) with forgot-PIN and first-time hints; Live shows a
+  loading state before its first poll (C3); Grades gets retry + a friendly
+  instructor-preview state (C4); sessions sorted by date client-side (C5);
+  attendance pills use real theme tokens and survive dark mode (C6); sign-in
+  errors are `role="alert"` (C7); keys on the two 3-second-polling lists (C8).
+- `ConfirmButton` (two-press, self-disarming) replaces `window.confirm` for
+  People remove / PIN reset (B12 — 14 more `window.confirm` sites remain, see
+  audit). Stale Home-card copy fixed (B11).
+- **Deliberately not done:** moving Reset-the-course off Classes (its placement
+  is a recorded decision in the code comment); Gradebook per-class default
+  (self-healed once the Aug 19 class was rewound); projector route stays
+  unlinked (deferred by the professor's own choice — reachable at
+  `/teach/run/:sessionId/projector` as a fallback); backend stable-code error
+  refactor, verify-i18n scope extension, dead-code purge, and
+  `course-gradebook-summary`'s legacy weighted-category surface (frozen, not
+  removed) — all still open in the audit's D section.
+
 ### Full-platform audit acted on: cut-short classes, Spanish errors, four closed doors (2026-08-13, evening)
 
 The complete audit is `docs/audits/2026-08-13-full-platform-audit.md` — read it

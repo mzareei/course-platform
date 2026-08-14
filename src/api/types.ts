@@ -186,6 +186,8 @@ export interface GradebookSummary {
     id: string;
     title: string;
     category_id: string;
+    /** Links a class-grade item to its class; null on legacy items. */
+    class_session_id?: string | null;
     max_score: number;
     status: string;
     due_at?: string | null;

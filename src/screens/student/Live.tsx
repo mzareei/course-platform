@@ -59,6 +59,10 @@ export function Live() {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [reflectionDone, setReflectionDone] = useState(false);
+  // Until the first poll answers, the screen is loading — showing "waiting for
+  // the professor" before we have ever asked the server misreads a slow network
+  // as an idle classroom.
+  const [firstPollDone, setFirstPollDone] = useState(false);
   const shownAt = useRef<number>(Date.now());
   const poll = useRef<number | undefined>(undefined);
   const clock = useRef<number | undefined>(undefined);
@@ -88,6 +92,8 @@ export function Live() {
       }
       // Keep the last known state on a network blip rather than blanking the screen.
       if (!view) setError(e instanceof Error ? e.message : null);
+    } finally {
+      setFirstPollDone(true);
     }
   }
 
@@ -232,6 +238,7 @@ export function Live() {
             <div class="stack">
               {displayOptions.map((option) => (
                 <button
+                  key={option.key}
                   class="pulse-choice tappable"
                   type="button"
                   disabled={busy || remaining <= 0}
@@ -292,8 +299,14 @@ export function Live() {
   return (
     <LiveShell error={error}>
       <div class="empty-state card">
-        <h3>{t("live.waitingTitle")}</h3>
-        <p>{t("live.waitingBody")}</p>
+        {firstPollDone || !sessionId ? (
+          <>
+            <h3>{t("live.waitingTitle")}</h3>
+            <p>{t("live.waitingBody")}</p>
+          </>
+        ) : (
+          <p class="hint">{t("app.loading")}</p>
+        )}
       </div>
     </LiveShell>
   );

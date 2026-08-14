@@ -58,7 +58,15 @@ export function PinForm({
   }
 
   return (
-    <div class="card stack">
+    // A real <form> so the phone keyboard's Go/Enter key submits — without it
+    // a student has to dismiss the keyboard and find the button.
+    <form
+      class="card stack"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!busy && ready) void submit();
+      }}
+    >
       {claiming ? (
         <div>
           <h2>{t("pin.firstTimeTitle")}</h2>
@@ -97,12 +105,7 @@ export function PinForm({
         {claiming ? <span class="hint">{t("pin.choosePinHint")}</span> : null}
       </label>
 
-      <button
-        class="btn primary"
-        type="button"
-        disabled={busy || !ready}
-        onClick={() => void submit()}
-      >
+      <button class="btn primary" type="submit" disabled={busy || !ready}>
         {busy
           ? t("pin.signingIn")
           : claiming
@@ -111,6 +114,13 @@ export function PinForm({
       </button>
 
       {error ? <p class="error-text" role="alert">{error}</p> : null}
+
+      {!claiming ? (
+        <p class="hint">
+          {t("pin.forgotHint")}
+          {canClaim ? "" : ` ${t("pin.firstTimeHint")}`}
+        </p>
+      ) : null}
 
       {/* Only offered with a live class code in hand. Off the QR path there is
           nothing to switch to, and offering it would promise something the
@@ -128,6 +138,6 @@ export function PinForm({
           {claiming ? t("pin.haveAPin") : t("pin.needAPin")}
         </button>
       ) : null}
-    </div>
+    </form>
   );
 }

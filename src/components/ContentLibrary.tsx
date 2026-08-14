@@ -47,6 +47,7 @@ export function ContentLibraryView() {
   const [itemError, setItemError] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
   // Which item's share picker is expanded, and the group chosen in it. Local
   // to the screen, not the library payload — closing it loses nothing on the
   // server.
@@ -124,9 +125,16 @@ export function ContentLibraryView() {
   const isAvailable = (item: ContentItem) =>
     (releasesByItem.get(item.id) ?? []).some((r) => studentsCanOpen(r.state, r.opens_at));
 
-  const items = reviewableItems.filter((item) =>
-    filter === "all" ? true : filter === "available" ? isAvailable(item) : !isAvailable(item)
-  );
+  // Numeric collation puts "Week 2" before "Week 10" — the list used to render
+  // in creation order, which scattered the weeks.
+  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  const needle = query.trim().toLowerCase();
+  const items = reviewableItems
+    .filter((item) =>
+      filter === "all" ? true : filter === "available" ? isAvailable(item) : !isAvailable(item)
+    )
+    .filter((item) => !needle || item.title.toLowerCase().includes(needle))
+    .sort((a, b) => collator.compare(a.title, b.title));
   const availableCount = reviewableItems.filter(isAvailable).length;
   const assignableSessions = sessions.filter((session) =>
     ASSIGNABLE_SESSION_STATES.includes(session.state) && session.actual_start_at == null
@@ -144,13 +152,21 @@ export function ContentLibraryView() {
               job does not leave a permanent maintenance card behind. */}
           <PublicLinkCleanup />
 
-          <div class="row" style="justify-content: space-between; align-items: center;">
+          <div class="row" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
             <span class="hint">
               {t("content.library.countAvailable", {
                 available: availableCount,
                 total: reviewableItems.length
               })}
             </span>
+            <input
+              type="search"
+              value={query}
+              placeholder={t("content.library.searchPlaceholder")}
+              aria-label={t("content.library.searchPlaceholder")}
+              style="max-width: 16rem;"
+              onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+            />
             <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">
               {(["all", "available", "hidden"] as Filter[]).map((value) => (
                 <a href="#" role="tab" aria-current={filter === value ? "page" : undefined}

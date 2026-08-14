@@ -7,7 +7,11 @@ export function TeachHome() {
   const ctx = context.value;
   if (!ctx) return null;
 
-  const sessions = ctx.teacher_sessions ?? [];
+  // Sorted here rather than trusting server order — "upcoming" must mean by
+  // date, whatever order the context endpoint happens to return.
+  const sessions = [...(ctx.teacher_sessions ?? [])].sort((a, b) =>
+    String(a.planned_date ?? "").localeCompare(String(b.planned_date ?? ""))
+  );
   const today = localDateKey();
   const todaySessions = sessions.filter((s) => (s.planned_date ?? "").slice(0, 10) === today);
   const upcoming = sessions

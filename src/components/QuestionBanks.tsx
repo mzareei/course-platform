@@ -164,11 +164,11 @@ function QuestionBankCard({
         </span>
       </div>
 
-      {flexible ? (
+      {flexible && bank.source_pdf_pages.length > 0 ? (
         <p class="hint">
           {ready ? t("content.banks.flexibleReady") : t("content.banks.flexibleInvalid")}
           {" · "}
-          {t("content.banks.sourcePages", { pages: bank.source_pdf_pages.join(", ") || "—" })}
+          {t("content.banks.sourcePages", { pages: bank.source_pdf_pages.join(", ") })}
         </p>
       ) : (
         <p class="hint">

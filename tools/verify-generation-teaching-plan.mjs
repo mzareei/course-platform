@@ -110,7 +110,20 @@ const flexibleBank = (overrides = {}) => legacyBank({
 });
 assert.equal(readiness.questionBankReadiness(flexibleBank()), "ready");
 assert.equal(readiness.questionBankReadiness(flexibleBank({ total: 0 })), "invalid");
-assert.equal(readiness.questionBankReadiness(flexibleBank({ source_pdf_mapping_status: "missing" })), "invalid");
+// A bank with real PDF pages and a broken mapping is genuinely wrong…
+assert.equal(
+  readiness.questionBankReadiness(
+    flexibleBank({ source_pdf_mapping_status: "missing", source_pdf_pages: [3, 4] })
+  ),
+  "invalid"
+);
+// …but an imported bank never had a PDF, and must not be flagged for it.
+assert.equal(
+  readiness.questionBankReadiness(
+    flexibleBank({ source_pdf_mapping_status: "missing", source_pdf_pages: [] })
+  ),
+  "ready"
+);
 
 assert.deepEqual(
   readiness.questionBankControlCapabilities(legacyBank({ content_item_id: null }), true),

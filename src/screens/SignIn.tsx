@@ -162,7 +162,15 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         </div>
       ) : null}
 
-      <div class="card muted">
+      <form
+        class="card muted"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (busy) return;
+          if (sent && code.trim().length >= 6) onVerify();
+          else if (cleaned) onSend();
+        }}
+      >
         <p class="eyebrow">{t("signIn.otherWays")}</p>
         <label class="field">
           {t("signIn.emailLabel")}
@@ -175,6 +183,8 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
             inputmode="email"
           />
         </label>
+        {/* Explicit buttons keep their own actions; the form's onSubmit only
+            serves the keyboard's Enter/Go key. */}
         <button class="btn primary" type="button" disabled={busy || !cleaned} onClick={onSend}>
           {sent ? t("signIn.resend") : t("signIn.send")}
         </button>
@@ -200,11 +210,15 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         ) : null}
 
         {message ? (
-          <p class={message.kind === "error" ? "error-text" : "hint"} role="status">
+          // An error must interrupt the screen reader; a status must not.
+          <p
+            class={message.kind === "error" ? "error-text" : "hint"}
+            role={message.kind === "error" ? "alert" : "status"}
+          >
             {message.text}
           </p>
         ) : null}
-      </div>
+      </form>
 
       {config.testSignIn ? (
         <div class="card muted">
