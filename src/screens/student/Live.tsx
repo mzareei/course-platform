@@ -124,6 +124,38 @@ export function Live() {
 
   const round = view?.round ?? null;
   const mine = view?.my_answer ?? null;
+
+  // Who owns the screen at the moment the quiz closes.
+  //
+  // Rendering the player on `state === "live"` alone made the class poll able to
+  // unmount it mid-submit: the poll is the very thing that flips the state, and
+  // it races the player's own 1-second auto-submit clock. Whenever the poll won,
+  // the student's whole attempt vanished — no error, no rank, no quiz mark.
+  //
+  // So the player, not the poll, decides when it is done. Live remembers which
+  // instance it has shown the player for and which one the player has reported
+  // finishing, and keeps it on screen in between whatever the state says.
+  const quizInstanceId = view?.quiz.instance_id ?? null;
+  const quizState = view?.quiz.state ?? null;
+  const [quizStartedFor, setQuizStartedFor] = useState<string | null>(null);
+  const [quizFinishedFor, setQuizFinishedFor] = useState<string | null>(null);
+
+  // The gates and the pulse question outrank the quiz, so "started" is only
+  // recorded when the quiz branch is actually the one being reached — otherwise
+  // a pulse question pushed during a quiz would mark a player that never mounted.
+  const quizBranchReachable =
+    !!view && view.checked_in && view.session_state !== "paused" && !round;
+
+  useEffect(() => {
+    if (quizBranchReachable && quizInstanceId && quizState === "live") {
+      setQuizStartedFor(quizInstanceId);
+    }
+  }, [quizBranchReachable, quizInstanceId, quizState]);
+
+  const quizUnfinished =
+    quizInstanceId !== null &&
+    quizStartedFor === quizInstanceId &&
+    quizFinishedFor !== quizInstanceId;
   const profileId = ctx?.profile?.id ?? "anon";
   const useSpanish = lang.value === "es";
 
@@ -271,18 +303,29 @@ export function Live() {
     );
   }
 
-  // 2. The end-of-class quiz is live — take it.
-  if (view?.quiz.instance_id && view.quiz.state === "live") {
+  // 2. The end-of-class quiz is live — take it. And it stays here after the
+  //    close too, for a student who was mid-attempt: `quizUnfinished` holds the
+  //    screen until the player says it has sent what it had. The `live` half of
+  //    the test still matters on its own — it is what keeps the score on screen
+  //    for a student who submitted early, before the quiz closed at all.
+  if (quizInstanceId && (quizState === "live" || quizUnfinished)) {
     return (
       <LiveShell error={error}>
         <div class="card">
-          <QuizPlayer activityInstanceId={view.quiz.instance_id} />
+          <QuizPlayer
+            activityInstanceId={quizInstanceId}
+            quizClosed={quizState === "closed"}
+            onFinished={() => setQuizFinishedFor(quizInstanceId)}
+          />
         </div>
       </LiveShell>
     );
   }
 
-  // 3. The quiz has closed and the reflection isn't in yet — write it.
+  // 3. The quiz has closed and the reflection isn't in yet — write it. Reached
+  //    once the player is finished, and immediately for a student who joined
+  //    after the quiz closed and never started it — they must land on the exit
+  //    ticket, not on a dead screen.
   if (view?.quiz.instance_id && view.quiz.state === "closed" && view.reflection && !view.reflection.submitted && !reflectionDone) {
     return (
       <LiveShell error={error}>

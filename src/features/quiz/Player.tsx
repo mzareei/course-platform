@@ -24,7 +24,23 @@ function secondsFor(question: QuizQuestion) {
   return Number(question.seconds) > 0 ? Number(question.seconds) : FALLBACK_SECONDS;
 }
 
-export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string }) {
+export function QuizPlayer({
+  activityInstanceId,
+  quizClosed,
+  onFinished
+}: {
+  activityInstanceId: string;
+  /**
+   * The class poll has seen the instance flip to `closed`. It can learn this a
+   * second or two before this player's own clock reaches the deadline, and
+   * before the fix that added this prop, Live.tsx unmounted the player at that
+   * moment — clearing the interval that was about to auto-submit and throwing
+   * away the whole attempt, silently, for the students still working.
+   */
+  quizClosed: boolean;
+  /** The player has nothing left to send. Live.tsx may take the screen back. */
+  onFinished: () => void;
+}) {
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -45,6 +61,10 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   // off the same stateRef snapshot. Reset only on failure, so a successful
   // submit stays latched for good.
   const submitting = useRef(false);
+  // Separate from `submitting`, and not a second submit latch: this one only
+  // makes sure Live.tsx is told exactly once that the player is done. Without
+  // it, every re-render after a terminal state would fire the callback again.
+  const finished = useRef(false);
   // Refs mirror the latest state so the auto-advance effect (keyed only on the
   // clock tick) always reads current values without re-subscribing every render.
   const stateRef = useRef({ index: 0, questions: null as QuizQuestion[] | null, answers: {} as Record<string, string>, busy: false, result: null as SubmitAttemptResponse["score"] | null, resumed: null as { percent: number | null } | null, error: null as string | null });
@@ -98,6 +118,12 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   useEffect(() => {
     if (index > 0) questionRef.current?.focus();
   }, [index]);
+
+  function reportFinished() {
+    if (finished.current) return;
+    finished.current = true;
+    onFinished();
+  }
 
   async function submitNow(finalAnswers: Record<string, string>) {
     if (!attemptId || !stateRef.current.questions) return;
@@ -171,6 +197,51 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
     void submitNow(a);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, instanceEndsAt]);
+
+  // The handoff. Two clocks are racing at the deadline: this player's own
+  // 1-second interval, which fires 0–1s late, and the class poll, which learns
+  // the instance closed 0–3s late plus a round trip. The poll wins often enough
+  // — roughly one student in eight or ten of those still working — and when it
+  // did, Live.tsx unmounted this component and the attempt was never sent at
+  // all. No error, no rank, no quiz mark, and nobody finds out.
+  //
+  // So the player is no longer allowed to be surprised by the close. It is told,
+  // and it sends what the student has straight away, landing inside the server's
+  // sixty-second grace instead of waiting for its own tick.
+  useEffect(() => {
+    if (!quizClosed) return;
+    const { answers: a, busy: isBusy, result: hasResult, resumed: hasResumed } = stateRef.current;
+    // Already terminal, or a submit is in flight — the same latch the deadline
+    // path uses, deliberately not a second one.
+    if (hasResult || hasResumed || isBusy || submitting.current) return;
+    // Still loading. The deps below bring us back the moment the attempt lands.
+    if (!attemptId || !questions) return;
+    // A student who answered nothing submits nothing: the server refuses an
+    // empty submission, so this is the finished state rather than an error on
+    // the phone of someone who never started.
+    if (Object.keys(a).length === 0) {
+      setResumed({ percent: null });
+      return;
+    }
+    void submitNow(a);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizClosed, attemptId, questions]);
+
+  // Terminal in either direction — graded, or finished with nothing to grade.
+  useEffect(() => {
+    if (result || resumed) reportFinished();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, resumed]);
+
+  // The quiz is over and this player never got an attempt to submit: the start
+  // call failed, most likely because the server had already closed the instance
+  // by the time it arrived. There is nothing to send and nothing worth retrying,
+  // so hand the screen back rather than leaving the student on a Try again
+  // button that cannot work.
+  useEffect(() => {
+    if (quizClosed && error && !questions) reportFinished();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizClosed, error, questions]);
 
   if (error && !questions) {
     // The quiz never loaded — a dead end mid-class without a way to retry.

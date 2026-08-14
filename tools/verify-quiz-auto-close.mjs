@@ -33,8 +33,8 @@ if (!existsSync(fn("_shared"))) {
 }
 
 const {
-  OPEN_INSTANCE_STATES, SUBMITTED_STATUSES, GRACE_SECONDS, EVERYONE_CLOSE_FLOOR_MS,
-  decideQuizClose, closeReasonFor, withinSubmitGrace
+  OPEN_INSTANCE_STATES, CLOSABLE_STATES, SUBMITTED_STATUSES, GRACE_SECONDS,
+  EVERYONE_CLOSE_FLOOR_MS, decideQuizClose, closeReasonFor, withinSubmitGrace
 } = await import(backend("_shared/quiz-close.ts").href);
 
 const at = (iso) => new Date(iso);
@@ -210,6 +210,75 @@ assert.equal(
   "no deadline means no grace to be inside of"
 );
 
+// ------------------------------------------- the grace after a MANUAL close
+// A quiz can stop before ends_at — the professor pressing "Close the quiz" is
+// the ordinary way. Keying the grace to ends_at alone gave those students no
+// grace whatsoever: refused with "Activity is closed." and every answer they
+// had given thrown away. The stop time is the EARLIER of ends_at and the moment
+// the instance was closed.
+const T_CLOSE = "2026-08-14T18:04:00.000Z"; // six minutes before T_END
+
+assert.equal(
+  withinSubmitGrace({
+    endsAt: T_END,
+    closedAt: T_CLOSE,
+    startedAt: T0,
+    now: at("2026-08-14T18:04:30.000Z")
+  }),
+  true,
+  "a manual close before the deadline still takes a submission thirty seconds later"
+);
+// The property the lower bound was added to protect, and the reason this cannot
+// simply fall back to ends_at: a manual close must stop taking submissions
+// within sixty seconds, not at 18:10 when the original clock would have run out.
+assert.equal(
+  withinSubmitGrace({
+    endsAt: T_END,
+    closedAt: T_CLOSE,
+    startedAt: T0,
+    now: at("2026-08-14T18:05:30.000Z")
+  }),
+  false,
+  "ninety seconds after a manual close is outside the grace — the close stops it, not ends_at"
+);
+assert.equal(
+  withinSubmitGrace({
+    endsAt: T_END,
+    closedAt: T_CLOSE,
+    startedAt: "2026-08-14T18:04:20.000Z", // opened the quiz after it was closed
+    now: at("2026-08-14T18:04:30.000Z")
+  }),
+  false,
+  "an attempt started after the close gets nothing — the grace finishes work already begun"
+);
+assert.equal(
+  withinSubmitGrace({
+    endsAt: T_END,
+    closedAt: T_CLOSE,
+    startedAt: T0,
+    now: at("2026-08-14T18:03:59.000Z")
+  }),
+  false,
+  "before the close there is no grace — the quiz is still open on its own terms"
+);
+// A close that lands a moment AFTER the deadline (the auto-close firing late)
+// must not push the window out past the deadline it fired for.
+assert.equal(
+  withinSubmitGrace({
+    endsAt: T_END,
+    closedAt: "2026-08-14T18:10:02.000Z",
+    startedAt: T0,
+    now: at("2026-08-14T18:11:30.000Z")
+  }),
+  false,
+  "a close after the deadline never extends the window — ends_at stays the ceiling"
+);
+assert.equal(
+  withinSubmitGrace({ endsAt: T_END, closedAt: null, startedAt: T0, now: at("2026-08-14T18:10:30.000Z") }),
+  true,
+  "no close time means the deadline is the stop time, exactly as before"
+);
+
 assert.deepEqual(
   [...SUBMITTED_STATUSES].sort(),
   ["late", "submitted"],
@@ -218,6 +287,41 @@ assert.deepEqual(
 assert.ok(
   OPEN_INSTANCE_STATES.includes("live") && !OPEN_INSTANCE_STATES.includes("closed"),
   "the open states match the ones course-class-quiz already reuses"
+);
+
+// --------------------------------------------- a paused quiz has no clock
+// Pausing the class sets every running instance to `paused`, and the resume path
+// does not put it back. `paused` is in OPEN_INSTANCE_STATES because there it
+// means "not finished", which is right — but a timer must never close a quiz
+// while the room is stopped. It fired from any student's poll, so a five-minute
+// pause ended the quiz and lost every answer in progress with nobody pressing
+// anything.
+assert.ok(
+  OPEN_INSTANCE_STATES.includes("paused"),
+  "paused still counts as not-finished for the callers that mean that"
+);
+assert.ok(
+  !CLOSABLE_STATES.includes("paused"),
+  "a paused quiz is not closable — the clock is not running while the room is stopped"
+);
+assert.ok(
+  CLOSABLE_STATES.includes("open") && CLOSABLE_STATES.includes("live"),
+  "a running quiz is still closable"
+);
+assert.equal(
+  decideQuizClose({ ...base, state: "paused", now: at(T_END) }),
+  null,
+  "a paused instance past its deadline is NOT closed"
+);
+assert.equal(
+  decideQuizClose({ ...base, state: "paused", now: at("2026-08-14T19:00:00.000Z") }),
+  null,
+  "and it stays open however long the pause runs"
+);
+assert.equal(
+  decideQuizClose({ ...base, state: "paused", submittedCount: 18 }),
+  null,
+  "not even everyone-has-submitted closes a quiz while the class is paused"
 );
 
 // ------------------------------------------------------ both polls close it
@@ -261,6 +365,55 @@ check(
 check(
   /"late"/.test(attempt),
   "a submission inside the grace must be stored as late, not rejected"
+);
+
+// The pure rule above is only worth having if the callers actually hand it the
+// close time. Without updated_at in the SELECT, closedAt is silently undefined
+// and every manual close is back to no grace at all.
+check(
+  /\.select\("id, activity_template_id[^"]*updated_at/.test(attempt),
+  "loadActivityInstance must SELECT updated_at — the grace cannot see the stop time without it"
+);
+check(
+  (attempt.match(/closedAt:/g) || []).length >= 2,
+  "both the submit gate and the per-attempt time limit must pass the close time"
+);
+check(
+  /String\(instance\.state\) !== "closed"[\s\S]{0,120}return null/.test(attempt),
+  "updated_at may only be read as a stop time on a CLOSED instance — on a running one it is an unrelated edit"
+);
+check(
+  /CLOSABLE_STATES/.test(closeSource) && /decideQuizClose[\s\S]{0,400}CLOSABLE_STATES/.test(closeSource),
+  "decideQuizClose must gate on CLOSABLE_STATES, not on the not-finished list"
+);
+
+// ------------------------------------------- the player owns the handoff
+// The class poll is what flips the state to closed, and it raced the player's
+// own auto-submit clock. When the poll won, Live.tsx unmounted the player
+// mid-submit and the attempt was never sent — no error, no rank, no quiz mark.
+// The player must be TOLD the quiz closed and must be the one to say it is done.
+const player = readFileSync("src/features/quiz/Player.tsx", "utf8");
+const live = readFileSync("src/screens/student/Live.tsx", "utf8");
+
+check(
+  /quizClosed/.test(player) && /onFinished/.test(player),
+  "the player must take the close as a prop and report when it is finished"
+);
+check(
+  /quizClosed=\{/.test(live) && /onFinished=\{/.test(live),
+  "Live must hand the player the close and listen for the finish"
+);
+check(
+  /quizUnfinished/.test(live) && /quizState === "live" \|\| quizUnfinished/.test(live),
+  "Live must keep the player mounted for a STARTED-BUT-UNFINISHED instance, not only while the state still says live"
+);
+check(
+  /if \(!quizClosed\) return;[\s\S]{0,900}?submitNow\(/.test(player),
+  "a closed quiz must make the player submit straight away, not wait for its own clock tick"
+);
+check(
+  /if \(!quizClosed\) return;[\s\S]{0,900}?submitting\.current/.test(player),
+  "the close-driven submit must go through the SAME latch as the deadline one — two latches race each other"
 );
 
 if (failures.length) {

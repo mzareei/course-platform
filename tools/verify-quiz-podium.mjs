@@ -150,6 +150,17 @@ check(
   /throw new Error\("The quiz is still running\./.test(attempt),
   "set_name_reveal must refuse while the quiz is still running"
 );
+// ...but ONLY in the reveal direction. Rankings move after the close — a
+// submission landing inside the sixty-second grace is graded like any other and
+// can displace someone who was third when they tapped "show my name". Requiring
+// podium membership to withdraw left that student unable to take their name off
+// the screen at the front of the room while the banner still said it was up
+// there. Consent that cannot be withdrawn is not consent, and hiding a name can
+// only ever remove information — there is nothing to protect by refusing.
+check(
+  /if \(input\.revealed\)\s*\{[\s\S]{0,700}?throw new Error\("Only the top three can be named on the podium\.[\s\S]{0,40}?\}\s*\n\s*\}/.test(attempt),
+  "the podium-membership guard must apply to REVEALING only — a student must always be able to withdraw"
+);
 
 // The client must not be the thing hiding a name.
 const podium = existsSync("src/features/quiz/Podium.tsx")
