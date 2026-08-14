@@ -1462,6 +1462,11 @@ export const strings = {
   "podium.backToClass": ["Back to class", "Volver a la clase"],
   "podium.classroomEyebrow": ["End of class quiz", "Examen de fin de clase"],
   "podium.classroomTitle": ["Top of the class", "Los mejores de la clase"],
+  "podium.yourPlace": ["You finished #{rank} of {of}", "Terminaste #{rank} de {of}"],
+  "podium.revealMyName": ["Show my name to the class", "Mostrar mi nombre a la clase"],
+  "podium.hideMyName": ["Hide my name again", "Ocultar mi nombre otra vez"],
+  "podium.nameShowing": ["Your name is on the class screen.", "Tu nombre está en la pantalla de la clase."],
+  "podium.revealFailed": ["That did not save. Try again.", "No se guardó. Inténtalo de nuevo."],
 
   // ---------------------------------------------------------------- student live
   "live.title": ["In class", "En clase"],

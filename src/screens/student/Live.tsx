@@ -15,6 +15,7 @@ import type { ClassGrade } from "../../api/types";
 import { formatGrade } from "../../features/classRecord/format";
 import { currentPulse, answerPulse, shuffleOptions, type StudentPulseView } from "../../api/pulse";
 import { QuizPlayer } from "../../features/quiz/Player";
+import { RankBanner } from "../../features/quiz/RankBanner";
 import { Reflection } from "../../features/reflection/Reflection";
 import {
   clearJoinedClassSession,
@@ -286,6 +287,7 @@ export function Live() {
     return (
       <LiveShell error={error}>
         <div class="card">
+          {view.quiz.my_rank ? <RankBanner rank={view.quiz.my_rank} /> : null}
           <Reflection
             classSessionId={sessionId}
             minWords={view.reflection.min_words}
@@ -310,6 +312,7 @@ export function Live() {
     return (
       <LiveShell error={error}>
         <div class="empty-state card">
+          {view?.quiz?.my_rank ? <RankBanner rank={view.quiz.my_rank} /> : null}
           <h3>{t("live.doneTitle")}</h3>
           {classGrade && classGrade.grade !== null ? (
             <>

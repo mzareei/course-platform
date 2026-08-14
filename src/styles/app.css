@@ -950,6 +950,22 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .quiz-podium-large .quiz-podium-place { min-width: 11rem; font-size: 1.4rem; }
 .quiz-podium-large .quiz-podium-medal { font-size: 3.5rem; }
 
+.quiz-rank-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.9rem;
+  margin-bottom: 0.9rem;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.quiz-rank-banner.top3 { background: var(--accent-soft); }
+.quiz-rank-medal { font-size: 2.2rem; line-height: 1; }
+.quiz-rank-line { font-weight: 700; font-size: 1.1rem; margin: 0; }
+
 /* The room-facing celebration. Unlike .classroom-question-layer, there is no
    non-fullscreen state to switch between — this covers the viewport the
    instant it mounts and paints an opaque background so the room can never

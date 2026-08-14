@@ -58,6 +58,15 @@ export interface PulseResults {
   }>;
 }
 
+export interface QuizRank {
+  rank: number;
+  of: number;
+  is_top3: boolean;
+  /** The phone needs this to opt in to being named. */
+  attempt_id: string;
+  name_revealed: boolean;
+}
+
 export interface StudentPulseView {
   session_state: string;
   round: PulseRound | null;
@@ -83,6 +92,8 @@ export interface StudentPulseView {
     state: string | null;
     ends_at?: string | null;
     question_count?: number | null;
+    /** Null while the quiz runs, and for a student who never submitted. */
+    my_rank?: QuizRank | null;
   };
   reflection: {
     submitted: boolean;
