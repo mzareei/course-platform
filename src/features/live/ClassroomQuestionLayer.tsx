@@ -9,8 +9,19 @@ import { lang, t } from "../../i18n";
  */
 export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) {
   const layerRef = useRef<HTMLElement | null>(null);
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
+  // Focus only moves once the professor has actually toggled — never on mount.
+  const everToggled = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const useSpanish = lang.value === "es";
+
+  useEffect(() => {
+    if (!everToggled.current) return;
+    // Entering fullscreen moves keyboard focus (and the screen reader) into
+    // the layer; leaving hands it back to the button that was pressed.
+    if (isFullscreen) layerRef.current?.focus();
+    else toggleRef.current?.focus();
+  }, [isFullscreen]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -32,6 +43,7 @@ export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) 
   async function toggleFullscreen() {
     const layer = layerRef.current;
     if (!layer) return;
+    everToggled.current = true;
     if (isFullscreen) {
       setIsFullscreen(false);
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -52,6 +64,7 @@ export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) 
       class={`classroom-question-layer${isFullscreen ? " classroom-question-layer-fullscreen" : ""}`}
       data-testid="classroom-question-layer"
       aria-live="polite"
+      tabindex={-1}
     >
       <div class="classroom-question-shell">
         <p class="eyebrow">{t("run.classroomQuestion.eyebrow")}</p>
@@ -74,6 +87,7 @@ export function ClassroomQuestionLayer({ round }: { round: PulseRound | null }) 
         </p>
         <div class="classroom-question-actions">
           <button
+            ref={toggleRef}
             class="btn classroom-question-fullscreen"
             type="button"
             aria-pressed={isFullscreen}

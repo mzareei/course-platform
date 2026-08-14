@@ -24,31 +24,40 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<SubmitAttemptResponse["score"] | null>(null);
+  const [resumed, setResumed] = useState<{ percent: number | null } | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [questionDeadline, setQuestionDeadline] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
+  const questionRef = useRef<HTMLHeadingElement | null>(null);
   const integrity = useRef({ focus_loss_count: 0, paste_count: 0, copy_count: 0 });
   // Refs mirror the latest state so the auto-advance effect (keyed only on the
   // clock tick) always reads current values without re-subscribing every render.
-  const stateRef = useRef({ index: 0, questions: null as QuizQuestion[] | null, answers: {} as Record<string, string>, busy: false, result: null as SubmitAttemptResponse["score"] | null });
-  stateRef.current = { index, questions, answers, busy, result };
+  const stateRef = useRef({ index: 0, questions: null as QuizQuestion[] | null, answers: {} as Record<string, string>, busy: false, result: null as SubmitAttemptResponse["score"] | null, resumed: null as { percent: number | null } | null, error: null as string | null });
+  stateRef.current = { index, questions, answers, busy, result, resumed, error };
 
   useEffect(() => {
+    setError(null);
     startQuizAttempt(activityInstanceId)
       .then((res) => {
         setAttemptId(res.attempt.id);
         setQuestions(res.questions);
         if (res.attempt.submitted_at) {
-          // Resuming a page reload after already submitting.
-          setResult({ raw: 0, total: 0, percent: 0, speed_bonus: 0, final: 0 });
+          // Resuming after already submitting: show the real graded score if
+          // the server sent one, and never a fabricated 0%.
+          setResumed({ percent: typeof res.attempt.score_percent === "number" ? res.attempt.score_percent : null });
         } else if (res.questions.length) {
           setQuestionDeadline(Date.now() + secondsFor(res.questions[0]) * 1000);
         }
       })
       .catch((e) => setError(apiErrorText(e, "quiz.startFailed")));
+  }, [activityInstanceId, loadAttempt]);
 
+  // The integrity listeners live in their own mount effect so a load retry
+  // never re-subscribes (and never resets) them.
+  useEffect(() => {
     const onBlur = () => { integrity.current.focus_loss_count += 1; };
     const onPaste = () => { integrity.current.paste_count += 1; };
     const onCopy = () => { integrity.current.copy_count += 1; };
@@ -60,12 +69,18 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
       window.removeEventListener("paste", onPaste);
       window.removeEventListener("copy", onCopy);
     };
-  }, [activityInstanceId]);
+  }, []);
 
   useEffect(() => {
     const clock = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(clock);
   }, []);
+
+  // Every advance — tap or timeout — announces the new question to a screen
+  // reader and scrolls it into view. Not on first paint (index 0).
+  useEffect(() => {
+    if (index > 0) questionRef.current?.focus();
+  }, [index]);
 
   async function submitNow(finalAnswers: Record<string, string>) {
     if (!attemptId || !stateRef.current.questions) return;
@@ -103,14 +118,39 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   // question's own timer expires — the whole point of a live, timed,
   // one-after-another quiz instead of a browse-at-your-own-pace one.
   useEffect(() => {
-    const { busy: isBusy, result: hasResult } = stateRef.current;
-    if (!questionDeadline || hasResult || isBusy) return;
+    const { busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
+    // hasError: a failed auto-submit must not re-fire every clock tick — the
+    // student retries from the visible Submit button instead.
+    if (!questionDeadline || hasResult || hasResumed || isBusy || hasError) return;
     if (now >= questionDeadline) advance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, questionDeadline]);
 
-  if (error) return <p class="error-text" role="alert">{error}</p>;
+  if (error && !questions) {
+    // The quiz never loaded — a dead end mid-class without a way to retry.
+    return (
+      <div class="stack">
+        <p class="error-text" role="alert">{error}</p>
+        <div class="row">
+          <button class="btn primary" type="button" onClick={() => setLoadAttempt((n) => n + 1)}>
+            {t("app.tryAgain")}
+          </button>
+          <a class="btn quiet" href="/">{t("live.backToToday")}</a>
+        </div>
+      </div>
+    );
+  }
   if (!questions) return <p class="hint">{t("quiz.loading")}</p>;
+
+  if (resumed) {
+    return (
+      <div class="stack">
+        <p class="eyebrow">{t("quiz.done")}</p>
+        {resumed.percent !== null ? <span class="big-number">{resumed.percent}%</span> : null}
+        <p class="hint">{resumed.percent !== null ? t("quiz.doneBody") : t("quiz.resumedNoScore")}</p>
+      </div>
+    );
+  }
 
   if (result) {
     return (
@@ -141,11 +181,12 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
         </div>
       </div>
 
-      <h2 style="font-size: 1.3rem;">{(lang.value === "es" && current.prompt_es) || current.prompt}</h2>
+      <h2 ref={questionRef} tabindex={-1} style="font-size: 1.3rem;">{(lang.value === "es" && current.prompt_es) || current.prompt}</h2>
 
       <div class="stack" style="gap: 0.5rem;">
         {current.options.map((option) => (
           <button
+            key={option.id}
             class={`pulse-choice tappable${answers[current.id] === option.id ? " selected" : ""}`}
             type="button"
             disabled={busy}
@@ -156,13 +197,17 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
         ))}
       </div>
 
+      {/* A submit failure shows here, inside the question view, so the Submit
+          button stays on screen and pressing it again is the retry. */}
+      {error ? <p class="error-text" role="alert">{error}</p> : null}
+
       <div class="row" style="justify-content: flex-end;">
         {index < questions.length - 1 ? (
           <button class="btn primary" type="button" disabled={!answers[current.id] || busy} onClick={advance}>
             {t("quiz.next")}
           </button>
         ) : (
-          <button class="btn primary" type="button" disabled={busy || answered === 0} onClick={() => submitNow(answers)}>
+          <button class={`btn primary${busy ? " loading" : ""}`} type="button" disabled={busy || answered === 0} aria-busy={busy} onClick={() => submitNow(answers)}>
             {busy ? t("quiz.submitting") : t("quiz.submit")}
           </button>
         )}

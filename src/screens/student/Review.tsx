@@ -48,10 +48,11 @@ export function Review() {
         </div>
       ) : (
         groups.map(([type, items]) => (
-          <section class="stack">
+          <section key={type} class="stack">
             <h2>{t(GROUP_KEYS[type] ?? "group.other")}</h2>
             {items.map((release) => (
               <a
+                key={release.release_id}
                 class="card"
                 style="text-decoration: none; color: inherit;"
                 href={releaseHref(release)}

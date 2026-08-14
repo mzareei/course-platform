@@ -5,6 +5,7 @@
 // release, so the lecture still has to be released for a class like any other
 // content. Nothing here is ever visible to a student before that.
 import { useEffect, useRef, useState } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { t, apiErrorText } from "../../i18n";
 import type { StringKey } from "../../i18n/strings";
 import {
@@ -41,12 +42,14 @@ export function Content() {
   const [planning, setPlanning] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<GenerationJob | null>(null);
   // The professor's own lectures come first — the AI pipeline is the newer,
-  // rarer path, not the default one.
-  const [tab, setTab] = useState<ContentTab>("library");
+  // rarer path, not the default one. The tab lives in the URL so the back
+  // button and a reload keep the professor where they were.
+  const { query } = useLocation();
+  const tab: ContentTab = query.tab === "banks" ? "banks" : query.tab === "import" ? "import" : "library";
   const poll = useRef<number | undefined>(undefined);
 
   function refresh() {
-    return listJobs().then((r) => setJobs(r.jobs)).catch((e: Error) => setError(e.message));
+    return listJobs().then((r) => setJobs(r.jobs)).catch((e: unknown) => setError(apiErrorText(e, "content.jobsLoadFailed")));
   }
 
   useEffect(() => { void refresh(); }, []);
@@ -102,7 +105,7 @@ export function Content() {
       await cancelJob(jobId);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : null);
+      setError(apiErrorText(e, "content.jobsLoadFailed"));
     } finally {
       setBusy(null);
     }
@@ -115,20 +118,17 @@ export function Content() {
           <p class="eyebrow">{t("content.eyebrow")}</p>
           <h1>{t("content.title")}</h1>
         </div>
-        <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">
-          <a href="#" role="tab" aria-current={tab === "library" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("library"); }}>
+        <nav class="nav-tabs" aria-label={t("content.tabsLabel")} style="flex: 0 0 auto;">
+          <a href="/teach/content" aria-current={tab === "library" ? "page" : undefined}>
             {t("content.tab.library")}
           </a>
-          <a href="#" role="tab" aria-current={tab === "banks" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("banks"); }}>
+          <a href="/teach/content?tab=banks" aria-current={tab === "banks" ? "page" : undefined}>
             {t("content.tab.banks")}
           </a>
-          <a href="#" role="tab" aria-current={tab === "import" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("import"); }}>
+          <a href="/teach/content?tab=import" aria-current={tab === "import" ? "page" : undefined}>
             {t("content.tab.import")}
           </a>
-        </div>
+        </nav>
       </div>
 
       {tab === "library" ? <ContentLibraryView /> : tab === "banks" ? (
@@ -268,7 +268,7 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
           .catch(() => {});
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) setError(apiErrorText(e, "content.jobsLoadFailed"));
       });
     return () => { cancelled = true; };
   }, [jobId, reviewCapabilities.requestsDeckPreview]);

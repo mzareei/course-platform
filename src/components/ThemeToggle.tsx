@@ -14,6 +14,12 @@ export function ThemeToggle() {
   function toggle() {
     const next = theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
+    // Browser chrome colour mirrors --surface; update together with app.css.
+    const metaColor = next === "dark" ? "#0c131f" : "#f4f7fb";
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+      m.setAttribute("content", metaColor);
+      m.removeAttribute("media");
+    });
     try {
       localStorage.setItem(config.themeStorageKey, next);
       // The deck engine reads its own key; keep decks matching the app.

@@ -4,12 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
+    <!-- Browser chrome colour. Values mirror --surface; update together with app.css. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f7fb" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c131f" />
     <title>Course Platform</title>
     <script>
       // No-flash theme: apply the stored choice before first paint.
       try {
         const t = localStorage.getItem("cp.theme");
-        if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+        if (t === "dark" || t === "light") {
+          document.documentElement.dataset.theme = t;
+          const c = t === "dark" ? "#0c131f" : "#f4f7fb";
+          document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+            m.setAttribute("content", c);
+            m.removeAttribute("media");
+          });
+        }
       } catch {}
     </script>
   </head>

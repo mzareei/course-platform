@@ -489,6 +489,7 @@ export const strings = {
   "gradebook.title": ["Gradebook", "Calificaciones"],
   "gradebook.loading": ["Loading the gradebook…", "Cargando las calificaciones…"],
   "gradebook.tab.semester": ["Semester", "Semestre"],
+  "gradebook.tabsLabel": ["Gradebook views", "Vistas de calificaciones"],
   "gradebook.col.student": ["Student", "Estudiante"],
   "gradebook.emptyTitle": ["No grades yet", "Aún no hay calificaciones"],
   "gradebook.emptyBody": [
@@ -1471,6 +1472,19 @@ export const strings = {
   "live.pointsEarned": ["+{points} points", "+{points} puntos"],
   "live.answerFailed": ["Could not record your answer.", "No se pudo registrar tu respuesta."],
   "live.timeUp": ["Time is up for this question", "Se acabó el tiempo de esta pregunta"],
+  "live.revealIn": ["Answer locks in {seconds}s", "La respuesta se cierra en {seconds}s"],
+  "live.loadFailed": [
+    "The class screen could not load. It keeps retrying by itself.",
+    "La pantalla de la clase no pudo cargar. Sigue reintentando por sí sola."
+  ],
+  "content.jobsLoadFailed": [
+    "Content could not load. Try again in a moment.",
+    "El contenido no pudo cargar. Intenta de nuevo en un momento."
+  ],
+  "gradebook.loadFailed": [
+    "The gradebook could not load. Try again in a moment.",
+    "Las calificaciones no pudieron cargar. Intenta de nuevo en un momento."
+  ],
   "live.backToToday": ["Leave class view", "Salir de la vista de clase"],
   "live.doneTitle": ["That's everything for today", "Eso es todo por hoy"],
   "live.doneBody": [
@@ -1492,6 +1506,10 @@ export const strings = {
   "quiz.doneBody": [
     "Your score is recorded. Your professor will show the class results shortly.",
     "Tu calificación quedó registrada. Tu profesor mostrará los resultados del grupo en un momento."
+  ],
+  "quiz.resumedNoScore": [
+    "Your quiz was submitted. Your professor has your score.",
+    "Tu examen fue enviado. Tu profesor tiene tu calificación."
   ],
   "run.step.end": ["End the class", "Terminar la clase"],
   "run.step.endBody": [
@@ -1540,6 +1558,7 @@ export const strings = {
   ],
   // ------------------------------------------------- content · your library
   "content.tab.library": ["Materials", "Materiales"],
+  "content.tabsLabel": ["Content sections", "Secciones de contenido"],
   "content.tab.banks": ["Question banks", "Bancos de preguntas"],
   "content.tab.generate": ["Generate from a PDF", "Generar desde un PDF"],
   "content.tab.import": ["Import", "Importar"],

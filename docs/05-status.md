@@ -2,6 +2,57 @@
 
 **Last updated:** 2026-08-13
 
+### UX/UI improvement batch shipped (2026-08-13, late night)
+
+Professor-approved batch ("everything listed"), plan at
+`docs/superpowers/plans/2026-08-13-ux-ui-improvement-batch.md`, all 38
+verifiers green after every task:
+
+- **Async buttons show a spinner** (`.btn.loading` + `aria-busy`) — sign-in,
+  quiz submit, reflection submit. SignIn's shared busy flag became a
+  per-action union so only the pressed button spins.
+- **Answer taps paint instantly** on the student Live screen (optimistic
+  `pendingKey`, reverted on failure) and the countdown pill survives
+  answering ("Answer locks in Ns"), warning at ≤5s like the quiz.
+- **Quiz resume no longer fabricates 0%** — the resumed attempt's real
+  `score_percent` (verified against `course-activity-attempt`'s select) is
+  shown, or an honest no-number "submitted" state.
+- **Quiz failures recover**: load failure gets Try again + back; submit
+  failure stays inside the question view so Submit remains the retry; a
+  failed auto-submit no longer re-fires every clock tick.
+- **Reflection drafts autosave** per class (`cp.reflection.draft.<sessionId>`),
+  cleared on successful submit.
+- **Spanish error sweep**: nine raw `e.message` render sites now go through
+  `apiErrorText` (worst was student Live); `ContentLibrary.run()` takes a
+  string key; `verify-student-notes` pins the new pattern; `verify-i18n` now
+  also scans `src/features` (was clean on arrival).
+- **Instructor tabs live in the URL** (`/teach/content?tab=…`,
+  `/teach/grades?tab=perClass`) as real links — back button and reload keep
+  the professor's place; the library filter is honest `aria-pressed` buttons,
+  and no fake `role="tablist"` remains anywhere.
+- **No more full page reloads** for QR entry (`route("/live")` after the
+  awaited context refresh) or Grades retry (refetch).
+- **Focus management**: the classroom fullscreen layer takes focus on enter
+  and returns it to the toggle on exit; quiz auto-advance focuses each new
+  question heading.
+- **Stable keys** on the quiz options, revealed pulse option, Review and
+  Grades lists.
+- **Phone chrome**: `theme-color` metas follow the theme (mirroring
+  `--surface`; the boot script and ThemeToggle both keep them in sync);
+  lang toggle 40→44px; bottom-nav labels 0.72→0.75rem with a 44px floor;
+  `.pill.hidden` uses `--text-muted` (was a hair under AA).
+
+**Deliberately untouched** (standing decisions): quiz integrity telemetry
+disclosure (awaits the professor's call), projector route stays unlinked,
+Reset-the-course placement.
+
+**Verified without a live class**: typecheck, all 38 verifiers, build, and
+the deployed-bundle check. The in-class behaviours (optimistic tap, countdown,
+quiz retry/resume, reflection draft) need the next Group 402 rehearsal:
+scan the QR → answer a question (watch it highlight instantly) → let the
+quiz fail once by toggling airplane mode (watch Try again appear) → reload
+mid-reflection (draft survives).
+
 ### Audit close-out: nothing mechanical left open (2026-08-13, night)
 
 Commit `50921e0` + backend `7dafb51`: every `window.confirm` in src/ is now a

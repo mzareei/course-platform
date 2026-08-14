@@ -260,6 +260,29 @@ a:hover { color: var(--primary-strong); }
 .btn:active:not(:disabled) { transform: scale(0.98); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* A button mid-request: keep the busy text, add a small ring. The global
+   prefers-reduced-motion kill switch freezes the rotation, which is fine —
+   a static ring still reads as "working". */
+.btn.loading {
+  position: relative;
+  pointer-events: none;
+}
+.btn.loading::after {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.5em;
+  vertical-align: -0.1em;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: btn-spin 0.7s linear infinite;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 .btn.primary {
   background: var(--primary);
   border-color: var(--primary);
@@ -338,7 +361,8 @@ textarea { min-height: 7rem; resize: vertical; }
 .pill.open { background: var(--good-soft); color: var(--good); }
 .pill.scheduled { background: var(--primary-soft); color: var(--primary); }
 .pill.review { background: var(--accent-soft); color: var(--accent); }
-.pill.hidden { background: var(--surface-3); color: var(--text-subtle); }
+/* --text-muted, not --text-subtle: subtle-on-surface-3 was 4.47:1, a hair under AA. */
+.pill.hidden { background: var(--surface-3); color: var(--text-muted); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.live {
   background: var(--danger-soft);
@@ -464,7 +488,8 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   background: var(--surface-2);
   border-radius: var(--radius);
 }
-.nav-tabs a {
+.nav-tabs a,
+.nav-tabs .nav-tab-btn {
   flex: 1;
   text-align: center;
   text-decoration: none;
@@ -480,13 +505,26 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   justify-content: center;
   transition: background var(--ease), color var(--ease), box-shadow var(--ease);
 }
-.nav-tabs a:hover { color: var(--text); background: var(--surface-1); }
-.nav-tabs a[aria-current="page"] {
+.nav-tabs a:hover,
+.nav-tabs .nav-tab-btn:hover { color: var(--text); background: var(--surface-1); }
+.nav-tabs a[aria-current="page"],
+.nav-tabs .nav-tab-btn[aria-pressed="true"] {
   background: var(--surface-1);
   color: var(--text);
   box-shadow: var(--shadow-sm);
 }
-.nav-tabs a[aria-current="page"]:hover { background: var(--surface-1); }
+.nav-tabs a[aria-current="page"]:hover,
+.nav-tabs .nav-tab-btn[aria-pressed="true"]:hover { background: var(--surface-1); }
+/* The filter variant is a real button — strip the UA chrome, keep the tab look. */
+.nav-tabs .nav-tab-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  touch-action: manipulation;
+}
 
 /* ---------------------------------------------------------------- student bottom nav */
 .bottom-nav {
@@ -505,7 +543,8 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   align-items: center;
   gap: 0.15rem;
   padding: 0.5rem 0 0.6rem;
-  font-size: 0.72rem;
+  min-height: 44px;
+  font-size: 0.75rem;
   font-weight: 650;
   color: var(--text-subtle);
   text-decoration: none;
@@ -880,7 +919,7 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   font-weight: 700;
   letter-spacing: 0.06em;
   padding: 0.5rem 0.6rem;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--border-strong);
   color: var(--text-muted);
 }

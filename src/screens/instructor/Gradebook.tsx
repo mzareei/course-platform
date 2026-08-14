@@ -7,6 +7,7 @@
 // Adjustments and locking stay in the current app until the Advanced drawer
 // arrives.
 import { useEffect, useState } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { callFn } from "../../api/client";
 import type { GradebookSummary, RosterOverview } from "../../api/types";
 import { StatusPill } from "../../components/StatusPill";
@@ -16,7 +17,7 @@ import { context } from "../../state/session";
 import { classPulseRounds, type PulseRoundReview } from "../../api/pulse";
 import { classQuizSummary, type QuizAttemptSummary } from "../../api/quiz";
 import { classReflections, type ClassReflection } from "../../api/reflection";
-import { t, locale, formatDay } from "../../i18n";
+import { t, locale, formatDay, apiErrorText } from "../../i18n";
 
 const SUBMITTED_STATES = ["submitted", "late"];
 
@@ -62,7 +63,7 @@ function PerClassReview() {
         }
       })
       .catch((e: Error) => {
-        if (!cancelled) setRosterError(e.message || t("studentNotes.rosterLoadFailed"));
+        if (!cancelled) setRosterError(apiErrorText(e, "studentNotes.rosterLoadFailed"));
       });
     return () => {
       cancelled = true;
@@ -88,7 +89,7 @@ function PerClassReview() {
         setReflections(reflection.reflections);
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message || t("gradebook.perClass.loadFailed"));
+        if (!cancelled) setError(apiErrorText(e, "gradebook.perClass.loadFailed"));
       });
     return () => {
       cancelled = true;
@@ -319,12 +320,14 @@ function PerClassReview() {
 export function Gradebook() {
   const [data, setData] = useState<GradebookSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"matrix" | "perClass">("matrix");
+  // The tab lives in the URL so back/reload keep the professor's place.
+  const { query } = useLocation();
+  const tab: "matrix" | "perClass" = query.tab === "perClass" ? "perClass" : "matrix";
 
   useEffect(() => {
     callFn<GradebookSummary>("course-gradebook-summary")
       .then(setData)
-      .catch((e: Error) => setError(e.message));
+      .catch((e: unknown) => setError(apiErrorText(e, "gradebook.loadFailed")));
   }, []);
 
   if (error) {
@@ -364,16 +367,14 @@ export function Gradebook() {
           <p class="eyebrow">{t("gradebook.eyebrow")}</p>
           <h1>{t("gradebook.title")}</h1>
         </div>
-        <div class="nav-tabs" role="tablist" style="flex: 0 0 auto;">
-          <a href="#" role="tab" aria-current={tab === "matrix" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("matrix"); }}>
+        <nav class="nav-tabs" aria-label={t("gradebook.tabsLabel")} style="flex: 0 0 auto;">
+          <a href="/teach/grades" aria-current={tab === "matrix" ? "page" : undefined}>
             {t("gradebook.tab.semester")}
           </a>
-          <a href="#" role="tab" aria-current={tab === "perClass" ? "page" : undefined}
-             onClick={(e) => { e.preventDefault(); setTab("perClass"); }}>
+          <a href="/teach/grades?tab=perClass" aria-current={tab === "perClass" ? "page" : undefined}>
             {t("gradebook.tab.perClass")}
           </a>
-        </div>
+        </nav>
       </div>
 
       {(() => {

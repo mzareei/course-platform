@@ -35,7 +35,7 @@ assert.match(gradebook, /StudentNoteHistory/);
 assert.match(gradebook, /classSessionId=\{sessionId\}/);
 assert.match(gradebook, /profileId=\{selectedStudentId\}/);
 assert.match(gradebook, /const \[rosterError, setRosterError\] = useState<string \| null>\(null\)/);
-assert.match(gradebook, /setRosterError\(e\.message \|\| t\("studentNotes\.rosterLoadFailed"\)\)/);
+assert.match(gradebook, /setRosterError\(apiErrorText\(e, "studentNotes\.rosterLoadFailed"\)\)/);
 assert.doesNotMatch(gradebook, /setRoster\(\[\]\)/);
 assert.match(gradebook, /rosterError \? \(\s*<p class="error-text" role="alert">\{rosterError\}<\/p>/);
 
