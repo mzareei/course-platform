@@ -162,7 +162,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
             {t("quiz.next")}
           </button>
         ) : (
-          <button class="btn primary" type="button" disabled={busy || answered === 0} onClick={() => submitNow(answers)}>
+          <button class={`btn primary${busy ? " loading" : ""}`} type="button" disabled={busy || answered === 0} aria-busy={busy} onClick={() => submitNow(answers)}>
             {busy ? t("quiz.submitting") : t("quiz.submit")}
           </button>
         )}

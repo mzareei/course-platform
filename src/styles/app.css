@@ -260,6 +260,29 @@ a:hover { color: var(--primary-strong); }
 .btn:active:not(:disabled) { transform: scale(0.98); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* A button mid-request: keep the busy text, add a small ring. The global
+   prefers-reduced-motion kill switch freezes the rotation, which is fine —
+   a static ring still reads as "working". */
+.btn.loading {
+  position: relative;
+  pointer-events: none;
+}
+.btn.loading::after {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.5em;
+  vertical-align: -0.1em;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: btn-spin 0.7s linear infinite;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 .btn.primary {
   background: var(--primary);
   border-color: var(--primary);

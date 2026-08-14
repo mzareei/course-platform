@@ -36,7 +36,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<null | "send" | "verify" | "microsoft" | "test">(null);
   const [message, setMessage] = useState<{ kind: "info" | "error"; text: string } | null>(null);
 
   const cleaned = email.trim().toLowerCase();
@@ -55,7 +55,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
       setMessage({ kind: "info", text: t("signIn.cooldown", { seconds: Math.ceil(wait / 1000) }) });
       return;
     }
-    setBusy(true);
+    setBusy("send");
     try {
       await sendOtp(cleaned);
       startCooldown();
@@ -81,13 +81,13 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         text: failure.message || t("signIn.sendFailed")
       });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   async function onVerify() {
     setMessage(null);
-    setBusy(true);
+    setBusy("verify");
     try {
       await verifyOtp(cleaned, code.trim());
       await finishSignIn();
@@ -97,13 +97,13 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         text: apiErrorText(error, "signIn.codeFailed")
       });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   async function onMicrosoft() {
     setMessage(null);
-    setBusy(true);
+    setBusy("microsoft");
     try {
       // Redirects away on success, so there is no "finished" state to handle.
       await signInWithMicrosoft();
@@ -112,13 +112,13 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         kind: "error",
         text: apiErrorText(error, "signIn.microsoftFailed")
       });
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   async function onTestSignIn() {
     setMessage(null);
-    setBusy(true);
+    setBusy("test");
     try {
       await testSignIn(cleaned);
       await finishSignIn();
@@ -128,7 +128,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         text: apiErrorText(error, "signIn.testFailed")
       });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -151,9 +151,10 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
       {config.microsoftSignIn ? (
         <div class="card">
           <button
-            class="btn primary"
+            class={`btn primary${busy === "microsoft" ? " loading" : ""}`}
             type="button"
-            disabled={busy}
+            disabled={busy !== null}
+            aria-busy={busy === "microsoft"}
             onClick={() => void onMicrosoft()}
           >
             {t("signIn.microsoft")}
@@ -185,7 +186,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         </label>
         {/* Explicit buttons keep their own actions; the form's onSubmit only
             serves the keyboard's Enter/Go key. */}
-        <button class="btn primary" type="button" disabled={busy || !cleaned} onClick={onSend}>
+        <button class={`btn primary${busy === "send" ? " loading" : ""}`} type="button" disabled={busy !== null || !cleaned} aria-busy={busy === "send"} onClick={onSend}>
           {sent ? t("signIn.resend") : t("signIn.send")}
         </button>
 
@@ -203,7 +204,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
                 onInput={(e) => setCode((e.target as HTMLInputElement).value)}
               />
             </label>
-            <button class="btn" type="button" disabled={busy || code.trim().length < 6} onClick={onVerify}>
+            <button class={`btn${busy === "verify" ? " loading" : ""}`} type="button" disabled={busy !== null || code.trim().length < 6} aria-busy={busy === "verify"} onClick={onVerify}>
               {t("signIn.verify")}
             </button>
           </>
@@ -224,7 +225,7 @@ export function SignIn({ joinCode }: { joinCode?: string } = {}) {
         <div class="card muted">
           <h3>{t("signIn.testTitle")}</h3>
           <p class="hint">{t("signIn.testBody")}</p>
-          <button class="btn" type="button" disabled={busy || !cleaned} onClick={onTestSignIn}>
+          <button class={`btn${busy === "test" ? " loading" : ""}`} type="button" disabled={busy !== null || !cleaned} aria-busy={busy === "test"} onClick={onTestSignIn}>
             {t("signIn.testButton")}
           </button>
         </div>

@@ -59,7 +59,7 @@ export function Reflection({
       </p>
       {error ? <p class="error-text" role="alert">{error}</p> : null}
 
-      <button class="btn primary" type="button" disabled={busy || !canSubmit} onClick={onSubmit}>
+      <button class={`btn primary${busy ? " loading" : ""}`} type="button" disabled={busy || !canSubmit} aria-busy={busy} onClick={onSubmit}>
         {busy ? t("reflection.submitting") : t("reflection.submit")}
       </button>
     </div>

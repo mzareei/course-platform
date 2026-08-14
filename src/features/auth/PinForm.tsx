@@ -105,7 +105,7 @@ export function PinForm({
         {claiming ? <span class="hint">{t("pin.choosePinHint")}</span> : null}
       </label>
 
-      <button class="btn primary" type="submit" disabled={busy || !ready}>
+      <button class={`btn primary${busy ? " loading" : ""}`} type="submit" disabled={busy || !ready} aria-busy={busy}>
         {busy
           ? t("pin.signingIn")
           : claiming
