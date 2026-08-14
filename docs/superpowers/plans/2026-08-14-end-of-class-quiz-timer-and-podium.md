@@ -226,6 +226,14 @@ check(
   /question\.seconds|current\.seconds|\.seconds\b/.test(player),
   "the player must take each question's time from the server's `seconds` field"
 );
+// Two effects share one stateRef snapshot per tick, so `busy` (state) cannot
+// stop the second from submitting after the first already has. Only a ref
+// latches synchronously.
+check(
+  /const submitting = useRef\(false\)/.test(player)
+    && /if \(submitting\.current\) return;/.test(player),
+  "submitNow must latch on a ref against re-entry within a single clock tick"
+);
 
 // The two callers must both go through the shared rule.
 const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
@@ -2059,7 +2067,36 @@ Update the header comment at the top of the file — it currently says "short ea
 // rule of its own.
 ```
 
-- [ ] **Step 4: Submit at the instance deadline**
+- [ ] **Step 4a: Latch `submitNow` against re-entry**
+
+Two effects are keyed on the same one-second clock tick — the existing per-question auto-advance and the whole-quiz deadline effect added below. Both read `stateRef.current`, which is reassigned once per render, so they see the SAME snapshot within one commit. When the first calls `submitNow`, its `setBusy(true)` has not landed by the time the second reads `busy` — and both submit.
+
+This is not exotic: a phone that sleeps throttles the interval, so on unlock `now` jumps past the question deadline and the quiz deadline together. The server's already-submitted check is a plain read-then-write with no lock, so two concurrent submits can double-write a student's graded rows or hand them an error banner after they have genuinely finished.
+
+Only a ref latches synchronously. Add beside the other refs:
+
+```typescript
+  // The one thing that can stop a double submit inside a single tick. `busy` is
+  // state — it is not visible to the sibling effect that runs microseconds later
+  // off the same stateRef snapshot. Reset only on failure, so a successful
+  // submit stays latched for good.
+  const submitting = useRef(false);
+```
+
+At the top of `submitNow`, immediately after the existing early return:
+
+```typescript
+    if (submitting.current) return;
+    submitting.current = true;
+```
+
+and in its `catch` block (NOT `finally` — a success must stay latched):
+
+```typescript
+      submitting.current = false;
+```
+
+- [ ] **Step 4b: Submit at the instance deadline**
 
 The instance deadline already arrives on `start_attempt` and is currently ignored. Hold it:
 
