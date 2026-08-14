@@ -2444,7 +2444,11 @@ export function Podium({ entries, large = false }: { entries: PodiumEntry[]; lar
       {podiumOrder(entries).map((entry) => (
         <li key={entry.profile_id} class={`quiz-podium-place rank-${entry.rank}`}>
           <span class="quiz-podium-medal" aria-hidden="true">{MEDALS[entry.rank] || "🎉"}</span>
-          <span class="quiz-podium-rank">{t("podium.place", { rank: entry.rank })}</span>
+          {/* Rendered inline, not through t(). A formatted rank number is the
+              same in both languages, and routing it through the dictionary
+              would force an entry onto verify-i18n's identical-strings
+              allowlist for a string that has nothing to translate. */}
+          <span class="quiz-podium-rank">#{entry.rank}</span>
           <span class="quiz-podium-id">
             {entry.student_identifier || t("podium.noId")}
           </span>
@@ -2537,6 +2541,17 @@ import { ClassroomPodiumLayer } from "../../features/live/ClassroomPodiumLayer";
 ```typescript
   const [podium, setPodium] = useState<PodiumEntry[]>([]);
   const [showingPodium, setShowingPodium] = useState(false);
+
+  // A new quiz invalidates the last one's winners immediately. Without this the
+  // previous podium — and its live "show the winners" button — stays on screen
+  // for one round trip after the next quiz closes, so a fast click could put
+  // the WRONG three student IDs on the screen in front of the room.
+  useEffect(() => {
+    if (instanceId) {
+      setPodium([]);
+      setShowingPodium(false);
+    }
+  }, [instanceId]);
 ```
 
 ```typescript
@@ -2582,7 +2597,6 @@ And at the very end of the returned `<section>`:
 ```typescript
   "podium.title": ["Top of the class", "Los mejores de la clase"],
   "podium.empty": ["No one finished the quiz.", "Nadie terminó el examen."],
-  "podium.place": ["#{rank}", "#{rank}"],
   "podium.noId": ["Student", "Estudiante"],
   "podium.showToClass": ["Show the winners to the class", "Mostrar a los ganadores a la clase"],
   "podium.backToClass": ["Back to class", "Volver a la clase"],
