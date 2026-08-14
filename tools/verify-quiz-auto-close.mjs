@@ -324,6 +324,22 @@ assert.equal(
   "not even everyone-has-submitted closes a quiz while the class is paused"
 );
 
+// ------------------------------------------------ resuming undoes the pause
+// Pausing sets every running instance to `paused`; until now nothing set it
+// back. `paused` is not in CLOSABLE_STATES (asserted above), so without a
+// resume branch the instance stayed `paused` forever — never reaching
+// `closed` — and Live.tsx gates the exit ticket on quiz.state === "closed",
+// stranding the whole room for the rest of the class after any pause that
+// touched a running quiz. The filter matters as much as the state: reviving
+// a `closed` instance on resume would reopen a finished quiz for answers.
+const sessionManagement = readFileSync(fn("course-session-management/index.ts"), "utf8");
+check(
+  /if \(input\.nextState === "live"\) \{[\s\S]{0,250}state: "live"[\s\S]{0,250}\.in\(\s*"state",\s*\[\s*"paused"\s*\]\s*\)/.test(
+    sessionManagement
+  ),
+  "resuming a class must move activity instances back to live, filtered to only the ones a pause put to sleep"
+);
+
 // ------------------------------------------------------ both polls close it
 // Whichever poll arrives first does the closing, so a reloaded or backgrounded
 // Run Class page cannot hold the quiz open.
