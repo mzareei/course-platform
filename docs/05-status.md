@@ -48,10 +48,26 @@ with ID + PIN. Everything held except one blocker and one default:
   pluralizes in both languages.
 - **QA cleanup done:** sandbox class day reset then deleted, the 402 review
   release removed (401's real one untouched), QA student back to Removed.
-- Still open, pre-existing: `tools/verify-generation-ownership.mjs` fails on
-  pristine main (its upsert-locating regex no longer matches the worker) —
-  stale verifier, not a production defect. The legacy PIN-gated `*-summary`
-  functions exist in the repo but are already deleted from production.
+- **`verify-generation-ownership` fixed — the whole backend suite is green for
+  the first time in a while.** It had been failing on pristine main because it
+  pinned an implementation shape that no longer exists: the worker used to
+  `.upsert()` content_items from TypeScript, and persistence has since moved
+  into the `finalize_pdf_generation_bundle` SQL function, which selects the row
+  `for update`, checks ownership, and writes in one transaction. That is
+  *stronger* than what the verifier was written to police — its own header
+  complained the check and the write were too far apart — so the assertions
+  now follow the property into the migration. Two of the original assertions
+  were themselves unsound and were fixed in passing: ordering was read from
+  where functions sit in the file rather than their call sites (and
+  `preparePriorVersion` is defined *below* the finalize helper but runs
+  *before* it), and table-name matches were prefixes, so a write retargeted to
+  `content_versions_DISABLED` still passed. A new guard forbids the worker
+  writing content_items directly again, which would step around the row lock.
+  Every assertion was mutation-tested: seven deliberate breakages each fail,
+  and the clean tree passes — see the note below on why that step is not
+  optional.
+- Still open, pre-existing: the legacy PIN-gated `*-summary` functions exist in
+  the repo but are already deleted from production.
 
 ### UX/UI improvement batch shipped (2026-08-13, late night)
 

@@ -6,6 +6,63 @@ the UI is silently wrong.**
 
 ---
 
+## 82. A verifier that pins an implementation shape goes stale when the code gets better — and a permanently-red verifier protects nothing
+
+**Found 2026-08-13 while sweeping the backend: `verify-generation-ownership`
+failed on pristine `main`, and had for long enough that it was being stepped
+around as "known red".**
+
+It asserted `worker.search(/from\("content_items"\)\s*\n?\s*\.upsert\(/)` and
+refused to run further when that regex found nothing. Nothing was broken. The
+worker had *stopped* upserting `content_items` from TypeScript, and persistence
+moved into the `finalize_pdf_generation_bundle` SQL function, which does:
+
+```sql
+select * into content_item from public.content_items
+ where course_id = … and slug = … for update;      -- row lock
+if content_item.owner_profile_id <> generation_job.created_by then
+  raise exception 'generation_slug_not_owned';      -- check
+…
+update public.content_items …                       -- write
+```
+
+Check and write are now in **one transaction behind a row lock** — which is
+exactly what the verifier's own header comment demanded ("the check and the
+write are far apart … the guarantee has to live at the write"). The code had
+grown into the thing the test was asking for, and the test failed *because of
+it*. Two more assertions below the failure had gone stale the same way and had
+not run in months (`owner_profile_id: ` and `content_versions`, both of which
+moved into the same SQL function).
+
+Worse, two of the original assertions were **unsound even when green**:
+
+- Ordering was read from where functions appear in the *file*, not from their
+  call sites. `preparePriorVersion` is defined *below* the finalize helper and
+  runs *before* it, so the positional check was measuring layout, not sequence.
+  It passed for years by coincidence of formatting.
+- Table names were matched as substrings, so retargeting a write to
+  `content_versions_DISABLED` still satisfied "must record a version".
+
+**Rules:**
+
+1. **Assert the property, not the shape.** "Ownership is checked before the
+   write, under a lock" survives a refactor; `.from("x").upsert(` does not.
+   When a verifier fails, first ask whether the *property* still holds — if it
+   does, the verifier is the thing that's wrong, and moving its assertions to
+   wherever the property now lives is the fix, not deleting it.
+2. **A red verifier is worse than no verifier**, because everyone learns to
+   skip it and it stops guarding the thing it was written for. Fix it or
+   delete it the day it goes red; never carry it as "known red".
+3. **Mutation-test every assertion.** A verifier that only ever passes proves
+   nothing at all — same lesson as #78, where a lockout counter that never
+   incremented looked perfectly healthy. Break the property on purpose, one way
+   per assertion, and watch each one fail. Seven deliberate breakages were run
+   here; the first pass caught six, and the seventh (`content_versions` renamed
+   to `content_versions_DISABLED`) sailed through and exposed the prefix bug
+   above. That single miss is the entire argument for doing this.
+
+---
+
 ## 81. An app-level branch on a non-reactive location strands in-app navigation in the wrong shell
 
 **Found 2026-08-13 by a full E2E rehearsal in Group 402, the day after it
