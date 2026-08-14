@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { backendPath, skipWithoutBackend } from "./lib/backend-root.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const api = readFileSync(path.join(root, "src/api/session.ts"), "utf8");
@@ -56,9 +57,15 @@ assert.match(
   "after a reset the cockpit must forget the class it was holding, or stale latches survive it"
 );
 
+// The rest reads the backend repo. Skip rather than crash when it is absent.
+if (skipWithoutBackend("verify-class-reset", "supabase/migrations")) {
+  console.log("verify-class-reset: OK (frontend checks only)");
+  process.exit(0);
+}
+
 // The summary the UI prints must name fields the server actually returns.
 const migration = readFileSync(
-  path.resolve(root, "../mzareei.github.io/supabase/migrations/0047_reset_class_session.sql"),
+  backendPath("supabase/migrations/0047_reset_class_session.sql"),
   "utf8"
 );
 for (const field of [
@@ -117,10 +124,7 @@ assert.match(
 );
 
 const fn = readFileSync(
-  path.resolve(
-    root,
-    "../mzareei.github.io/supabase/functions/course-session-management/index.ts"
-  ),
+  backendPath("supabase/functions/course-session-management/index.ts"),
   "utf8"
 );
 assert.match(

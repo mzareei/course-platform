@@ -2430,3 +2430,24 @@ The resume mirror filters `.in("state", ["paused"])` on purpose. The
 `closed → continued → live` reopen path drives this same code on a session whose
 instances are already `closed`; without the filter, reopening an ended class
 would revive a finished, graded quiz for answers.
+
+## 75. A verifier that hardcodes `../mzareei.github.io` passes here and fails in CI
+
+The backend repo sits beside this one on the development machine, so
+`../mzareei.github.io` resolves locally and every check runs. CI clones it to a
+path of its own choosing and announces that path in
+`COURSE_PLATFORM_BACKEND_ROOT`. A verifier that ignores the variable fails in
+one of two ways, and the quiet one is worse:
+
+- `verify-class-reset` read the migration with no existence check and died on
+  `ENOENT`, **turning every push to main red from 2026-08-11 onward.**
+- `verify-quiz-timing`, `verify-quiz-podium`, `verify-quiz-auto-close`,
+  `verify-auto-posted-grades` and `verify-live-attendance-count` guarded the
+  same wrong path with `existsSync` and printed "backend repo not checked out,
+  skipping". CI *had* checked it out. Five verifiers reported success without
+  running — including every server-side quiz contract.
+
+`tools/lib/backend-root.mjs` is now the only place that answers "where is the
+backend". A verifier that needs it calls `backendPath` / `backendUrl` and, when
+it may legitimately be absent, `skipWithoutBackend` — which prints the root it
+looked in, so a skip that should not have happened is visible in the log.

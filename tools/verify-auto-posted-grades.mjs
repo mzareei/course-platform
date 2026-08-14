@@ -5,15 +5,16 @@
 //
 // Posting is now a consequence of finishing, not a chore. These are the four
 // moments it has to happen, and the two traps in doing it that way.
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { backendPath, hasBackend } from "./lib/backend-root.mjs";
 
 const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
-const fn = (name) => `../mzareei.github.io/supabase/functions/${name}`;
-const backend = existsSync(fn("_shared/class-grade.ts"));
+const fn = (name) => backendPath(`supabase/functions/${name}`);
+const backend = hasBackend("supabase/functions/_shared/class-grade.ts");
 
 // ------------------------------------------------------------------ frontend
 const classRecord = readFileSync("src/screens/instructor/ClassRecord.tsx", "utf8");

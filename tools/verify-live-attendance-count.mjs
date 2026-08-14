@@ -7,6 +7,7 @@
 // had walked in.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { backendPath } from "./lib/backend-root.mjs";
 
 const failures = [];
 const check = (condition, message) => {
@@ -74,8 +75,8 @@ check(
 
 // ------------------------------------------------------------------ backend
 // The edge function lives in the other repo. Check it when it is checked out;
-// skip rather than fail when only this repo is present (CI clones one).
-const pulseFn = "../mzareei.github.io/supabase/functions/course-pulse/index.ts";
+// skip rather than fail when only this repo is present.
+const pulseFn = backendPath("supabase/functions/course-pulse/index.ts");
 if (existsSync(pulseFn)) {
   const fn = readFileSync(pulseFn, "utf8");
   check(

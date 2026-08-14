@@ -7,23 +7,19 @@
 // student's phone can read.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { backendPath, backendUrl, skipWithoutBackend } from "./lib/backend-root.mjs";
 
-// readFileSync resolves against the working directory; import() resolves
-// against this module's URL in tools/, one level deeper. Two helpers on
-// purpose — confusing them silently imports the wrong folder.
-const fn = (name) => `../mzareei.github.io/supabase/functions/${name}`;
-const backend = (name) =>
-  new URL(`../../mzareei.github.io/supabase/functions/${name}`, import.meta.url);
+// readFileSync takes a path; import() takes a URL. Two helpers on purpose —
+// both anchored on the backend root, which CI puts somewhere of its own.
+const fn = (name) => backendPath(`supabase/functions/${name}`);
+const backend = (name) => backendUrl(`supabase/functions/${name}`);
 
 const failures = [];
 const check = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
-if (!existsSync(fn("_shared"))) {
-  console.log("verify-quiz-podium: backend repo not checked out, skipping");
-  process.exit(0);
-}
+if (skipWithoutBackend("verify-quiz-podium")) process.exit(0);
 
 const { PODIUM_PLACES, rankAttempts, podiumCut, rankOf } =
   await import(backend("_shared/quiz-rank.ts").href);

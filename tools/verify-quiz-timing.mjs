@@ -7,15 +7,14 @@
 // checked. The client must hold no copy of it — the two repos deploy
 // independently, so a duplicated constant drifts silently.
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { backendPath, backendUrl, skipWithoutBackend } from "./lib/backend-root.mjs";
 
-// readFileSync resolves against the working directory (the repo root, the way
-// every other verifier reads src/…). import() resolves against THIS MODULE's
-// URL, which is tools/ — one level deeper. Two helpers, deliberately, because
-// getting them confused silently imports the wrong folder.
-const fn = (name) => `../mzareei.github.io/supabase/functions/${name}`;
-const backend = (name) =>
-  new URL(`../../mzareei.github.io/supabase/functions/${name}`, import.meta.url);
+// readFileSync takes a path; import() takes a URL. Two helpers, deliberately,
+// because getting them confused silently imports the wrong folder. Both are
+// anchored on the backend root, which CI puts somewhere of its own.
+const fn = (name) => backendPath(`supabase/functions/${name}`);
+const backend = (name) => backendUrl(`supabase/functions/${name}`);
 
 const failures = [];
 const check = (condition, message) => {
@@ -23,10 +22,7 @@ const check = (condition, message) => {
 };
 
 // ------------------------------------------------------------------- the rule
-if (!existsSync(fn("_shared"))) {
-  console.log("verify-quiz-timing: backend repo not checked out, skipping");
-  process.exit(0);
-}
+if (skipWithoutBackend("verify-quiz-timing")) process.exit(0);
 
 const {
   BASE_SECONDS, LONG_SECONDS, LONG_THRESHOLD_CHARS, CUSHION_SECONDS,
