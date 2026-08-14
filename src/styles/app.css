@@ -915,6 +915,64 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   .classroom-question-options { grid-template-columns: 1fr; }
 }
 
+.quiz-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.quiz-podium-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  min-width: 7rem;
+}
+
+/* First place stands taller, the way a podium actually looks. */
+.quiz-podium-place.rank-1 { padding-block: 1.4rem; }
+.quiz-podium-place.rank-2 { padding-block: 1rem; }
+
+.quiz-podium-medal { font-size: 1.6rem; line-height: 1; }
+.quiz-podium-rank { font-size: 0.8rem; color: var(--text-muted); }
+.quiz-podium-id { font-weight: 700; font-variant-numeric: tabular-nums; }
+.quiz-podium-name { font-size: 0.85rem; color: var(--text-muted); }
+.quiz-podium-score { font-size: 0.9rem; font-weight: 650; }
+
+.quiz-podium-large .quiz-podium-place { min-width: 11rem; font-size: 1.4rem; }
+.quiz-podium-large .quiz-podium-medal { font-size: 3.5rem; }
+
+/* The room-facing celebration. Unlike .classroom-question-layer, there is no
+   non-fullscreen state to switch between — this covers the viewport the
+   instant it mounts and paints an opaque background so the room can never
+   read the professor's private counts through it. */
+.classroom-podium-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  padding: 2rem;
+}
+
+.classroom-podium-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  text-align: center;
+  max-width: 60rem;
+}
+
 /* Professor-only question bank review and editing. */
 .question-bank-review { gap: 0.9rem; }
 .question-bank-question-list { gap: 0.75rem; }

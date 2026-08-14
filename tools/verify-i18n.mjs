@@ -35,7 +35,9 @@ const allowedIdentical = new Set([
   "app.switchToEnglish",
   "people.col.id",
   "type.material",
-  "state.live"
+  "state.live",
+  // A rank number ("#3") reads the same in Spanish — there is no word to translate.
+  "podium.place"
 ]);
 
 for (const [, key, en, es] of entries) {

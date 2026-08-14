@@ -1454,6 +1454,16 @@ export const strings = {
     "Aún no se ha enviado ninguna reflexión."
   ],
 
+  // ---------------------------------------------------------------- podium
+  "podium.title": ["Top of the class", "Los mejores de la clase"],
+  "podium.empty": ["No one finished the quiz.", "Nadie terminó el examen."],
+  "podium.place": ["#{rank}", "#{rank}"],
+  "podium.noId": ["Student", "Estudiante"],
+  "podium.showToClass": ["Show the winners to the class", "Mostrar a los ganadores a la clase"],
+  "podium.backToClass": ["Back to class", "Volver a la clase"],
+  "podium.classroomEyebrow": ["End of class quiz", "Examen de fin de clase"],
+  "podium.classroomTitle": ["Top of the class", "Los mejores de la clase"],
+
   // ---------------------------------------------------------------- student live
   "live.title": ["In class", "En clase"],
   "live.eyebrow": ["Live", "En vivo"],

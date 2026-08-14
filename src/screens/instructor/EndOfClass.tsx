@@ -13,11 +13,13 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t, apiErrorText } from "../../i18n";
 import {
-  startClassQuiz, closeClassQuiz, classQuizStatus, currentClassQuiz,
-  type QuizStatus
+  startClassQuiz, closeClassQuiz, classQuizStatus, currentClassQuiz, classQuizPodium,
+  type QuizStatus, type PodiumEntry
 } from "../../api/quiz";
 import { classReflections, type ClassReflection } from "../../api/reflection";
 import { clockText } from "../../features/quiz/clock";
+import { Podium } from "../../features/quiz/Podium";
+import { ClassroomPodiumLayer } from "../../features/live/ClassroomPodiumLayer";
 
 const POLL_MS = 4000;
 
@@ -26,6 +28,8 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   const [status, setStatus] = useState<QuizStatus | null>(null);
   const [lastResult, setLastResult] = useState<QuizStatus | null>(null);
   const [reflections, setReflections] = useState<ClassReflection[] | null>(null);
+  const [podium, setPodium] = useState<PodiumEntry[]>([]);
+  const [showingPodium, setShowingPodium] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -90,6 +94,20 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
     const id = setInterval(tick, POLL_MS);
     return () => clearInterval(id);
   }, [sessionId]);
+
+  // Polled rather than fetched once: a top-three student may tap "show my name"
+  // a minute after the quiz closes, and the podium has to pick it up without
+  // the professor reloading anything.
+  useEffect(() => {
+    if (instanceId) return; // a quiz is running; there is no podium yet
+    const tick = () =>
+      classQuizPodium({ class_session_id: sessionId })
+        .then((res) => setPodium(res.entries))
+        .catch(() => {});
+    tick();
+    const id = setInterval(tick, POLL_MS);
+    return () => clearInterval(id);
+  }, [sessionId, instanceId]);
 
   async function onStart() {
     setBusy(true);
@@ -172,6 +190,15 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
               ) : null}
             </div>
           ) : null}
+          {podium.length ? (
+            <div class="stack" style="gap: 0.6rem;">
+              <h3>{t("podium.title")}</h3>
+              <Podium entries={podium} />
+              <button class="btn" type="button" onClick={() => setShowingPodium(true)}>
+                {t("podium.showToClass")}
+              </button>
+            </div>
+          ) : null}
           <button class="btn primary" type="button" disabled={busy} onClick={onStart}>
             {busy
               ? t("endOfClass.starting")
@@ -197,6 +224,10 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
           ))}
         </div>
       )}
+
+      {showingPodium ? (
+        <ClassroomPodiumLayer entries={podium} onClose={() => setShowingPodium(false)} />
+      ) : null}
     </section>
   );
 }

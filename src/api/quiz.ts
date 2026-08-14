@@ -122,3 +122,21 @@ export interface QuizAttemptSummary {
 export function classQuizSummary(classSessionId: string) {
   return callFn<{ attempts: QuizAttemptSummary[] }>("course-class-quiz", { action: "summary", class_session_id: classSessionId });
 }
+
+export interface PodiumEntry {
+  rank: number;
+  profile_id: string;
+  student_identifier: string | null;
+  score_final: number | null;
+  name_revealed: boolean;
+  /** Present only when that student opted in. The server withholds it
+   *  otherwise — this is never a name the client is trusted to hide. */
+  name: string | null;
+}
+
+export function classQuizPodium(input: { class_session_id: string }) {
+  return callFn<{ instance_id: string | null; entries: PodiumEntry[] }>(
+    "course-class-quiz",
+    { action: "podium", ...input }
+  );
+}
