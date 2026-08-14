@@ -2174,9 +2174,21 @@ export const strings = {
     "The grades could not be posted.",
     "No se pudieron publicar las calificaciones."
   ],
-  "classRecord.postedResult": [
-    "Posted {posted} grades. {skipped} students have nothing to grade yet.",
-    "Se publicaron {posted} calificaciones. {skipped} estudiantes aún no tienen nada que calificar."
+  "classRecord.postedResultOne": [
+    "Posted 1 grade.",
+    "Se publicó 1 calificación."
+  ],
+  "classRecord.postedResultMany": [
+    "Posted {posted} grades.",
+    "Se publicaron {posted} calificaciones."
+  ],
+  "classRecord.postedSkippedOne": [
+    "1 student has nothing to grade yet.",
+    "1 estudiante aún no tiene nada que calificar."
+  ],
+  "classRecord.postedSkippedMany": [
+    "{skipped} students have nothing to grade yet.",
+    "{skipped} estudiantes aún no tienen nada que calificar."
   ],
   "classRecord.sortBy": ["Sort by {column}", "Ordenar por {column}"],
   "classRecord.save": ["Save", "Guardar"],

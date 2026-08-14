@@ -1170,7 +1170,9 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         <div class="run-prelive-grid">
           <div class="run-deck-column">{deck}</div>
           <div class="run-control-column">
-            {joinUrl ? (
+            {/* A closed class cannot be joined, so showing its QR would invite
+                a room full of phones to a refusal. */}
+            {joinUrl && !ended ? (
               <JoinCard
                 joinUrl={joinUrl}
                 joinCode={session.join_code}
@@ -1184,6 +1186,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
             {sessionId && banksLoaded ? (
               <ClassQuestionPlanBoard
                 classSessionId={sessionId}
+                contentItemId={session?.content_item_id}
                 isLive={isLive}
                 autoAsk={autoSend}
                 deckReady={bridge.deckReady}
@@ -1352,6 +1355,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
             {sessionId && banksLoaded ? (
               <ClassQuestionPlanBoard
                 classSessionId={sessionId}
+                contentItemId={session?.content_item_id}
                 isLive={isLive}
                 autoAsk={autoSend}
                 deckReady={bridge.deckReady}

@@ -102,6 +102,7 @@ function checkpointLabel(checkpoint: PlanCheckpoint): string {
 
 export function ClassQuestionPlanBoard({
   classSessionId,
+  contentItemId,
   isLive,
   autoAsk,
   deckReady,
@@ -110,6 +111,10 @@ export function ClassQuestionPlanBoard({
   onRefresh
 }: {
   classSessionId: string;
+  /** The class day's attached lecture. With no plan yet, the bank picker must
+   *  default to this lecture's own bank — the first bank alphabetically once
+   *  offered a different lecture's questions as the ready-to-create plan. */
+  contentItemId?: string | null;
   isLive: boolean;
   /** The professor's "send each question when I reach its slide" switch. */
   autoAsk: boolean;
@@ -169,8 +174,11 @@ export function ClassQuestionPlanBoard({
       ]);
       setBanks(bankResponse.banks);
       applyPlan(loadedPlan);
+      const lectureBankId = contentItemId
+        ? bankResponse.banks.find((bank) => bank.content_item_id === contentItemId)?.bank_id
+        : undefined;
       setSelectedBankId((current) =>
-        loadedPlan?.question_bank_id || current || bankResponse.banks[0]?.bank_id || ""
+        loadedPlan?.question_bank_id || current || lectureBankId || bankResponse.banks[0]?.bank_id || ""
       );
     } catch (cause) {
       setError(localizedPlanError(cause, "run.plan.loadFailed"));

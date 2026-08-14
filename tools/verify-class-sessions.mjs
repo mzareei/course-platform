@@ -53,12 +53,19 @@ assert.match(today, /ctx\.student_sessions/);
 assert.doesNotMatch(today, /sessionIsLive = allReleases/);
 assert.match(live, /ctx\?\.student_sessions/);
 assert.match(app, /path="\/teach\/classes"/);
-const authenticatedJoinGate = app.indexOf('if (location.pathname.startsWith("/join/"))');
+// The join gate reads the reactive currentPath signal, NOT location.pathname:
+// App only re-renders on signals, so a plain location read left the app stuck
+// in the join shell (rendering SignIn to a signed-in student) after JoinClass
+// route("/live")-ed. PathSync inside the shell is what keeps the signal fresh.
+const authenticatedJoinGate = app.indexOf('if (currentPath.value.startsWith("/join/"))');
 const contextErrorGate = app.indexOf("if (contextError.value)");
 const rosterGate = app.indexOf('if (ctx && ctx.roster_status !== "active")');
 assert.ok(authenticatedJoinGate >= 0);
 assert.ok(authenticatedJoinGate < contextErrorGate);
 assert.ok(authenticatedJoinGate < rosterGate);
+assert.doesNotMatch(app, /location\.pathname\.startsWith\("\/join\/"\)/);
+assert.match(app, /const currentPath = signal\(location\.pathname\)/);
+assert.match(app, /currentPath\.value = path/);
 
 assert.equal(normalizeReturnPath("/join/K7P4"), "/join/K7P4");
 assert.equal(normalizeReturnPath("https://evil.example/"), null);

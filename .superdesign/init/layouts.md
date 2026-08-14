@@ -1,6 +1,12 @@
+# Shared layouts
+
+## Application shell and instructor layout
+
+- Path: `src/app.tsx`
+- Owns authentication gates, global top bar, instructor navigation, student shell selection, and route mounting.
+
+```tsx
 import { LocationProvider, Router, Route, useLocation } from "preact-iso";
-import { useEffect } from "preact/hooks";
-import { signal } from "@preact/signals";
 import { booting, session, context, contextError, surface, isOwner, refreshContext } from "./state/session";
 import { signOut } from "./auth/auth";
 import { t } from "./i18n";
@@ -13,7 +19,6 @@ import { Review } from "./screens/student/Review";
 import { Grades } from "./screens/student/Grades";
 import { TeachHome } from "./screens/instructor/Home";
 import { Gradebook } from "./screens/instructor/Gradebook";
-import { ClassRecordRoute } from "./screens/instructor/ClassRecord";
 import { People } from "./screens/instructor/People";
 import { Classes } from "./screens/instructor/Classes";
 import { Content } from "./screens/instructor/Content";
@@ -22,12 +27,7 @@ import { Viewer } from "./screens/Viewer";
 import { Live } from "./screens/student/Live";
 import { JoinClass } from "./screens/student/JoinClass";
 import { RunClass } from "./screens/instructor/RunClass";
-import { Projector } from "./screens/instructor/Projector";
 import { StudentShell } from "./components/StudentShell";
-
-function isProjectorRoute(path: string) {
-  return /^\/teach\/run\/[^/]+\/projector\/?$/.test(path);
-}
 
 function InstructorNav() {
   const { path } = useLocation();
@@ -89,7 +89,6 @@ function InstructorSurface() {
         <Route path="/student/review" component={StudentReviewPreview} />
         <Route path="/student/grades" component={StudentGradesPreview} />
         <Route path="/teach/run/:sessionId" component={RunClass} />
-        <Route path="/teach/class/:sessionId" component={ClassRecordRoute} />
         <Route path="/view/:releaseId" component={Viewer} />
         <Route default component={TeachHome} />
       </Router>
@@ -122,85 +121,21 @@ function Topbar() {
   );
 }
 
-/** The one URL-driven branch App takes is "/join/*", and App reads the global
- *  `location`, which is not reactive. When JoinClass finishes and calls
- *  `route("/live")`, only the Router inside JoinRouteShell re-renders — App
- *  keeps rendering the join shell, whose fallback used to be the sign-in
- *  screen. Every first-time student hit that: claim a PIN, land on /live, see
- *  "Sign in" until a manual reload. This signal is App's reactive view of the
- *  path; PathSync keeps it current from inside the shell's LocationProvider. */
-const currentPath = signal(location.pathname);
-
-function PathSync() {
-  const { path } = useLocation();
-  useEffect(() => {
-    currentPath.value = path;
-  }, [path]);
-  return null;
-}
-
-/** Signed out, any route → sign in. Signed in, the join shell is only for
- *  /join/* — for anything else PathSync is about to hand control back to App,
- *  so show a quiet loading beat, never a sign-in form to a signed-in student. */
-function JoinFallback() {
-  if (!session.value) return <SignIn />;
-  return (
-    <div class="empty-state card" role="status">
-      <p>{t("app.loading")}</p>
-    </div>
-  );
-}
-
 function JoinRouteShell() {
   return (
     <LocationProvider>
-      <PathSync />
       <Topbar />
       <main class="shell">
         <Router>
           <Route path="/join/:joinCode" component={JoinClass} />
-          <Route default component={JoinFallback} />
+          <Route default component={SignIn} />
         </Router>
       </main>
     </LocationProvider>
   );
 }
 
-function ProjectorUnavailable({ loading = false }: { loading?: boolean }) {
-  return (
-    <main class="projector-screen projector-empty">
-      <div class="card" role={loading ? "status" : "alert"}>
-        <h1>{loading ? t("projector.loading") : t("projector.unavailableTitle")}</h1>
-        {!loading ? <p class="hint">{t("projector.unavailableBody")}</p> : null}
-      </div>
-    </main>
-  );
-}
-
-function ProjectorRoute() {
-  const ctx = context.value;
-  const authorized = !booting.value
-    && Boolean(session.value)
-    && !contextError.value
-    && ctx?.roster_status === "active"
-    && surface.value === "instructor";
-  if (!authorized) return <ProjectorUnavailable loading={booting.value} />;
-
-  return (
-    <LocationProvider>
-      <Router>
-        <Route path="/teach/run/:sessionId/projector" component={Projector} />
-        <Route default component={ProjectorUnavailable} />
-      </Router>
-    </LocationProvider>
-  );
-}
-
 export function App() {
-  // Claim this URL before boot, sign-in, roster, and surface branches. The
-  // dedicated route still verifies authorization before mounting Projector.
-  if (isProjectorRoute(location.pathname)) return <ProjectorRoute />;
-
   if (booting.value) {
     return (
       <div class="shell">
@@ -218,9 +153,7 @@ export function App() {
   // Joining must reach its own authenticated authorization boundary before
   // course-context and roster gates so missing/unenrolled users get the
   // join-specific access explanation and consume any stored auth return.
-  // `currentPath` (not `location.pathname`) so the in-app route("/live") after
-  // a successful join re-renders App out of the join shell.
-  if (currentPath.value.startsWith("/join/")) {
+  if (location.pathname.startsWith("/join/")) {
     return <JoinRouteShell />;
   }
 
@@ -280,3 +213,58 @@ export function App() {
     </LocationProvider>
   );
 }
+```
+
+## Student shell
+
+- Path: `src/components/StudentShell.tsx`
+- Wraps student pages with optional professor-preview notice and the fixed bottom navigation.
+
+```tsx
+import type { ComponentChildren } from "preact";
+import { useLocation } from "preact-iso";
+import { t } from "../i18n";
+
+export function StudentShell({
+  preview,
+  children
+}: {
+  preview: boolean;
+  children: ComponentChildren;
+}) {
+  const { path } = useLocation();
+  const prefix = preview ? "/student" : "";
+  const items = [
+    { href: prefix || "/", glyph: "📅", label: t("nav.today") },
+    { href: `${prefix}/review`, glyph: "📚", label: t("nav.review") },
+    { href: `${prefix}/grades`, glyph: "✅", label: t("nav.grades") }
+  ];
+
+  return (
+    <>
+      {preview ? (
+        <aside class="student-preview-banner" role="status">
+          <span>
+            <strong>{t("student.preview.title")}</strong>{" "}
+            {t("student.preview.body")}
+          </span>
+          <a class="btn quiet" href="/teach">{t("student.preview.exit")}</a>
+        </aside>
+      ) : null}
+      {children}
+      <nav class="bottom-nav" aria-label={t("nav.main")}>
+        {items.map((item) => (
+          <a
+            href={item.href}
+            aria-current={path === item.href ? "page" : undefined}
+          >
+            <span class="glyph" aria-hidden="true">{item.glyph}</span>
+            {item.label}
+          </a>
+        ))}
+      </nav>
+    </>
+  );
+}
+```
+

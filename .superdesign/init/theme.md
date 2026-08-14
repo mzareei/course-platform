@@ -1,3 +1,21 @@
+# Theme and design tokens
+
+## Compact token summary
+
+- Framework: Preact/Vite with custom semantic components and one vanilla CSS stylesheet; no UI component library and no Tailwind.
+- Fonts: `Inter`, `Avenir Next`, `Segoe UI`, sans-serif.
+- Brand/accent: teal `#009b9d`; accent surfaces use pale teal; destructive state is restrained red.
+- Light surface: warm off-white page, white cards, dark navy text, muted slate secondary text.
+- Dark surface: deep navy page and cards, off-white text, muted blue-gray secondary text.
+- Shape: rounded cards and controls (roughly 8–24px), pill statuses at 999px.
+- Spacing: 4/8/12/16/20/24/32px rhythm with responsive grids.
+- Shadows: subtle low-elevation card and modal shadows; borders remain visible.
+- Breakpoints: responsive adaptations around 960px, 760px, and 600px.
+- Presentation intent: calm, high-contrast, readable at room distance; status and actions never rely on color alone.
+
+## Raw source: `src/styles/app.css`
+
+```css
 /* =============================================================================
    Course Platform — design system
    Tokens ported from the Gen-2 app (TC2007B app.css): neutral surfaces, one blue
@@ -16,7 +34,7 @@
   --surface-2: #eef2f8;
   --surface-3: #e4eaf3;
   --border: #dbe3ee;
-  --border-strong: #a9b8d6;
+  --border-strong: #c3cee0;
 
   --text: #12203a;
   --text-muted: #55637a;
@@ -31,7 +49,7 @@
   --accent: #0a6f65;
   --accent-soft: #e2f5f2;
 
-  --good: #157a3d;
+  --good: #15803d;
   --good-soft: #e6f5ec;
   --warn: #a45a08;
   --warn-soft: #fbefdc;
@@ -45,12 +63,10 @@
 
   --shadow-sm: 0 1px 2px rgba(18, 32, 58, 0.06), 0 1px 3px rgba(18, 32, 58, 0.05);
   --shadow: 0 6px 18px rgba(18, 32, 58, 0.07), 0 2px 6px rgba(18, 32, 58, 0.05);
-  --shadow-lg: 0 20px 44px rgba(18, 32, 58, 0.16), 0 6px 16px rgba(18, 32, 58, 0.08);
   --ring: 0 0 0 3px rgba(37, 99, 235, 0.32);
   --ease: 160ms cubic-bezier(0.2, 0, 0, 1);
-  --ease-press: 100ms cubic-bezier(0.2, 0, 0, 1);
 
-  --font-sans: "Inter Variable", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --shell-max: 1080px;
@@ -64,7 +80,7 @@
     --surface-2: #1b2739;
     --surface-3: #223148;
     --border: #29374d;
-    --border-strong: #4c6285;
+    --border-strong: #3a4c68;
     --text: #eaf1fb;
     --text-muted: #a6b4c9;
     --text-subtle: #7f8ea6;
@@ -84,7 +100,6 @@
     --danger-soft: rgba(255, 122, 134, 0.15);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
-    --shadow-lg: 0 24px 56px rgba(0, 0, 0, 0.48), 0 8px 20px rgba(0, 0, 0, 0.32);
     --ring: 0 0 0 3px rgba(90, 155, 255, 0.4);
   }
 }
@@ -96,7 +111,7 @@
   --surface-2: #1b2739;
   --surface-3: #223148;
   --border: #29374d;
-  --border-strong: #4c6285;
+  --border-strong: #3a4c68;
   --text: #eaf1fb;
   --text-muted: #a6b4c9;
   --text-subtle: #7f8ea6;
@@ -116,7 +131,6 @@
   --danger-soft: rgba(255, 122, 134, 0.15);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
-  --shadow-lg: 0 24px 56px rgba(0, 0, 0, 0.48), 0 8px 20px rgba(0, 0, 0, 0.32);
   --ring: 0 0 0 3px rgba(90, 155, 255, 0.4);
 }
 
@@ -143,10 +157,7 @@ h1 { font-size: 1.6rem; font-weight: 750; letter-spacing: -0.015em; }
 h2 { font-size: 1.2rem; font-weight: 700; }
 h3 { font-size: 1rem; font-weight: 650; }
 p { margin: 0; }
-a { color: var(--primary); text-underline-offset: 0.15em; }
-a:hover { color: var(--primary-strong); }
-
-::selection { background: var(--primary-soft); color: var(--text); }
+a { color: var(--primary); }
 
 :focus-visible { outline: none; box-shadow: var(--ring); border-radius: var(--radius-sm); }
 
@@ -158,16 +169,10 @@ a:hover { color: var(--primary-strong); }
 .shell {
   max-width: var(--shell-max);
   margin: 0 auto;
-  padding: 1rem 1rem 1.5rem;
+  padding: 1rem 1rem 6.5rem; /* room for the anchored primary action on phones */
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-/* Only the student surface renders the fixed bottom nav (StudentShell), and it
-   is the one thing that needs bottom clearance. Keyed on the nav itself so the
-   instructor's student-preview routes keep the clearance too. */
-.shell:has(.bottom-nav) {
-  padding-bottom: 6.5rem;
 }
 
 .topbar {
@@ -188,18 +193,6 @@ a:hover { color: var(--primary-strong); }
   font-size: 1rem;
   color: var(--text);
   text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-/* A small mark so the wordmark reads as an identity, not a leftover label. */
-.topbar .brand::before {
-  content: "";
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  flex: 0 0 auto;
 }
 .topbar .spacer { flex: 1; }
 
@@ -233,16 +226,6 @@ a:hover { color: var(--primary-strong); }
 }
 .card.muted { background: var(--surface-2); box-shadow: none; }
 
-/* A card that IS a link (the Home quick links) should answer the cursor. */
-a.card {
-  transition: border-color var(--ease), box-shadow var(--ease), transform var(--ease);
-}
-a.card:hover {
-  border-color: var(--primary-soft-border);
-  box-shadow: var(--shadow);
-  transform: translateY(-1px);
-}
-
 .stack { display: flex; flex-direction: column; gap: 0.75rem; }
 .row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 .grid-2 { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
@@ -275,35 +258,10 @@ a.card:hover {
   border-radius: var(--radius-sm);
   cursor: pointer;
   min-height: 44px;
-  touch-action: manipulation;
-  transition: background var(--ease), border-color var(--ease), transform var(--ease-press), box-shadow var(--ease);
+  transition: background var(--ease), border-color var(--ease);
 }
 .btn:hover { background: var(--surface-2); }
-.btn:active:not(:disabled) { transform: scale(0.98); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* A button mid-request: keep the busy text, add a small ring. The global
-   prefers-reduced-motion kill switch freezes the rotation, which is fine —
-   a static ring still reads as "working". */
-.btn.loading {
-  position: relative;
-  pointer-events: none;
-}
-.btn.loading::after {
-  content: "";
-  display: inline-block;
-  width: 0.85em;
-  height: 0.85em;
-  margin-left: 0.5em;
-  vertical-align: -0.1em;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  animation: btn-spin 0.7s linear infinite;
-}
-@keyframes btn-spin {
-  to { transform: rotate(360deg); }
-}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn.primary {
   background: var(--primary);
@@ -313,9 +271,7 @@ a.card:hover {
 .btn.primary:hover { background: var(--primary-strong); border-color: var(--primary-strong); }
 
 .btn.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
-.btn.danger:hover { background: var(--danger); border-color: var(--danger); color: var(--text-onfill); }
 .btn.quiet { border-color: transparent; background: transparent; color: var(--primary); }
-.btn.quiet:hover { background: var(--primary-soft); }
 
 /* The one primary action on student phones: full width, bottom anchored. */
 .action-dock {
@@ -343,8 +299,7 @@ label.field {
   font-weight: 650;
   color: var(--text-muted);
 }
-input[type="email"], input[type="text"], input[type="number"], input[type="password"],
-input[type="search"], input[type="date"], textarea, select {
+input[type="email"], input[type="text"], input[type="number"], textarea, select {
   font: inherit;
   color: var(--text);
   background: var(--surface-1);
@@ -352,17 +307,6 @@ input[type="search"], input[type="date"], textarea, select {
   border-radius: var(--radius-sm);
   padding: 0.6rem 0.75rem;
   min-height: 44px;
-  transition: border-color var(--ease), box-shadow var(--ease);
-}
-input[type="email"]:hover, input[type="text"]:hover, input[type="number"]:hover,
-input[type="password"]:hover, input[type="search"]:hover, input[type="date"]:hover,
-textarea:hover, select:hover {
-  border-color: var(--text-subtle);
-}
-input[type="email"]:focus-visible, input[type="text"]:focus-visible, input[type="number"]:focus-visible,
-input[type="password"]:focus-visible, input[type="search"]:focus-visible, input[type="date"]:focus-visible,
-textarea:focus-visible, select:focus-visible {
-  border-color: var(--primary);
 }
 textarea { min-height: 7rem; resize: vertical; }
 
@@ -383,8 +327,7 @@ textarea { min-height: 7rem; resize: vertical; }
 .pill.open { background: var(--good-soft); color: var(--good); }
 .pill.scheduled { background: var(--primary-soft); color: var(--primary); }
 .pill.review { background: var(--accent-soft); color: var(--accent); }
-/* --text-muted, not --text-subtle: subtle-on-surface-3 was 4.47:1, a hair under AA. */
-.pill.hidden { background: var(--surface-3); color: var(--text-muted); }
+.pill.hidden { background: var(--surface-3); color: var(--text-subtle); }
 .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.live {
   background: var(--danger-soft);
@@ -405,8 +348,6 @@ table.data {
   min-width: 560px;
 }
 table.data th, table.data td { text-align: left; padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); }
-table.data tbody tr { transition: background var(--ease); }
-table.data tbody tr:hover { background: var(--surface-2); }
 table.data th {
   font-size: 0.72rem;
   letter-spacing: 0.07em;
@@ -418,89 +359,6 @@ table.data th {
 table.data tr:last-child td { border-bottom: none; }
 table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
 
-/* --------------------------------------------------- class record (2 tables) */
-/* Sortable column headings. A button, not a styled div, so the keyboard and a
-   screen reader get the same affordance the mouse does. */
-.sort-header {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.sort-header:hover { color: var(--text); }
-.sort-header.active { color: var(--text); }
-table.data th.num .sort-header { width: 100%; text-align: right; }
-
-.attendance-pill {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  border: 1px solid transparent;
-}
-/* Real theme tokens, so the pills stay readable in dark mode — the previous
-   --ok/--ok-bg tokens never existed and the hex fallbacks ignored the theme. */
-.attendance-pill.present { background: var(--good-soft); color: var(--good); }
-.attendance-pill.late { background: var(--warn-soft); color: var(--warn); }
-.attendance-pill.left-early { background: rgba(120, 120, 140, 0.16); color: var(--text-muted); }
-.attendance-pill.absent { background: var(--danger-soft); color: var(--danger); }
-
-/* ------------------------------------------------- student class grades
-
-   A phone is the student's device for this screen, and table.data carries a
-   560px min-width — on a 375px screen that is a horizontal scrollbar hiding
-   the class name behind it. One card per class instead, so nothing is ever
-   off-screen and the grade stays next to what produced it. */
-.class-grade-card { gap: 0.75rem; }
-.class-grade-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-.class-grade-title { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
-.class-grade-title strong { font-size: 0.98rem; line-height: 1.3; }
-.class-grade-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  flex: 0 0 auto;
-}
-.class-grade-stats {
-  display: grid;
-  gap: 0.6rem;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-}
-.class-grade-stat { display: flex; flex-direction: column; gap: 0.2rem; }
-.class-grade-stat dt {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-subtle);
-}
-.class-grade-stat dd { margin: 0; font-size: 0.95rem; font-weight: 600; }
-.class-grade-stat dd .attendance-pill { font-weight: 700; }
-
-.grade-breakdown { padding: 0.35rem 0 0.2rem; }
-.grade-breakdown ol {
-  margin: 0 0 0.5rem;
-  padding-left: 1.1rem;
-  display: grid;
-  gap: 0.2rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-.grade-breakdown .grade-breakdown-result { color: var(--text); font-weight: 650; }
-
 /* ---------------------------------------------------------------- nav tabs (instructor) */
 .nav-tabs {
   display: flex;
@@ -510,8 +368,7 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   background: var(--surface-2);
   border-radius: var(--radius);
 }
-.nav-tabs a,
-.nav-tabs .nav-tab-btn {
+.nav-tabs a {
   flex: 1;
   text-align: center;
   text-decoration: none;
@@ -525,27 +382,11 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--ease), color var(--ease), box-shadow var(--ease);
 }
-.nav-tabs a:hover,
-.nav-tabs .nav-tab-btn:hover { color: var(--text); background: var(--surface-1); }
-.nav-tabs a[aria-current="page"],
-.nav-tabs .nav-tab-btn[aria-pressed="true"] {
+.nav-tabs a[aria-current="page"] {
   background: var(--surface-1);
   color: var(--text);
   box-shadow: var(--shadow-sm);
-}
-.nav-tabs a[aria-current="page"]:hover,
-.nav-tabs .nav-tab-btn[aria-pressed="true"]:hover { background: var(--surface-1); }
-/* The filter variant is a real button — strip the UA chrome, keep the tab look. */
-.nav-tabs .nav-tab-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  font: inherit;
-  font-weight: 650;
-  cursor: pointer;
-  touch-action: manipulation;
 }
 
 /* ---------------------------------------------------------------- student bottom nav */
@@ -565,13 +406,10 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   align-items: center;
   gap: 0.15rem;
   padding: 0.5rem 0 0.6rem;
-  min-height: 44px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 650;
   color: var(--text-subtle);
   text-decoration: none;
-  touch-action: manipulation;
-  transition: color var(--ease);
 }
 .bottom-nav a[aria-current="page"] { color: var(--primary); }
 .bottom-nav .glyph { font-size: 1.25rem; line-height: 1; }
@@ -668,7 +506,7 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   gap: 1rem;
   align-items: start;
 }
-.run-deck-column { min-width: 0; position: relative; }
+.run-deck-column { min-width: 0; }
 .run-control-column {
   min-width: 0;
   display: flex;
@@ -701,10 +539,10 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.65rem 0.8rem;
-  border: 1px solid var(--warn);
+  border: 1px solid var(--warning, #d6a52f);
   border-radius: 0.75rem;
   background: var(--surface-1);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
 }
 .run-end-confirm {
   flex-basis: 100%;
@@ -756,31 +594,6 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   padding: 0.65rem 0.75rem;
   font-size: 0.9rem;
 }
-.checkpoint-autosend {
-  display: grid;
-  gap: 0.3rem;
-  padding: 0.7rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-.checkpoint-autosend-switch {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  min-height: 44px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.checkpoint-autosend-switch input {
-  width: 1.15rem;
-  height: 1.15rem;
-  flex: none;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-.checkpoint-autosend .hint {
-  margin: 0;
-}
 .checkpoint-manual {
   padding: 0.75rem;
   border: 1px solid var(--warn);
@@ -795,121 +608,6 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .checkpoint-final-quiz {
   border-color: var(--primary);
 }
-
-/* Audience-facing live question. The deck engine renders an equivalent layer
-   inside its own document so browser fullscreen does not hide the question. */
-.classroom-question-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: grid;
-  place-items: center;
-  padding: clamp(1.5rem, 5vw, 5rem);
-  /* Keep the parent layer opaque so the deck's own fullscreen layer is not
-     composited underneath it in normal (non-fullscreen) Run Class mode. */
-  background: var(--surface);
-  color: var(--text);
-}
-.classroom-question-layer:fullscreen {
-  width: 100vw;
-  height: 100vh;
-  overflow: auto;
-}
-.classroom-question-layer-fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  width: 100vw;
-  height: 100vh;
-  overflow: auto;
-}
-.classroom-question-shell {
-  width: min(1100px, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.classroom-question-shell h2 {
-  margin: 0;
-  font-size: clamp(1.8rem, 4vw, 3.8rem);
-  line-height: 1.1;
-}
-.classroom-question-instruction,
-.classroom-question-hint {
-  color: var(--text-muted);
-}
-.classroom-question-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-  margin-top: 0.5rem;
-}
-.classroom-question-option {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.8rem;
-  align-items: start;
-  padding: 1.1rem 1.2rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  font-size: clamp(1rem, 1.8vw, 1.35rem);
-}
-.classroom-question-key {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--text-muted);
-  font-weight: 800;
-}
-.classroom-question-hint { margin-top: 0.5rem; }
-.classroom-question-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.25rem;
-}
-
-@media (max-width: 640px) {
-  .classroom-question-options { grid-template-columns: 1fr; }
-}
-
-/* Professor-only question bank review and editing. */
-.question-bank-review { gap: 0.9rem; }
-.question-bank-question-list { gap: 0.75rem; }
-.question-bank-question { gap: 0.75rem; background: var(--surface); }
-.question-bank-question h4 { margin: 0.25rem 0 0; font-size: 1.05rem; }
-.question-bank-question-tags { flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
-.question-bank-answer-list { display: grid; gap: 0.35rem; }
-.question-bank-answer {
-  display: grid;
-  grid-template-columns: 1.6rem 1fr;
-  gap: 0.5rem;
-  align-items: start;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
-}
-.question-bank-answer.correct {
-  border-color: var(--good);
-  background: var(--good-soft);
-}
-.question-bank-answer small { display: block; margin-top: 0.15rem; color: var(--text-muted); }
-.question-bank-editor { border-top: 1px solid var(--border); padding-top: 0.8rem; }
-.question-bank-difficulty { max-width: 18rem; }
-.question-bank-editor-options { gap: 0.65rem; }
-.question-bank-editor-option {
-  display: grid;
-  gap: 0.45rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
-}
-.checkbox-label { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-muted); font-size: 0.88rem; }
 
 @media (max-width: 960px) {
   .run-class-shell {
@@ -941,7 +639,7 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   font-weight: 700;
   letter-spacing: 0.06em;
   padding: 0.5rem 0.6rem;
-  min-height: 44px;
+  min-height: 40px;
   border: 1px solid var(--border-strong);
   color: var(--text-muted);
 }
@@ -962,14 +660,9 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   padding: 1rem 1.1rem;
   min-height: 60px;
 }
-.pulse-choice.tappable {
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: border-color var(--ease), background var(--ease), transform var(--ease-press);
-}
+.pulse-choice.tappable { cursor: pointer; transition: border-color var(--ease), background var(--ease); }
 .pulse-choice.tappable:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-soft); }
-.pulse-choice.tappable:active:not(:disabled) { transform: scale(0.985); }
-.pulse-choice.tappable:disabled { opacity: 0.5; cursor: not-allowed; }
+.pulse-choice.tappable:disabled { opacity: 0.55; cursor: not-allowed; }
 .pulse-choice.correct { border-color: var(--good); background: var(--good-soft); color: var(--good); }
 
 .pulse-verdict { font-weight: 700; font-size: 1.05rem; }
@@ -1005,118 +698,6 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   color: var(--text-muted);
 }
 
-/* ---------------------------------------------------------------- projector */
-.projector-screen {
-  position: relative;
-  display: flex;
-  width: 100vw;
-  min-height: 100dvh;
-  overflow: hidden;
-  background: var(--surface);
-}
-.projector-deck {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  min-height: 100dvh;
-}
-.projector-deck .run-deck-host,
-.projector-deck .run-deck-frame {
-  width: 100%;
-  height: 100%;
-  min-height: 100dvh;
-  aspect-ratio: auto;
-  border: 0;
-  border-radius: 0;
-}
-.projector-deck.is-covered {
-  position: absolute;
-  inset: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-.projector-status {
-  position: absolute;
-  inset: auto 1.25rem 1.25rem;
-  z-index: 2;
-  margin: 0 auto;
-  width: fit-content;
-  max-width: calc(100% - 2.5rem);
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface-1);
-  color: var(--text-muted);
-  box-shadow: var(--shadow-sm);
-}
-.projector-empty {
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-.projector-empty .card { max-width: 34rem; }
-.projector-pulse {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  justify-content: center;
-  gap: clamp(1.2rem, 3vh, 2.75rem);
-  width: min(92vw, 1120px);
-  margin: 0 auto;
-  padding: clamp(1.5rem, 5vw, 5rem) 0;
-}
-.projector-pulse-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.projector-pulse-progress {
-  color: var(--text-muted);
-  font-size: clamp(1rem, 1.7vw, 1.45rem);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-.projector-pulse h1 {
-  font-size: clamp(2rem, 4.5vw, 4.6rem);
-  line-height: 1.08;
-}
-.projector-pulse-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(0.75rem, 1.6vw, 1.25rem);
-}
-.projector-pulse-option {
-  display: flex;
-  align-items: center;
-  min-height: clamp(5.5rem, 14vh, 10rem);
-  padding: clamp(1rem, 2.5vw, 2rem);
-  border: 2px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  font-size: clamp(1.2rem, 2.25vw, 2.15rem);
-  font-weight: 700;
-  line-height: 1.25;
-}
-.projector-pulse-option.correct {
-  border-color: var(--good);
-  background: var(--good-soft);
-  color: var(--good);
-}
-.projector-pulse-reveal {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  font-size: clamp(1rem, 1.8vw, 1.35rem);
-}
-.projector-pulse-correct {
-  color: var(--good);
-  font-weight: 750;
-}
-@media (max-width: 680px) {
-  .projector-pulse-options { grid-template-columns: 1fr; }
-}
-
 /* ---------------------------------------------------------------- quiz player */
 .pulse-choice.selected {
   border-color: var(--primary);
@@ -1139,20 +720,5 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 @media (prefers-reduced-motion: reduce) {
   .progress-fill { transition: none; }
 }
+```
 
-/* ---------------------------------------------------------------- import prompt */
-.import-prompt-text {
-  margin: 0;
-  max-height: 22rem;
-  overflow: auto;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}

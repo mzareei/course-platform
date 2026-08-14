@@ -99,7 +99,14 @@ export function ClassRecord({ sessionId }: { sessionId?: string }) {
       {error ? <p class="error-text" role="alert">{error}</p> : null}
       {posted ? (
         <p class="hint">
-          {t("classRecord.postedResult", { posted: posted.posted, skipped: posted.skipped })}
+          {posted.posted === 1
+            ? t("classRecord.postedResultOne")
+            : t("classRecord.postedResultMany", { posted: posted.posted })}
+          {posted.skipped > 0
+            ? ` ${posted.skipped === 1
+              ? t("classRecord.postedSkippedOne")
+              : t("classRecord.postedSkippedMany", { skipped: posted.skipped })}`
+            : ""}
         </p>
       ) : null}
 
