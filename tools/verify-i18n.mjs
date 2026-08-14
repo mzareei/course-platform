@@ -71,7 +71,7 @@ function walk(dir) {
   return out;
 }
 
-const componentFiles = [...walk("src/screens"), ...walk("src/components")];
+const componentFiles = [...walk("src/screens"), ...walk("src/components"), ...walk("src/features")];
 const englishWords = /\b(the|your|you|and|with|from|this|that|when|professor|student|class|course)\b/i;
 
 for (const rel of componentFiles) {
