@@ -396,6 +396,17 @@ textarea { min-height: 7rem; resize: vertical; }
   background: currentColor;
 }
 
+.quiz-countdown {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.quiz-countdown.warn {
+  color: var(--warn);
+}
+
 /* ---------------------------------------------------------------- tables */
 .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-1); }
 table.data {

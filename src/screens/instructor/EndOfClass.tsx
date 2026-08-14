@@ -17,6 +17,7 @@ import {
   type QuizStatus
 } from "../../api/quiz";
 import { classReflections, type ClassReflection } from "../../api/reflection";
+import { clockText } from "../../features/quiz/clock";
 
 const POLL_MS = 4000;
 
@@ -27,6 +28,7 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   const [reflections, setReflections] = useState<ClassReflection[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
   const poll = useRef<number | undefined>(undefined);
 
   // Recover after a page reload: adopt a running quiz, and separately load the
@@ -68,6 +70,15 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
     tick();
     poll.current = setInterval(tick, POLL_MS) as unknown as number;
     return () => clearInterval(poll.current);
+  }, [instanceId]);
+
+  // The status poll is every four seconds; the countdown has to move every one.
+  // It ticks locally and re-syncs to the server's ends_at on each poll, so a
+  // sleeping laptop's drift is corrected rather than accumulated.
+  useEffect(() => {
+    if (!instanceId) return;
+    const clock = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(clock);
   }, [instanceId]);
 
   // Reflections belong to the class session, not to any one quiz, and keep
@@ -113,6 +124,7 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   }
 
   const running = Boolean(instanceId);
+  const remainingMs = status?.ends_at ? new Date(status.ends_at).getTime() - now : 0;
 
   return (
     <section class="card checkpoint-final-quiz">
@@ -124,9 +136,21 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
         <div class="stack">
           <p class="big-number">
             {status?.submitted ?? 0}
-            <span style="font-size:1rem;font-weight:600;color:var(--text-muted);"> / {status?.enrolled ?? "…"}</span>
+            <span style="font-size:1rem;font-weight:600;color:var(--text-muted);">
+              {" / "}{status?.present ?? "…"}
+            </span>
           </p>
-          <p class="hint">{t("endOfClass.submittedOf", { started: status?.started ?? 0 })}</p>
+          <p class="hint">{t("endOfClass.submittedOfPresent", {
+            started: status?.started ?? 0,
+            present: status?.present ?? 0
+          })}</p>
+          {status?.ends_at ? (
+            <p class={`quiz-countdown${remainingMs <= 60_000 ? " warn" : ""}`}
+               role="timer"
+               aria-live="off">
+              {t("endOfClass.timeLeft", { time: clockText(remainingMs) })}
+            </p>
+          ) : null}
           <button class="btn" type="button" disabled={busy} onClick={onClose}>
             {busy ? t("endOfClass.closing") : t("endOfClass.close")}
           </button>
@@ -138,6 +162,13 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
               <span class="pill hidden">{t("endOfClass.closed")}</span>
               {typeof lastResult.average_score === "number" ? (
                 <span class="hint">{t("endOfClass.average", { score: lastResult.average_score })}</span>
+              ) : null}
+              {lastResult.closed_reason ? (
+                <span class="hint">
+                  {lastResult.closed_reason === "everyone"
+                    ? t("endOfClass.closedEveryone")
+                    : t("endOfClass.closedTime")}
+                </span>
               ) : null}
             </div>
           ) : null}

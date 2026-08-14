@@ -96,8 +96,12 @@ export interface QuizStatus {
   ends_at: string | null;
   question_count: number | null;
   enrolled: number;
+  /** Students in the room today — the roster is who COULD have come. The
+   *  completeness message has to speak in this number. */
+  present: number;
   started: number;
   submitted: number;
+  closed_reason: "time" | "everyone" | null;
   average_score: number | null;
 }
 
