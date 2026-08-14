@@ -77,6 +77,9 @@ Spacing comes from flex/grid `gap`, not per-element margins.
 - **Buttons:** `.btn`, `.btn.primary` (the one main action), `.btn.quiet`
   (tertiary/links), `.btn.danger` (irreversible). Minimum 44px tall — these are
   tapped in a lecture hall.
+- **`.btn.loading`** — add it (plus `aria-busy`) to any button whose request is
+  in flight; it appends a small spinner ring after the busy label. Keep the
+  text swap ("Signing in…") — the ring supplements it, never replaces it.
 - **`StatusPill`** — never render a raw state string. It maps machine states to
   plain language.
 - **`.pill`** — `live` (in progress), `warn`, `hidden` (neutral/finished).
@@ -122,7 +125,7 @@ button.
   or copy-pasted translation, on drifting `{placeholders}`, and on hardcoded
   English in a screen.
 - `t("key", { name: value })` interpolates.
-- Currently ~318 string pairs.
+- Currently ~1,140 string pairs.
 - **Known gap:** content *titles* come from the database and are English only.
   Translating them needs a `content_items.title_es` column.
 
