@@ -16,6 +16,7 @@ export const strings = {
   "app.themeToLight": ["Switch to light theme", "Cambiar a tema claro"],
   "app.themeToDark": ["Switch to dark theme", "Cambiar a tema oscuro"],
   "app.language": ["Language", "Idioma"],
+  "app.pressAgainConfirm": ["Press again to confirm", "Presiona otra vez para confirmar"],
 
   // Fallbacks for backend errors that arrive without a translatable code.
   "errors.signedOut": [
@@ -1686,6 +1687,10 @@ export const strings = {
   "content.banks.checkpointCount": [
     "{count} checkpoints",
     "{count} puntos de control"
+  ],
+  "content.banks.planCheckpoints": [
+    "Checkpoints come from this class's question plan.",
+    "Los puntos de control vienen del plan de preguntas de la clase."
   ],
   "content.banks.checkpoint": [
     "Checkpoint {number} · after slide {slide}",

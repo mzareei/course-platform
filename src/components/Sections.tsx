@@ -20,6 +20,7 @@ import { useEffect, useState } from "preact/hooks";
 import { listSections, saveSection, sectionErrorKey, type CourseSection } from "../api/schedule";
 import { StatusPill } from "./StatusPill";
 import { SectionEditor } from "./SectionEditor";
+import { ConfirmButton } from "./ConfirmButton";
 import { isOwner, refreshContext } from "../state/session";
 import { t, apiErrorText } from "../i18n";
 
@@ -70,7 +71,6 @@ export function Sections() {
 
   async function onToggle(section: CourseSection) {
     const retiring = section.status === "active" || section.status === "planned";
-    if (retiring && !confirm(t("sections.retireConfirm", { code: section.section_code }))) return;
     setError(null);
     setNotice(null);
     setBusy(section.id);
@@ -150,14 +150,24 @@ export function Sections() {
                             {t("sections.members")}
                           </a>
                           {isOwner.value ? (
-                            <button
-                              class="btn quiet"
-                              type="button"
-                              disabled={busy === section.id}
-                              onClick={() => void onToggle(section)}
-                            >
-                              {live ? t("sections.retire") : t("sections.reactivate")}
-                            </button>
+                            live ? (
+                              <ConfirmButton
+                                label={t("sections.retire")}
+                                confirmLabel={t("app.pressAgainConfirm")}
+                                className="btn quiet"
+                                disabled={busy === section.id}
+                                onConfirm={() => void onToggle(section)}
+                              />
+                            ) : (
+                              <button
+                                class="btn quiet"
+                                type="button"
+                                disabled={busy === section.id}
+                                onClick={() => void onToggle(section)}
+                              >
+                                {t("sections.reactivate")}
+                              </button>
+                            )
                           ) : null}
                         </div>
                       </td>

@@ -15,6 +15,7 @@ import { t, apiErrorText } from "../i18n";
 import { activeRoles } from "../state/session";
 import { QuestionBankReview } from "./QuestionBankReview";
 import { ForceDeleteControl } from "./ForceDeleteControl";
+import { ConfirmButton } from "./ConfirmButton";
 
 export function QuestionBanks() {
   const [banks, setBanks] = useState<CheckpointBankSummary[] | null>(null);
@@ -123,9 +124,6 @@ function QuestionBankCard({
   }
 
   async function remove(force = false) {
-    if (!force && !confirm(t("content.banks.deleteBankConfirm", { title: bank.content_title || bank.title, count: bank.total }))) {
-      return;
-    }
     setDeleting(true);
     setDeleteError(null);
     try {
@@ -170,6 +168,11 @@ function QuestionBankCard({
           {" · "}
           {t("content.banks.sourcePages", { pages: bank.source_pdf_pages.join(", ") })}
         </p>
+      ) : flexible && bank.source_pdf_pages.length === 0 && checkpointCount === 0 ? (
+        // An imported bank has no slide-mapped checkpoints of its own; saying
+        // "0 checkpoints" reads as broken when the class's question plan is
+        // what actually supplies them.
+        <p class="hint">{t("content.banks.planCheckpoints")}</p>
       ) : (
         <p class="hint">
           {t("content.banks.checkpointCount", { count: checkpointCount })}
@@ -187,14 +190,13 @@ function QuestionBankCard({
               ? t("content.banks.closeReview")
               : t("content.banks.reviewQuestions")}
           </button>
-          <button
-            class="btn quiet"
-            type="button"
+          <ConfirmButton
+            label={t("content.banks.deleteBank")}
+            confirmLabel={t("app.pressAgainConfirm")}
+            className="btn quiet"
             disabled={deleting}
-            onClick={() => void remove()}
-          >
-            {t("content.banks.deleteBank")}
-          </button>
+            onConfirm={() => void remove()}
+          />
         </div>
       ) : null}
 

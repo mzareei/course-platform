@@ -5,6 +5,7 @@ import {
   updateQuestion,
   type BankQuestion
 } from "../api/checkpoints";
+import { ConfirmButton } from "./ConfirmButton";
 import { t, apiErrorText } from "../i18n";
 
 type DraftOption = {
@@ -114,7 +115,6 @@ export function QuestionBankReview({
   }
 
   async function remove(question: BankQuestion) {
-    if (!confirm(t("content.banks.deleteConfirm"))) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -215,9 +215,13 @@ function QuestionReviewCard({
             <button class="btn quiet" type="button" disabled={busy} onClick={onEdit}>
               {t("content.banks.editQuestion")}
             </button>
-            <button class="btn quiet" type="button" disabled={busy} onClick={onDelete}>
-              {t("content.banks.deleteQuestion")}
-            </button>
+            <ConfirmButton
+              label={t("content.banks.deleteQuestion")}
+              confirmLabel={t("app.pressAgainConfirm")}
+              className="btn quiet"
+              disabled={busy}
+              onConfirm={onDelete}
+            />
           </div>
         ) : null}
       </div>

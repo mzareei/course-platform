@@ -40,8 +40,6 @@ export interface RosterApplyResult extends RosterPreview {
   };
 }
 
-export const ROSTER_ROLES: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
-
 export function listRoster() {
   return callFn<RosterOverview>("course-roster-management");
 }

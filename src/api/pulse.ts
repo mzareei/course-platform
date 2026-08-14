@@ -91,15 +91,6 @@ export interface StudentPulseView {
   };
 }
 
-export function pushPulse(input: {
-  class_session_id: string;
-  question: { text: string; options: PulseOption[]; correct_key: string };
-  time_limit_seconds?: number;
-  points?: number;
-}) {
-  return callFn<{ round: PulseRound }>("course-pulse", { action: "push", ...input });
-}
-
 export function pushBankQuestion(input: {
   class_session_id: string;
   question_id: string;

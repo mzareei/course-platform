@@ -21,6 +21,7 @@ import { listSessions, type ClassSession } from "../api/schedule";
 import { canReleaseToReview } from "../api/contentVisibility";
 import { PublicLinkCleanup } from "./PublicLinkCleanup";
 import { ForceDeleteControl } from "./ForceDeleteControl";
+import { ConfirmButton } from "./ConfirmButton";
 import { refreshContext } from "../state/session";
 import { t, formatDay, apiErrorText } from "../i18n";
 import { ApiError } from "../api/client";
@@ -53,6 +54,9 @@ export function ContentLibraryView() {
   // server.
   const [sharingItemId, setSharingItemId] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<string>("");
+  // Assigning replaces a class day's lecture, so it gets the same two-press
+  // treatment: the select stages the class, the ConfirmButton performs it.
+  const [assignTarget, setAssignTarget] = useState<{ itemId: string; sessionId: string } | null>(null);
 
   async function load() {
     try {
@@ -238,28 +242,28 @@ export function ContentLibraryView() {
                         {busy === item.id ? t("content.library.copying") : t("content.library.copy")}
                       </button>
                     ) : canEdit && !wholeCourseRelease ? (
-                      <button
-                        class="btn primary"
-                        type="button"
+                      <ConfirmButton
+                        label={busy === item.id ? t("content.library.working") : t("content.library.makeAvailable")}
+                        confirmLabel={t("app.pressAgainConfirm")}
+                        className="btn primary"
                         disabled={busy === item.id}
-                        onClick={() => {
-                          if (!confirm(t("content.library.makeAvailableConfirm", { title: item.title }))) return;
+                        onConfirm={() => {
                           void run(item.id, async () => {
                             await makeAvailable({ item, existingRelease: reusableWholeCourseRelease });
                             setNotice(t("content.library.madeAvailable", { title: item.title }));
                           });
                         }}
-                      >
-                        {busy === item.id ? t("content.library.working") : t("content.library.makeAvailable")}
-                      </button>
+                      />
                     ) : null}
                     {canEdit && item.source_kind === "storage_object" ? (
-                      <button
-                        class="btn quiet"
-                        type="button"
+                      <ConfirmButton
+                        label={busy === item.id ? t("content.library.syncing") : t("content.library.syncFromRepository")}
+                        // verify-content-repo-sync-ui requires the armed press to
+                        // show the sync consequences, not a generic press-again.
+                        confirmLabel={t("content.library.syncConfirm", { title: item.title })}
+                        className="btn quiet"
                         disabled={busy === item.id}
-                        onClick={() => {
-                          if (!confirm(t("content.library.syncConfirm", { title: item.title }))) return;
+                        onConfirm={() => {
                           void run(item.id, async () => {
                             const result = await syncContentFromRepository(item.id);
                             setNotice(t(
@@ -270,9 +274,7 @@ export function ContentLibraryView() {
                             ));
                           }, t("content.library.syncFailed", { title: item.title }));
                         }}
-                      >
-                        {busy === item.id ? t("content.library.syncing") : t("content.library.syncFromRepository")}
-                      </button>
+                      />
                     ) : null}
                     {/* Sharing is a distinct privilege from releasing to
                         students, so it is offered independently of whether the
@@ -291,12 +293,12 @@ export function ContentLibraryView() {
                       </button>
                     ) : null}
                     {canEdit && !item.is_shared_with_me ? (
-                      <button
-                        class="btn quiet"
-                        type="button"
+                      <ConfirmButton
+                        label={busy === item.id ? t("content.library.working") : t("content.library.delete")}
+                        confirmLabel={t("app.pressAgainConfirm")}
+                        className="btn quiet"
                         disabled={busy === item.id}
-                        onClick={() => {
-                          if (!confirm(t("content.library.deleteConfirm", { title: item.title, releases: mine.length }))) return;
+                        onConfirm={() => {
                           void run(item.id, async () => {
                             await deleteContentItem(item.id);
                             setNotice(t("content.library.deleted", { title: item.title }));
@@ -310,9 +312,7 @@ export function ContentLibraryView() {
                             await refreshContext();
                           }, t("content.library.deleteFailed"));
                         }}
-                      >
-                        {busy === item.id ? t("content.library.working") : t("content.library.delete")}
-                      </button>
+                      />
                     ) : null}
                   </div>
                 </div>
@@ -388,25 +388,11 @@ export function ContentLibraryView() {
                 <label class="field">
                   {t("content.library.assignToClass")}
                   <select
-                    value=""
+                    value={assignTarget?.itemId === item.id ? assignTarget.sessionId : ""}
                     disabled={busy === item.id || !assignableSessions.length}
                     onChange={(event) => {
-                      const target = event.target as HTMLSelectElement;
-                      const session = assignableSessions.find((candidate) => candidate.session_id === target.value);
-                      target.value = "";
-                      if (!session) return;
-                      if (!confirm(t("content.library.assignConfirm", { lecture: item.title, title: session.title }))) return;
-                      void run(item.id, async () => {
-                        await updateClass({
-                          session_id: session.session_id,
-                          section_id: session.section_id,
-                          title: session.title,
-                          planned_date: session.planned_date,
-                          content_item_id: item.id
-                        });
-                        await refreshContext();
-                        setNotice(t("content.library.assigned", { lecture: item.title, title: session.title }));
-                      });
+                      const sessionId = (event.target as HTMLSelectElement).value;
+                      setAssignTarget(sessionId ? { itemId: item.id, sessionId } : null);
                     }}
                   >
                     <option value="">{t("content.library.assignClassPlaceholder")}</option>
@@ -421,6 +407,35 @@ export function ContentLibraryView() {
                       </option>
                     ))}
                   </select>
+                  {(() => {
+                    const session = assignTarget?.itemId === item.id
+                      ? assignableSessions.find((candidate) => candidate.session_id === assignTarget.sessionId)
+                      : undefined;
+                    return session ? (
+                      <div class="row" style="margin-top: 0.4rem;">
+                        <ConfirmButton
+                          label={busy === item.id ? t("content.library.working") : t("content.library.assignToClass")}
+                          confirmLabel={t("app.pressAgainConfirm")}
+                          className="btn primary"
+                          disabled={busy === item.id}
+                          onConfirm={() => {
+                            setAssignTarget(null);
+                            void run(item.id, async () => {
+                              await updateClass({
+                                session_id: session.session_id,
+                                section_id: session.section_id,
+                                title: session.title,
+                                planned_date: session.planned_date,
+                                content_item_id: item.id
+                              });
+                              await refreshContext();
+                              setNotice(t("content.library.assigned", { lecture: item.title, title: session.title }));
+                            });
+                          }}
+                        />
+                      </div>
+                    ) : null;
+                  })()}
                 </label>
                 ) : null}
                 {plannedAssignments.length ? (
@@ -452,15 +467,16 @@ export function ContentLibraryView() {
                                 })
                               : scope}
                           </span>
-                          <button
-                            class="btn quiet"
-                            type="button"
+                          <ConfirmButton
+                            label={busy === item.id
+                              ? t("content.library.working")
+                              : release.state === "scheduled"
+                                ? t("content.library.cancelScheduled")
+                                : t("content.library.removeFromReview")}
+                            confirmLabel={t("app.pressAgainConfirm")}
+                            className="btn quiet"
                             disabled={busy === item.id}
-                            onClick={() => {
-                              const confirmKey = scheduled
-                                ? "content.library.cancelScheduledConfirm"
-                                : "content.library.removeFromReviewConfirm";
-                              if (!confirm(t(confirmKey, { title: item.title, scope }))) return;
+                            onConfirm={() => {
                               void run(item.id, async () => {
                                 await updateReleaseState({
                                   release_id: release.release_id,
@@ -477,13 +493,7 @@ export function ContentLibraryView() {
                                 ));
                               });
                             }}
-                          >
-                            {busy === item.id
-                              ? t("content.library.working")
-                              : release.state === "scheduled"
-                                ? t("content.library.cancelScheduled")
-                                : t("content.library.removeFromReview")}
-                          </button>
+                          />
                         </div>
                       );
                     })}
@@ -514,27 +524,24 @@ export function ContentLibraryView() {
             <p class="hint">{t("content.library.unmanagedHint")}</p>
           </div>
           {unmanagedItems.map((item) => {
-            const itemReleases = releasesByItem.get(item.id) ?? [];
             const failure = itemError[item.id];
             return (
               <div class="card row" style="justify-content: space-between; align-items: center;" key={item.id}>
                 <span>{item.title}</span>
                 <div class="stack" style="align-items: flex-end; gap: 0.3rem;">
-                  <button
-                    class="btn quiet"
-                    type="button"
+                  <ConfirmButton
+                    label={busy === item.id ? t("content.library.working") : t("content.library.delete")}
+                    confirmLabel={t("app.pressAgainConfirm")}
+                    className="btn quiet"
                     disabled={busy === item.id}
-                    onClick={() => {
-                      if (!confirm(t("content.library.deleteConfirm", { title: item.title, releases: itemReleases.length }))) return;
+                    onConfirm={() => {
                       void run(item.id, async () => {
                         await deleteContentItem(item.id);
                         setNotice(t("content.library.deleted", { title: item.title }));
                         await refreshContext();
                       }, t("content.library.deleteFailed"));
                     }}
-                  >
-                    {busy === item.id ? t("content.library.working") : t("content.library.delete")}
-                  </button>
+                  />
                   {failure ? <p class="error-text" role="alert">{failure}</p> : null}
                   {failure === t("content.library.content_item_has_activity_history") ? (
                     <ForceDeleteControl

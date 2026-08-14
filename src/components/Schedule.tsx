@@ -18,6 +18,7 @@ import { canReleaseToReview } from "../api/contentVisibility";
 import { StatusPill } from "./StatusPill";
 import { ForceDeleteControl } from "./ForceDeleteControl";
 import { SessionEditor } from "./SessionEditor";
+import { ConfirmButton } from "./ConfirmButton";
 import { refreshContext } from "../state/session";
 import { t, formatDay, apiErrorText } from "../i18n";
 
@@ -91,7 +92,6 @@ export function Schedule() {
   }
 
   async function onCancel(session: ClassSession) {
-    if (!confirm(t("schedule.cancelConfirm", { title: session.title }))) return;
     setError(null);
     setNotice(null);
     setBusy(session.session_id);
@@ -108,7 +108,6 @@ export function Schedule() {
   }
 
   async function onDelete(session: ClassSession, force = false) {
-    if (!force && !confirm(t("schedule.deleteConfirm", { title: session.title }))) return;
     setError(null);
     setNotice(null);
     setBusy(session.session_id);
@@ -203,24 +202,22 @@ export function Schedule() {
                             </button>
                           ) : null}
                           {session.state === "planned" ? (
-                            <button
-                              class="btn quiet"
-                              type="button"
+                            <ConfirmButton
+                              label={t("schedule.cancel")}
+                              confirmLabel={t("app.pressAgainConfirm")}
+                              className="btn quiet"
                               disabled={busy === session.session_id}
-                              onClick={() => void onCancel(session)}
-                            >
-                              {t("schedule.cancel")}
-                            </button>
+                              onConfirm={() => void onCancel(session)}
+                            />
                           ) : null}
                           {["planned", "cancelled", "closed"].includes(session.state) ? (
-                            <button
-                              class="btn quiet"
-                              type="button"
+                            <ConfirmButton
+                              label={t("schedule.delete")}
+                              confirmLabel={t("app.pressAgainConfirm")}
+                              className="btn quiet"
                               disabled={busy === session.session_id}
-                              onClick={() => void onDelete(session)}
-                            >
-                              {t("schedule.delete")}
-                            </button>
+                              onConfirm={() => void onDelete(session)}
+                            />
                           ) : null}
                         </div>
                       </td>

@@ -10,6 +10,7 @@ import {
   type AdminCourse, type AdminProfessor
 } from "../../api/admin";
 import { StatusPill } from "../../components/StatusPill";
+import { ConfirmButton } from "../../components/ConfirmButton";
 import { t, apiErrorText } from "../../i18n";
 
 type InviteRole = "instructor" | "teaching_assistant";
@@ -111,7 +112,6 @@ export function Admin() {
 
   async function onRemove(person: AdminProfessor) {
     const name = person.full_name || person.email || "";
-    if (!confirm(t("admin.removeConfirm", { name, course: person.course_id }))) return;
     setError(null);
     setNotice(null);
     setBusy(true);
@@ -294,14 +294,13 @@ export function Admin() {
                     <td><StatusPill state={person.membership_status} /></td>
                     <td>
                       {person.membership_status === "active" && person.role !== "platform_owner" ? (
-                        <button
-                          class="btn quiet"
-                          type="button"
+                        <ConfirmButton
+                          label={busy ? t("admin.removing") : t("admin.remove")}
+                          confirmLabel={t("app.pressAgainConfirm")}
+                          className="btn quiet"
                           disabled={busy}
-                          onClick={() => void onRemove(person)}
-                        >
-                          {busy ? t("admin.removing") : t("admin.remove")}
-                        </button>
+                          onConfirm={() => void onRemove(person)}
+                        />
                       ) : null}
                     </td>
                   </tr>

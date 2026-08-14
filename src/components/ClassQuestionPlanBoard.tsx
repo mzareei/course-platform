@@ -17,6 +17,7 @@ import {
   planCheckpointForSlide,
   shouldAutoAskPlanCheckpoint
 } from "../features/live/planAutoAsk";
+import { ConfirmButton } from "./ConfirmButton";
 import { t } from "../i18n";
 import type { StringKey } from "../i18n/strings";
 
@@ -353,7 +354,6 @@ export function ClassQuestionPlanBoard({
   }
 
   async function handleRemoveCheckpoint(checkpoint: PlanCheckpoint) {
-    if (!confirm(t("run.plan.removeConfirm"))) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -581,14 +581,13 @@ export function ClassQuestionPlanBoard({
                         >
                           {t("run.plan.edit")}
                         </button>
-                        <button
-                          class="btn quiet"
-                          type="button"
+                        <ConfirmButton
+                          label={t("run.plan.remove")}
+                          confirmLabel={t("app.pressAgainConfirm")}
+                          className="btn quiet"
                           disabled={busy}
-                          onClick={() => void handleRemoveCheckpoint(selectedCheckpoint)}
-                        >
-                          {t("run.plan.remove")}
-                        </button>
+                          onConfirm={() => void handleRemoveCheckpoint(selectedCheckpoint)}
+                        />
                       </div>
                     </div>
 

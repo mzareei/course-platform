@@ -28,7 +28,6 @@ export const surface = computed<Surface>(() => {
   return "student";
 });
 
-export const isTeacher = computed(() => surface.value === "instructor");
 export const isOwner = computed(() => activeRoles.value.includes("platform_owner"));
 
 export async function refreshContext(): Promise<void> {

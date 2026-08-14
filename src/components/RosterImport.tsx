@@ -11,6 +11,7 @@ import {
   rosterFromCsv, decodeCsv, previewRoster, applyRoster, MAX_ROSTER_ROWS,
   type RosterRow, type RosterPreview
 } from "../api/roster";
+import { ConfirmButton } from "./ConfirmButton";
 
 import { t, apiErrorText } from "../i18n";
 
@@ -83,7 +84,6 @@ export function RosterImport({ onImported }: { onImported: () => void }) {
 
   async function onApply() {
     if (!rows || !preview) return;
-    if (!confirm(t("roster.import.confirm", { count: preview.accepted_count }))) return;
     setError(null);
     setNotice(null);
     setBusy(true);
@@ -241,16 +241,15 @@ export function RosterImport({ onImported }: { onImported: () => void }) {
           ) : null}
 
           <div class="row">
-            <button
-              class="btn primary"
-              type="button"
-              disabled={busy || !preview.accepted_count}
-              onClick={onApply}
-            >
-              {busy
+            <ConfirmButton
+              label={busy
                 ? t("roster.import.applying")
                 : t("roster.import.apply", { count: preview.accepted_count })}
-            </button>
+              confirmLabel={t("app.pressAgainConfirm")}
+              className="btn primary"
+              disabled={busy || !preview.accepted_count}
+              onConfirm={() => void onApply()}
+            />
             {!preview.accepted_count ? (
               <span class="hint">{t("roster.import.nothingToApply")}</span>
             ) : null}

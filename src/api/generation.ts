@@ -169,10 +169,6 @@ export function approveJob(jobId: string) {
   return callFn<{ job: GenerationJob }>("course-generation", { action: "approve", job_id: jobId });
 }
 
-export function regenerateQuestions(jobId: string) {
-  return callFn<{ job: GenerationJob }>("course-generation", { action: "regenerate_questions", job_id: jobId });
-}
-
 // ------------------------------------------------------------------ upload
 export function createUpload(input: { filename: string; size_bytes: number }) {
   return callFn<{ upload_id: string; path: string; token: string; signed_url: string }>(

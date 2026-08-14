@@ -158,10 +158,16 @@ a:hover { color: var(--primary-strong); }
 .shell {
   max-width: var(--shell-max);
   margin: 0 auto;
-  padding: 1rem 1rem 6.5rem; /* room for the anchored primary action on phones */
+  padding: 1rem 1rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+/* Only the student surface renders the fixed bottom nav (StudentShell), and it
+   is the one thing that needs bottom clearance. Keyed on the nav itself so the
+   instructor's student-preview routes keep the clearance too. */
+.shell:has(.bottom-nav) {
+  padding-bottom: 6.5rem;
 }
 
 .topbar {

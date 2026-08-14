@@ -143,15 +143,6 @@ export function saveCheckpointCandidates(input: {
   ) as Promise<ClassQuestionPlan>;
 }
 
-export function markClassQuestionPlanCheckpointSkipped(checkpointId: string) {
-  return unwrapPlan(
-    callFn<{ plan: ClassQuestionPlan }>("course-class-question-plan", {
-      action: "mark_skipped",
-      checkpoint_id: checkpointId
-    })
-  ) as Promise<ClassQuestionPlan>;
-}
-
 const PLAN_ERROR_KEYS = new Set<StringKey>([
   "run.plan.class_question_plan_action_invalid",
   "run.plan.class_question_plan_auth_invalid",
