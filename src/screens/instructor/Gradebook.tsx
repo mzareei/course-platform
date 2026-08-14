@@ -378,8 +378,9 @@ export function Gradebook() {
       </div>
 
       {(() => {
-        // A closed class whose grades were never posted is invisible here —
-        // nothing used to say so, and a whole class went unposted unnoticed.
+        // Posting is automatic now, so this no longer means "you forgot" — it
+        // means a write failed, which is worth saying out loud rather than
+        // leaving a class silently ungraded. Opening its record posts it.
         const postedSessionIds = new Set(
           items.map((item) => item.class_session_id).filter(Boolean)
         );

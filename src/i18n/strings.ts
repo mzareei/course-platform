@@ -301,12 +301,12 @@ export const strings = {
     "No se pudieron cargar tus calificaciones."
   ],
   "gradebook.unpostedNudge": [
-    "Closed but not posted yet: {titles}. Students see a class grade only after you post it from its class record.",
-    "Cerradas pero sin publicar: {titles}. Tus estudiantes ven la calificación de una clase solo cuando la publicas desde su registro."
+    "No grades in the gradebook yet for: {titles}. Grades post themselves, so this means a write did not go through — open the class record and it will post.",
+    "Sin calificaciones en el libro para: {titles}. Las calificaciones se publican solas, así que algo falló — abre el registro de la clase y se publicarán."
   ],
   "grades.instructorPreview": [
-    "You are previewing the student surface. Students see their posted class grades here, with the arithmetic behind each one.",
-    "Estás viendo la vista de estudiante. Aquí tus estudiantes ven sus calificaciones publicadas, con la aritmética detrás de cada una."
+    "You are previewing the student surface. Students see their class grades here, with the arithmetic behind each one.",
+    "Estás viendo la vista de estudiante. Aquí tus estudiantes ven sus calificaciones de clase, con la aritmética detrás de cada una."
   ],
   "grades.courseTotal": [
     "Course average across {count} graded class(es)",
@@ -326,8 +326,8 @@ export const strings = {
   "grades.status": ["Status", "Estado"],
   "grades.emptyTitle": ["No grades yet", "Aún no hay calificaciones"],
   "grades.emptyBody": [
-    "Your grade for a class appears here once your instructor posts it.",
-    "Tu calificación de una clase aparece aquí en cuanto tu profesor la publica."
+    "Your grade for a class appears here as soon as you hand in that class's reflection.",
+    "Tu calificación de una clase aparece aquí en cuanto entregas la reflexión de esa clase."
   ],
   "grades.revisit": ["Worth revisiting", "Vale la pena repasar"],
 
@@ -493,8 +493,8 @@ export const strings = {
   "gradebook.col.student": ["Student", "Estudiante"],
   "gradebook.emptyTitle": ["No grades yet", "Aún no hay calificaciones"],
   "gradebook.emptyBody": [
-    "One grade per class appears here once you post it from the class record.",
-    "Una calificación por clase aparece aquí en cuanto la publicas desde el registro de la clase."
+    "One grade per class appears here by itself, as students finish each class.",
+    "Una calificación por clase aparece aquí sola, conforme tus estudiantes terminan cada clase."
   ],
   "gradebook.perClassNote": [
     "Grade adjustments and locking stay in the current course app for now.",
@@ -1502,6 +1502,11 @@ export const strings = {
     "Tus respuestas rápidas, el quiz y tu reflexión ya quedaron registrados. Nos vemos en la próxima clase."
   ],
   "live.viewGrades": ["View my grades", "Ver mis calificaciones"],
+  "live.gradeLabel": ["Your grade for this class", "Tu calificación de esta clase"],
+  "live.gradeBreakdown": [
+    "Class questions {pulseCorrect}/{pulseTotal} · final quiz {quizCorrect}/{quizTotal}. Tap below for the full arithmetic.",
+    "Preguntas de clase {pulseCorrect}/{pulseTotal} · examen final {quizCorrect}/{quizTotal}. Abajo puedes ver toda la aritmética."
+  ],
 
   // ---------------------------------------------------------------- quiz
   "quiz.startFailed": ["Could not start the quiz.", "No se pudo iniciar el quiz."],
@@ -2178,27 +2183,9 @@ export const strings = {
   ],
   "classRecord.noSession": ["Pick a class first", "Primero elige una clase"],
   "classRecord.backToGrades": ["Back to grades", "Volver a calificaciones"],
-  "classRecord.postToGradebook": ["Post to the gradebook", "Publicar en el libro de calificaciones"],
-  "classRecord.posting": ["Posting…", "Publicando…"],
-  "classRecord.postFailed": [
-    "The grades could not be posted.",
-    "No se pudieron publicar las calificaciones."
-  ],
-  "classRecord.postedResultOne": [
-    "Posted 1 grade.",
-    "Se publicó 1 calificación."
-  ],
-  "classRecord.postedResultMany": [
-    "Posted {posted} grades.",
-    "Se publicaron {posted} calificaciones."
-  ],
-  "classRecord.postedSkippedOne": [
-    "1 student has nothing to grade yet.",
-    "1 estudiante aún no tiene nada que calificar."
-  ],
-  "classRecord.postedSkippedMany": [
-    "{skipped} students have nothing to grade yet.",
-    "{skipped} estudiantes aún no tienen nada que calificar."
+  "classRecord.autoPosted": [
+    "Grades post themselves: each student's the moment they hand in their reflection, everyone else's when you end the class. Changing a grade below sends the correction straight to that student.",
+    "Las calificaciones se publican solas: la de cada estudiante al entregar su reflexión, y la del resto al terminar la clase. Si cambias una abajo, la corrección le llega de inmediato a ese estudiante."
   ],
   "classRecord.sortBy": ["Sort by {column}", "Ordenar por {column}"],
   "classRecord.save": ["Save", "Guardar"],

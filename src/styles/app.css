@@ -962,6 +962,24 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   }
 }
 
+/* The grade a student meets the moment they hand in their reflection. Big
+   because it is the only thing on the screen they came for. */
+.live-grade-value {
+  font-size: 3.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  margin: 0.4rem 0 0;
+  color: var(--accent);
+}
+.live-grade-label {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
 /* ---------------------------------------------------------------- language toggle */
 .lang-toggle {
   font-family: var(--font-mono);

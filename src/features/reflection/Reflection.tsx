@@ -2,6 +2,7 @@
 // professor's word range (50-100 by default). The counter updates live so a
 // student knows before they try to submit, not after a rejection.
 import { useState } from "preact/hooks";
+import type { ClassGrade } from "../../api/types";
 import { t, apiErrorText } from "../../i18n";
 import { submitReflection } from "../../api/reflection";
 
@@ -18,7 +19,9 @@ export function Reflection({
   classSessionId: string;
   minWords: number;
   maxWords: number;
-  onSubmitted: () => void;
+  /** Carries the class grade the server just posted, so the next screen can
+   *  show it instead of sending the student to look for it. */
+  onSubmitted: (grade: ClassGrade | null) => void;
 }) {
   // A reload or accidental back gesture at the end of class must not eat the
   // one paragraph a student wrote. Drafts persist per class session.
@@ -38,9 +41,12 @@ export function Reflection({
     setBusy(true);
     setError(null);
     try {
-      await submitReflection({ class_session_id: classSessionId, one_thing: text.trim() });
+      const { ticket } = await submitReflection({
+        class_session_id: classSessionId,
+        one_thing: text.trim()
+      });
       try { localStorage.removeItem(draftKey); } catch { /* nothing to clean */ }
-      onSubmitted();
+      onSubmitted(ticket.class_grade ?? null);
     } catch (e) {
       setError(apiErrorText(e, "reflection.submitFailed"));
     } finally {

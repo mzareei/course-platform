@@ -138,9 +138,7 @@ export function overrideClassGrade(input: {
   return callFn<GradingTable>("course-class-record", { action: "override", ...input });
 }
 
-export function postClassGradesToGradebook(classSessionId: string) {
-  return callFn<{ gradebook_item_id: string; posted: number; skipped: number }>(
-    "course-class-record",
-    { action: "post_to_gradebook", class_session_id: classSessionId }
-  );
-}
+// There is deliberately no "post grades" call here. Grades post themselves:
+// a student's when they submit their reflection (course-exit-ticket), everyone
+// else's when the class is ended (course-session-management), a corrected one
+// when it is overridden, and any that failed when this record is next opened.

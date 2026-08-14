@@ -11,6 +11,8 @@ import type { ComponentChildren } from "preact";
 import { context } from "../../state/session";
 import { t, lang, apiErrorText } from "../../i18n";
 import { ApiError } from "../../api/client";
+import type { ClassGrade } from "../../api/types";
+import { formatGrade } from "../../features/classRecord/format";
 import { currentPulse, answerPulse, shuffleOptions, type StudentPulseView } from "../../api/pulse";
 import { QuizPlayer } from "../../features/quiz/Player";
 import { Reflection } from "../../features/reflection/Reflection";
@@ -60,6 +62,10 @@ export function Live() {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [reflectionDone, setReflectionDone] = useState(false);
+  // The grade the server posted as the reflection landed. Held here rather than
+  // re-fetched: the student has just finished, and sending them to My Grades to
+  // find out how they did is the round trip this whole change removes.
+  const [classGrade, setClassGrade] = useState<ClassGrade | null>(null);
   // Until the first poll answers, the screen is loading — showing "waiting for
   // the professor" before we have ever asked the server misreads a slow network
   // as an idle classroom.
@@ -284,7 +290,10 @@ export function Live() {
             classSessionId={sessionId}
             minWords={view.reflection.min_words}
             maxWords={view.reflection.max_words}
-            onSubmitted={() => setReflectionDone(true)}
+            onSubmitted={(grade) => {
+              setClassGrade(grade);
+              setReflectionDone(true);
+            }}
           />
         </div>
       </LiveShell>
@@ -292,12 +301,34 @@ export function Live() {
   }
 
   // 4. Reflection submitted, or nothing scheduled yet — done for this class.
+  //
+  // The grade is on this screen because this is where the student is standing
+  // when it becomes real. It used to be posted by hand from the class record,
+  // so "you're done, go and look at My Grades" sent a room full of students to
+  // an empty screen.
   if (reflectionDone || view?.reflection?.submitted) {
     return (
       <LiveShell error={error}>
         <div class="empty-state card">
           <h3>{t("live.doneTitle")}</h3>
-          <p>{t("live.doneBody")}</p>
+          {classGrade && classGrade.grade !== null ? (
+            <>
+              <p class="live-grade-value" data-testid="live-class-grade">
+                {formatGrade(classGrade.grade)}
+              </p>
+              <p class="live-grade-label">{t("live.gradeLabel")}</p>
+              <p class="hint">
+                {t("live.gradeBreakdown", {
+                  pulseCorrect: classGrade.pulse_correct,
+                  pulseTotal: classGrade.pulse_total,
+                  quizCorrect: classGrade.quiz_correct,
+                  quizTotal: classGrade.quiz_total
+                })}
+              </p>
+            </>
+          ) : (
+            <p>{t("live.doneBody")}</p>
+          )}
           <a class="btn" href="/grades">{t("live.viewGrades")}</a>
         </div>
       </LiveShell>

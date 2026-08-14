@@ -11,7 +11,6 @@ import { ClassGradingTable } from "../../components/ClassGradingTable";
 import {
   classAttendance,
   classGrading,
-  postClassGradesToGradebook,
   type AttendanceTable,
   type GradingTable
 } from "../../api/classRecord";
@@ -20,8 +19,6 @@ export function ClassRecord({ sessionId }: { sessionId?: string }) {
   const [attendance, setAttendance] = useState<AttendanceTable | null>(null);
   const [grading, setGrading] = useState<GradingTable | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [posting, setPosting] = useState(false);
-  const [posted, setPosted] = useState<{ posted: number; skipped: number } | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -29,7 +26,6 @@ export function ClassRecord({ sessionId }: { sessionId?: string }) {
     setAttendance(null);
     setGrading(null);
     setError(null);
-    setPosted(null);
     Promise.all([classAttendance(sessionId), classGrading(sessionId)])
       .then(([attendanceData, gradingData]) => {
         if (cancelled) return;
@@ -43,20 +39,6 @@ export function ClassRecord({ sessionId }: { sessionId?: string }) {
       cancelled = true;
     };
   }, [sessionId]);
-
-  async function onPost() {
-    if (!sessionId) return;
-    setPosting(true);
-    setError(null);
-    try {
-      const result = await postClassGradesToGradebook(sessionId);
-      setPosted({ posted: result.posted, skipped: result.skipped });
-    } catch (e) {
-      setError(apiErrorText(e, "classRecord.postFailed"));
-    } finally {
-      setPosting(false);
-    }
-  }
 
   if (!sessionId) {
     return (
@@ -90,25 +72,15 @@ export function ClassRecord({ sessionId }: { sessionId?: string }) {
         </div>
         <div class="row" style="gap: 0.5rem;">
           <a class="btn quiet" href="/teach/grades">{t("classRecord.backToGrades")}</a>
-          <button class="btn primary" type="button" disabled={posting || !grading} onClick={onPost}>
-            {posting ? t("classRecord.posting") : t("classRecord.postToGradebook")}
-          </button>
         </div>
       </div>
 
       {error ? <p class="error-text" role="alert">{error}</p> : null}
-      {posted ? (
-        <p class="hint">
-          {posted.posted === 1
-            ? t("classRecord.postedResultOne")
-            : t("classRecord.postedResultMany", { posted: posted.posted })}
-          {posted.skipped > 0
-            ? ` ${posted.skipped === 1
-              ? t("classRecord.postedSkippedOne")
-              : t("classRecord.postedSkippedMany", { skipped: posted.skipped })}`
-            : ""}
-        </p>
-      ) : null}
+
+      {/* No Post button. Grades post themselves: each student's when they hand
+          in their reflection, everyone else's when the class is ended, and a
+          corrected one the moment it is overridden below. */}
+      <p class="hint">{t("classRecord.autoPosted")}</p>
 
       {attendance ? (
         <AttendanceEngagementTable data={attendance} onData={setAttendance} />
