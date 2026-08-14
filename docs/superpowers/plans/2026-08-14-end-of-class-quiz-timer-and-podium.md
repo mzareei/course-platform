@@ -1873,7 +1873,7 @@ Expected: failures include "the student poll must run the auto-close check too" 
 `classDateFor` is already imported in this file. Add:
 
 ```typescript
-import { maybeAutoCloseInstance } from "../_shared/quiz-close.ts";
+import { maybeAutoCloseInstance, OPEN_INSTANCE_STATES } from "../_shared/quiz-close.ts";
 import { rankAttempts, rankOf } from "../_shared/quiz-rank.ts";
 ```
 
@@ -1901,26 +1901,34 @@ async function loadCurrentQuiz(db: Db, sessionId: string, profileId: string) {
   const instance = (instances || [])[0];
   if (!instance) return { instance_id: null, state: null, my_rank: null };
 
-  const closed = await maybeAutoCloseInstance(
-    db,
-    {
-      id: String(instance.id),
-      state: String(instance.state),
-      starts_at: instance.starts_at,
-      ends_at: instance.ends_at,
-      class_session_id: String(instance.class_session_id)
-    },
-    classDateFor
-  );
+  // A quiz that is ALREADY closed has nothing left to close, and this poll runs
+  // for every phone in the room every three seconds for the rest of the class.
+  // Counting the room and listing the attempts again on each of those polls buys
+  // nothing: the decision cannot change. The instructor's own poll still runs the
+  // full check — it is the one that needs `present` and `submitted` to say which
+  // condition ended the quiz.
+  const state = OPEN_INSTANCE_STATES.includes(String(instance.state))
+    ? (await maybeAutoCloseInstance(
+        db,
+        {
+          id: String(instance.id),
+          state: String(instance.state),
+          starts_at: instance.starts_at,
+          ends_at: instance.ends_at,
+          class_session_id: String(instance.class_session_id)
+        },
+        classDateFor
+      )).state
+    : String(instance.state);
 
   return {
     instance_id: instance.id,
-    state: closed.state, // 'live' -> take it now; 'closed' -> reflection can open
+    state, // 'live' -> take it now; 'closed' -> reflection can open
     ends_at: instance.ends_at,
     question_count: instance.question_count,
     // Only once the quiz is over. A place published while the room is still
     // answering would tell a student how they are doing mid-quiz.
-    my_rank: closed.state === "closed"
+    my_rank: state === "closed"
       ? await loadMyRank(db, String(instance.id), profileId)
       : null
   };
