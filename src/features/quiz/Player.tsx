@@ -186,6 +186,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
       <div class="stack" style="gap: 0.5rem;">
         {current.options.map((option) => (
           <button
+            key={option.id}
             class={`pulse-choice tappable${answers[current.id] === option.id ? " selected" : ""}`}
             type="button"
             disabled={busy}

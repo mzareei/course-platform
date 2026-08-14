@@ -232,7 +232,7 @@ export function Live() {
               {round.options
                 .filter((option) => option.key === round.correct_key)
                 .map((option) => (
-                  <div class="pulse-choice correct">
+                  <div key={option.key} class="pulse-choice correct">
                     {(useSpanish && option.text_es) || option.text}
                   </div>
                 ))}

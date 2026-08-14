@@ -215,8 +215,8 @@ export function Grades() {
       {progress.recommendations?.length ? (
         <div class="card muted">
           <h3>{t("grades.revisit")}</h3>
-          {progress.recommendations.slice(0, 3).map((rec) => (
-            <p class="hint">• {rec.message ?? rec.title ?? rec.reason}</p>
+          {progress.recommendations.slice(0, 3).map((rec, i) => (
+            <p key={rec.message ?? rec.title ?? i} class="hint">• {rec.message ?? rec.title ?? rec.reason}</p>
           ))}
         </div>
       ) : null}
