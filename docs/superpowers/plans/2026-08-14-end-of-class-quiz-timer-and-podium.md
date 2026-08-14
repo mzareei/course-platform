@@ -530,6 +530,19 @@ assert.equal(
   true,
   "a submission thirty seconds late is still accepted"
 );
+// The lower bound. A grace is a window AFTER a deadline; without this the
+// function is true for the whole quiz, so a manual "Close it now" would keep
+// taking submissions until ends_at and the per-attempt limit would never fire.
+assert.equal(
+  withinSubmitGrace({ endsAt: T_END, startedAt: T0, now: at("2026-08-14T18:05:00.000Z") }),
+  false,
+  "there is no grace before the deadline — that window is the quiz itself"
+);
+assert.equal(
+  withinSubmitGrace({ endsAt: T_END, startedAt: T0, now: at(T_END) }),
+  false,
+  "at the deadline exactly the quiz is still open on its own terms, not on grace"
+);
 assert.equal(
   withinSubmitGrace({ endsAt: T_END, startedAt: T0, now: at("2026-08-14T18:11:30.000Z") }),
   false,
@@ -709,6 +722,13 @@ export function withinSubmitGrace(input: {
   const startedAt = millis(input?.startedAt);
   if (startedAt === null || startedAt >= endsAt) return false;
   const now = input?.now instanceof Date ? input.now.getTime() : Date.now();
+  // A grace exists only AFTER a deadline. Without this lower bound the function
+  // is true for the whole quiz window, and two things break: the professor's
+  // "Close it now" keeps accepting submissions until ends_at (closeQuiz sets
+  // state but never touches ends_at), and the per-attempt time limit becomes
+  // unreachable because its early-return fires from the moment an attempt
+  // starts.
+  if (now <= endsAt) return false;
   return now <= endsAt + GRACE_SECONDS * 1000;
 }
 
