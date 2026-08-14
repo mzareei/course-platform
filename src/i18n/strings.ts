@@ -1457,7 +1457,6 @@ export const strings = {
   // ---------------------------------------------------------------- podium
   "podium.title": ["Top of the class", "Los mejores de la clase"],
   "podium.empty": ["No one finished the quiz.", "Nadie terminó el examen."],
-  "podium.place": ["#{rank}", "#{rank}"],
   "podium.noId": ["Student", "Estudiante"],
   "podium.showToClass": ["Show the winners to the class", "Mostrar a los ganadores a la clase"],
   "podium.backToClass": ["Back to class", "Volver a la clase"],

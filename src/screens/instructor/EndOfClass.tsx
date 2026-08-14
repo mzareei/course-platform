@@ -35,6 +35,17 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   const [now, setNow] = useState(Date.now());
   const poll = useRef<number | undefined>(undefined);
 
+  // A new quiz invalidates the last one's winners immediately. Without this the
+  // previous podium — and its live "show the winners" button — stays on screen
+  // for one round trip after the next quiz closes, so a fast click could put
+  // the WRONG three student IDs on the screen in front of the room.
+  useEffect(() => {
+    if (instanceId) {
+      setPodium([]);
+      setShowingPodium(false);
+    }
+  }, [instanceId]);
+
   // Recover after a page reload: adopt a running quiz, and separately load the
   // score of the last closed one so the class average survives a refresh.
   useEffect(() => {

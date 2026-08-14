@@ -30,7 +30,11 @@ export function Podium({ entries, large = false }: { entries: PodiumEntry[]; lar
       {podiumOrder(entries).map((entry) => (
         <li key={entry.profile_id} class={`quiz-podium-place rank-${entry.rank}`}>
           <span class="quiz-podium-medal" aria-hidden="true">{MEDALS[entry.rank] || "🎉"}</span>
-          <span class="quiz-podium-rank">{t("podium.place", { rank: entry.rank })}</span>
+          {/* Rendered inline, not through t(). A formatted rank number is the
+              same in both languages, and routing it through the dictionary
+              would force an entry onto verify-i18n's identical-strings
+              allowlist for a string that has nothing to translate. */}
+          <span class="quiz-podium-rank">#{entry.rank}</span>
           <span class="quiz-podium-id">
             {entry.student_identifier || t("podium.noId")}
           </span>
