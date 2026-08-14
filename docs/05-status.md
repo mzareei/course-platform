@@ -2,6 +2,26 @@
 
 **Last updated:** 2026-08-13
 
+### Audit close-out: nothing mechanical left open (2026-08-13, night)
+
+Commit `50921e0` + backend `7dafb51`: every `window.confirm` in src/ is now a
+two-press ConfirmButton (12 sites; the sync site keeps its verifier-required
+sentence as the confirm label; the assign flow stages the select then confirms);
+imported banks with no checkpoint coverage explain plan-based checkpoints;
+dead exports removed (`markClassQuestionPlanCheckpointSkipped`, `pushPulse`,
+`regenerateQuestions`, `ROSTER_ROLES`, `isTeacher`); instructor screens lose the
+6.5rem dead bottom padding (`.shell:has(.bottom-nav)` keeps student clearance);
+`listRoster` dedupes by profile so the owner+instructor professor renders once.
+QA litter removed from 401 through the People UI (ZZ Rehearsal Test, max); the
+cptest auth users were already gone; no duplicate enrollment rows existed.
+`final_quiz_question_count` and `.action-dock` are pinned by verifiers
+(`verify-class-question-plans.mjs:39`, `verify-app-shell.mjs:109`) — remove the
+assertions together with the code when someone next touches those verifiers.
+Still open by decision, not omission: the professor's own external-access grant
+(`zarei.1982@gmail.com`, "just testing") awaits his call, and the full backend
+stable-error-code refactor (~200 English messages across 14 functions) is a
+separate sized piece — `apiErrorText` already covers the student-facing impact.
+
 ### Audit batches 2–4: teaching workflow + student experience (2026-08-13, late evening)
 
 Continuation of the same audit (`docs/audits/2026-08-13-full-platform-audit.md`).
