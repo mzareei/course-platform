@@ -51,6 +51,7 @@
 | `tools/verify-quiz-auto-close.mjs` | **New test.** Executes the close decision; asserts both polls call it and the grace exists. |
 | `tools/verify-quiz-podium.mjs` | **New test.** Executes ranking; asserts names are withheld server-side. |
 | `src/features/quiz/Player.tsx` | Uses the server's `seconds`; submits at the instance deadline. |
+| `src/features/quiz/clock.ts` | **New.** `M:SS` formatting, shared by the phone's clock and the professor's countdown. |
 | `src/features/quiz/Podium.tsx` | **New.** Renders a top-3 list. Used by the box and the room layer. |
 | `src/features/quiz/RankBanner.tsx` | **New.** One student's place, medal, and reveal button. |
 | `src/features/live/ClassroomPodiumLayer.tsx` | **New.** Fullscreen podium for the room, mirroring `ClassroomQuestionLayer`. |
@@ -929,7 +930,7 @@ assert.deepEqual(
   ["a", "b"],
   "two submissions make a two-place podium, not an empty slot"
 );
-assert.deepEqual(rankAttempts([]).length, 0, "an empty quiz has an empty podium");
+assert.deepEqual(podiumCut(rankAttempts([])), [], "an empty quiz has an empty podium");
 
 // A tie spanning third place shows everyone holding it. Truncating to exactly
 // three would drop a student who earned the same score as the one shown.
@@ -1941,6 +1942,7 @@ EOF
 ## Task 10: The player obeys the server's clock
 
 **Files:**
+- Create: `src/features/quiz/clock.ts`
 - Modify: `src/features/quiz/Player.tsx`
 - Modify: `src/api/quiz.ts`
 - Modify: `src/i18n/strings.ts`
@@ -2067,14 +2069,23 @@ In the header row, after the existing per-question pill:
           ) : null}
 ```
 
-Add the helper above the component, exported — Task 11 imports it for the instructor's countdown so the two clocks read the same:
+The professor's countdown (Task 11) formats the same way, and an instructor screen reaching into a student component for a formatter is the wrong direction. Create `src/features/quiz/clock.ts`:
 
 ```typescript
-/** `M:SS`, for both the phone's total clock and the professor's countdown. */
+// `M:SS`, for the phone's total clock and the professor's countdown alike.
+// Its own module rather than an export from Player.tsx: the End of Class box
+// is an instructor screen, and it should not have to import from the student's
+// quiz player to format a number.
 export function clockText(remainingMs: number) {
   const total = Math.max(0, Math.round(remainingMs / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
+```
+
+Import it in `Player.tsx`:
+
+```typescript
+import { clockText } from "./clock";
 ```
 
 - [ ] **Step 6: Add the strings**
@@ -2094,7 +2105,7 @@ Expected: `verify-quiz-timing: OK`, typecheck clean, i18n clean.
 
 ```bash
 cd ~/Documents/GitHub/course-platform
-git add src/features/quiz/Player.tsx src/api/quiz.ts src/i18n/strings.ts
+git add src/features/quiz/Player.tsx src/features/quiz/clock.ts src/api/quiz.ts src/i18n/strings.ts
 git commit -m "$(cat <<'EOF'
 Take question timing from the server; submit at the whole-quiz deadline
 
@@ -2192,7 +2203,7 @@ with, above the `return`:
 and the import:
 
 ```typescript
-import { clockText } from "../../features/quiz/Player";
+import { clockText } from "../../features/quiz/clock";
 ```
 
 `aria-live="off"` is deliberate: a timer that announces itself every second makes a screen reader unusable for the whole quiz.
@@ -2337,13 +2348,16 @@ Create `src/features/quiz/Podium.tsx`:
 import type { PodiumEntry } from "../../api/quiz";
 import { t } from "../../i18n";
 
-const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+/** Exported so RankBanner shows a student the same medal the professor's
+ *  podium is showing the room. Two copies would drift the moment one is
+ *  edited. */
+export const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
-/** 2 · 1 · 3, with any extra tied places following. */
+/** 2 · 1 · 3. A tie simply widens one of the three groups — podiumCut never
+ *  returns a rank above 3, so there is no fourth bucket to append. */
 function podiumOrder(entries: PodiumEntry[]) {
   const byRank = (rank: number) => entries.filter((entry) => entry.rank === rank);
-  const rest = entries.filter((entry) => entry.rank > 3);
-  return [...byRank(2), ...byRank(1), ...byRank(3), ...rest];
+  return [...byRank(2), ...byRank(1), ...byRank(3)];
 }
 
 export function Podium({ entries, large = false }: { entries: PodiumEntry[]; large?: boolean }) {
@@ -2657,9 +2671,8 @@ Create `src/features/quiz/RankBanner.tsx`:
 import { useState } from "preact/hooks";
 import type { QuizRank } from "../../api/pulse";
 import { setQuizNameReveal } from "../../api/quiz";
+import { MEDALS } from "./Podium";
 import { t, apiErrorText } from "../../i18n";
-
-const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
 export function RankBanner({
   rank,
