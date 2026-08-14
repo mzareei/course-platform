@@ -20,7 +20,12 @@ export function Reflection({
   maxWords: number;
   onSubmitted: () => void;
 }) {
-  const [text, setText] = useState("");
+  // A reload or accidental back gesture at the end of class must not eat the
+  // one paragraph a student wrote. Drafts persist per class session.
+  const draftKey = `cp.reflection.draft.${classSessionId}`;
+  const [text, setText] = useState(() => {
+    try { return localStorage.getItem(draftKey) || ""; } catch { return ""; }
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +39,7 @@ export function Reflection({
     setError(null);
     try {
       await submitReflection({ class_session_id: classSessionId, one_thing: text.trim() });
+      try { localStorage.removeItem(draftKey); } catch { /* nothing to clean */ }
       onSubmitted();
     } catch (e) {
       setError(apiErrorText(e, "reflection.submitFailed"));
@@ -50,7 +56,12 @@ export function Reflection({
 
       <textarea
         value={text}
-        onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
+        onInput={(e) => {
+          const value = (e.target as HTMLTextAreaElement).value;
+          setText(value);
+          // ≤100 words; writing through on every keystroke is fine.
+          try { localStorage.setItem(draftKey, value); } catch { /* draft survives in state only */ }
+        }}
         style="min-height: 9rem;"
         placeholder={t("reflection.placeholder")}
       />
