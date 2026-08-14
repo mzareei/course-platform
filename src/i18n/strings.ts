@@ -1471,6 +1471,7 @@ export const strings = {
   "live.pointsEarned": ["+{points} points", "+{points} puntos"],
   "live.answerFailed": ["Could not record your answer.", "No se pudo registrar tu respuesta."],
   "live.timeUp": ["Time is up for this question", "Se acabó el tiempo de esta pregunta"],
+  "live.revealIn": ["Answer locks in {seconds}s", "La respuesta se cierra en {seconds}s"],
   "live.backToToday": ["Leave class view", "Salir de la vista de clase"],
   "live.doneTitle": ["That's everything for today", "Eso es todo por hoy"],
   "live.doneBody": [

@@ -56,6 +56,7 @@ export function Live() {
 
   const [view, setView] = useState<StudentPulseView | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [reflectionDone, setReflectionDone] = useState(false);
@@ -74,6 +75,7 @@ export function Live() {
       setView((prev) => {
         if (next.round && next.round.round_id !== prev?.round?.round_id) {
           shownAt.current = Date.now(); // start the latency clock for this question
+          setPendingKey(null);
         }
         return next;
       });
@@ -128,6 +130,7 @@ export function Live() {
   async function submit(optionKey: string) {
     if (!round) return;
     setBusy(true);
+    setPendingKey(optionKey); // paint the choice immediately; the server confirms behind it
     setError(null);
     try {
       await answerPulse({
@@ -137,6 +140,7 @@ export function Live() {
       });
       await refresh();
     } catch (e) {
+      setPendingKey(null); // the tap did not land — put the choices back
       setError(apiErrorText(e, "live.answerFailed"));
     } finally {
       setBusy(false);
@@ -199,9 +203,13 @@ export function Live() {
         <div class="card">
           <div class="row" style="justify-content: space-between;">
             <p class="eyebrow">{t("live.answer")}</p>
-            {round.state === "open" && !mine ? (
-              <span class={`pill ${remaining > 0 ? "live" : "warn"}`}>
-                {remaining > 0 ? t("run.timeLeft", { seconds: remaining }) : t("live.timeUp")}
+            {round.state === "open" ? (
+              <span class={`pill ${remaining > 5 ? "live" : "warn"}`}>
+                {remaining > 0
+                  ? mine
+                    ? t("live.revealIn", { seconds: remaining })
+                    : t("run.timeLeft", { seconds: remaining })
+                  : t("live.timeUp")}
               </span>
             ) : null}
           </div>
@@ -239,7 +247,7 @@ export function Live() {
               {displayOptions.map((option) => (
                 <button
                   key={option.key}
-                  class="pulse-choice tappable"
+                  class={`pulse-choice tappable${pendingKey === option.key ? " selected" : ""}`}
                   type="button"
                   disabled={busy || remaining <= 0}
                   onClick={() => submit(option.key)}
