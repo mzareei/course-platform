@@ -27,6 +27,11 @@ export interface QuizAttempt {
   started_at: string;
   submitted_at: string | null;
   attempt_number: number;
+  // Present on a resumed attempt (course-activity-attempt selects them);
+  // null until grading has run.
+  score_raw?: number | null;
+  score_percent?: number | null;
+  score_final?: number | null;
 }
 
 export interface StartAttemptResponse {

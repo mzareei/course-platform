@@ -24,6 +24,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<SubmitAttemptResponse["score"] | null>(null);
+  const [resumed, setResumed] = useState<{ percent: number | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -32,8 +33,8 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   const integrity = useRef({ focus_loss_count: 0, paste_count: 0, copy_count: 0 });
   // Refs mirror the latest state so the auto-advance effect (keyed only on the
   // clock tick) always reads current values without re-subscribing every render.
-  const stateRef = useRef({ index: 0, questions: null as QuizQuestion[] | null, answers: {} as Record<string, string>, busy: false, result: null as SubmitAttemptResponse["score"] | null });
-  stateRef.current = { index, questions, answers, busy, result };
+  const stateRef = useRef({ index: 0, questions: null as QuizQuestion[] | null, answers: {} as Record<string, string>, busy: false, result: null as SubmitAttemptResponse["score"] | null, resumed: null as { percent: number | null } | null });
+  stateRef.current = { index, questions, answers, busy, result, resumed };
 
   useEffect(() => {
     startQuizAttempt(activityInstanceId)
@@ -41,8 +42,9 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
         setAttemptId(res.attempt.id);
         setQuestions(res.questions);
         if (res.attempt.submitted_at) {
-          // Resuming a page reload after already submitting.
-          setResult({ raw: 0, total: 0, percent: 0, speed_bonus: 0, final: 0 });
+          // Resuming after already submitting: show the real graded score if
+          // the server sent one, and never a fabricated 0%.
+          setResumed({ percent: typeof res.attempt.score_percent === "number" ? res.attempt.score_percent : null });
         } else if (res.questions.length) {
           setQuestionDeadline(Date.now() + secondsFor(res.questions[0]) * 1000);
         }
@@ -103,14 +105,24 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   // question's own timer expires — the whole point of a live, timed,
   // one-after-another quiz instead of a browse-at-your-own-pace one.
   useEffect(() => {
-    const { busy: isBusy, result: hasResult } = stateRef.current;
-    if (!questionDeadline || hasResult || isBusy) return;
+    const { busy: isBusy, result: hasResult, resumed: hasResumed } = stateRef.current;
+    if (!questionDeadline || hasResult || hasResumed || isBusy) return;
     if (now >= questionDeadline) advance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, questionDeadline]);
 
   if (error) return <p class="error-text" role="alert">{error}</p>;
   if (!questions) return <p class="hint">{t("quiz.loading")}</p>;
+
+  if (resumed) {
+    return (
+      <div class="stack">
+        <p class="eyebrow">{t("quiz.done")}</p>
+        {resumed.percent !== null ? <span class="big-number">{resumed.percent}%</span> : null}
+        <p class="hint">{resumed.percent !== null ? t("quiz.doneBody") : t("quiz.resumedNoScore")}</p>
+      </div>
+    );
+  }
 
   if (result) {
     return (

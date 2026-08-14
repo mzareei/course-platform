@@ -1494,6 +1494,10 @@ export const strings = {
     "Your score is recorded. Your professor will show the class results shortly.",
     "Tu calificación quedó registrada. Tu profesor mostrará los resultados del grupo en un momento."
   ],
+  "quiz.resumedNoScore": [
+    "Your quiz was submitted. Your professor has your score.",
+    "Tu examen fue enviado. Tu profesor tiene tu calificación."
+  ],
   "run.step.end": ["End the class", "Terminar la clase"],
   "run.step.endBody": [
     "Closes the class for students: the live screen stops being offered, and any open question or running quiz is closed.",
