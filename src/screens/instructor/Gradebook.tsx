@@ -16,7 +16,7 @@ import { context } from "../../state/session";
 import { classPulseRounds, type PulseRoundReview } from "../../api/pulse";
 import { classQuizSummary, type QuizAttemptSummary } from "../../api/quiz";
 import { classReflections, type ClassReflection } from "../../api/reflection";
-import { t, locale, formatDay } from "../../i18n";
+import { t, locale, formatDay, apiErrorText } from "../../i18n";
 
 const SUBMITTED_STATES = ["submitted", "late"];
 
@@ -62,7 +62,7 @@ function PerClassReview() {
         }
       })
       .catch((e: Error) => {
-        if (!cancelled) setRosterError(e.message || t("studentNotes.rosterLoadFailed"));
+        if (!cancelled) setRosterError(apiErrorText(e, "studentNotes.rosterLoadFailed"));
       });
     return () => {
       cancelled = true;
@@ -88,7 +88,7 @@ function PerClassReview() {
         setReflections(reflection.reflections);
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message || t("gradebook.perClass.loadFailed"));
+        if (!cancelled) setError(apiErrorText(e, "gradebook.perClass.loadFailed"));
       });
     return () => {
       cancelled = true;
@@ -324,7 +324,7 @@ export function Gradebook() {
   useEffect(() => {
     callFn<GradebookSummary>("course-gradebook-summary")
       .then(setData)
-      .catch((e: Error) => setError(e.message));
+      .catch((e: unknown) => setError(apiErrorText(e, "gradebook.loadFailed")));
   }, []);
 
   if (error) {

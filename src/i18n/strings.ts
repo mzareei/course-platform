@@ -1472,6 +1472,18 @@ export const strings = {
   "live.answerFailed": ["Could not record your answer.", "No se pudo registrar tu respuesta."],
   "live.timeUp": ["Time is up for this question", "Se acabó el tiempo de esta pregunta"],
   "live.revealIn": ["Answer locks in {seconds}s", "La respuesta se cierra en {seconds}s"],
+  "live.loadFailed": [
+    "The class screen could not load. It keeps retrying by itself.",
+    "La pantalla de la clase no pudo cargar. Sigue reintentando por sí sola."
+  ],
+  "content.jobsLoadFailed": [
+    "Content could not load. Try again in a moment.",
+    "El contenido no pudo cargar. Intenta de nuevo en un momento."
+  ],
+  "gradebook.loadFailed": [
+    "The gradebook could not load. Try again in a moment.",
+    "Las calificaciones no pudieron cargar. Intenta de nuevo en un momento."
+  ],
   "live.backToToday": ["Leave class view", "Salir de la vista de clase"],
   "live.doneTitle": ["That's everything for today", "Eso es todo por hoy"],
   "live.doneBody": [

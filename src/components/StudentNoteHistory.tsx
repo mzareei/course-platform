@@ -36,7 +36,7 @@ export function StudentNoteHistory({
         if (!cancelled) setNotes(loadedNotes);
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message || t("studentNotes.loadFailed"));
+        if (!cancelled) setError(apiErrorText(e, "studentNotes.loadFailed"));
       });
     return () => {
       cancelled = true;

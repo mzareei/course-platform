@@ -46,7 +46,7 @@ export function Content() {
   const poll = useRef<number | undefined>(undefined);
 
   function refresh() {
-    return listJobs().then((r) => setJobs(r.jobs)).catch((e: Error) => setError(e.message));
+    return listJobs().then((r) => setJobs(r.jobs)).catch((e: unknown) => setError(apiErrorText(e, "content.jobsLoadFailed")));
   }
 
   useEffect(() => { void refresh(); }, []);
@@ -102,7 +102,7 @@ export function Content() {
       await cancelJob(jobId);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : null);
+      setError(apiErrorText(e, "content.jobsLoadFailed"));
     } finally {
       setBusy(null);
     }
@@ -268,7 +268,7 @@ function ReviewPanel({ jobId, generationMode, onClose, onApproved }: {
           .catch(() => {});
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) setError(apiErrorText(e, "content.jobsLoadFailed"));
       });
     return () => { cancelled = true; };
   }, [jobId, reviewCapabilities.requestsDeckPreview]);

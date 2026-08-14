@@ -93,7 +93,7 @@ export function Live() {
         return;
       }
       // Keep the last known state on a network blip rather than blanking the screen.
-      if (!view) setError(e instanceof Error ? e.message : null);
+      if (!view) setError(apiErrorText(e, "live.loadFailed"));
     } finally {
       setFirstPollDone(true);
     }

@@ -73,7 +73,7 @@ export function ContentLibraryView() {
     void load();
   }, []);
 
-  async function run(itemId: string, work: () => Promise<void>, failureMessage = t("content.library.changeFailed")) {
+  async function run(itemId: string, work: () => Promise<void>, failureKey: StringKey = "content.library.changeFailed", failureVars?: Record<string, string | number>) {
     setNotice(null);
     setItemError((current) => ({ ...current, [itemId]: "" }));
     setBusy(itemId);
@@ -88,7 +88,7 @@ export function ContentLibraryView() {
           ? t("content.library.notReviewable")
           : deleteErrorKey !== null
             ? t(deleteErrorKey)
-            : e instanceof Error ? e.message : failureMessage
+            : apiErrorText(e, failureKey, failureVars)
       }));
     } finally {
       setBusy(null);
@@ -272,7 +272,7 @@ export function ContentLibraryView() {
                                 : "content.library.synced",
                               { title: item.title }
                             ));
-                          }, t("content.library.syncFailed", { title: item.title }));
+                          }, "content.library.syncFailed", { title: item.title });
                         }}
                       />
                     ) : null}
@@ -310,7 +310,7 @@ export function ContentLibraryView() {
                             // assigned lecture would keep seeing stale references until a
                             // full reload.
                             await refreshContext();
-                          }, t("content.library.deleteFailed"));
+                          }, "content.library.deleteFailed");
                         }}
                       />
                     ) : null}
@@ -508,7 +508,7 @@ export function ContentLibraryView() {
                       await deleteContentItem(item.id, { force: true });
                       setNotice(t("content.library.deleted", { title: item.title }));
                       await refreshContext();
-                    }, t("content.library.deleteFailed"))}
+                    }, "content.library.deleteFailed")}
                   />
                 ) : null}
               </div>
@@ -539,7 +539,7 @@ export function ContentLibraryView() {
                         await deleteContentItem(item.id);
                         setNotice(t("content.library.deleted", { title: item.title }));
                         await refreshContext();
-                      }, t("content.library.deleteFailed"));
+                      }, "content.library.deleteFailed");
                     }}
                   />
                   {failure ? <p class="error-text" role="alert">{failure}</p> : null}
@@ -551,7 +551,7 @@ export function ContentLibraryView() {
                         await deleteContentItem(item.id, { force: true });
                         setNotice(t("content.library.deleted", { title: item.title }));
                         await refreshContext();
-                      }, t("content.library.deleteFailed"))}
+                      }, "content.library.deleteFailed")}
                     />
                   ) : null}
                 </div>

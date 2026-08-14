@@ -37,7 +37,7 @@ export function ClassRecord({ sessionId }: { sessionId?: string }) {
         setGrading(gradingData);
       })
       .catch((e: Error) => {
-        if (!cancelled) setError(e.message || t("classRecord.loadFailed"));
+        if (!cancelled) setError(apiErrorText(e, "classRecord.loadFailed"));
       });
     return () => {
       cancelled = true;
