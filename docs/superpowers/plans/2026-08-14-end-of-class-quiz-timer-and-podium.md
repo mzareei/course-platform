@@ -393,7 +393,8 @@ EOF
   - `SUBMITTED_STATUSES = ["submitted", "late"]`
   - `GRACE_SECONDS = 60`
   - `type QuizCloseReason = "time" | "everyone"`
-  - `decideQuizClose(input: { state: string; endsAt: string | null; presentCount: number; submittedCount: number; now: Date }): QuizCloseReason | null`
+  - `EVERYONE_CLOSE_FLOOR_MS = 60_000`
+  - `decideQuizClose(input: { state: string; startsAt: string | null; endsAt: string | null; presentCount: number; submittedCount: number; now: Date }): QuizCloseReason | null`
   - `closeReasonFor(input: { presentCount: number; submittedCount: number }): QuizCloseReason`
   - `withinSubmitGrace(input: { endsAt: string | null; startedAt: string | null; now: Date }): boolean`
 
@@ -410,7 +411,9 @@ Create `tools/verify-quiz-auto-close.mjs` in the **frontend** repo:
 //
 // 1. The denominator is CHECK-INS, not the roster. section_enrollments counts
 //    every absent student, so "everyone has finished" is unreachable against
-//    it — the same mistake pitfall 0048 records for the pulse questions.
+//    it — the same mistake recorded in docs/07-pitfalls.md under
+//    "`enrolled` is the roster, not the room". (Cited by title: the numbering
+//    in that file collides — ## 57 through ## 69 each appear twice.)
 //
 // 2. Closing at the deadline used to REJECT a submission arriving a second
 //    later, losing every answer a student had given. Invisible and generous,
@@ -628,8 +631,10 @@ Create `supabase/functions/_shared/quiz-close.ts` in the **backend** repo:
 // The completeness denominator is CHECK-INS, never the roster.
 // section_enrollments includes every absent student, so "everyone has
 // finished" would be unreachable against it — the same mistake recorded for
-// the pulse questions in 0048, where counting all attendance rows of a
-// two-day class inflated the room past the number of people who could answer.
+// the pulse questions, recorded in docs/07-pitfalls.md as "`enrolled` is the
+// roster, not the room". That entry carries a second rule this module also
+// obeys: guard completeness with a floor, or one student tapping instantly
+// ends the activity for everyone still working.
 //
 // The decision is pure so it can be executed by the verifier; the one function
 // that touches the database is kept at the bottom and does no deciding.
@@ -721,7 +726,7 @@ export function withinSubmitGrace(input: {
 export async function maybeAutoCloseInstance(
   // deno-lint-ignore no-explicit-any
   db: any,
-  instance: { id: string; state: string; ends_at: string | null; class_session_id: string | null },
+  instance: { id: string; state: string; starts_at: string | null; ends_at: string | null; class_session_id: string | null },
   classDateFor: () => string
 ): Promise<{ state: string; present: number; submitted: number; closed_reason: QuizCloseReason | null }> {
   const [{ count: present }, { data: attempts, error }] = await Promise.all([
@@ -787,7 +792,8 @@ Add the shared quiz auto-close decision
 Closes on the deadline, or when every student who checked in today has
 submitted. The denominator is check-ins, never the roster: an absent student
 would otherwise make "everyone has finished" unreachable, the same mistake
-0048 records for the pulse questions.
+docs/07-pitfalls.md records under
+"`enrolled` is the roster, not the room".
 
 An empty room must not read as a finished one, so the everyone-branch is
 guarded on present > 0 — without it the quiz would close in the same second
@@ -1335,6 +1341,7 @@ Replace the body of `quizStatus` after `loadInstanceForActor`:
     {
       id: String(instance.id),
       state: String(instance.state),
+      starts_at: (instance as Record<string, unknown>).starts_at as string | null,
       ends_at: instance.ends_at as string | null,
       class_session_id: (instance as Record<string, unknown>).class_session_id as string | null
     },
@@ -1374,7 +1381,7 @@ Replace the body of `quizStatus` after `loadInstanceForActor`:
 `loadInstanceForActor` must also select `class_session_id`. Change its `.select(...)` to:
 
 ```typescript
-    .select("id, section_id, class_session_id, state, ends_at, question_count, course_sections!inner(course_id)")
+    .select("id, section_id, class_session_id, state, starts_at, ends_at, question_count, course_sections!inner(course_id)")
 ```
 
 - [ ] **Step 6: Run both tests**
@@ -1857,7 +1864,7 @@ It currently takes `(db, sessionId)`. It now needs the caller's profile to answe
 async function loadCurrentQuiz(db: Db, sessionId: string, profileId: string) {
   const { data: instances, error } = await db
     .from("activity_instances")
-    .select("id, state, ends_at, question_count, class_session_id")
+    .select("id, state, starts_at, ends_at, question_count, class_session_id")
     .eq("class_session_id", sessionId)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -1870,6 +1877,7 @@ async function loadCurrentQuiz(db: Db, sessionId: string, profileId: string) {
     {
       id: String(instance.id),
       state: String(instance.state),
+      starts_at: instance.starts_at,
       ends_at: instance.ends_at,
       class_session_id: String(instance.class_session_id)
     },

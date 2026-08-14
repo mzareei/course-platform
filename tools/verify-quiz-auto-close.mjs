@@ -6,7 +6,8 @@
 //
 // 1. The denominator is CHECK-INS, not the roster. section_enrollments counts
 //    every absent student, so "everyone has finished" is unreachable against
-//    it — the same mistake pitfall 0048 records for the pulse questions.
+//    it — the same mistake pitfall "`enrolled` is the roster, not the room"
+//    (docs/07-pitfalls.md) records for the pulse questions.
 //
 // 2. Closing at the deadline used to REJECT a submission arriving a second
 //    later, losing every answer a student had given. Invisible and generous,
@@ -32,7 +33,7 @@ if (!existsSync(fn("_shared"))) {
 }
 
 const {
-  OPEN_INSTANCE_STATES, SUBMITTED_STATUSES, GRACE_SECONDS,
+  OPEN_INSTANCE_STATES, SUBMITTED_STATUSES, GRACE_SECONDS, EVERYONE_CLOSE_FLOOR_MS,
   decideQuizClose, closeReasonFor, withinSubmitGrace
 } = await import(backend("_shared/quiz-close.ts").href);
 
@@ -42,6 +43,10 @@ const T_END = "2026-08-14T18:10:00.000Z";
 
 const base = {
   state: "live",
+  // Ten minutes before T0 — far past EVERYONE_CLOSE_FLOOR_MS by the time any
+  // existing assertion below evaluates "everyone", so the floor added in this
+  // round never changes what those assertions mean.
+  startsAt: "2026-08-14T17:50:00.000Z",
   endsAt: T_END,
   presentCount: 18,
   submittedCount: 3,
@@ -103,6 +108,55 @@ assert.equal(
   decideQuizClose({ ...base, submittedCount: 18, now: at(T_END) }),
   "everyone",
   "when the room finishes exactly as time runs out, say everyone finished"
+);
+
+// ---------------------------------------------------- the completeness floor
+// A count-only rule closes an almost-empty room the moment the professor
+// starts it, if a couple of quick students submit before the rest have even
+// checked in. The pulse questions hit this exact bug (docs/07-pitfalls.md,
+// "`enrolled` is the roster, not the room": "guard the completeness rule with
+// a floor as well") and fixed it with a floor; the quiz needs the same one.
+assert.equal(EVERYONE_CLOSE_FLOOR_MS, 60_000, "the floor is sixty seconds");
+
+assert.equal(
+  decideQuizClose({
+    ...base,
+    startsAt: "2026-08-14T17:59:30.000Z", // opened 30s before "now"
+    submittedCount: 18,
+    now: at(T0)
+  }),
+  null,
+  "a room that finishes inside the floor stays open"
+);
+assert.equal(
+  decideQuizClose({
+    ...base,
+    startsAt: "2026-08-14T17:58:30.000Z", // opened 90s before "now"
+    submittedCount: 18,
+    now: at(T0)
+  }),
+  "everyone",
+  "the same room past the floor closes"
+);
+assert.equal(
+  decideQuizClose({
+    ...base,
+    startsAt: null,
+    submittedCount: 18,
+    now: at(T0)
+  }),
+  "everyone",
+  "a null start time never blocks the everyone branch"
+);
+assert.equal(
+  decideQuizClose({
+    ...base,
+    startsAt: "2026-08-14T18:09:45.000Z", // opened 15s before the deadline
+    submittedCount: 18,
+    now: at(T_END)
+  }),
+  "time",
+  "the deadline still closes regardless of the floor"
 );
 
 assert.equal(
@@ -184,7 +238,7 @@ check(
   "the completeness denominator must be today's check-ins"
 );
 check(
-  !/section_enrollments/.test(closeSource),
+  !/from\(["']section_enrollments["']\)/.test(closeSource),
   "the roster must never reach the completeness check — an absent student would make 'everyone finished' unreachable"
 );
 check(
