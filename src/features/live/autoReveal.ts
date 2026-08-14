@@ -76,14 +76,30 @@ export function countAdvance(
 }
 
 /**
- * How long `course-pulse` keeps serving a revealed round to students
- * (`revealDisplayMinutes = 3`). The cockpit has to use the same number: showing
- * a question the phones have already dropped is how the professor ended up
- * looking at last checkpoint's question with a Continue button under it.
+ * How long `course-pulse` will keep serving a revealed round to students
+ * (`revealDisplayMinutes = 3`). It is the outer bound, not the target: nothing
+ * in the cockpit may wait longer than this, because showing a question the
+ * phones have already dropped is how the professor ended up looking at last
+ * checkpoint's question with a Continue button under it.
  */
 export const REVEAL_DISPLAY_MS = 3 * 60 * 1000;
 
-export type AutoContinueReason = "displayWindowElapsed" | "movedOn";
+/**
+ * How long the answer stays up before the lecture resumes on its own.
+ *
+ * The professor's ask, 2026-08-14: once the answer is on screen there is
+ * nothing left to decide, so Continue should not need a click. It cannot be
+ * *instant*, though — continuing closes the round, and `course-pulse` stops
+ * serving a closed round, so a zero-second continue would pull "you were right"
+ * off every phone in the same frame it appeared (pitfall #66).
+ *
+ * Fifteen seconds is the professor's own number: long enough for a student
+ * whose phone polls every three seconds to read the verdict, short enough that
+ * the room is not sitting in silence waiting for the cockpit.
+ */
+export const AUTO_CONTINUE_AFTER_REVEAL_MS = 15_000;
+
+export type AutoContinueReason = "answerShown" | "movedOn";
 
 /**
  * When the cockpit should let go of a revealed question by itself.
@@ -110,8 +126,23 @@ export function autoContinueReason(input: {
   if (input.state !== "revealed") return null;
   if (input.advancesSinceRevealed >= ADVANCES_BEFORE_REVEAL) return "movedOn";
   if (input.revealedAtMs === null) return null;
-  if (input.nowMs - input.revealedAtMs >= REVEAL_DISPLAY_MS) {
-    return "displayWindowElapsed";
+  if (input.nowMs - input.revealedAtMs >= AUTO_CONTINUE_AFTER_REVEAL_MS) {
+    return "answerShown";
   }
   return null;
+}
+
+/**
+ * Whole seconds left before the lecture resumes by itself, for the countdown
+ * the panel shows under the answer. Null means there is no countdown to show —
+ * a round recovered after a reload has no reveal time, and `autoContinueReason`
+ * will not fire on the clock for it either, so promising one would be a lie.
+ */
+export function secondsUntilAutoContinue(input: {
+  revealedAtMs: number | null;
+  nowMs: number;
+}): number | null {
+  if (input.revealedAtMs === null) return null;
+  const left = AUTO_CONTINUE_AFTER_REVEAL_MS - (input.nowMs - input.revealedAtMs);
+  return Math.max(0, Math.ceil(left / 1000));
 }

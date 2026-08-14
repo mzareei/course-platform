@@ -973,6 +973,11 @@ export const strings = {
     "QR code that opens this class",
     "Código QR que abre esta clase"
   ],
+  "run.join.joinedLabel": ["in the room", "en el salón"],
+  "run.join.joinedOfRoster": [
+    "of {enrolled} on the roster",
+    "de {enrolled} en la lista"
+  ],
   "run.join.qrLoading": ["Building the QR code…", "Generando el código QR…"],
   "run.join.qrFailed": [
     "The QR code could not be generated. Students can use the link or class code instead.",
@@ -1268,6 +1273,11 @@ export const strings = {
   ],
   "run.checkpoint.skip": ["Skip this checkpoint", "Omitir este punto"],
   "run.checkpoint.continue": ["Continue lecture", "Continuar la clase"],
+  "run.checkpoint.continueNow": ["Continue now", "Continuar ahora"],
+  "run.checkpoint.continuingIn": [
+    "The answer is up. Back to the lecture in {seconds} s.",
+    "La respuesta está a la vista. Volvemos a la clase en {seconds} s."
+  ],
   "run.checkpoint.closeContinue": [
     "Close and continue",
     "Cerrar y continuar"

@@ -736,6 +736,34 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .run-join-qr {
   flex: 0 0 auto;
 }
+/* Sits directly above the QR code: the professor glances at the code the room
+   is scanning and reads the count in the same look. */
+.run-join-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+.run-join-count-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.run-join-count-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.run-join-count-roster {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.run-join-card.compact .run-join-count-value {
+  font-size: 1.6rem;
+}
 .run-join-qr img {
   display: block;
   border-radius: var(--radius-sm);

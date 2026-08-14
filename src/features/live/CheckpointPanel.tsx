@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import type { CheckpointCoverage } from "../../api/checkpoints";
 import { lang, t } from "../../i18n";
+import { secondsUntilAutoContinue } from "./autoReveal";
 import type { ActiveCheckpoint, CheckpointUiState } from "./checkpointState";
 
 function secondsLeft(endsAt?: string) {
@@ -46,11 +47,14 @@ export function CheckpointPanel({
    *  that, is what the end-of-class quiz needs — not deck checkpoints. */
   finalQuizAvailable: boolean;
 }) {
-  const [, setClock] = useState(Date.now());
+  const [now, setClock] = useState(Date.now());
   const useSpanish = lang.value === "es";
 
+  // A revealed round needs the same one-second tick an open one does: the panel
+  // now counts down to resuming the lecture by itself, and a countdown that
+  // only repaints when something else re-renders is worse than none.
   useEffect(() => {
-    if (state.type !== "open") return;
+    if (state.type !== "open" && state.type !== "revealed") return;
     const id = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(id);
   }, [state.type]);
@@ -60,6 +64,15 @@ export function CheckpointPanel({
   const results = resultState?.results ?? null;
   const round = resultState?.round ?? null;
   const remaining = secondsLeft(round?.ends_at);
+  const continueIn =
+    state.type === "revealed"
+      ? secondsUntilAutoContinue({
+        revealedAtMs: round?.revealed_at
+          ? new Date(round.revealed_at).getTime()
+          : null,
+        nowMs: now
+      })
+      : null;
 
   return (
     <aside class="checkpoint-panel card">
@@ -275,13 +288,17 @@ export function CheckpointPanel({
                 {t("run.reveal")}
               </button>
             ) : (
+              /* The lecture resumes on its own; this is only for a professor
+                 who does not want to wait out the countdown. */
               <button
                 class="btn primary"
                 type="button"
                 disabled={busy}
                 onClick={onContinue}
               >
-                {t("run.checkpoint.continue")}
+                {continueIn === null
+                  ? t("run.checkpoint.continue")
+                  : t("run.checkpoint.continueNow")}
               </button>
             )}
             {state.type === "open" ? (
@@ -295,14 +312,16 @@ export function CheckpointPanel({
               </button>
             ) : null}
           </div>
-          <p class="hint">
+          <p class="hint" role={state.type === "revealed" ? "status" : undefined}>
             {state.type === "open"
               ? autoSend
                 ? t("run.checkpoint.autoRevealHint")
                 : t("run.checkpoint.spaceRevealHint")
-              : autoSend
-                ? t("run.checkpoint.revealedAutoHint")
-                : t("run.checkpoint.arrowHint")}
+              : continueIn === null
+                ? autoSend
+                  ? t("run.checkpoint.revealedAutoHint")
+                  : t("run.checkpoint.arrowHint")
+                : t("run.checkpoint.continuingIn", { seconds: continueIn })}
           </p>
         </div>
       ) : null}

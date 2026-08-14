@@ -1,6 +1,34 @@
 # Status
 
-**Last updated:** 2026-08-13 (late night, second pass)
+**Last updated:** 2026-08-14
+
+### The answer hands the lecture back by itself; the room's count sits over the QR (2026-08-14)
+
+Two things the professor asked for after teaching with the cockpit:
+
+- **"When the answer is already shown, Continue lecture should press itself."**
+  It does now, 15 seconds after the reveal — his own number. Not instantly:
+  continuing *closes* the round, and `course-pulse` stops serving a closed round,
+  so a zero-second continue would take "you were right" off every phone in the
+  frame it appeared (pitfall #66). Fifteen seconds covers a phone polling every
+  three. The panel counts the seconds down out loud ("Back to the lecture in
+  12 s") and the button becomes **Continue now** for anyone who will not wait.
+  `AUTO_CONTINUE_AFTER_REVEAL_MS` replaces the old 3-minute
+  `REVEAL_DISPLAY_MS` trigger, which stays as the outer bound a verifier now
+  pins the new value beneath.
+- **A live headcount above the QR code**, so he can watch the room fill up.
+  New teacher-only `attendance` action on `course-pulse` returning `present`
+  (today's `class_attendance` rows) and `enrolled` (the roster), polled every
+  5 s for as long as the join card is on screen — including before the class
+  goes live, which is exactly when students are scanning. Two `head: true`
+  counts, deliberately not folded into `current` (four queries plus a full
+  results load) . The counter is hidden until the first real count lands:
+  "0 in the room" on a full classroom is a worse lie than a blank for a second.
+
+`course-pulse` deployed. New verifier `verify-live-attendance-count`;
+`verify-auto-continue` rewritten around the new window. 39 verifiers green.
+
+### Full E2E sweep, PIN-claim fix, per-group isolation, Inter ships (2026-08-13, late night)
 
 ### Full E2E sweep, PIN-claim fix, per-group isolation, Inter ships (2026-08-13, late night)
 

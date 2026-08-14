@@ -6,6 +6,33 @@ the UI is silently wrong.**
 
 ---
 
+## 83. "Make it automatic" is a question about *when*, not about *whether*
+
+**Asked 2026-08-14: "when the answer is already shown … that button should be
+automatically pressed, so we continue to the lecture."**
+
+The literal implementation — fire `continueCheckpoint()` the instant the state
+turns `revealed` — is a regression, and a silent one. Continuing closes the
+round; `course-pulse` serves a student only an `open` or `revealed` round
+(pitfall #66); so the verdict every student was waiting for would appear and
+vanish in the same frame. Nothing errors. The professor's cockpit does exactly
+what he asked. The failure lands on thirty phones he cannot see, and comes back
+a week later as "the students say they never find out if they were right."
+
+The tell is that the request names a *trigger* ("when the answer is shown") but
+the button does two things: hand the lecture back **to the professor**, and take
+the question away **from the room**. Those wanted different timings, and only
+the professor could say what the second one should be. He said fifteen seconds.
+
+**Rule:** before automating a control, list everything it does and who each
+effect lands on. If one effect is invisible from where the request was made,
+that is the one to ask about — and ask with the trade-off spelled out, not as
+"how many seconds?" More generally, when a delay is the answer, the number is a
+teaching decision, not an engineering one: bound it in code (a verifier now
+pins it below the phones' own display window) but let him choose it.
+
+---
+
 ## 82. A verifier that pins an implementation shape goes stale when the code gets better — and a permanently-red verifier protects nothing
 
 **Found 2026-08-13 while sweeping the backend: `verify-generation-ownership`

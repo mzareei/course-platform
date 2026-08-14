@@ -7,8 +7,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   ADVANCES_BEFORE_REVEAL,
+  AUTO_CONTINUE_AFTER_REVEAL_MS,
   REVEAL_DISPLAY_MS,
-  autoContinueReason
+  autoContinueReason,
+  secondsUntilAutoContinue
 } from "../src/features/live/autoReveal.ts";
 
 const revealedAtMs = 1_000_000;
@@ -33,21 +35,58 @@ for (const state of ["open", "closed"]) {
   );
 }
 
-// -------------------------------------- the phones' own window, matched exactly
+// ------------------------------- the answer gets read before the lecture resumes
+// Continuing closes the round, and course-pulse stops serving a closed round, so
+// this delay is the entire window a student has to read "you were right". Zero
+// would take the verdict away in the frame it appeared (pitfall #66).
+assert.ok(
+  AUTO_CONTINUE_AFTER_REVEAL_MS >= 10_000,
+  "the answer must stay up long enough for a phone polling every 3s to show it"
+);
+assert.ok(
+  AUTO_CONTINUE_AFTER_REVEAL_MS < REVEAL_DISPLAY_MS,
+  "the cockpit must never hold a question longer than course-pulse serves it"
+);
 assert.equal(
   REVEAL_DISPLAY_MS,
   3 * 60 * 1000,
-  "the cockpit must use the same three minutes course-pulse serves students"
+  "the outer bound must stay the three minutes course-pulse serves students"
 );
 assert.equal(
-  autoContinueReason({ ...revealed, nowMs: revealedAtMs + REVEAL_DISPLAY_MS - 1 }),
+  autoContinueReason({
+    ...revealed,
+    nowMs: revealedAtMs + AUTO_CONTINUE_AFTER_REVEAL_MS - 1
+  }),
   null,
-  "inside the window the cockpit must still show what the phones show"
+  "inside the reading window the answer must stay on screen"
 );
 assert.equal(
-  autoContinueReason({ ...revealed, nowMs: revealedAtMs + REVEAL_DISPLAY_MS }),
-  "displayWindowElapsed",
-  "when the phones drop the question the cockpit must drop it too"
+  autoContinueReason({
+    ...revealed,
+    nowMs: revealedAtMs + AUTO_CONTINUE_AFTER_REVEAL_MS
+  }),
+  "answerShown",
+  "once the answer has been up long enough the lecture must resume by itself"
+);
+
+// ------------------------------------------------------ the countdown it shows
+assert.equal(
+  secondsUntilAutoContinue({ revealedAtMs, nowMs: revealedAtMs }),
+  AUTO_CONTINUE_AFTER_REVEAL_MS / 1000,
+  "the countdown must start at the full window"
+);
+assert.equal(
+  secondsUntilAutoContinue({
+    revealedAtMs,
+    nowMs: revealedAtMs + AUTO_CONTINUE_AFTER_REVEAL_MS + 5_000
+  }),
+  0,
+  "the countdown must never go negative"
+);
+assert.equal(
+  secondsUntilAutoContinue({ revealedAtMs: null, nowMs: revealedAtMs }),
+  null,
+  "a round with no reveal time has no countdown — autoContinueReason will not fire on the clock for it either, so the panel must not promise one"
 );
 
 // ------------------------------------------------ the professor plainly moved on
@@ -131,6 +170,26 @@ assert.doesNotMatch(
   runClass,
   /autoContinueReason\(\{[\s\S]{0,200}advancesSinceAsked/,
   "the retire must never read the pre-reveal counter — it is already at the threshold"
+);
+
+// The professor teaches from fullscreen and asked for the answer to hand the
+// lecture back without a click. A countdown he cannot see is a screen that
+// changes under him, so the panel has to say what is about to happen.
+const panel = readFileSync("src/features/live/CheckpointPanel.tsx", "utf8");
+assert.match(
+  panel,
+  /secondsUntilAutoContinue\(/,
+  "the panel must show how long the answer stays up before the lecture resumes"
+);
+assert.match(
+  panel,
+  /run\.checkpoint\.continuingIn/,
+  "the countdown must be a translated string, not a bare number"
+);
+assert.match(
+  panel,
+  /state\.type !== "open" && state\.type !== "revealed"/,
+  "the one-second tick must run while revealed too, or the countdown never repaints"
 );
 
 console.log("verify-auto-continue: OK");

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import QRCode from "qrcode";
 import { startClassSession } from "../../api/classes";
 import {
+  classAttendanceCount,
   closePulse,
   currentPulse,
   drawCheckpointQuestion,
@@ -13,6 +14,7 @@ import {
   pushBankQuestion,
   revealPulse,
   type BankSummary,
+  type ClassAttendanceCount,
   type PulseRound
 } from "../../api/pulse";
 import { currentClassQuiz, closeClassQuiz } from "../../api/quiz";
@@ -56,6 +58,10 @@ import { EndOfClass } from "./EndOfClass";
 
 const POLL_MS = 3000;
 const BRIDGE_TIMEOUT_MS = 8000;
+// Slower than the results poll on purpose: a class fills up over minutes, not
+// seconds, and this one runs for the whole hour rather than only while a
+// question is open.
+const ATTENDANCE_POLL_MS = 5000;
 
 type RecoveryAction =
   | { type: "draw"; checkpoint: ActiveCheckpoint }
@@ -75,12 +81,15 @@ function JoinCard({
   joinCode,
   qrDataUrl,
   qrError,
+  joined,
   compact = false
 }: {
   joinUrl: string;
   joinCode: string;
   qrDataUrl: string | null;
   qrError: boolean;
+  /** Null until the first count arrives — a bare "0" would read as nobody came. */
+  joined: ClassAttendanceCount | null;
   compact?: boolean;
 }) {
   return (
@@ -95,6 +104,19 @@ function JoinCard({
         <a href={joinUrl}>{joinUrl}</a>
       </div>
       <div class="run-join-qr">
+        {/* Above the QR code, where the professor is already looking while the
+            room scans in. aria-live so the climb is announced, not just seen. */}
+        {joined ? (
+          <div class="run-join-count" role="status" aria-live="polite">
+            <span class="run-join-count-value">{joined.present}</span>
+            <span class="run-join-count-label">
+              {t("run.join.joinedLabel")}
+            </span>
+            <span class="run-join-count-roster">
+              {t("run.join.joinedOfRoster", { enrolled: joined.enrolled })}
+            </span>
+          </div>
+        ) : null}
         {qrDataUrl ? (
           <img
             src={qrDataUrl}
@@ -144,6 +166,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState(false);
+  const [joined, setJoined] = useState<ClassAttendanceCount | null>(null);
   const [recoveringCurrentRound, setRecoveringCurrentRound] = useState(false);
   const [advancesSinceAsked, setAdvancesSinceAsked] = useState(0);
   const [advancesSinceRevealed, setAdvancesSinceRevealed] = useState(0);
@@ -152,6 +175,7 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const [resetSummary, setResetSummary] = useState<ClassResetSummary | null>(null);
 
   const resultsPoll = useRef<number | undefined>(undefined);
+  const attendancePoll = useRef<number | undefined>(undefined);
   const previousDeckCheckpoint = useRef<ActiveCheckpoint | null>(null);
   // Where the deck is standing *now*. A draw is asynchronous, and the professor
   // may have walked past the checkpoint while it was in flight, so auto-send
@@ -196,6 +220,10 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
   const joinUrl = session?.join_code
     ? `${location.origin}/join/${session.join_code}`
     : "";
+  // A closed class cannot be joined, so showing its QR would invite a room full
+  // of phones to a refusal — and counting arrivals against it would be counting
+  // a door nobody can walk through.
+  const showJoinCard = Boolean(joinUrl) && !ended;
   const coverage = bank?.checkpoint_coverage ?? [];
   const finalCheckpoint = coverage.length
     ? Math.max(...coverage.map((item) => item.checkpoint_after_slide))
@@ -254,6 +282,35 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         setQrError(true);
       });
   }, [joinUrl]);
+
+  // The professor's ask, 2026-08-14: watch the room fill up. Polled rather than
+  // derived from a question's `present`, because the number he wants is the one
+  // *before* the first question — while the class is still scanning in, and
+  // before the class is even live.
+  useEffect(() => {
+    clearInterval(attendancePoll.current);
+    setJoined(null);
+    if (!sessionId || !showJoinCard) return;
+    const tick = () =>
+      classAttendanceCount(sessionId)
+        .then((count) => {
+          // A reply for the class we just navigated away from must not land on
+          // the new one's counter.
+          setJoined((current) =>
+            count.class_session_id === sessionId ? count : current
+          );
+        })
+        .catch(() => {
+          // Keep the last good number through a Wi-Fi interruption. A counter
+          // that blanks out mid-class reads as "everyone left".
+        });
+    void tick();
+    attendancePoll.current = setInterval(
+      tick,
+      ATTENDANCE_POLL_MS
+    ) as unknown as number;
+    return () => clearInterval(attendancePoll.current);
+  }, [sessionId, showJoinCard]);
 
   async function refreshCurrentRound() {
     if (!sessionId) return;
@@ -1170,14 +1227,13 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
         <div class="run-prelive-grid">
           <div class="run-deck-column">{deck}</div>
           <div class="run-control-column">
-            {/* A closed class cannot be joined, so showing its QR would invite
-                a room full of phones to a refusal. */}
-            {joinUrl && !ended ? (
+            {showJoinCard ? (
               <JoinCard
                 joinUrl={joinUrl}
                 joinCode={session.join_code}
                 qrDataUrl={qrDataUrl}
                 qrError={qrError}
+                joined={joined}
               />
             ) : null}
             {/* Pre-class is exactly when a professor wants to plan questions —
@@ -1318,12 +1374,13 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
             <ClassroomQuestionLayer round={classroomRound} />
           </div>
           <div class="run-control-column">
-            {joinUrl ? (
+            {showJoinCard ? (
               <JoinCard
                 joinUrl={joinUrl}
                 joinCode={session.join_code}
                 qrDataUrl={qrDataUrl}
                 qrError={qrError}
+                joined={joined}
                 compact
               />
             ) : null}

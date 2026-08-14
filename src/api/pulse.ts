@@ -146,6 +146,28 @@ export function pulseResults(round_id: string) {
   return callFn<PulseResults>("course-pulse", { action: "results", round_id });
 }
 
+/**
+ * How full the room is. Cheap enough to poll for the whole hour, which is the
+ * point: the professor watches this climb while the class scans in, before any
+ * question exists to carry a `present` count.
+ */
+export interface ClassAttendanceCount {
+  class_session_id: string;
+  /** The class day counted, in Monterrey time. */
+  attendance_date: string;
+  /** Students who scanned the QR code today. */
+  present: number;
+  /** Everyone on the section roster, present or not. */
+  enrolled: number;
+}
+
+export function classAttendanceCount(class_session_id: string) {
+  return callFn<ClassAttendanceCount>("course-pulse", {
+    action: "attendance",
+    class_session_id
+  });
+}
+
 /** One row per question asked during a finished class, in the order asked. */
 export interface PulseRoundReview {
   round_id: string;
