@@ -17,6 +17,10 @@ export interface QuizQuestion {
   question_type: string;
   difficulty: "easy" | "medium" | "hard";
   points: number;
+  /** How long this question is worth, decided by the server. The client keeps
+   *  no timing rule of its own — the two repos deploy independently, so a
+   *  constant on both sides drifts silently. */
+  seconds: number;
   options: QuizOption[];
 }
 
@@ -58,6 +62,13 @@ export function submitQuizAttempt(input: {
   integrity?: Record<string, unknown>;
 }) {
   return callFn<SubmitAttemptResponse>("course-activity-attempt", { action: "submit_attempt", ...input });
+}
+
+export function setQuizNameReveal(input: { attempt_id: string; revealed: boolean }) {
+  return callFn<{ attempt_id: string; name_revealed: boolean }>(
+    "course-activity-attempt",
+    { action: "set_name_reveal", ...input }
+  );
 }
 
 // ---------------------------------------------------------------- instructor

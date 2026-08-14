@@ -1,21 +1,27 @@
 // The end-of-class quiz, taken inside the student's live screen. Phone-first,
-// ONE question on screen at a time, each with its own countdown — short easy
-// questions get 20s, harder ones get more room to think, up to 45s. When a
-// question's timer runs out the player moves on by itself; there is no going
-// back once a question has passed, matching how a live in-class quiz actually
-// runs. Server-graded — the browser never learns which option is correct
-// until after submit. Questions are pre-mixed across difficulty tiers by the
-// server (course-activity-attempt); this component just presents them in the
-// order it received them, each timed by its own difficulty.
+// ONE question on screen at a time, each with its own countdown — thirty
+// seconds for almost everything, and forty-five for a question that simply
+// takes longer to read. The server
+// decides and sends the number with the question; this file holds no timing
+// rule of its own. When a question's timer runs out the player moves on by
+// itself; there is no going back once a question has passed, matching how a
+// live in-class quiz actually runs. Server-graded — the browser never learns
+// which option is correct until after submit. Questions are pre-mixed across
+// difficulty tiers by the server (course-activity-attempt); this component
+// just presents them in the order it received them, each timed by its own
+// duration.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t, lang, apiErrorText } from "../../i18n";
 import { startQuizAttempt, submitQuizAttempt, type QuizQuestion, type SubmitAttemptResponse } from "../../api/quiz";
+import { clockText } from "./clock";
 
-const SECONDS_BY_DIFFICULTY: Record<string, number> = { easy: 20, medium: 30, hard: 45 };
-const DEFAULT_SECONDS = 30;
+// The server sends each question's own time. The fallback is the floor, never
+// a table: if a stale deployment omits the field, a student gets the minimum
+// the professor asked for rather than a number this file invented.
+const FALLBACK_SECONDS = 30;
 
 function secondsFor(question: QuizQuestion) {
-  return SECONDS_BY_DIFFICULTY[question.difficulty] || DEFAULT_SECONDS;
+  return Number(question.seconds) > 0 ? Number(question.seconds) : FALLBACK_SECONDS;
 }
 
 export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string }) {
@@ -30,6 +36,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [questionDeadline, setQuestionDeadline] = useState<number | null>(null);
+  const [instanceEndsAt, setInstanceEndsAt] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
   const questionRef = useRef<HTMLHeadingElement | null>(null);
   const integrity = useRef({ focus_loss_count: 0, paste_count: 0, copy_count: 0 });
@@ -44,6 +51,11 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
       .then((res) => {
         setAttemptId(res.attempt.id);
         setQuestions(res.questions);
+        setInstanceEndsAt(
+          res.activity_instance?.ends_at
+            ? new Date(res.activity_instance.ends_at).getTime()
+            : null
+        );
         if (res.attempt.submitted_at) {
           // Resuming after already submitting: show the real graded score if
           // the server sent one, and never a fabricated 0%.
@@ -126,6 +138,25 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, questionDeadline]);
 
+  // The whole quiz has a deadline, not just each question. When it passes the
+  // player stops feeding new questions and sends what the student has, landing
+  // inside the server's sixty-second grace.
+  //
+  // A student who answered nothing submits nothing: the server refuses an empty
+  // submission ("At least one response is required"), so auto-submitting a
+  // blank attempt would put an error on the phone of someone who never started.
+  useEffect(() => {
+    const { answers: a, busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
+    if (!instanceEndsAt || hasResult || hasResumed || isBusy || hasError) return;
+    if (now < instanceEndsAt) return;
+    if (Object.keys(a).length === 0) {
+      setResumed({ percent: null });
+      return;
+    }
+    void submitNow(a);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, instanceEndsAt]);
+
   if (error && !questions) {
     // The quiz never loaded — a dead end mid-class without a way to retry.
     return (
@@ -176,6 +207,11 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
           {remaining !== null ? (
             <span class={`pill ${remaining > 5 ? "live" : "warn"}`}>
               {remaining > 0 ? t("run.timeLeft", { seconds: remaining }) : t("quiz.timeUpAdvancing")}
+            </span>
+          ) : null}
+          {instanceEndsAt !== null ? (
+            <span class="pill hidden">
+              {t("quiz.totalLeft", { time: clockText(Math.max(0, instanceEndsAt - now)) })}
             </span>
           ) : null}
         </div>

@@ -2024,6 +2024,7 @@ export const strings = {
     "Una pregunta a la vez — avanza automáticamente cuando se acaba el tiempo."
   ],
   "quiz.timeUpAdvancing": ["Time's up — moving on…", "Se acabó el tiempo — avanzando…"],
+  "quiz.totalLeft": ["{time} left in total", "{time} en total"],
 
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],
