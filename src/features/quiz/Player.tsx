@@ -31,6 +31,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
   const [now, setNow] = useState(Date.now());
   const [questionDeadline, setQuestionDeadline] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
+  const questionRef = useRef<HTMLHeadingElement | null>(null);
   const integrity = useRef({ focus_loss_count: 0, paste_count: 0, copy_count: 0 });
   // Refs mirror the latest state so the auto-advance effect (keyed only on the
   // clock tick) always reads current values without re-subscribing every render.
@@ -74,6 +75,12 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
     const clock = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(clock);
   }, []);
+
+  // Every advance — tap or timeout — announces the new question to a screen
+  // reader and scrolls it into view. Not on first paint (index 0).
+  useEffect(() => {
+    if (index > 0) questionRef.current?.focus();
+  }, [index]);
 
   async function submitNow(finalAnswers: Record<string, string>) {
     if (!attemptId || !stateRef.current.questions) return;
@@ -174,7 +181,7 @@ export function QuizPlayer({ activityInstanceId }: { activityInstanceId: string 
         </div>
       </div>
 
-      <h2 style="font-size: 1.3rem;">{(lang.value === "es" && current.prompt_es) || current.prompt}</h2>
+      <h2 ref={questionRef} tabindex={-1} style="font-size: 1.3rem;">{(lang.value === "es" && current.prompt_es) || current.prompt}</h2>
 
       <div class="stack" style="gap: 0.5rem;">
         {current.options.map((option) => (
