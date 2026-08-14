@@ -13,7 +13,9 @@
 ## Global Constraints
 
 - **Two repos.** Frontend is `~/Documents/GitHub/course-platform` (this repo). Backend is `~/Documents/GitHub/mzareei.github.io`, holding `supabase/functions/` and `supabase/migrations/`. Most tasks commit in **both**; each task says which.
-- **Edge functions do not deploy on push.** Deploy explicitly: `npx supabase functions deploy <name>` from the backend repo. Migrations: `npx supabase db push`.
+- **NOTHING DEPLOYS AND NOTHING IS PUSHED UNTIL TASK 14.** There is one Supabase project and no staging, so every `functions deploy` and `db push` changes live class software the moment it runs. The professor decided all of it lands in a single pass at the end. Tasks 1–13 commit locally only. If a task's text ever seems to ask you to deploy, push, or run a migration, it is wrong — do not.
+- **Edge functions do not deploy on git push** (Cloudflare Pages builds the frontend; the functions never ship that way). Task 14 deploys them explicitly with `npx supabase functions deploy <name>` from the backend repo, and applies migrations with `npx supabase db push`.
+- **Both repos work directly on `main`,** by the professor's decision. Commit freely; never push.
 - **Supabase project ref:** `ojmbupftdikwmlqvibwt`.
 - **Every user-facing string is EN + ES**, added in pairs to `src/i18n/strings.ts`. `tools/verify-i18n.mjs` enforces it.
 - **The browser never queries a table.** RLS is on with zero policies; edge functions are the only door.
@@ -1165,24 +1167,20 @@ comment on column public.student_attempts.name_revealed is
   'Student opted in to having their real name shown on the class podium for THIS attempt. Per-quiz consent; never inherited by a later attempt.';
 ```
 
-- [ ] **Step 2: Push it**
+- [ ] **Step 2: Do NOT apply it**
+
+The migration is **not** pushed here. There is one Supabase project and no staging, so `db push` would alter the live database mid-build. Task 14 applies it in the single deployment pass, before the functions that read the column go up.
+
+Check the file is syntactically sound by eye instead: one `alter table`, one `comment on column`, `if not exists` present so a re-run is harmless. Nothing to run.
+
+- [ ] **Step 3: Confirm nothing was applied**
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
-npx supabase db push
+git status --short supabase/migrations/
 ```
 
-Expected: the migration applies cleanly. `add column if not exists` makes a re-run harmless.
-
-- [ ] **Step 3: Verify the column exists**
-
-Run, from the backend repo:
-
-```bash
-npx supabase db push --dry-run
-```
-
-Expected: reports no pending migrations. If it still lists `0053`, the push did not land — do not continue to Task 6, which selects the column.
+Expected: `0053_quiz_name_reveal.sql` shows as a new untracked file and nothing else. If you find yourself having run `db push`, say so in your report — it is not a disaster (the column is additive with a default) but Task 14 needs to know.
 
 - [ ] **Step 4: Commit (backend)**
 
@@ -1383,11 +1381,10 @@ Replace the body of `quizStatus` after `loadInstanceForActor`:
 Run: `node tools/verify-quiz-timing.mjs; node tools/verify-quiz-auto-close.mjs`
 Expected: `verify-quiz-timing` still fails only on the two client checks (Task 10). `verify-quiz-auto-close` still fails only on "the student poll must run the auto-close check too" (Task 9) and the two grace checks (Task 7).
 
-- [ ] **Step 7: Deploy and commit (backend)**
+- [ ] **Step 7: Commit (backend) — do NOT deploy**
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
-npx supabase functions deploy course-class-quiz
 git add supabase/functions/course-class-quiz/index.ts
 git commit -m "$(cat <<'EOF'
 Size the quiz clock from its questions and let it close itself
@@ -1519,11 +1516,10 @@ async function quizPodium(
 Run: `node tools/verify-quiz-podium.mjs`
 Expected: still FAIL, but no longer on "the podium action must use the shared ranking rule" or the name-withholding check. Remaining failures belong to Tasks 8, 9 and 12.
 
-- [ ] **Step 5: Deploy and commit (backend)**
+- [ ] **Step 5: Commit (backend) — do NOT deploy**
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
-npx supabase functions deploy course-class-quiz
 git add supabase/functions/course-class-quiz/index.ts
 git commit -m "$(cat <<'EOF'
 Add the quiz podium action
@@ -1676,11 +1672,10 @@ function assertAttemptWithinTimeLimit(attempt: Record<string, unknown>, instance
 Run: `node tools/verify-quiz-timing.mjs; node tools/verify-quiz-auto-close.mjs`
 Expected: `verify-quiz-auto-close` now fails only on "the student poll must run the auto-close check too" (Task 9). `verify-quiz-timing` fails only on the two client checks (Task 10).
 
-- [ ] **Step 7: Deploy and commit (backend)**
+- [ ] **Step 7: Commit (backend) — do NOT deploy**
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
-npx supabase functions deploy course-activity-attempt
 git add supabase/functions/course-activity-attempt/index.ts
 git commit -m "$(cat <<'EOF'
 Stamp each quiz question with its own time; accept a submission in the grace
@@ -1796,11 +1791,10 @@ async function setNameReveal(
 Run: `node tools/verify-quiz-podium.mjs`
 Expected: still FAIL, but only on the Task 9 and Task 12 checks ("the student's own place must use the same rule", "src/features/quiz/Podium.tsx must exist").
 
-- [ ] **Step 5: Deploy and commit (backend)**
+- [ ] **Step 5: Commit (backend) — do NOT deploy**
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
-npx supabase functions deploy course-activity-attempt
 git add supabase/functions/course-activity-attempt/index.ts
 git commit -m "$(cat <<'EOF'
 Let a top-three student choose to be named on the podium
@@ -1922,11 +1916,10 @@ async function loadMyRank(db: Db, instanceId: string, profileId: string) {
 Run: `node tools/verify-quiz-auto-close.mjs; node tools/verify-quiz-podium.mjs`
 Expected: `verify-quiz-auto-close` now **passes** completely. `verify-quiz-podium` fails only on "src/features/quiz/Podium.tsx must exist" and the client name check (Task 12).
 
-- [ ] **Step 5: Deploy and commit (backend)**
+- [ ] **Step 5: Commit (backend) — do NOT deploy**
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
-npx supabase functions deploy course-pulse
 git add supabase/functions/course-pulse/index.ts
 git commit -m "$(cat <<'EOF'
 Close the quiz from the student poll too, and tell each student their place
@@ -2818,26 +2811,47 @@ npm run verify && npm run build
 
 Expected: "All N verifiers passed", then a clean vite build. Treat any failure as a build failure — do not deploy.
 
-- [ ] **Step 2: Confirm every backend piece is deployed**
+- [ ] **Step 2: Deploy the backend — the whole thing, in this order**
+
+This is the first moment anything in this plan touches the live platform. Tasks 1–13 committed locally and deployed nothing; everything ships here, in one pass, by the professor's decision.
+
+**Check first that no class is running.** Deploying `course-pulse` mid-lecture interrupts a room of phones polling it every three seconds.
+
+Order matters. The migration goes first: `course-class-quiz` and `course-pulse` both select `name_revealed`, and a function deployed ahead of its column throws on every poll.
 
 ```bash
 cd ~/Documents/GitHub/mzareei.github.io
-npx supabase functions deploy course-class-quiz
-npx supabase functions deploy course-activity-attempt
-npx supabase functions deploy course-pulse
+npx supabase db push
+```
+
+Expected: `0053_quiz_name_reveal.sql` applies. Confirm before continuing:
+
+```bash
 npx supabase db push --dry-run
 ```
 
-Expected: three successful deploys; the dry run reports no pending migrations. Edge functions do **not** deploy on git push — this step is the only thing that ships them.
+Expected: no pending migrations. If `0053` is still listed, stop — do not deploy the functions.
+
+Then the functions:
+
+```bash
+npx supabase functions deploy course-class-quiz
+npx supabase functions deploy course-activity-attempt
+npx supabase functions deploy course-pulse
+```
+
+Expected: three successful deploys. Edge functions do **not** deploy on git push — this step is the only thing that ships them.
 
 - [ ] **Step 3: Push the frontend**
+
+The backend must be up before this: Cloudflare Pages builds within a minute or two of the push, and an SPA that calls `podium` or `set_name_reveal` before those actions exist gives every student an error.
 
 ```bash
 cd ~/Documents/GitHub/course-platform
 git push
 ```
 
-Cloudflare Pages builds on push. Wait for the deployment before testing.
+Wait for the Pages deployment to finish before testing.
 
 - [ ] **Step 4: Test through the real entry points, in Group 402**
 
