@@ -1,6 +1,57 @@
 # Status
 
-**Last updated:** 2026-08-13
+**Last updated:** 2026-08-13 (late night, second pass)
+
+### Full E2E sweep, PIN-claim fix, per-group isolation, Inter ships (2026-08-13, late night)
+
+A complete rehearsal of the whole class loop was run against production in
+Group 402 with a QA student (instructor in the professor's Chrome, student in a
+separate browser): PIN claim at a live QR → check-in → planned pulse question
+(instant answer paint, auto-reveal on all-answered, student result) →
+12-question end-of-class quiz (100%, submit spinner) → reflection (word count,
+appears in cockpit) → end class → class record (Present, 100% engagement,
+1/1 + 12/12) → post to gradebook → student My Grades (100 with breakdown) →
+Review (release visible, deck renders in the gated viewer) → returning sign-in
+with ID + PIN. Everything held except one blocker and one default:
+
+- **Fixed + verified in production: pitfall #81.** A first-time student who
+  claimed a PIN landed on /live showing the sign-in form until they reloaded —
+  App's /join branch read the non-reactive `location.pathname`. Now a
+  `currentPath` signal + `PathSync`; the join shell's fallback never shows
+  SignIn to a signed-in user. Re-tested live after deploy: join → /live with
+  no reload.
+- **Fixed: the plan board's bank picker defaulted to the first bank
+  alphabetically** ("Legal Aspect of Cybersecurity") instead of the class
+  day's own lecture bank. It now prefers the bank whose `content_item_id`
+  matches the session's lecture. (Code-verified + typechecked; the live demo
+  path wasn't exercisable — the only planned session with a lecture already
+  had a plan, whose bank rightly wins.)
+- **Per-group isolation closed across ten backend functions** ahead of
+  inviting 402/501/502 professors — audit ran over every function's real
+  queries. Highlights: `course-reset` was open to ANY instructor (read every
+  student's activity in every group; erase the whole course) — now owner-only;
+  `course-class-quiz` close/status now resolve the instance's own section
+  (were bypassable); roster import/move can no longer capture another group's
+  students; `course-question-bank` now follows content ownership + shares
+  (was: any instructor could list/edit/delete any bank); `course-content-access`
+  no longer mints deck tokens for any teacher on any item (owner, share, or
+  the item scheduled on a taught group's class day); generation jobs are
+  creator-scoped; checkpoint preparation requires ownership; course-wide
+  gradebook categories are owner-only; a dual-enrolled student's record
+  returns only the caller's slice. All deployed; the deployed-function check
+  is green (38/38 match the repo).
+- **Inter actually loads now** (`@fontsource-variable/inter`, self-hosted so
+  CSP `default-src 'self'` covers it) — the tokens had named Inter since day
+  one and every user was seeing the system fallback. Plus small polish: brand
+  mark in the topbar, hover treatment on the Home quick-link cards, the
+  closed-class Run Class no longer shows a join QR, "Posted 1 grades" now
+  pluralizes in both languages.
+- **QA cleanup done:** sandbox class day reset then deleted, the 402 review
+  release removed (401's real one untouched), QA student back to Removed.
+- Still open, pre-existing: `tools/verify-generation-ownership.mjs` fails on
+  pristine main (its upsert-locating regex no longer matches the worker) —
+  stale verifier, not a production defect. The legacy PIN-gated `*-summary`
+  functions exist in the repo but are already deleted from production.
 
 ### UX/UI improvement batch shipped (2026-08-13, late night)
 

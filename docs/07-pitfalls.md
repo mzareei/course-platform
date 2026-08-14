@@ -6,6 +6,45 @@ the UI is silently wrong.**
 
 ---
 
+## 81. An app-level branch on a non-reactive location strands in-app navigation in the wrong shell
+
+**Found 2026-08-13 by a full E2E rehearsal in Group 402, the day after it
+shipped: a first-time student claimed their PIN at the QR code, landed on
+`/live`, and saw the sign-in form until they manually reloaded.**
+
+`App` chooses between three shells, and exactly one branch is URL-driven:
+`if (location.pathname.startsWith("/join/")) return <JoinRouteShell />`. But
+`App` re-renders only when a **signal** changes, and `location.pathname` is not
+a signal. So when `JoinClass` finished the join and called `route("/live")` —
+the deliberate no-full-reload improvement shipped the previous evening — only
+the Router *inside* the join shell re-rendered. `App` kept rendering the join
+shell at `/live`, and that shell's fallback route was `<SignIn />`. The header
+knew the student's name; the body asked them to sign in. Nothing errored.
+
+Every first-time student walks this exact path, because claiming a PIN is the
+first thing the QR does. The previous behaviour had been a full
+`location.href` navigation, which re-ran `App` from scratch and masked the
+stale branch — replacing the reload with `route()` is what exposed it.
+
+The fix has two halves, and the second matters even with the first in place:
+
+1. `currentPath` — a module-level signal initialised from `location.pathname`
+   and kept fresh by a `PathSync` component inside the shell's
+   `LocationProvider`. The App branch reads the signal, so leaving `/join/*`
+   re-renders App out of the shell. `verify-class-sessions` pins this.
+2. The join shell's fallback route renders SignIn **only when signed out**; a
+   signed-in user gets a quiet loading beat. A fallback that can face a
+   signed-in user must never be an authentication screen — that is the one
+   component guaranteed to gaslight them.
+
+**Rule:** a component that branches on the URL must read the URL reactively,
+or the branch is frozen at whatever the URL was on its last unrelated render.
+And after changing *how* navigation happens (reload → in-app route), re-test
+every flow that crosses a shell boundary, not just the screen the change was
+aimed at — the reload was doing invisible work.
+
+---
+
 ## 80. A student's session outlives the sign-in method that created it
 
 **Reported by the professor 2026-08-13, from the second real class: "for two,
