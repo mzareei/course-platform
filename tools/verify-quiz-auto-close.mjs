@@ -177,6 +177,19 @@ assert.equal(
   true,
   "a submission thirty seconds late is still accepted"
 );
+// The lower bound. A grace is a window AFTER a deadline; without this the
+// function is true for the whole quiz, so a manual "Close it now" would keep
+// taking submissions until ends_at and the per-attempt limit would never fire.
+assert.equal(
+  withinSubmitGrace({ endsAt: T_END, startedAt: T0, now: at("2026-08-14T18:05:00.000Z") }),
+  false,
+  "there is no grace before the deadline — that window is the quiz itself"
+);
+assert.equal(
+  withinSubmitGrace({ endsAt: T_END, startedAt: T0, now: at(T_END) }),
+  false,
+  "at the deadline exactly the quiz is still open on its own terms, not on grace"
+);
 assert.equal(
   withinSubmitGrace({ endsAt: T_END, startedAt: T0, now: at("2026-08-14T18:11:30.000Z") }),
   false,
