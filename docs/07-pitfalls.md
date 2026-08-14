@@ -2354,3 +2354,79 @@ round is `open` and released on reveal. Two things to preserve:
 
 Absent any message the deck is unlocked, so presenting outside a live class is
 completely unchanged.
+
+## 70. `enrolled` is the roster, not the room — and completeness needs a floor too
+
+The end-of-class quiz closes itself when everyone has finished. "Everyone"
+measured against `section_enrollments` can never be true — the roster carries
+every absent student — so the rule silently never fires. `class_attendance`
+scoped to `classDateFor()` is the only denominator that means "the people who
+can actually answer".
+
+That is the same trap `loadResults` hit for the pulse questions, and it carries
+a second half that is easy to miss: **guard the rule with a time floor as
+well.** One student checked in and finishing fast satisfies "everyone finished"
+seconds in, ending the activity for a room that has barely started.
+`autoReveal.ts` encodes `EVERYONE_ANSWERED_FLOOR_MS = 10_000` for the pulse
+path; `quiz-close.ts` encodes `EVERYONE_CLOSE_FLOOR_MS = 60_000` for the quiz,
+longer because a student tapping through can legitimately finish twelve
+questions in well under a minute.
+
+Note this file numbers `## 57` through `## 69` **twice each**. Cite pitfalls by
+title, not number.
+
+## 71. A grace window needs a lower bound, and it is the moment the activity actually stopped
+
+`withinSubmitGrace` originally bounded only the upper edge — `now <= endsAt +
+60s` — which is trivially true for the whole quiz. Two things broke: the
+professor's "Close the quiz" sets `state` but never touches `ends_at`, so
+submissions kept landing until the original deadline, minutes later; and
+`assertAttemptWithinTimeLimit`'s early return fired from the moment an attempt
+started, making the per-attempt limit unreachable.
+
+Adding `now > endsAt` fixed those and broke something worse: a close *before*
+`ends_at` then refused every straggler outright, losing every answer they had
+already given. The stop time is `min(endsAt, closedAt)`, where `closedAt` is the
+instance's `updated_at` **read only when `state === "closed"`** — on a running
+row that column is an unrelated edit and would put the stop time in the past.
+
+## 72. Two effects on the same clock tick share one `stateRef` snapshot
+
+`Player.tsx` mirrors live state into a ref so its clock-driven effects read
+current values without re-subscribing. That ref is reassigned once per render,
+so every effect in the same commit sees the *same* snapshot. When the
+per-question auto-advance called `submitNow` — whose `setBusy(true)` is a
+deferred state update — the whole-quiz deadline effect ran microseconds later,
+still saw `busy: false`, and submitted the same attempt again.
+
+A phone that sleeps throttles the interval, so on unlock `now` jumps past both
+deadlines in one tick and the double submit is routine, not exotic. Only a
+`useRef` latches synchronously; `busy` cannot. Reset the latch in `catch` only —
+a successful submit must stay latched.
+
+## 73. A poll that changes the screen can unmount a component mid-write
+
+`Live.tsx` rendered `<QuizPlayer>` only while `quiz.state === "live"`. The
+player auto-submits on its own 1s clock; the 3s poll flips that state to
+`closed`. At the deadline they race, and when the poll won the player unmounted
+with its interval cleared and **nothing was ever submitted** — no error, no
+score, no way for the student or the professor to know.
+
+A component that owns unsaved work must own its own exit. The player now
+receives `quizClosed` and reports `onFinished`, and the screen keeps it mounted
+for a started-but-unfinished instance regardless of what the poll says.
+
+## 74. Pausing a class pauses its quiz, and resuming never un-paused it
+
+`updateSessionState` sets `activity_instances.state = 'paused'` on pause with no
+mirror on resume. That asymmetry was survivable only because a paused quiz used
+to be closed by its own timer, which quietly healed it. Narrowing
+`decideQuizClose` to `CLOSABLE_STATES = ["open","live"]` — correct, a quiz must
+not expire while the room is stopped — turned the leak permanent: the instance
+never reaches `closed`, and `Live.tsx` gates the exit ticket on exactly that, so
+**no student in the class reaches the reflection for the rest of the session.**
+
+The resume mirror filters `.in("state", ["paused"])` on purpose. The
+`closed → continued → live` reopen path drives this same code on a session whose
+instances are already `closed`; without the filter, reopening an ended class
+would revive a finished, graded quiz for answers.

@@ -2160,3 +2160,49 @@ Useful if you need a test PDF again:
 
 Working scratch scripts were used for this and not committed; the recipe above is
 enough to recreate them.
+
+---
+
+## End-of-class quiz: visible timer, auto-close and podium (2026-08-14, shipped)
+
+Spec: `docs/superpowers/specs/2026-08-14-end-of-class-quiz-timer-and-podium-design.md`
+Plan: `docs/superpowers/plans/2026-08-14-end-of-class-quiz-timer-and-podium.md`
+
+Shipped and verified end-to-end in a throwaway Group 501 class:
+
+- The quiz clock is **derived from its questions** — the sum of the longest a
+  student could draw, plus a two-minute cushion — and shown as a live countdown
+  in the End of Class box. The old flat 600s default is gone.
+- **30 seconds minimum per question**, 45 only when prompt plus options exceed a
+  reading-length threshold, measured in whichever language reads longer.
+  Difficulty no longer decides timing. The 20-second tier is gone.
+- The quiz **closes itself** on the deadline or when every student checked in
+  today has submitted, whichever comes first, driven by the instructor poll and
+  every student poll alike. The box says which condition ended it.
+- A submission arriving within **60 seconds of the stop** is graded `late`
+  rather than rejected. That status was previously unreachable.
+- Each student sees **their placing** above the exit ticket and on the done
+  screen; the top three get a medal and an opt-in "show my name to the class".
+- The professor gets a **top-three podium by student ID** and a control that
+  puts it fullscreen on the room's screen. Names are withheld **by the server**
+  unless that student opted in, per quiz.
+
+**Deploy shape, for next time.** Migration `0053` must be applied before the
+functions — three of them select `name_revealed`, and a function deployed ahead
+of its column 400s the whole student live screen. Then **four** functions
+together (`course-session-management`, `course-class-quiz`,
+`course-activity-attempt`, `course-pulse`) because `_shared` bundles per
+function, then the frontend. **Reload Run Class after a deploy** — an open tab
+keeps the old bundle and silently fails to route.
+
+**Left behind in QA, safe to remove:** a class day "QA ONLY — quiz timer and
+podium test (delete after)" on Group 501, and `qa.sandbox.aug12@tec.mx` on that
+group's roster. Both harmless; Group 501 has no real students.
+
+**Note for whoever tests next:** Group 402 is **no longer empty** — it carries a
+real roster now. Groups 501 and 502 are the safe ones, and that should be
+re-checked on the People screen rather than assumed.
+
+**Unrelated observation worth a look:** a student who answers 8 of 12 questions
+and gets all 8 right scores **100%**, because grading runs over submitted
+responses only. Pre-existing, untouched by this work.
