@@ -21,3 +21,4 @@ dist/
 
 # Isolated local feature workspaces
 .worktrees/
+.design-backup/
