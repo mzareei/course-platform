@@ -230,4 +230,34 @@ assert.deepEqual(
 );
 assert.deepEqual([...scopedScoreProfileIds(scores, "id-501")], []);
 
+// ------------------------------------------------------- the glue, statically
+// state/scope.ts reaches for signals and localStorage, so it cannot be imported
+// here. These are the three things about it worth failing a build over.
+const { readFileSync } = await import("node:fs");
+const scopeState = readFileSync(new URL("../src/state/scope.ts", import.meta.url), "utf8");
+const configSource = readFileSync(new URL("../src/config.ts", import.meta.url), "utf8");
+
+assert.match(
+  configSource,
+  /scopeStorageKey: "cp\.scope"/,
+  "the scope storage key belongs in config beside the theme and language keys"
+);
+assert.match(
+  scopeState,
+  /config\.scopeStorageKey/,
+  "state/scope.ts must persist through the config key, never a literal"
+);
+// Private browsing throws on localStorage. Losing the remembered choice is
+// fine; a white top bar is not.
+assert.match(
+  scopeState,
+  /try \{[\s\S]{0,400}?localStorage[\s\S]{0,400}?\} catch/,
+  "every localStorage access in state/scope.ts must be inside try/catch"
+);
+assert.match(
+  scopeState,
+  /resolveScope\(/,
+  "the live scope must go through resolveScope so a stale saved group falls back"
+);
+
 console.log("verify-scope-filter: OK");

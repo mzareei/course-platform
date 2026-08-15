@@ -35,5 +35,8 @@ export const config = {
 
   // Per-device unlock for QA addresses (see qa-test-accounts.md in the old repo).
   testAccessStorageKey: "cp.test-access-emails",
-  themeStorageKey: "cp.theme"
+  themeStorageKey: "cp.theme",
+
+  // Which group the Teach surface is looking at. Per device, like the theme.
+  scopeStorageKey: "cp.scope"
 } as const;
