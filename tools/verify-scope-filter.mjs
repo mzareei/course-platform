@@ -146,4 +146,88 @@ assert.equal(groupName(g401), "Group 401", "the group's own name, as People alre
 assert.equal(groupName({ id: "x", section_code: "", section_name: "Only a name" }), "Only a name");
 assert.equal(groupName({ id: "x", section_code: "402", section_name: "" }), "402");
 
+// ---------------------------------------------------------------- row filters
+const {
+  inScope,
+  personSectionIds,
+  scopedReleases,
+  scopedRoster,
+  scopedScoreProfileIds,
+  scopedSessions,
+  ungroupedPeople
+} = await import("../src/features/scope/filters.ts");
+
+assert.equal(inScope("id-401", null), true, "all groups never filters");
+assert.equal(inScope(null, null), true);
+assert.equal(inScope("id-401", "id-401"), true);
+assert.equal(inScope("id-402", "id-401"), false);
+assert.equal(inScope(null, "id-401"), false, "a session with no group is not in a group");
+assert.equal(inScope(undefined, "id-401"), false);
+
+const sessions = [
+  { session_id: "s1", section_id: "id-401" },
+  { session_id: "s2", section_id: "id-402" },
+  { session_id: "s3", section_id: "id-401" }
+];
+assert.deepEqual(scopedSessions(sessions, null).map((s) => s.session_id), ["s1", "s2", "s3"]);
+assert.deepEqual(scopedSessions(sessions, "id-401").map((s) => s.session_id), ["s1", "s3"]);
+assert.deepEqual(scopedSessions([], "id-401"), []);
+
+const roster = [
+  { profile_id: "p1", sections: [{ section_id: "id-401", status: "active" }] },
+  { profile_id: "p2", sections: [{ section_id: "id-402", status: "active" }] },
+  { profile_id: "p3", sections: [] },
+  { profile_id: "p4", sections: null },
+  { profile_id: "p5", sections: [{ section_id: "id-401", status: "dropped" }] },
+  { profile_id: "p6", sections: [
+    { section_id: "id-401", status: "active" },
+    { section_id: "id-402", status: "active" }
+  ] }
+];
+
+assert.deepEqual(personSectionIds(roster[0]), ["id-401"]);
+assert.deepEqual(personSectionIds(roster[4]), [], "a dropped enrolment is not a group");
+assert.deepEqual(personSectionIds(roster[3]), []);
+
+assert.equal(scopedRoster(roster, null).length, 6, "all groups shows the whole roster");
+assert.deepEqual(
+  scopedRoster(roster, "id-401").map((p) => p.profile_id),
+  ["p1", "p6"],
+  "a group view shows that group, and a dropped enrolment does not count"
+);
+
+// A freshly imported student has no group at all. Without this list, importing
+// a roster inside a group view would leave nobody to assign.
+assert.deepEqual(
+  ungroupedPeople(roster, "id-401").map((p) => p.profile_id),
+  ["p3", "p4", "p5"],
+  "people with no live group must stay reachable inside a group view"
+);
+assert.deepEqual(ungroupedPeople(roster, null), [], "All groups already lists everyone once");
+
+const releases = [
+  { id: "r1", section_id: "id-401" },
+  { id: "r2", section_id: "id-402" },
+  { id: "r3", section_id: null }
+];
+assert.deepEqual(scopedReleases(releases, null).map((r) => r.id), ["r1", "r2", "r3"]);
+assert.deepEqual(
+  scopedReleases(releases, "id-401").map((r) => r.id),
+  ["r1", "r3"],
+  "whole-course content is genuinely open to that group and must not be hidden"
+);
+
+const scores = [
+  { profile_id: "p1", section_id: "id-401" },
+  { profile_id: "p1", section_id: null },
+  { profile_id: "p2", section_id: "id-402" }
+];
+assert.deepEqual([...scopedScoreProfileIds(scores, null)].sort(), ["p1", "p2"]);
+assert.deepEqual(
+  [...scopedScoreProfileIds(scores, "id-401")],
+  ["p1"],
+  "a student is in the matrix when any of their scores is in the group"
+);
+assert.deepEqual([...scopedScoreProfileIds(scores, "id-501")], []);
+
 console.log("verify-scope-filter: OK");
