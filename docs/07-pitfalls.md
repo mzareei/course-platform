@@ -2451,3 +2451,22 @@ one of two ways, and the quiet one is worse:
 backend". A verifier that needs it calls `backendPath` / `backendUrl` and, when
 it may legitimately be absent, `skipWithoutBackend` — which prints the root it
 looked in, so a skip that should not have happened is visible in the log.
+
+## 85. A Teach screen that filters by section on its own will drift
+
+Every screen scoped by the instructor/admin switcher (2026-08-15) narrows
+through `src/features/scope/filters.ts`, and `tools/verify-scope-filter.mjs`
+fails the build the day a screen stops importing it. Three things to hold onto
+here:
+
+- **A screen must not write its own section filter.** The moment one does,
+  it and `filters.ts` are two copies of the same rule, and they will disagree
+  the first time either one changes.
+- **`activeSectionId === null` means *all groups*, not *no group*.** It must
+  always return the rows untouched. A filter that treats `null` as "nothing
+  matches" silently empties the admin view — the one mode that is supposed to
+  show everything.
+- **`model.ts` and `filters.ts` may never import Preact, i18n, or
+  `localStorage`.** A Node verifier imports both directly to self-test them
+  against real data; either import breaks that verifier's ability to run at
+  all, not just its assertions.

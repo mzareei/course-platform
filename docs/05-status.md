@@ -1,6 +1,82 @@
 # Status
 
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-15
+
+### A scope switcher separates "instructor of 401" from "admin of everything" (2026-08-15)
+
+He is `platform_owner` of the whole platform *and* the instructor of Group 401.
+Every Teach screen was reading his platform-owner membership as global
+instructor access, so Home, Classes, People, Grades and Content all quietly
+mixed 401, 402, 501 and 502 together — with no way to see any one group the
+way that group's own instructor sees it, and no way to see just his own class.
+His ask, in his words: a dropdown at the top of Teach — pick **instructor** and
+he sees only Group 401, nothing more and nothing less; pick **admin** and he
+sees everything, with the ability to drill into any single group and see it
+exactly as that group's instructor would.
+
+**What shipped** is a scope switcher in the top bar: one `<select>` with two
+`<optgroup>`s, INSTRUCTOR listing the groups he teaches and ADMIN listing "All
+groups" then every group he does not teach. Group 401 appears once, on
+purpose — owner controls stay visible while in Instructor mode, so an "Admin ·
+Group 401" entry would render a screen identical to the one already in the
+menu. The switcher renders nothing at all when its menu holds one entry or
+fewer, so an instructor who teaches a single group sees no control and no
+change in behavior.
+
+**The filtering happens entirely in the browser.** No edge function was
+touched, and none was deployed. For a platform owner the switcher is a focus
+tool, not an authorization boundary — the server already permits him
+everything it always did, and the existing per-section guard that stops a
+non-owner instructor reading another group's data (pitfall #56) is untouched.
+
+Two pure modules hold every rule: `src/features/scope/model.ts` (the menu, the
+saved choice, the fallbacks) and `src/features/scope/filters.ts` (narrowing
+rows to the active scope). Neither imports Preact, i18n, or `localStorage`,
+which is what lets `tools/verify-scope-filter.mjs` import them under plain
+Node and self-test them against real data — the pitfall entry below explains
+why that constraint has to hold going forward. `src/state/scope.ts` is thin
+glue on top: signals, `localStorage` under `config.scopeStorageKey`, and one
+`listSections()` fetch. Every screen asks the filters what to show; none of
+them writes its own rule.
+
+Home, Classes (schedule and group list), People, Grades (semester matrix and
+per-class tab) and Content all follow the switcher. Run Class, the class
+record, the projector and the Admin settings screen are unchanged — none of
+them has a notion of "which group am I looking at" that the switcher needs to
+touch.
+
+**Two judgement calls worth recording, because neither is obvious from the
+code:**
+
+- Inside a single-group view, People still shows a separate "Not in a group
+  yet" block. Without it, importing a roster while inside a group view would
+  strand every new student with nobody able to assign them — that block is the
+  only place a group-scoped instructor could ever reach them.
+- Inside a single-group view, Content still shows whole-course releases
+  (`section_id` null). That group genuinely can open them, and hiding them
+  would misrepresent what its own students actually see.
+
+**A rule he set mid-build.** `tools/verify-class-sessions.mjs` had an assertion
+that People's group view must filter with `hasActiveStudentEnrollment`, which
+requires `role === "student"` AND `status === "active"`. Asked directly, he
+ruled that a group view should list *everyone* attached to that group — a
+teaching assistant of 401 must not vanish from 401's own People screen — and
+should include students who are invited but have not yet signed in. That is
+what `scopedRoster` does now; the stale assertion was replaced rather than
+patched around. `hasActiveStudentEnrollment` has no caller left in `src/`; it
+stays exported and self-tested rather than deleted.
+
+**A bug caught in review, worth remembering because the shape will recur.**
+Hiding the Group column shrank the schedule table to five columns, but the
+expandable editor row and the force-delete row still spanned six — a row whose
+`colSpan` exceeds every other row's cell count drags the whole table's column
+count up with it, so a phantom empty column appeared on the right. Fixed with
+`colSpan={isAllGroups.value ? 6 : 5}`.
+
+**Verification status, stated plainly.** `npm run verify` (44 verifiers),
+`npm run typecheck` and `npm run build` all pass. The feature has **not** yet
+been exercised by a human in the running app — that walkthrough is pending and
+must happen in Groups 501 and 502 only, never 401 or 402.
 
 ### Grades post themselves; the student meets theirs the second they finish (2026-08-14)
 
