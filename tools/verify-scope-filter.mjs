@@ -320,4 +320,24 @@ assert.match(
   "the Group column belongs to the all-groups view only"
 );
 
+// ---------------------------------------------------------- Classes screen
+const schedule = readFileSync(new URL("../src/components/Schedule.tsx", import.meta.url), "utf8");
+const sectionsView = readFileSync(new URL("../src/components/Sections.tsx", import.meta.url), "utf8");
+
+assert.match(
+  schedule,
+  /import \{[^}]*\bscopedSessions\b[^}]*\} from "\.\.\/features\/scope\/filters"/,
+  "the schedule must narrow its class days through the shared filter"
+);
+assert.match(
+  schedule,
+  /const visible = scopedSessions\(/,
+  "the schedule's visible list is the scoped one"
+);
+assert.match(
+  sectionsView,
+  /import \{[^}]*\binScope\b[^}]*\} from "\.\.\/features\/scope\/filters"/,
+  "the group list must narrow to the chosen group"
+);
+
 console.log("verify-scope-filter: OK");

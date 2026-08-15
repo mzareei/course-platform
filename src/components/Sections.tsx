@@ -23,6 +23,8 @@ import { SectionEditor } from "./SectionEditor";
 import { ConfirmButton } from "./ConfirmButton";
 import { isOwner, refreshContext } from "../state/session";
 import { t, apiErrorText } from "../i18n";
+import { inScope } from "../features/scope/filters";
+import { activeSectionId } from "../state/scope";
 
 export function Sections() {
   const [sections, setSections] = useState<CourseSection[] | null>(null);
@@ -102,6 +104,8 @@ export function Sections() {
 
   if (!sections) return <div class="empty-state"><p>{t("app.loading")}</p></div>;
 
+  const visibleSections = sections.filter((section) => inScope(section.id, activeSectionId.value));
+
   return (
     <div class="stack">
       <div>
@@ -112,7 +116,7 @@ export function Sections() {
       {notice ? <p class="hint" role="status">{notice}</p> : null}
       {error ? <p class="error-text" role="alert">{error}</p> : null}
 
-      {sections.length ? (
+      {visibleSections.length ? (
         <div class="table-scroll">
           <table class="data">
             <thead>
@@ -125,7 +129,7 @@ export function Sections() {
               </tr>
             </thead>
             <tbody>
-              {sections.map((section) => {
+              {visibleSections.map((section) => {
                 const live = section.status === "active" || section.status === "planned";
                 return (
                   <>

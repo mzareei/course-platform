@@ -21,6 +21,8 @@ import { SessionEditor } from "./SessionEditor";
 import { ConfirmButton } from "./ConfirmButton";
 import { refreshContext } from "../state/session";
 import { t, formatDay, apiErrorText } from "../i18n";
+import { scopedSessions } from "../features/scope/filters";
+import { activeSectionId, isAllGroups } from "../state/scope";
 
 const RUNNABLE = ["planned", "open", "live", "paused", "continued"];
 const EDITABLE_SESSION_STATES = ["planned", "open", "continued"];
@@ -64,6 +66,12 @@ export function Schedule() {
   useEffect(() => {
     void load();
   }, []);
+
+  // Keep the "add a class day" group in step with the switcher, including when
+  // the professor changes groups while this screen is open.
+  useEffect(() => {
+    if (activeSectionId.value) setSectionId(activeSectionId.value);
+  }, [activeSectionId.value]);
 
   async function onAdd() {
     setError(null);
@@ -140,9 +148,14 @@ export function Schedule() {
     return <div class="empty-state"><p>{t("schedule.loading")}</p></div>;
   }
 
-  const usableSections = sections.filter((s) => ["planned", "active"].includes(s.status));
+  const active = activeSectionId.value;
+  // A new class day belongs to the group you are looking at. Offering the
+  // others here would let you file it against a group that is not on screen.
+  const usableSections = sections
+    .filter((s) => ["planned", "active"].includes(s.status))
+    .filter((s) => active === null || s.id === active);
   const sectionById = new Map(sections.map((s) => [s.id, s]));
-  const visible = sessions;
+  const visible = scopedSessions(sessions, active);
 
   return (
     <div class="stack">
@@ -166,7 +179,7 @@ export function Schedule() {
               <tr>
                 <th>{t("schedule.col.when")}</th>
                 <th>{t("schedule.col.what")}</th>
-                <th>{t("schedule.col.group")}</th>
+                {isAllGroups.value ? <th>{t("schedule.col.group")}</th> : null}
                 <th>{t("schedule.col.lecture")}</th>
                 <th>{t("grades.status")}</th>
                 <th />
@@ -182,7 +195,9 @@ export function Schedule() {
                     <tr>
                       <td>{dayLabel(session.planned_date)}</td>
                       <td>{session.title}</td>
-                      <td>{section?.section_code ?? session.section_code ?? "—"}</td>
+                      {isAllGroups.value
+                        ? <td>{section?.section_code ?? session.section_code ?? "—"}</td>
+                        : null}
                       <td>{session.content_title || t("schedule.noLecture")}</td>
                       <td><StatusPill state={session.state} /></td>
                       <td>
@@ -269,17 +284,19 @@ export function Schedule() {
                   onInput={(e) => setDate((e.target as HTMLInputElement).value)}
                 />
               </label>
-              <label class="field">
-                {t("schedule.group")}
-                <select
-                  value={sectionId}
-                  onChange={(e) => setSectionId((e.target as HTMLSelectElement).value)}
-                >
-                  {usableSections.map((s) => (
-                    <option value={s.id}>{s.section_name || s.section_code}</option>
-                  ))}
-                </select>
-              </label>
+              {isAllGroups.value ? (
+                <label class="field">
+                  {t("schedule.group")}
+                  <select
+                    value={sectionId}
+                    onChange={(e) => setSectionId((e.target as HTMLSelectElement).value)}
+                  >
+                    {usableSections.map((s) => (
+                      <option value={s.id}>{s.section_name || s.section_code}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <label class="field">
                 {t("schedule.lecture")}
                 <select
