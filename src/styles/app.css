@@ -203,6 +203,14 @@ a:hover { color: var(--primary-strong); }
 }
 .topbar .spacer { flex: 1; }
 
+/* The switcher sits with the toggles, not with the wordmark: it is something
+   you change, not something that names the page. */
+.scope-switcher select {
+  max-width: 14rem;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+}
+
 /* Below ~480px there isn't room for brand + profile name + both toggles +
    sign out on one line, and wrapping mid-row looks broken rather than
    responsive — drop the profile name first since it's the least essential. */
@@ -210,6 +218,7 @@ a:hover { color: var(--primary-strong); }
   .topbar { flex-wrap: nowrap; gap: 0.4rem; padding: 0.6rem 0.75rem; }
   .topbar .brand { font-size: 0.9rem; }
   .topbar .hint { display: none; }
+  .scope-switcher select { max-width: 8.5rem; font-size: 0.8rem; }
 }
 
 .eyebrow {

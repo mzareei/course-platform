@@ -260,4 +260,43 @@ assert.match(
   "the live scope must go through resolveScope so a stale saved group falls back"
 );
 
+// ------------------------------------------------------------- the switcher
+// Pitfall #12: a feature no user can reach is a feature that did not ship.
+const app = readFileSync(new URL("../src/app.tsx", import.meta.url), "utf8");
+const switcher = readFileSync(new URL("../src/components/ScopeSwitcher.tsx", import.meta.url), "utf8");
+const strings = readFileSync(new URL("../src/i18n/strings.ts", import.meta.url), "utf8");
+
+assert.match(app, /<ScopeSwitcher\s*\/>/, "the switcher must be rendered from the top bar");
+assert.match(
+  app,
+  /import \{ ScopeSwitcher \} from "\.\/components\/ScopeSwitcher"/,
+  "app.tsx must import the switcher"
+);
+assert.match(
+  app,
+  /loadScopeGroups\(\)/,
+  "the instructor surface must ask for the full group list once"
+);
+assert.match(
+  switcher,
+  /scopeOptions\.value\.length < 2/,
+  "one entry or fewer means no switcher — a single-group instructor's app is untouched"
+);
+assert.match(switcher, /<optgroup/, "the menu is two labelled halves, instructor above admin");
+
+for (const key of [
+  "scope.label",
+  "scope.instructor",
+  "scope.admin",
+  "scope.allGroups",
+  "scope.youTeach",
+  "scope.viewingForeign"
+]) {
+  assert.match(
+    strings,
+    new RegExp(`"${key.replace(".", "\\.")}": \\[`),
+    `${key} must exist as a bilingual pair`
+  );
+}
+
 console.log("verify-scope-filter: OK");

@@ -18,6 +18,17 @@ export const strings = {
   "app.language": ["Language", "Idioma"],
   "app.pressAgainConfirm": ["Press again to confirm", "Presiona otra vez para confirmar"],
 
+  // --------------------------------------------------------- scope switcher
+  "scope.label": ["What you are looking at", "Lo que estás viendo"],
+  "scope.instructor": ["Instructor", "Profesor"],
+  "scope.admin": ["Admin", "Administración"],
+  "scope.allGroups": ["All groups", "Todos los grupos"],
+  "scope.youTeach": ["{group} (you teach this)", "{group} (tú lo impartes)"],
+  "scope.viewingForeign": [
+    "Viewing {group} — you are not the instructor of this group.",
+    "Estás viendo {group} — no eres el profesor de este grupo."
+  ],
+
   // Fallbacks for backend errors that arrive without a translatable code.
   "errors.signedOut": [
     "You are signed out. Sign in again to continue.",

@@ -24,6 +24,8 @@ import { JoinClass } from "./screens/student/JoinClass";
 import { RunClass } from "./screens/instructor/RunClass";
 import { Projector } from "./screens/instructor/Projector";
 import { StudentShell } from "./components/StudentShell";
+import { ScopeSwitcher } from "./components/ScopeSwitcher";
+import { loadScopeGroups } from "./state/scope";
 
 function isProjectorRoute(path: string) {
   return /^\/teach\/run\/[^/]+\/projector\/?$/.test(path);
@@ -72,6 +74,11 @@ function StudentGradesPreview() {
 
 function InstructorSurface() {
   const { path } = useLocation();
+
+  useEffect(() => {
+    void loadScopeGroups();
+  }, []);
+
   const studentPreview =
     path === "/student" || path.startsWith("/student/");
 
@@ -102,6 +109,7 @@ function Topbar() {
   return (
     <header class="topbar">
       <a class="brand" href={surface.value === "instructor" ? "/teach" : "/"}>{t("app.name")}</a>
+      {surface.value === "instructor" ? <ScopeSwitcher /> : null}
       <span class="spacer" />
       {profile ? <span class="hint">{profile.preferred_name || profile.full_name}</span> : null}
       <LanguageToggle />
