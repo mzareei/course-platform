@@ -340,4 +340,28 @@ assert.match(
   "the group list must narrow to the chosen group"
 );
 
+// ------------------------------------------------------------ People screen
+const people = readFileSync(new URL("../src/screens/instructor/People.tsx", import.meta.url), "utf8");
+
+assert.match(
+  people,
+  /import \{[^}]*\bscopedRoster\b[^}]*\} from "\.\.\/\.\.\/features\/scope\/filters"/,
+  "People must narrow the roster through the shared filter"
+);
+assert.match(
+  people,
+  /\bungroupedPeople\b/,
+  "People must still show students who are in no group yet, or a roster import strands them"
+);
+assert.match(
+  people,
+  /setScopeToSection\(/,
+  "an existing ?group= link must move the switcher rather than fight it"
+);
+assert.match(
+  strings,
+  /"people\.ungroupedTitle": \[/,
+  "the ungrouped block needs a bilingual heading"
+);
+
 console.log("verify-scope-filter: OK");

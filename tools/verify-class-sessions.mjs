@@ -202,7 +202,19 @@ assert.match(
   "active and invited students must both be movable before first sign-in"
 );
 assert.match(people, /new Set\(\(groups \?\? \[\]\)\.map\(\(group\) => group\.id\)\)/);
-assert.match(people, /hasActiveStudentEnrollment\(person\.sections, groupId\)/);
+// People's group view now narrows through the shared scope filter, which lists
+// everyone attached to the group — a TA of 401 must not vanish from 401 — and
+// keeps a student who is invited but has not signed in yet. The old assertion
+// here required role === "student" && status === "active" and encoded the
+// opposite of both. The guarantee it really protected — that a dropped
+// enrolment does not keep someone in a group — now lives in
+// tools/verify-scope-filter.mjs, which self-tests personSectionIds against
+// real dropped-enrolment data rather than matching a regex.
+assert.match(
+  people,
+  /scopedRoster\(/,
+  "People's group view must narrow the roster through the shared scope filter"
+);
 assert.match(people, /currentCourseStudentSectionId\(person\.sections, courseGroupIds\)/);
 assert.match(people, /!data \|\| !groups/, "assignment controls must not mount before authoritative groups load");
 assert.doesNotMatch(people, /context\.value\?\.sections/, "People must not treat the instructor's enrollments as course groups");

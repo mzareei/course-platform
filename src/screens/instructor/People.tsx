@@ -15,10 +15,7 @@ import {
 import { StatusPill } from "../../components/StatusPill";
 import { RosterImport } from "../../components/RosterImport";
 import { StudentNoteHistory } from "../../components/StudentNoteHistory";
-import {
-  currentCourseStudentSectionId,
-  hasActiveStudentEnrollment
-} from "../../features/roster/sectionMembership";
+import { currentCourseStudentSectionId } from "../../features/roster/sectionMembership";
 import {
   assignmentErrorKey,
   isAssignableGroupStatus,
@@ -27,6 +24,8 @@ import {
 import { context, refreshContext } from "../../state/session";
 import { t, apiErrorText } from "../../i18n";
 import { ConfirmButton } from "../../components/ConfirmButton";
+import { scopedRoster, ungroupedPeople } from "../../features/scope/filters";
+import { activeSectionId, setScopeToSection } from "../../state/scope";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
 const GROUP_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -122,6 +121,13 @@ export function People() {
     ? groups?.find((group) => group.id === requestedGroupId) ?? null
     : null;
   const groupId = selectedGroup?.id ?? null;
+
+  // The link predates the switcher. Rather than two competing ideas of what is
+  // on screen, the link now moves the switcher and the top bar tells the truth.
+  useEffect(() => {
+    if (groupId) setScopeToSection(groupId);
+  }, [groupId]);
+
   const selectedGroupAssignable = Boolean(
     selectedGroup && isAssignableGroupStatus(selectedGroup.status)
   );
@@ -158,10 +164,11 @@ export function People() {
     person.full_name.toLowerCase().includes(searchNeedle) ||
     (person.institutional_email || "").toLowerCase().includes(searchNeedle) ||
     (person.student_identifier || "").toLowerCase().includes(searchNeedle);
-  const roster = (groupId
-    ? (data?.roster ?? []).filter((person) => hasActiveStudentEnrollment(person.sections, groupId))
-    : (data?.roster ?? [])
-  ).filter(matchesSearch);
+  const active = activeSectionId.value;
+  const roster = scopedRoster(data?.roster ?? [], active).filter(matchesSearch);
+  // A student who was just imported has no group at all. Without this list,
+  // importing a roster inside a group view would leave nobody to assign.
+  const ungrouped = ungroupedPeople(data?.roster ?? [], active).filter(matchesSearch);
   const studentsOutsideGroup = groupId && selectedGroupAssignable
     ? (data?.roster ?? []).filter((person, index, rows) =>
         person.course_role === "student" &&
@@ -525,6 +532,46 @@ export function People() {
           </table>
         </div>
       )}
+
+      {ungrouped.length ? (
+        <div class="card stack">
+          <h3>{t("people.ungroupedTitle")}</h3>
+          <p class="hint">{t("people.ungroupedBody")}</p>
+          <div class="table-scroll">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>{t("people.col.name")}</th>
+                  <th>{t("people.email")}</th>
+                  <th>{t("people.group")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ungrouped.map((person) => (
+                  <tr key={person.profile_id}>
+                    <td>{person.full_name}</td>
+                    <td>{person.institutional_email}</td>
+                    <td>
+                      {person.course_role === "student" &&
+                      person.membership_status === "active" &&
+                      isAssignableStudentProfileStatus(person.profile_status) &&
+                      person.profile_id !== myProfileId ? (
+                        <GroupAssignment
+                          person={person}
+                          groups={groups ?? []}
+                          courseGroupIds={courseGroupIds}
+                          assigning={assigning === person.profile_id}
+                          onAssign={(sectionId) => void assignGroup(person, sectionId)}
+                        />
+                      ) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       {selectedNoteProfile ? (
         <section class="card stack">

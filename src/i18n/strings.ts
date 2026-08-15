@@ -855,6 +855,11 @@ export const strings = {
   "people.groupEmpty": ["No one is enrolled in this group yet.", "Aún no hay nadie inscrito en este grupo."],
   "people.loadFailed": ["Could not load the roster and groups.", "No se pudieron cargar la lista y los grupos."],
   "people.group": ["Group", "Grupo"],
+  "people.ungroupedTitle": ["Not in a group yet", "Todavía sin grupo"],
+  "people.ungroupedBody": [
+    "These people are on the course but have no group. Assign one to bring them into a class.",
+    "Estas personas están en el curso pero no tienen grupo. Asigna uno para incluirlas en una clase."
+  ],
   "people.chooseGroup": ["Choose a group", "Elige un grupo"],
   "people.assignGroup": ["Assign group", "Asignar grupo"],
   "people.changeGroup": ["Change group", "Cambiar grupo"],
