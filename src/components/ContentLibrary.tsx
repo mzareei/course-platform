@@ -19,6 +19,8 @@ import {
 import { updateClass } from "../api/classes";
 import { listSessions, type ClassSession } from "../api/schedule";
 import { canReleaseToReview } from "../api/contentVisibility";
+import { scopedReleases, scopedSessions } from "../features/scope/filters";
+import { activeSectionId } from "../state/scope";
 import { PublicLinkCleanup } from "./PublicLinkCleanup";
 import { ForceDeleteControl } from "./ForceDeleteControl";
 import { ConfirmButton } from "./ConfirmButton";
@@ -119,8 +121,12 @@ export function ContentLibraryView() {
     );
   }
 
+  const active = activeSectionId.value;
+  // A release with no group is course-wide: Group 402 really can open it, so
+  // hiding it would misrepresent what that group's students see.
+  const visibleReleases = scopedReleases(releases, active);
   const releasesByItem = new Map<string, ReleaseRow[]>();
-  for (const release of releases) {
+  for (const release of visibleReleases) {
     const list = releasesByItem.get(release.content_item_id) ?? [];
     list.push(release);
     releasesByItem.set(release.content_item_id, list);
@@ -140,7 +146,7 @@ export function ContentLibraryView() {
     .filter((item) => !needle || item.title.toLowerCase().includes(needle))
     .sort((a, b) => collator.compare(a.title, b.title));
   const availableCount = reviewableItems.filter(isAvailable).length;
-  const assignableSessions = sessions.filter((session) =>
+  const assignableSessions = scopedSessions(sessions, active).filter((session) =>
     ASSIGNABLE_SESSION_STATES.includes(session.state) && session.actual_start_at == null
   );
 

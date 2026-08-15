@@ -378,4 +378,18 @@ assert.match(
   "the per-class tab and the unposted nudge must both narrow to the chosen group"
 );
 
+// ------------------------------------------------------------------ Content
+const library = readFileSync(new URL("../src/components/ContentLibrary.tsx", import.meta.url), "utf8");
+
+assert.match(
+  library,
+  /import \{[^}]*\bscopedReleases\b[^}]*\} from "\.\.\/features\/scope\/filters"/,
+  "the content library must narrow releases through the shared filter"
+);
+assert.match(
+  library,
+  /\bscopedSessions\b/,
+  "the class-linked panels must narrow to the chosen group too"
+);
+
 console.log("verify-scope-filter: OK");
