@@ -1,0 +1,149 @@
+// The professor is platform owner AND instructor of Group 401. The switcher is
+// what keeps those two facts apart. These are its rules, tested directly:
+// tools/ runs under plain Node, so src/features/scope/*.ts must stay free of
+// Preact, localStorage and the network for this file to import them at all.
+import assert from "node:assert/strict";
+import {
+  activeSectionId,
+  buildScopeOptions,
+  defaultScope,
+  groupName,
+  isForeignGroup,
+  parseScope,
+  resolveScope,
+  serializeScope
+} from "../src/features/scope/model.ts";
+
+const g401 = { id: "id-401", section_code: "401", section_name: "Group 401" };
+const g402 = { id: "id-402", section_code: "402", section_name: "Group 402" };
+const g501 = { id: "id-501", section_code: "501", section_name: "Group 501" };
+
+/** The professor: owner of the platform, instructor of 401 only. */
+const professor = {
+  groups: [g501, g402, g401],
+  myGroupIds: ["id-401"],
+  isOwner: true
+};
+/** Somebody who teaches 402 and nothing else. */
+const otherInstructor = { groups: [g402], myGroupIds: ["id-402"], isOwner: false };
+
+// ------------------------------------------------------------ serialize/parse
+assert.equal(serializeScope({ kind: "instructor", sectionId: "id-401" }), "instructor:id-401");
+assert.equal(serializeScope({ kind: "admin", sectionId: null }), "admin:all");
+assert.equal(serializeScope({ kind: "admin", sectionId: "id-402" }), "admin:id-402");
+
+assert.deepEqual(parseScope("instructor:id-401"), { kind: "instructor", sectionId: "id-401" });
+assert.deepEqual(parseScope("admin:all"), { kind: "admin", sectionId: null });
+assert.deepEqual(parseScope("admin:id-402"), { kind: "admin", sectionId: "id-402" });
+
+for (const bad of [null, undefined, "", "nonsense", "instructor:", "admin:", "student:id-401", ":x"]) {
+  assert.equal(parseScope(bad), null, `parseScope must reject ${JSON.stringify(bad)}`);
+}
+
+// Round-trips, because the menu compares options by their serialized value.
+for (const scope of [
+  { kind: "instructor", sectionId: "id-401" },
+  { kind: "admin", sectionId: null },
+  { kind: "admin", sectionId: "id-402" }
+]) {
+  assert.deepEqual(parseScope(serializeScope(scope)), scope, "serialize/parse must round-trip");
+}
+
+// -------------------------------------------------------------------- the menu
+const menu = buildScopeOptions(professor);
+assert.deepEqual(
+  menu.map((option) => option.value),
+  ["instructor:id-401", "admin:all", "admin:id-402", "admin:id-501"],
+  "your own group first, then All groups, then the rest by section_code"
+);
+assert.deepEqual(
+  menu.map((option) => option.section),
+  ["instructor", "admin", "admin", "admin"]
+);
+assert.equal(menu[1].groupLabel, null, "the All-groups entry carries no group name — the caller translates it");
+assert.equal(menu[0].groupLabel, "Group 401");
+assert.equal(menu[0].youTeach, true);
+assert.equal(menu[2].youTeach, false);
+
+// Group 401 appears exactly once. Owner controls stay visible in Instructor
+// mode, so an "Admin · Group 401" entry would render an identical screen.
+assert.equal(
+  menu.filter((option) => option.scope.sectionId === "id-401").length,
+  1,
+  "a group you teach must never appear twice in the menu"
+);
+
+// A non-owner gets no ADMIN half at all.
+assert.deepEqual(
+  buildScopeOptions(otherInstructor).map((option) => option.value),
+  ["instructor:id-402"],
+  "a non-owner sees only the groups they teach"
+);
+assert.equal(
+  buildScopeOptions(otherInstructor).length,
+  1,
+  "one entry means the switcher renders nothing — their app is untouched"
+);
+
+// An owner who teaches nothing still gets the admin half.
+const observerOwner = { groups: [g401, g402], myGroupIds: [], isOwner: true };
+assert.deepEqual(
+  buildScopeOptions(observerOwner).map((option) => option.value),
+  ["admin:all", "admin:id-401", "admin:id-402"]
+);
+
+// ------------------------------------------------------------------- defaults
+assert.deepEqual(
+  defaultScope(professor),
+  { kind: "instructor", sectionId: "id-401" },
+  "the professor lands in his own group"
+);
+assert.deepEqual(defaultScope(observerOwner), { kind: "admin", sectionId: null });
+assert.equal(
+  defaultScope({ groups: [], myGroupIds: [], isOwner: false }),
+  null,
+  "somebody with nothing to look at gets no scope, and screens behave as today"
+);
+
+// Lowest section_code wins when you teach more than one.
+assert.deepEqual(
+  defaultScope({ groups: [g501, g402], myGroupIds: ["id-501", "id-402"], isOwner: false }),
+  { kind: "instructor", sectionId: "id-402" }
+);
+
+// ------------------------------------------------------------------- recovery
+assert.deepEqual(
+  resolveScope({ kind: "admin", sectionId: "id-402" }, professor),
+  { kind: "admin", sectionId: "id-402" },
+  "a saved choice that is still in the menu is honoured"
+);
+assert.deepEqual(
+  resolveScope({ kind: "admin", sectionId: "id-999" }, professor),
+  { kind: "instructor", sectionId: "id-401" },
+  "an archived group falls back to the default, silently"
+);
+assert.deepEqual(
+  resolveScope({ kind: "admin", sectionId: null }, otherInstructor),
+  { kind: "instructor", sectionId: "id-402" },
+  "an admin scope saved by someone who is no longer an owner falls back"
+);
+assert.deepEqual(resolveScope(null, professor), { kind: "instructor", sectionId: "id-401" });
+
+// -------------------------------------------------------------- derived facts
+assert.equal(activeSectionId(null), null, "no scope means no filtering");
+assert.equal(activeSectionId({ kind: "admin", sectionId: null }), null);
+assert.equal(activeSectionId({ kind: "admin", sectionId: "id-402" }), "id-402");
+assert.equal(activeSectionId({ kind: "instructor", sectionId: "id-401" }), "id-401");
+
+assert.equal(isForeignGroup({ kind: "instructor", sectionId: "id-401" }, ["id-401"]), false);
+assert.equal(isForeignGroup({ kind: "admin", sectionId: "id-402" }, ["id-401"]), true);
+assert.equal(isForeignGroup({ kind: "admin", sectionId: null }, ["id-401"]), false,
+  "All groups is not a foreign group — the banner would be on permanently");
+assert.equal(isForeignGroup(null, ["id-401"]), false);
+
+// ---------------------------------------------------------------------- label
+assert.equal(groupName(g401), "Group 401", "the group's own name, as People already shows it");
+assert.equal(groupName({ id: "x", section_code: "", section_name: "Only a name" }), "Only a name");
+assert.equal(groupName({ id: "x", section_code: "402", section_name: "" }), "402");
+
+console.log("verify-scope-filter: OK");
