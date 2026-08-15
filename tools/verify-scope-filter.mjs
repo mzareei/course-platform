@@ -299,4 +299,25 @@ for (const key of [
   );
 }
 
+// -------------------------------------------------------- screens must ask
+// The whole point of one filter module is that no screen writes its own rule.
+const home = readFileSync(new URL("../src/screens/instructor/Home.tsx", import.meta.url), "utf8");
+
+assert.match(app, /<ScopeBanner\s*\/>/, "the banner must be rendered once for every Teach screen");
+assert.match(
+  home,
+  /import \{[^}]*\bscopedSessions\b[^}]*\} from "\.\.\/\.\.\/features\/scope\/filters"/,
+  "Teach home must narrow its classes through the shared filter"
+);
+assert.match(
+  home,
+  /scopedSessions\(ctx\.teacher_sessions/,
+  "Teach home's list must come out of scopedSessions, not straight off the context"
+);
+assert.match(
+  home,
+  /isAllGroups\.value \? <th>\{t\("teach\.col\.section"\)\}<\/th> : null/,
+  "the Group column belongs to the all-groups view only"
+);
+
 console.log("verify-scope-filter: OK");

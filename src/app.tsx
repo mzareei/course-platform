@@ -25,6 +25,7 @@ import { RunClass } from "./screens/instructor/RunClass";
 import { Projector } from "./screens/instructor/Projector";
 import { StudentShell } from "./components/StudentShell";
 import { ScopeSwitcher } from "./components/ScopeSwitcher";
+import { ScopeBanner } from "./components/ScopeBanner";
 import { loadScopeGroups } from "./state/scope";
 
 function isProjectorRoute(path: string) {
@@ -85,6 +86,7 @@ function InstructorSurface() {
   return (
     <>
       {studentPreview ? null : <InstructorNav />}
+      {studentPreview ? null : <ScopeBanner />}
       <Router>
         <Route path="/teach" component={TeachHome} />
         <Route path="/teach/classes" component={Classes} />

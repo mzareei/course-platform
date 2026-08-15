@@ -2,6 +2,8 @@
 import { context } from "../../state/session";
 import { StatusPill } from "../../components/StatusPill";
 import { t, formatDay, localDateKey } from "../../i18n";
+import { scopedSessions } from "../../features/scope/filters";
+import { activeSectionId, isAllGroups } from "../../state/scope";
 
 export function TeachHome() {
   const ctx = context.value;
@@ -9,9 +11,8 @@ export function TeachHome() {
 
   // Sorted here rather than trusting server order — "upcoming" must mean by
   // date, whatever order the context endpoint happens to return.
-  const sessions = [...(ctx.teacher_sessions ?? [])].sort((a, b) =>
-    String(a.planned_date ?? "").localeCompare(String(b.planned_date ?? ""))
-  );
+  const sessions = scopedSessions(ctx.teacher_sessions ?? [], activeSectionId.value)
+    .sort((a, b) => String(a.planned_date ?? "").localeCompare(String(b.planned_date ?? "")));
   const today = localDateKey();
   const todaySessions = sessions.filter((s) => (s.planned_date ?? "").slice(0, 10) === today);
   const upcoming = sessions
@@ -64,7 +65,7 @@ export function TeachHome() {
                 <th>#</th>
                 <th>{t("teach.col.class")}</th>
                 <th>{t("teach.col.date")}</th>
-                <th>{t("teach.col.section")}</th>
+                {isAllGroups.value ? <th>{t("teach.col.section")}</th> : null}
                 <th>{t("teach.col.status")}</th>
                 <th />
               </tr>
@@ -75,7 +76,7 @@ export function TeachHome() {
                   <td class="num">{s.sequence_number}</td>
                   <td>{s.title ?? "—"}</td>
                   <td>{formatDay(s.planned_date)}</td>
-                  <td>{s.section_code || "—"}</td>
+                  {isAllGroups.value ? <td>{s.section_code || "—"}</td> : null}
                   <td><StatusPill state={s.state} /></td>
                   <td><a class="btn quiet" href={`/teach/run/${s.session_id}`}>{t("run.title")}</a></td>
                 </tr>
