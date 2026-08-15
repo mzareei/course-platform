@@ -3,9 +3,11 @@
 // screen number six cannot quietly forget.
 //
 // Pure, for the same reason as model.ts: tools/verify-scope-filter.mjs imports
-// this under plain Node. `active === null` always means "all groups", and every
-// function must return the input untouched in that case — that is what keeps
-// today's behaviour exactly as it is.
+// this under plain Node. `active === null` always means "all groups" — nothing
+// is filtered out — which is what keeps today's behaviour exactly as it is.
+// The one deliberate exception is ungroupedPeople: the all-groups view already
+// lists everyone once, so it returns [] rather than the whole roster again.
+// Nothing here may treat null as "a group with no id"; see docs/07-pitfalls.md.
 
 export interface RosterLike {
   sections?: Array<{ section_id: string; status?: string }> | null;

@@ -376,7 +376,20 @@ export function Gradebook() {
     }
     students.get(key)!.scores.set(score.gradebook_item_id, score);
   }
-  const items = data.items;
+  // Columns narrow with the rows. A class-grade item belongs to its class, and
+  // a class belongs to exactly one group, so a group view that kept every
+  // column would show 401's students against three-quarters empty columns. An
+  // item with no class predates class-linked grading and belongs to no group —
+  // dropping it would hide real grades, so it stays in every view.
+  const scopedSessionIds = new Set(
+    scopedSessions(context.value?.teacher_sessions ?? [], activeSectionId.value)
+      .map((session) => session.session_id)
+  );
+  const items = activeSectionId.value === null
+    ? data.items
+    : data.items.filter(
+        (item) => item.class_session_id == null || scopedSessionIds.has(item.class_session_id)
+      );
 
   return (
     <div class="stack">
@@ -399,8 +412,10 @@ export function Gradebook() {
         // Posting is automatic now, so this no longer means "you forgot" — it
         // means a write failed, which is worth saying out loud rather than
         // leaving a class silently ungraded. Opening its record posts it.
+        // "Has this class ever been posted" is not a scoped question, so it
+        // reads the full item list, not the columns of the current group.
         const postedSessionIds = new Set(
-          items.map((item) => item.class_session_id).filter(Boolean)
+          data.items.map((item) => item.class_session_id).filter(Boolean)
         );
         const unposted = scopedSessions(
           context.value?.teacher_sessions ?? [],

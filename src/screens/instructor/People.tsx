@@ -25,7 +25,7 @@ import { context, refreshContext } from "../../state/session";
 import { t, apiErrorText } from "../../i18n";
 import { ConfirmButton } from "../../components/ConfirmButton";
 import { scopedRoster, ungroupedPeople } from "../../features/scope/filters";
-import { activeSectionId, setScopeToSection } from "../../state/scope";
+import { activeSectionId, scopeOptions, setScopeToSection } from "../../state/scope";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
 const GROUP_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -117,16 +117,25 @@ export function People() {
   const myProfileId = context.value?.profile?.id ?? "";
   const groupParam = new URLSearchParams(location.search).get("group");
   const requestedGroupId = groupParam && GROUP_UUID.test(groupParam) ? groupParam : null;
-  const selectedGroup = requestedGroupId
-    ? groups?.find((group) => group.id === requestedGroupId) ?? null
-    : null;
-  const groupId = selectedGroup?.id ?? null;
-
-  // The link predates the switcher. Rather than two competing ideas of what is
-  // on screen, the link now moves the switcher and the top bar tells the truth.
+  // The switcher is the only thing on this screen that answers "which group am
+  // I looking at". A `?group=` link from Classes is an entry ramp into it, not
+  // a second answer: it moves the switcher once and then deletes itself from
+  // the URL, so a stale parameter can never disagree with the top bar.
+  // setScopeToSection returns false while the group menu is still loading, so
+  // the ramp is retried whenever that menu changes.
+  const scopeMenu = scopeOptions.value.map((option) => option.value).join(",");
   useEffect(() => {
-    if (groupId) setScopeToSection(groupId);
-  }, [groupId]);
+    if (!requestedGroupId) return;
+    if (!setScopeToSection(requestedGroupId)) return;
+    const params = new URLSearchParams(location.search);
+    params.delete("group");
+    const query = params.toString();
+    history.replaceState({}, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+  }, [requestedGroupId, scopeMenu]);
+
+  const active = activeSectionId.value;
+  const selectedGroup = (groups ?? []).find((group) => group.id === active) ?? null;
+  const groupId = selectedGroup?.id ?? null;
 
   const selectedGroupAssignable = Boolean(
     selectedGroup && isAssignableGroupStatus(selectedGroup.status)
@@ -164,7 +173,6 @@ export function People() {
     person.full_name.toLowerCase().includes(searchNeedle) ||
     (person.institutional_email || "").toLowerCase().includes(searchNeedle) ||
     (person.student_identifier || "").toLowerCase().includes(searchNeedle);
-  const active = activeSectionId.value;
   const roster = scopedRoster(data?.roster ?? [], active).filter(matchesSearch);
   // A student who was just imported has no group at all. Without this list,
   // importing a roster inside a group view would leave nobody to assign.
@@ -357,7 +365,13 @@ export function People() {
             <span class="pill scheduled">
               {t("people.viewingGroup", { group: selectedGroup.section_name || selectedGroup.section_code })}
             </span>
-            <a class="btn quiet" href="/teach/people">{t("people.clearGroup")}</a>
+            {/* Only offered while a `?group=` link is still unspent — normally
+                the effect above deletes it, so this appears when the switcher
+                could not honour the link (a group that is not in your menu).
+                Changing group is the switcher's job, not this link's. */}
+            {requestedGroupId ? (
+              <a class="btn quiet" href="/teach/people">{t("people.clearGroup")}</a>
+            ) : null}
           </div>
           <div class="card stack">
             <h3>

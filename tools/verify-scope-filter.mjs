@@ -392,4 +392,72 @@ assert.match(
   "the class-linked panels must narrow to the chosen group too"
 );
 
+// ------------------------------------------- People: one source of truth
+// The bug this pins: the roster followed the switcher while the pill, the
+// "Assign a student to Group X" card and its write followed the `?group=`
+// parameter. Arriving from a 501 link and then switching to 401 left the card
+// offering 401's students and writing them into 501. The screen must have
+// exactly one answer to "which group am I looking at", and it is the switcher.
+assert.match(
+  people,
+  /const active = activeSectionId\.value;[\s\S]{0,200}const selectedGroup =[\s\S]{0,120}group\.id === active/,
+  "People's selected group must be looked up from activeSectionId, not the URL"
+);
+assert.equal(
+  (people.match(/const selectedGroup\b/g) ?? []).length,
+  1,
+  "one definition of selectedGroup, or the two sources of truth are back"
+);
+assert.doesNotMatch(
+  people,
+  /selectedGroup =[\s\S]{0,160}requestedGroupId/,
+  "the pill, the assign card and its write must never key off the raw ?group= param"
+);
+assert.match(
+  people,
+  /setScopeToSection\(requestedGroupId\)/,
+  "the ?group= link stays an entry ramp: it moves the switcher"
+);
+assert.match(
+  people,
+  /params\.delete\("group"\)[\s\S]{0,240}history\.replaceState\(/,
+  "a spent ?group= link must be stripped, so it cannot disagree with the switcher later"
+);
+assert.match(
+  people,
+  /void assignGroup\(person, selectedGroup\.id\)/,
+  "the assign card must write to the group the screen is actually showing"
+);
+// The full group list still has to reach the controls whose job is moving a
+// student between groups — narrowing those would make the screen useless.
+assert.match(
+  people,
+  /groups=\{groups \?\? \[\]\}/,
+  "GroupAssignment must keep the full, unfiltered group list"
+);
+
+// ---------------------------------------- Grades: columns narrow with rows
+// visibleProfileIds narrowed the students; the columns were still every class
+// on the platform, so a group view was three-quarters empty.
+assert.doesNotMatch(
+  gradebook,
+  /const items = data\.items;/,
+  "the matrix's columns must be narrowed, not taken straight off the payload"
+);
+assert.match(
+  gradebook,
+  /const items = activeSectionId\.value === null\s*\?\s*data\.items/,
+  "All groups must leave the item list exactly as the server sent it"
+);
+assert.match(
+  gradebook,
+  /item\.class_session_id == null \|\| scopedSessionIds\.has\(item\.class_session_id\)/,
+  "legacy items that predate class-linked grading belong to no group and must survive"
+);
+assert.match(
+  gradebook,
+  /postedSessionIds = new Set\(\s*data\.items/,
+  '"has this class ever been posted" is not a scoped question — it reads the full list'
+);
+
 console.log("verify-scope-filter: OK");

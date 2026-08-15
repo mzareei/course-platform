@@ -19,7 +19,7 @@ import {
 import { updateClass } from "../api/classes";
 import { listSessions, type ClassSession } from "../api/schedule";
 import { canReleaseToReview } from "../api/contentVisibility";
-import { scopedReleases, scopedSessions } from "../features/scope/filters";
+import { inScope, scopedReleases, scopedSessions } from "../features/scope/filters";
 import { activeSectionId } from "../state/scope";
 import { PublicLinkCleanup } from "./PublicLinkCleanup";
 import { ForceDeleteControl } from "./ForceDeleteControl";
@@ -204,6 +204,11 @@ export function ContentLibraryView() {
               .filter((release) => release.section_id == null)
               .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))[0];
             const plannedAssignments = assignableSessions.filter((session) => session.content_item_id === item.id);
+            // The share list is a row on a scoped screen like any other: inside
+            // Group 401, a live Revoke button for 502 is somebody else's group.
+            // The share TARGET dropdown above stays the full list — sharing
+            // into another group is its whole purpose.
+            const visibleShares = (item.shares ?? []).filter((share) => inScope(share.section_id, active));
             const failure = itemError[item.id];
             // Absent means an older deployed function that predates ownership, and
             // the pre-ownership behaviour was "every instructor may write".
@@ -250,7 +255,10 @@ export function ContentLibraryView() {
                     ) : canEdit && !wholeCourseRelease ? (
                       <ConfirmButton
                         label={busy === item.id ? t("content.library.working") : t("content.library.makeAvailable")}
-                        confirmLabel={t("app.pressAgainConfirm")}
+                        // This release carries no section_id: it opens the item
+                        // to every group, from a screen that may be naming just
+                        // one. The armed press has to say so out loud.
+                        confirmLabel={t("content.library.makeAvailableConfirm", { title: item.title })}
                         className="btn primary"
                         disabled={busy === item.id}
                         onConfirm={() => {
@@ -366,10 +374,10 @@ export function ContentLibraryView() {
                     </div>
                   </label>
                 ) : null}
-                {canEdit && item.shares && item.shares.length ? (
+                {canEdit && visibleShares.length ? (
                   <div class="stack" style="gap: 0.4rem;">
                     <p class="hint">{t("content.library.currentShares")}</p>
-                    {item.shares.map((share) => (
+                    {visibleShares.map((share) => (
                       <div class="row" style="justify-content: space-between; align-items: center;">
                         <span class="pill open">{share.section_code || share.section_name}</span>
                         <button
