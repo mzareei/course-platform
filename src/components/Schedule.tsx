@@ -239,7 +239,7 @@ export function Schedule() {
                     </tr>
                     {editingSessionId === session.session_id ? (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={isAllGroups.value ? 6 : 5}>
                           <SessionEditor
                             session={session}
                             sections={sections}
@@ -252,7 +252,7 @@ export function Schedule() {
                     ) : null}
                     {forceDeleteSessionId === session.session_id ? (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={isAllGroups.value ? 6 : 5}>
                           <ForceDeleteControl
                             busy={busy === session.session_id}
                             warningKey="schedule.forceDeleteWarning"
