@@ -18,6 +18,8 @@ import { classPulseRounds, type PulseRoundReview } from "../../api/pulse";
 import { classQuizSummary, type QuizAttemptSummary } from "../../api/quiz";
 import { classReflections, type ClassReflection } from "../../api/reflection";
 import { t, locale, formatDay, apiErrorText } from "../../i18n";
+import { scopedScoreProfileIds, scopedSessions } from "../../features/scope/filters";
+import { activeSectionId } from "../../state/scope";
 
 const SUBMITTED_STATES = ["submitted", "late"];
 
@@ -39,7 +41,10 @@ function timeOf(iso: string | null) {
  * docs/07-pitfalls.md #4.
  */
 function PerClassReview() {
-  const sessions = [...(context.value?.teacher_sessions ?? [])].reverse();
+  const sessions = scopedSessions(
+    context.value?.teacher_sessions ?? [],
+    activeSectionId.value
+  ).reverse();
   // Default to the most recent class that has actually been held; a planned
   // session in the future has nothing to review.
   const firstHeld = sessions.find((s) => s.state !== "planned") ?? sessions[0];
@@ -99,6 +104,14 @@ function PerClassReview() {
   useEffect(() => {
     setSelectedStudentId("");
   }, [sessionId]);
+
+  // Changing groups must not leave the picker pointing at a class that is no
+  // longer listed — the panels below would keep showing the old group's data.
+  useEffect(() => {
+    if (sessionId && sessions.some((session) => session.session_id === sessionId)) return;
+    const firstHeldNow = sessions.find((session) => session.state !== "planned") ?? sessions[0];
+    setSessionId(firstHeldNow?.session_id ?? "");
+  }, [activeSectionId.value, sessions.length]);
 
   if (!sessions.length) {
     return (
@@ -343,12 +356,17 @@ export function Gradebook() {
   }
 
   // Group scores by student for the matrix.
+  // Students are chosen by the group their scores are in; each chosen student
+  // then keeps all of their scores, including any older row with no section_id,
+  // so a row is never half-built.
+  const visibleProfileIds = scopedScoreProfileIds(data.scores, activeSectionId.value);
   const students = new Map<
     string,
     { name: string; email: string; scores: Map<string, GradebookSummary["scores"][number]> }
   >();
   for (const score of data.scores) {
     const key = score.profile_id;
+    if (!visibleProfileIds.has(key)) continue;
     if (!students.has(key)) {
       students.set(key, {
         name: score.student_name ?? t("gradebook.col.student"),
@@ -384,7 +402,10 @@ export function Gradebook() {
         const postedSessionIds = new Set(
           items.map((item) => item.class_session_id).filter(Boolean)
         );
-        const unposted = (context.value?.teacher_sessions ?? []).filter(
+        const unposted = scopedSessions(
+          context.value?.teacher_sessions ?? [],
+          activeSectionId.value
+        ).filter(
           (session) => session.state === "closed" && !postedSessionIds.has(session.session_id)
         );
         return unposted.length ? (

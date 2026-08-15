@@ -364,4 +364,18 @@ assert.match(
   "the ungrouped block needs a bilingual heading"
 );
 
+// ----------------------------------------------------------------- Grades
+const gradebook = readFileSync(new URL("../src/screens/instructor/Gradebook.tsx", import.meta.url), "utf8");
+
+assert.match(
+  gradebook,
+  /import \{[^}]*\bscopedScoreProfileIds\b[^}]*\} from "\.\.\/\.\.\/features\/scope\/filters"/,
+  "the matrix must pick its students through the shared filter"
+);
+assert.match(
+  gradebook,
+  /\bscopedSessions\b/,
+  "the per-class tab and the unposted nudge must both narrow to the chosen group"
+);
+
 console.log("verify-scope-filter: OK");
