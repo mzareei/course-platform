@@ -14,12 +14,25 @@
 // ---------------------------------------------------------------------------
 // PROVENANCE
 //
-// This is Prof. Zareei's own prompt, adopted verbatim on 2026-08-10 — he
-// wrote and tested it himself and asked for it to replace an earlier
-// agent-drafted version. It was NOT re-run through the self-test loop that
-// produced the version it replaced (real lecture → real model output → real
-// parseQuestionFile()) — the professor's own review stands in its place here,
-// same as the plan's original review checkpoint intended.
+// Adopted verbatim on 2026-08-10 from a prompt the course owner wrote and
+// tested himself, replacing an earlier agent-drafted version. It was NOT
+// re-run through the self-test loop that produced the version it replaced
+// (real lecture → real model output → real parseQuestionFile()) — his own
+// review stands in its place here, same as the plan's original review
+// checkpoint intended.
+//
+// Extended on 2026-08-17 for the two-step flow: it now reads the finished HTML
+// deck that DECK_PROMPT produces rather than a PDF, copies the deck's Pulse
+// check questions instead of inventing live ones, and bans intended_use=both.
+// Everything about question quality, brevity, distractors, bilingual rules and
+// JSON safety is his, untouched.
+//
+// No individual is named anywhere a professor can read, here or in the prompt
+// bodies: the platform serves many instructors, and one instructor's name on
+// the shared authoring surface would travel into everyone else's decks and
+// question banks. The prompts now say so to the model too — see the NEVER
+// CARRY PERSONAL IDENTITY ACROSS clause in both, which also stops a name being
+// copied off an attached PDF's title slide. verify-content-import enforces it.
 //
 // One structural gap worth naming plainly rather than silently: this version
 // does not state the database's actual hard character ceiling (4000 for a
@@ -36,16 +49,16 @@
 // against, three shapes that break the import when a model produces them:
 // "correct" quoted as a string (every question flagged "0 correct answers"),
 // the bank nested under a wrapper key (the whole file rejected), and options
-// written as bare strings. This prompt's own §13 and §6 independently forbid
+// written as bare strings. This prompt's own §14 and §7 independently forbid
 // all three — worth knowing they were arrived at separately, not carried over.
+// (Those were §13 and §6 before the two-step split inserted a section.)
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n";
 import type { StringKey } from "../i18n/strings";
 import { DECK_PROMPT } from "../features/import/deckPrompt";
 
-/** Exported so the verifier can assert the contract clauses are still present.
- *  Authored and tested by Prof. Zareei directly, adopted verbatim — see the
- *  VALIDATION CAVEAT above for what "tested" means here. */
+/** Step 2 of two. Exported so the verifier can assert the contract clauses are
+ *  still present. See PROVENANCE above for what "tested" means here. */
 export const IMPORT_PROMPT = `You are creating a multiple-choice question bank for ONE lecture of TC2007B Information Security at Tecnologico de Monterrey.
 
 The attachment is the finished HTML slide deck for that lecture. It already contains the pause check slides where the class stops, with their questions written on them. Your job is to carry those questions across exactly as written, and then add further questions for the end-of-class quiz.
@@ -69,6 +82,14 @@ Do not:
 The attachment always wins.
 
 The lecture title, file name, and chat text are only labels unless the same information actually appears inside the lecture.
+
+NEVER CARRY PERSONAL IDENTITY ACROSS
+
+No question, no option, and no bank title may contain an instructor name, a student name, an email address, a phone number, an employee number, or any other personal contact detail. If the deck shows one anywhere, ignore it — it is a label on the slides, never subject matter, and it is never the answer to anything.
+
+This bank is built with prompts shared by many instructors. A name copied out of one deck would travel into everyone else's question banks.
+
+The only exception is a person who is genuinely part of the subject matter — a named researcher in a cited paper, or a historical figure the lecture actually teaches about.
 
 If no attachment is available, or you cannot read it reliably, reply in plain sentences explaining that and stop. Never generate questions from the title or filename alone.
 
@@ -612,6 +633,7 @@ CONTENT
 
 - Every question is supported by the attachment.
 - Every correct answer is supported by the attachment.
+- No question, option, or title contains an instructor name, student name, email address, phone number, or other personal contact detail.
 - Every distractor comes from a plausible misunderstanding of lecture content.
 - No outside knowledge has entered the bank.
 - Questions follow the lecture's conceptual order.

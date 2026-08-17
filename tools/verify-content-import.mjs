@@ -257,16 +257,40 @@ assert.match(
 // the lede/caveat strings and the clause list below were updated to match
 // his actual wording, not the version they used to describe.
 //
-// 2026-08-17: split into two steps. His prompt is still the whole of step 2,
-// but it no longer reads a PDF — it reads the HTML deck that step 1 produces,
-// so §1/§2/§9/§11/§12 changed and the caveat can no longer claim the text is
-// purely his. It now says "based on" and names what was extended, because a
-// caveat that overstates its own provenance is the one thing on this card a
-// professor has no way to check.
+// 2026-08-17, later the same day: the credit came out entirely, at the course
+// owner's request. Many instructors use this platform, and one instructor's
+// name on the shared authoring surface reads as ownership of everyone's
+// lectures. So the assertion inverts — the caveat must keep the warning and
+// name nobody, and no personal name may appear in the dictionary at all.
 assert.match(
-  strings, /Based on Prof\. Zareei's own authoring prompt, extended/,
-  "the caveat must credit the actual author and admit the extension, not claim the current text is entirely his"
+  strings, /As with any AI-generated content, check the result in the preview/,
+  "the caveat must keep the AI-content warning — it is the only thing telling a professor to read the output before teaching from it"
 );
+// Deliberately a shape, not a name: spelling the surname here would put back
+// the very string this guard exists to keep out. "Prof. X", "Professor X" and
+// "Dr. X" are the forms a byline actually takes; the dictionary's many lowercase
+// uses of "professor" as a role are untouched by it.
+const BYLINE = /(Prof\.|Professor|Dr\.)\s+[A-Z]/;
+for (const [label, text] of [["strings", strings], ["step 2", promptCard], ["step 1", deckPrompt]]) {
+  assert.doesNotMatch(
+    text, BYLINE,
+    `${label}: no individual may be named on the shared authoring surface — it is read, copied and re-used by every instructor on the platform`
+  );
+}
+
+// A name must not survive the trip from an attached PDF either: lecture title
+// slides routinely carry the author's name, and without this clause step 1
+// would copy it onto the deck and step 2 could lift it into a question.
+for (const [label, body] of [["step 1", deckPrompt], ["step 2", promptCard]]) {
+  assert.match(
+    body, /NEVER CARRY PERSONAL IDENTITY ACROSS/,
+    `${label}: must instruct the model to drop instructor and student identity found in the attachment`
+  );
+  assert.match(
+    body, /historical figure the lecture actually teaches about/,
+    `${label}: must carve out people who are genuinely subject matter, or it would strip cited researchers too`
+  );
+}
 assert.match(
   promptCard, /t\("import\.prompt\.validationCaveat"\)/,
   "the validation caveat must be rendered in the UI, not left as a code comment only the next developer reads"

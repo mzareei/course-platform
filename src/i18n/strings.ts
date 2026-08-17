@@ -2176,9 +2176,12 @@ export const strings = {
     "The deck decides where the class pauses. Step 1 places a Pulse check slide wherever a concept finishes, and step 2 only copies those questions across — which is why every question lands on the slide it belongs to.",
     "La presentación decide dónde se pausa la clase. El paso 1 coloca una diapositiva de Pulse check donde termina cada concepto, y el paso 2 solo copia esas preguntas — por eso cada pregunta cae en la diapositiva que le corresponde."
   ],
+  // No individual is credited here. The platform serves many instructors, and
+  // a name on the shared authoring surface reads as ownership of everyone's
+  // lectures. The warning is the part that earns its place; the byline isn't.
   "import.prompt.validationCaveat": [
-    "Based on Prof. Zareei's own authoring prompt, extended to read the finished deck. As with any AI-generated content, check the result in the preview before relying on it in front of a class.",
-    "Basado en el prompt de autoría del Prof. Zareei, ampliado para leer la presentación terminada. Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
+    "As with any AI-generated content, check the result in the preview before relying on it in front of a class.",
+    "Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
   ],
   "import.prompt.attach": [
     "In both steps, attach the file in the same message as the prompt. Send nothing else with it — the AI must take the lecture only from the attachment.",

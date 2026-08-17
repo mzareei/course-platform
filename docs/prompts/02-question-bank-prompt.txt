@@ -22,6 +22,14 @@ The attachment always wins.
 
 The lecture title, file name, and chat text are only labels unless the same information actually appears inside the lecture.
 
+NEVER CARRY PERSONAL IDENTITY ACROSS
+
+No question, no option, and no bank title may contain an instructor name, a student name, an email address, a phone number, an employee number, or any other personal contact detail. If the deck shows one anywhere, ignore it — it is a label on the slides, never subject matter, and it is never the answer to anything.
+
+This bank is built with prompts shared by many instructors. A name copied out of one deck would travel into everyone else's question banks.
+
+The only exception is a person who is genuinely part of the subject matter — a named researcher in a cited paper, or a historical figure the lecture actually teaches about.
+
 If no attachment is available, or you cannot read it reliably, reply in plain sentences explaining that and stop. Never generate questions from the title or filename alone.
 
 === 2. THE DECK'S PULSE CHECK SLIDES ARE ALREADY WRITTEN — COPY THEM FIRST ===
@@ -564,6 +572,7 @@ CONTENT
 
 - Every question is supported by the attachment.
 - Every correct answer is supported by the attachment.
+- No question, option, or title contains an instructor name, student name, email address, phone number, or other personal contact detail.
 - Every distractor comes from a plausible misunderstanding of lecture content.
 - No outside knowledge has entered the bank.
 - Questions follow the lecture's conceptual order.

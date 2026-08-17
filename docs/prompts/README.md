@@ -43,15 +43,31 @@ mid-sentence. So prompt 2 permits only `pulse` (copied from a pause slide) and
 `final` (end-of-class quiz), and asserts that the pulse count equals the pause
 slide count.
 
+## No names, anywhere
+
+Nothing on this surface credits or identifies an individual — not the cards, not
+the caveat, not the prompt bodies. Many instructors use the platform, and one
+instructor's name on the shared authoring surface reads as ownership of
+everyone's lectures. `verify-content-import` asserts the dictionary and both
+prompt bodies stay clean.
+
+The same rule is pushed down to the model. Both prompts carry a **NEVER CARRY
+PERSONAL IDENTITY ACROSS** clause, because lecture title slides routinely carry
+their author's name: without it, step 1 copies that name onto the deck and step 2
+can lift it into a question. Subject matter crosses over; identity does not. The
+one carve-out is a person who *is* the subject — a cited researcher, a historical
+figure — so the clause doesn't strip real content.
+
 ## What changed in prompt 2
 
-It is Prof. Zareei's prompt, adopted 2026-08-10, with the minimum edits the
-two-step flow requires. Untouched: question quality, brevity targets, distractor
-rules, bilingual rules, JSON safety, output format.
+It is the course owner's own prompt, adopted 2026-08-10, with the minimum edits
+the two-step flow requires. Untouched: question quality, brevity targets,
+distractor rules, bilingual rules, JSON safety, output format.
 
 - **New §2** — copy the deck's `Pulse check` slides verbatim, first, in deck
   order. One question per pause slide, no more, no fewer.
-- **§1** — the attachment is the finished HTML deck, not a PDF.
+- **§1** — the attachment is the finished HTML deck, not a PDF; plus the
+  no-personal-identity clause above.
 - **§3** (was §2) — now scoped to the *additional* quiz questions; count reads
   "10 to 18 additional", whole bank still capped at 25.
 - **§9** (was §8) — slide numbers come from `data-slide`, not from counting.
