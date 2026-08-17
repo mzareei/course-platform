@@ -2159,9 +2159,17 @@ export const strings = {
     "Separa varios nombres de dominio con una coma o un salto de línea — por ejemplo example.com"
   ],
   "import.deck.commitAlone": ["Upload the deck", "Subir la presentación"],
+  "import.deck.chooseFirst": [
+    "Choose the deck HTML file above, then this button will send it.",
+    "Elige arriba el archivo HTML de la presentación y este botón la enviará."
+  ],
   "import.deck.aloneHint": [
     "You can upload the deck now and add its questions later — step 2 needs this file first.",
     "Puedes subir la presentación ahora y agregar sus preguntas después — el paso 2 necesita este archivo primero."
+  ],
+  "import.deck.savedWithQuestions": [
+    "This deck will be saved together with the questions — use Save to the course at the bottom of the page. You do not need a separate button for it.",
+    "Esta presentación se guardará junto con las preguntas — usa Guardar en el curso al final de la página. No necesitas un botón aparte para ella."
   ],
   "import.deck.titleMissing": [
     "This deck has no title, so there is nothing to name it in the library. Add a <title> line to the HTML and choose the file again.",

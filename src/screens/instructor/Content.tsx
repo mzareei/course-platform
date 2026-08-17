@@ -736,23 +736,38 @@ function ImportPanel() {
 
         {/* The only commit control used to live inside ImportPreview, which
             renders only for a loaded bank — so a deck chosen on its own could
-            be read, named on screen, and never sent anywhere. This button is
-            that missing half, and it appears only when ImportPreview is not
-            showing one, so there is never a second button competing with it. */}
-        {deckHtml.trim() && !(bank && bank.ok && !replacing) ? (
+            be read, named on screen, and never sent anywhere.
+
+            Exactly one commit button exists at a time. When a bank is loaded,
+            ImportPreview's button owns the submit and sends the deck with it;
+            this half then explains that in words, because a button that
+            disappears the moment the second file loads reads as the deck being
+            dropped, not as the two being merged.
+
+            When no bank is loaded, the button is always rendered and merely
+            disabled until a file is chosen. Rendering it only once a file
+            exists hid the one control the screen was missing behind the very
+            action the professor was looking for it to perform. */}
+        {bank && bank.ok && !replacing ? (
+          deckHtml.trim()
+            ? <p class="hint" role="status">{t("import.deck.savedWithQuestions")}</p>
+            : null
+        ) : (
           <div class="row" style="justify-content: space-between; align-items: center;">
-            <p class="hint">{t("import.deck.aloneHint")}</p>
+            <p class="hint">
+              {deckHtml.trim() ? t("import.deck.aloneHint") : t("import.deck.chooseFirst")}
+            </p>
             <button
               class="btn primary"
               type="button"
-              disabled={busy}
+              disabled={busy || !deckHtml.trim()}
               style="flex: 0 0 auto;"
               onClick={() => void onCommit()}
             >
               {t("import.deck.commitAlone")}
             </button>
           </div>
-        ) : null}
+        )}
       </div>
 
       {bank && bank.ok && !replacing ? (

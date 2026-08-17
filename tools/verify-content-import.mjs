@@ -204,9 +204,21 @@ assert.match(
   content, /if \(!hasBank && !hasDeck\) return;/,
   "onCommit must still refuse when there is nothing at all to send"
 );
+// The button must be visible before a file is chosen, not summoned by choosing
+// one: gating its existence on deckHtml hid the missing control behind the very
+// action the professor was hunting for it to perform. Disabled-and-present is
+// the discoverable form.
 assert.match(
-  content, /deckHtml\.trim\(\) && !\(bank && bank\.ok && !replacing\)/,
-  "a commit control must exist outside ImportPreview for the deck-only case, and must not double up with ImportPreview's own"
+  content, /disabled=\{busy \|\| !deckHtml\.trim\(\)\}/,
+  "the deck commit button must render disabled when no deck is chosen, not vanish"
+);
+assert.doesNotMatch(
+  content, /\{deckHtml\.trim\(\) && !\(bank && bank\.ok && !replacing\) \?/,
+  "the deck commit button must not be conditional on a file already being chosen"
+);
+assert.match(
+  content, /t\("import\.deck\.savedWithQuestions"\)/,
+  "when a bank is loaded ImportPreview owns the only button and sends the deck with it — that must be stated, or the deck button disappearing reads as the deck being dropped"
 );
 assert.match(
   content, /hasBank=\{resultHadBank\}/,
@@ -216,7 +228,7 @@ assert.match(
   content, /function deckTitleFromHtml/,
   "a deck with no bank must name itself from its own <title>"
 );
-for (const key of ["commitAlone", "aloneHint", "titleMissing"]) {
+for (const key of ["commitAlone", "aloneHint", "titleMissing", "chooseFirst", "savedWithQuestions"]) {
   assert.match(
     strings, new RegExp(`"import\\.deck\\.${key}"`),
     `import.deck.${key} must be bilingual`
