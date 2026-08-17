@@ -2137,8 +2137,8 @@ export const strings = {
   ],
   "import.slug": ["Lecture slug", "Identificador de la clase"],
   "import.slugHint": [
-    "Links the question bank and the deck to the same lecture. Lowercase letters, numbers and dashes.",
-    "Vincula el banco de preguntas y la presentación a la misma clase. Minúsculas, números y guiones."
+    "Links the question bank and the deck to the same lecture. Lowercase letters, numbers and dashes. If you upload the deck now and its questions later, use this exact same slug both times — a different one creates a second, separate lecture.",
+    "Vincula el banco de preguntas y la presentación a la misma clase. Minúsculas, números y guiones. Si subes la presentación ahora y sus preguntas después, usa exactamente el mismo slug las dos veces — uno distinto crea una segunda clase aparte."
   ],
   "import.slugRequired": [
     "Enter a lecture slug before saving.",

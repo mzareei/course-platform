@@ -540,8 +540,21 @@ function ImportPanel() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setDeckHtml(String(reader.result || ""));
+      const html = String(reader.result || "");
+      setDeckHtml(html);
       setDeckFileName(file.name);
+      // The slug is the join key: a deck and a bank uploaded under different
+      // slugs resolve to two independent content items, quietly, and the
+      // lecture ends up split in half. In the two-step flow the deck arrives
+      // first and alone, so without this the field sits empty and whatever
+      // gets typed has to be remembered and retyped exactly when the questions
+      // are uploaded later. Deriving it from the deck's own title gives both
+      // halves the same starting point. Only ever fills a blank field — never
+      // overwrites a slug already chosen, by hand or from a bank.
+      if (!slug.trim()) {
+        const suggested = slugify(deckTitleFromHtml(html));
+        if (suggested) setSlug(suggested);
+      }
     };
     reader.readAsText(file);
   }
