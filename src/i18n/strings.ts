@@ -2158,6 +2158,15 @@ export const strings = {
     "Separate multiple hostnames with a comma or a new line — e.g. example.com",
     "Separa varios nombres de dominio con una coma o un salto de línea — por ejemplo example.com"
   ],
+  "import.deck.commitAlone": ["Upload the deck", "Subir la presentación"],
+  "import.deck.aloneHint": [
+    "You can upload the deck now and add its questions later — step 2 needs this file first.",
+    "Puedes subir la presentación ahora y agregar sus preguntas después — el paso 2 necesita este archivo primero."
+  ],
+  "import.deck.titleMissing": [
+    "This deck has no title, so there is nothing to name it in the library. Add a <title> line to the HTML and choose the file again.",
+    "Esta presentación no tiene título, así que no hay cómo nombrarla en la biblioteca. Agrega una línea <title> al HTML y elige el archivo de nuevo."
+  ],
   "import.deck.success": ["Lecture deck imported.", "Presentación importada."],
   "import.deck.failed": ["The lecture deck could not be imported.", "No se pudo importar la presentación."],
 

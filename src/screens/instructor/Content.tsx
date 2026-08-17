@@ -431,6 +431,24 @@ function parseHostList(text: string): string[] {
   return [...new Set(hosts)];
 }
 
+/** The deck's own <title>, for a deck uploaded with no question bank to borrow
+ *  a title from.
+ *
+ *  Read with a regex rather than DOMParser on purpose: parsing a full lecture
+ *  deck into a detached document to reach one element runs its <style> blocks
+ *  through the CSS parser and builds a DOM for every slide, and the string is
+ *  already in memory. Entities are decoded through a textarea, so a title
+ *  containing &amp; or &#8212; arrives as the professor wrote it. */
+function deckTitleFromHtml(html: string): string {
+  const raw = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  if (!raw) return "";
+  const decoder = document.createElement("textarea");
+  decoder.innerHTML = raw;
+  // 180 is the server's own cap in writeDeck(); trimming here means a long
+  // title is silently accepted rather than rejected after the upload.
+  return decoder.value.replace(/\s+/g, " ").trim().slice(0, 180);
+}
+
 function ImportPanel() {
   const [bank, setBank] = useState<ParsedBank | null>(null);
   const [fileText, setFileText] = useState("");
@@ -453,6 +471,9 @@ function ImportPanel() {
   // would otherwise blank deckHtml before this ever renders and make a
   // successful deck import look like it was never attempted.
   const [resultHadDeck, setResultHadDeck] = useState(false);
+  // Same reasoning as resultHadDeck: a deck-only import must not report the
+  // bank half it never sent.
+  const [resultHadBank, setResultHadBank] = useState(false);
 
   // Restore a draft on mount. Only ever one in-progress import, so no picker.
   useEffect(() => {
@@ -538,28 +559,45 @@ function ImportPanel() {
   }
 
   async function onCommit() {
-    if (!bank || !bankIsImportable(bank)) return;
+    const hasDeck = deckHtml.trim().length > 0;
+    const hasBank = Boolean(bank && bankIsImportable(bank));
+    // Either half may travel alone. The two-step authoring flow produces the
+    // deck first and the questions from it afterwards, so demanding a bank
+    // before a deck could be uploaded made the deck unuploadable at the exact
+    // moment it existed and the bank did not.
+    if (!hasBank && !hasDeck) return;
     if (!slug.trim()) {
       setError(t("import.slugRequired"));
+      return;
+    }
+    // With no bank to borrow a title from, the deck names itself. Its <title>
+    // is the same element the server's own validator insists on, so a deck
+    // that passes validation always has one to give.
+    const deckTitle = hasBank ? bank!.title : deckTitleFromHtml(deckHtml);
+    if (hasDeck && !deckTitle) {
+      setError(t("import.deck.titleMissing"));
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const hasDeck = deckHtml.trim().length > 0;
       const response = await importContent({
-        bank: {
-          content_slug: slug.trim(),
-          title: bank.title,
-          title_es: bank.title_es,
-          questions: bank.questions
-        },
+        ...(hasBank
+          ? {
+            bank: {
+              content_slug: slug.trim(),
+              title: bank!.title,
+              title_es: bank!.title_es,
+              questions: bank!.questions
+            }
+          }
+          : {}),
         ...(hasDeck
           ? {
             deck: {
               slug: slug.trim(),
-              title: bank.title,
-              title_es: bank.title_es,
+              title: deckTitle,
+              title_es: hasBank ? bank!.title_es : null,
               html: deckHtml,
               external_links: parseHostList(externalLinksText)
             }
@@ -568,10 +606,13 @@ function ImportPanel() {
       });
       setResult(response);
       setResultHadDeck(hasDeck);
+      setResultHadBank(hasBank);
       // A bad deck must never hide a good bank, or the reverse — but only
       // clear the draft once nothing attempted has failed, so a partial
-      // failure never costs the professor their edits.
-      if (response.bank.ok && (!hasDeck || response.deck.ok)) {
+      // failure never costs the professor their edits. A half that was never
+      // sent comes back {ok:false} from the server's default result and must
+      // not be read as a failure.
+      if ((!hasBank || response.bank.ok) && (!hasDeck || response.deck.ok)) {
         clearImportDraft();
         resetForm();
       }
@@ -692,6 +733,26 @@ function ImportPanel() {
           />
           <span class="hint">{t("import.deck.externalLinksHint")}</span>
         </label>
+
+        {/* The only commit control used to live inside ImportPreview, which
+            renders only for a loaded bank — so a deck chosen on its own could
+            be read, named on screen, and never sent anywhere. This button is
+            that missing half, and it appears only when ImportPreview is not
+            showing one, so there is never a second button competing with it. */}
+        {deckHtml.trim() && !(bank && bank.ok && !replacing) ? (
+          <div class="row" style="justify-content: space-between; align-items: center;">
+            <p class="hint">{t("import.deck.aloneHint")}</p>
+            <button
+              class="btn primary"
+              type="button"
+              disabled={busy}
+              style="flex: 0 0 auto;"
+              onClick={() => void onCommit()}
+            >
+              {t("import.deck.commitAlone")}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {bank && bank.ok && !replacing ? (
@@ -700,17 +761,26 @@ function ImportPanel() {
 
       {busy ? <p class="hint" role="status">{t("import.saving")}</p> : null}
 
-      {result ? <ImportResultSummary result={result} hasDeck={resultHadDeck} /> : null}
+      {result ? (
+        <ImportResultSummary result={result} hasDeck={resultHadDeck} hasBank={resultHadBank} />
+      ) : null}
     </div>
   );
 }
 
-function ImportResultSummary({ result, hasDeck }: { result: ImportResult; hasDeck: boolean }) {
+function ImportResultSummary(
+  { result, hasDeck, hasBank }: { result: ImportResult; hasDeck: boolean; hasBank: boolean }
+) {
   return (
     <div class="card stack">
-      <p class={result.bank.ok ? "hint" : "error-text"} role={result.bank.ok ? "status" : "alert"}>
-        {result.bank.ok ? t("import.bank.success") : result.bank.error || t("import.bank.failed")}
-      </p>
+      {/* The server seeds both halves {ok:false} and only overwrites the one it
+          was actually given, so a deck-only import reports a bank failure that
+          never happened. Show a half only when it was sent. */}
+      {hasBank ? (
+        <p class={result.bank.ok ? "hint" : "error-text"} role={result.bank.ok ? "status" : "alert"}>
+          {result.bank.ok ? t("import.bank.success") : result.bank.error || t("import.bank.failed")}
+        </p>
+      ) : null}
       {hasDeck ? (
         <>
           <p class={result.deck.ok ? "hint" : "error-text"} role={result.deck.ok ? "status" : "alert"}>

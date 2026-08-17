@@ -180,6 +180,48 @@ const [api, preview, content, strings, promptCard, deckPrompt] = await Promise.a
 
 assert.match(api, /export async function importContent/);
 assert.match(api, /course-content-import/);
+
+// ------------------------------------------------- either half may go alone
+// The edge function seeds {bank:{ok:false},deck:{ok:false}} and fills in only
+// the halves it was given; writeDeck resolves its own slug, uploads its own
+// bytes and writes its own content_items row with no bank involved. Both
+// halves of the API type are optional. The screen was the only thing that
+// required a bank — onCommit returned early without one, and the sole commit
+// button lived inside ImportPreview, which renders only for a loaded bank. A
+// professor could choose a deck HTML, see its filename echoed back, and have
+// nothing on the page to press. That is the exact order the two-step authoring
+// flow produces files in, so the deck was unuploadable precisely when it was
+// the only thing that existed.
+assert.doesNotMatch(
+  content, /if \(!bank \|\| !bankIsImportable\(bank\)\) return;/,
+  "onCommit must not refuse a deck-only import — a deck with no bank yet is the normal state in the two-step flow"
+);
+assert.match(
+  content, /const hasBank = Boolean\(bank && bankIsImportable\(bank\)\)/,
+  "onCommit must decide the two halves independently"
+);
+assert.match(
+  content, /if \(!hasBank && !hasDeck\) return;/,
+  "onCommit must still refuse when there is nothing at all to send"
+);
+assert.match(
+  content, /deckHtml\.trim\(\) && !\(bank && bank\.ok && !replacing\)/,
+  "a commit control must exist outside ImportPreview for the deck-only case, and must not double up with ImportPreview's own"
+);
+assert.match(
+  content, /hasBank=\{resultHadBank\}/,
+  "the result summary must know whether a bank was sent, or a deck-only import reports a bank failure that never happened"
+);
+assert.match(
+  content, /function deckTitleFromHtml/,
+  "a deck with no bank must name itself from its own <title>"
+);
+for (const key of ["commitAlone", "aloneHint", "titleMissing"]) {
+  assert.match(
+    strings, new RegExp(`"import\\.deck\\.${key}"`),
+    `import.deck.${key} must be bilingual`
+  );
+}
 assert.match(preview, /groupBySlide/, "the preview must group by slide range as designed");
 assert.match(preview, /difficulty_defaulted/, "a defaulted difficulty must be visible");
 assert.match(preview, /questionIsImportable/);
