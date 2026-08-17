@@ -166,12 +166,16 @@ assert.deepEqual(
   "groups ascend by slide with ungrouped questions last"
 );
 
-const [api, preview, content, strings, promptCard] = await Promise.all([
+const [api, preview, content, strings, promptCard, deckPrompt] = await Promise.all([
   readFile(new URL("src/api/contentImport.ts", root), "utf8"),
   readFile(new URL("src/components/ImportPreview.tsx", root), "utf8"),
   readFile(new URL("src/screens/instructor/Content.tsx", root), "utf8"),
   readFile(new URL("src/i18n/strings.ts", root), "utf8"),
-  readFile(new URL("src/components/ImportPromptCard.tsx", root), "utf8")
+  readFile(new URL("src/components/ImportPromptCard.tsx", root), "utf8"),
+  // Step 1 lives outside the .tsx on purpose — it quotes slide markup, and
+  // verify-i18n.mjs reads >English sentence< inside any .tsx component as
+  // untranslated JSX. See the header comment in deckPrompt.ts.
+  readFile(new URL("src/features/import/deckPrompt.ts", root), "utf8")
 ]);
 
 assert.match(api, /export async function importContent/);
@@ -252,9 +256,16 @@ assert.match(
 // tested by him directly rather than through this repo's self-test loop —
 // the lede/caveat strings and the clause list below were updated to match
 // his actual wording, not the version they used to describe.
+//
+// 2026-08-17: split into two steps. His prompt is still the whole of step 2,
+// but it no longer reads a PDF — it reads the HTML deck that step 1 produces,
+// so §1/§2/§9/§11/§12 changed and the caveat can no longer claim the text is
+// purely his. It now says "based on" and names what was extended, because a
+// caveat that overstates its own provenance is the one thing on this card a
+// professor has no way to check.
 assert.match(
-  strings, /Written and tested by Prof\. Zareei/,
-  "the caveat must credit the actual author/tester of the current prompt, not a stale claim about a prior version"
+  strings, /Based on Prof\. Zareei's own authoring prompt, extended/,
+  "the caveat must credit the actual author and admit the extension, not claim the current text is entirely his"
 );
 assert.match(
   promptCard, /t\("import\.prompt\.validationCaveat"\)/,
@@ -312,8 +323,63 @@ assert.equal(exampleBank.questions[0].options.length, 4);
 assert.equal(exampleBank.questions[0].options.filter((o) => o.is_correct).length, 1);
 
 // The prompt body is deliberately English-only; the chrome around it is not.
-for (const key of ["title", "lede", "attach", "copy", "copied", "copyFailed"]) {
+// Every instruction a professor reads has to exist in both languages, and
+// verify-i18n.mjs proves each of these keys carries a distinct Spanish string.
+for (const key of [
+  "title", "lede", "attach", "copy", "copied", "copyFailed",
+  "howRule", "showText",
+  "step1Title", "step1Lede", "step1Save",
+  "step2Title", "step2Lede", "step2Save"
+]) {
   assert.match(strings, new RegExp(`"import\\.prompt\\.${key}"`), `import.prompt.${key} must be bilingual`);
 }
+
+// ------------------------------------------------- step 1: the deck prompt
+// Step 2 copies the pause questions instead of inventing them, which only
+// works if step 1 actually planted them. These clauses are the seam between
+// the two prompts — if step 1 stops emitting the badge, the attributes, or
+// the four .choice buttons, step 2 silently produces a bank with no live
+// questions at all and the class runs with nothing to ask.
+assert.match(
+  deckPrompt, /^export const DECK_PROMPT = `/m,
+  "DECK_PROMPT must be an exported module-scope template literal"
+);
+const deckBody = deckPrompt.match(/export const DECK_PROMPT = `([\s\S]*?)`;\n/)?.[1];
+assert.ok(deckBody, "DECK_PROMPT must be readable as a template literal");
+
+for (const [clause, why] of [
+  [/The attachment always wins/i, "the PDF is the only source; a title must never become content"],
+  [/Pulse check/, "step 2 finds pause slides by this exact badge text"],
+  [/data-pause-topic-en/, "the checkpoint's name on the plan board comes from this attribute"],
+  [/data-pause-id/, "the stable pause slug, forward-compatible with checkpoint matching by id"],
+  [/data-slide/, "the platform tracks position by this attribute, and step 2 reads it for covers_up_to_slide"],
+  [/exactly four button elements with class choice/i, "four options is a display requirement the bank inherits"],
+  [/answer-reveal fragment correct/, "the answer must stay hidden until the professor reveals it"],
+  [/Never add the attribute data-course-deck-engine/i, "that attribute suppresses the injected slide reporter — the deck would stop reporting position"],
+  [/Never add the attribute data-teaching-slide/i, "a second numbering system silently competes with data-slide"],
+  [/no link to an external stylesheet or font/i, "deck-validation rejects a deck that reaches outside itself"],
+  [/exactly one HTML code block/i, "commentary around the block breaks the upload"],
+  [/class active/, "the slide reporter finds the current slide by this class"]
+]) {
+  assert.match(deckBody, clause, `deck prompt must state: ${why}`);
+}
+
+// The two prompts have to agree on the badge, or step 2 finds nothing.
+assert.ok(
+  promptBody.includes("Pulse check") && deckBody.includes("Pulse check"),
+  "both prompts must name the same badge text, or step 2 finds no pause slides"
+);
+assert.match(
+  promptBody, /intended_use uses only pulse or final\. The value both never appears\./,
+  "step 2 must ban intended_use=both: the plan builder treats it as checkpoint-eligible, so it would stop the class at a slide with no pause slide behind it"
+);
+assert.match(
+  promptBody, /equal the number of Pulse check slides/i,
+  "step 2 must assert one pulse question per pause slide, in both the instructions and its own final check"
+);
+assert.doesNotMatch(
+  deckBody, /\$\{/,
+  "an interpolation inside the prompt would splice app state into instructions sent to a model"
+);
 
 console.log("content import parser verified");

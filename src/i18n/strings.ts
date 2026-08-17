@@ -2164,18 +2164,53 @@ export const strings = {
   // ------------------------------------------------- import · authoring prompt
   // Chrome only. The prompt body itself stays in English — it is instructions
   // to a model, not text a person reads.
-  "import.prompt.title": ["The authoring prompt", "El prompt de autoría"],
+  "import.prompt.title": [
+    "Build a lecture in two steps",
+    "Crea una clase en dos pasos"
+  ],
   "import.prompt.lede": [
-    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below.",
-    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo."
+    "Use your own AI subscription — ChatGPT, Claude or Gemini, whichever you already pay for. Step 1 turns your PDF into the slide deck. Step 2 reads that deck and writes the questions. Then upload both files below.",
+    "Usa tu propia suscripción de IA — ChatGPT, Claude o Gemini, la que ya pagues. El paso 1 convierte tu PDF en la presentación. El paso 2 lee esa presentación y escribe las preguntas. Después sube ambos archivos aquí abajo."
+  ],
+  "import.prompt.howRule": [
+    "The deck decides where the class pauses. Step 1 places a Pulse check slide wherever a concept finishes, and step 2 only copies those questions across — which is why every question lands on the slide it belongs to.",
+    "La presentación decide dónde se pausa la clase. El paso 1 coloca una diapositiva de Pulse check donde termina cada concepto, y el paso 2 solo copia esas preguntas — por eso cada pregunta cae en la diapositiva que le corresponde."
   ],
   "import.prompt.validationCaveat": [
-    "Written and tested by Prof. Zareei. As with any AI-generated content, check the result in the preview before relying on it in front of a class.",
-    "Escrito y probado por el Prof. Zareei. Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
+    "Based on Prof. Zareei's own authoring prompt, extended to read the finished deck. As with any AI-generated content, check the result in the preview before relying on it in front of a class.",
+    "Basado en el prompt de autoría del Prof. Zareei, ampliado para leer la presentación terminada. Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
   ],
   "import.prompt.attach": [
-    "Attach the lecture itself — the PDF or slide export — in the same message, and say how many slides it has so the questions land on the right ones.",
-    "Adjunta la clase misma — el PDF o la exportación de diapositivas — en el mismo mensaje, e indica cuántas diapositivas tiene para que las preguntas apunten a las correctas."
+    "In both steps, attach the file in the same message as the prompt. Send nothing else with it — the AI must take the lecture only from the attachment.",
+    "En ambos pasos, adjunta el archivo en el mismo mensaje que el prompt. No envíes nada más — la IA debe tomar la clase únicamente del archivo adjunto."
+  ],
+  "import.prompt.step1Title": [
+    "Step 1 — the slide deck",
+    "Paso 1 — la presentación"
+  ],
+  "import.prompt.step1Lede": [
+    "Attach your lecture PDF and paste this prompt. It answers with one HTML file: your slides in both languages, with a Pulse check slide everywhere the class should stop and answer.",
+    "Adjunta el PDF de tu clase y pega este prompt. Responde con un solo archivo HTML: tus diapositivas en ambos idiomas, con una diapositiva de Pulse check donde la clase deba detenerse a responder."
+  ],
+  "import.prompt.step1Save": [
+    "Save the reply as a file ending in .html, then upload it under Lecture deck below.",
+    "Guarda la respuesta como un archivo que termine en .html y súbelo en Presentación aquí abajo."
+  ],
+  "import.prompt.step2Title": [
+    "Step 2 — the questions",
+    "Paso 2 — las preguntas"
+  ],
+  "import.prompt.step2Lede": [
+    "Open a new chat, attach the .html file from step 1, and paste this prompt. It answers with the question file.",
+    "Abre un chat nuevo, adjunta el archivo .html del paso 1 y pega este prompt. Responde con el archivo de preguntas."
+  ],
+  "import.prompt.step2Save": [
+    "Attach the .html file, not the PDF — the questions have to be read from the finished slides. Save the reply as a file ending in .json and upload it as the question file below.",
+    "Adjunta el archivo .html, no el PDF — las preguntas deben leerse de las diapositivas terminadas. Guarda la respuesta como un archivo que termine en .json y súbelo como archivo de preguntas aquí abajo."
+  ],
+  "import.prompt.showText": [
+    "Show the prompt text",
+    "Ver el texto del prompt"
   ],
   "import.prompt.copy": ["Copy the prompt", "Copiar el prompt"],
   "import.prompt.copied": ["Copied!", "¡Copiado!"],

@@ -1,0 +1,298 @@
+You are building the slide deck for ONE lecture of TC2007B Information Security at Tecnologico de Monterrey.
+
+Your output is a single HTML file that is projected in a real classroom and imported into the course platform. A second prompt will later read your finished HTML to build the question bank, so your file is not a draft — it is the source of truth for what gets taught and where the class pauses. Follow every requirement below exactly.
+
+=== 1. THE ATTACHED FILE IS THE ONLY SOURCE OF SUBJECT MATTER ===
+
+The attached lecture material is the complete and only source of subject matter.
+
+Every slide, claim, example, and number must be supported by what the attachment actually contains.
+
+Do not:
+
+- add information from your own knowledge;
+- update or correct the lecture;
+- assume what a lecture with this title should contain;
+- use material from other lectures or courses;
+- treat the file name or anything written in this chat as subject matter.
+
+The attachment always wins.
+
+You may reorganize, tighten, and rephrase for the projector. You may not introduce content the attachment does not teach.
+
+If no attachment is available, or you cannot read it reliably, reply in plain sentences explaining that and stop. Never build a deck from the title alone.
+
+=== 2. ONE SELF-CONTAINED FILE, NO EXTERNAL REQUESTS ===
+
+Return exactly one complete HTML file.
+
+The file must render fully with no network access. The platform rejects a deck that reaches outside itself.
+
+Required:
+
+- all CSS inside one or more style elements in the head;
+- all JavaScript inside a script element in the file;
+- a title element describing the lecture.
+
+Forbidden:
+
+- link elements to external stylesheets or fonts, including Google Fonts;
+- script elements with a src attribute;
+- images, video, audio, or iframes loaded from a URL;
+- any relative path such as ./style.css, images/logo.png, or /assets/x.js;
+- web fonts of any kind.
+
+Use system font stacks only, for example:
+
+font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+If a diagram is genuinely needed, draw it with inline SVG or with HTML and CSS. Never link to an image file. Do not embed large base64 images.
+
+=== 3. SLIDE STRUCTURE ===
+
+The body contains a flat sequence of slide sections. Do not nest slides inside one another.
+
+Every slide is:
+
+<section class="slide" data-slide="1" data-section-en="Section name" data-section-es="Nombre de la seccion" data-title-en="Slide title" data-title-es="Titulo de la diapositiva">
+  <div class="slide-inner">
+    ...
+  </div>
+</section>
+
+Rules:
+
+- data-slide starts at 1 on the very first slide and increases by exactly 1 with no gaps and no repeats, in document order;
+- every slide carries all four data-section and data-title attributes;
+- the platform reads the slide position to know where the professor is, so the numbering must be perfect.
+
+Allowed additional classes on a slide:
+
+class="slide title-slide"    the opening slide, exactly one
+class="slide section"        a divider announcing a new part of the lecture
+class="slide activity"       a pause check, quick activity, or discussion slide
+class="slide wrap"           the closing summary slide, exactly one
+class="slide"                an ordinary content slide
+
+Never add the attribute data-course-deck-engine to any element.
+
+Never add the attribute data-teaching-slide to any slide.
+
+Both of those belong to a different deck system and will stop the platform from tracking your slides.
+
+=== 4. THE CURRENT SLIDE AND THE NAVIGATION SCRIPT ===
+
+Exactly one slide carries the class active at all times. The first slide starts with it:
+
+<section class="slide title-slide active" data-slide="1" ...>
+
+The platform watches which slide has the class active. If more than one has it, or none has it, the platform cannot tell where the professor is.
+
+Write a small navigation script that:
+
+- moves forward on ArrowRight, ArrowDown, PageDown, and Space;
+- moves back on ArrowLeft, ArrowUp, and PageUp;
+- jumps to the first slide on Home and the last on End;
+- moves the class active from the old slide to the new one and never leaves two slides active;
+- reveals click-to-reveal fragments one at a time before advancing past the slide (see section 7);
+- toggles language when the professor presses L;
+- toggles light and dark theme when the professor presses T;
+- never navigates on its own and never uses a timer to advance.
+
+CSS hides every slide except the active one:
+
+.slide { display: none; }
+.slide.active { display: flex; }
+
+=== 5. BILINGUAL TEXT ===
+
+The class is taught bilingually. Every visible string appears twice, once in English and once in Spanish, wrapped in spans:
+
+<h2><span class="lang-en">Threat versus vulnerability</span><span class="lang-es">Amenaza contra vulnerabilidad</span></h2>
+
+Rules:
+
+- the html element carries lang="en" data-theme="light" data-lang="en";
+- CSS shows one language at a time based on the data-lang attribute on the html element:
+
+  html[data-lang="en"] .lang-es { display: none; }
+  html[data-lang="es"] .lang-en { display: none; }
+
+- never put Spanish text inside a lang-en span or English text inside a lang-es span;
+- both versions must say the same thing, with the same numbers and the same meaning;
+- use natural Mexican academic Spanish, not literal translation;
+- keep technical terms in the form the attachment uses.
+
+=== 6. HOW MUCH GOES ON A SLIDE ===
+
+These slides are read from the back of a lecture hall.
+
+- one idea per slide;
+- a heading plus at most four or five short lines;
+- never a paragraph of prose on a projected slide;
+- headings around 30 to 60 characters per language;
+- bullet lines around 40 to 90 characters per language;
+- body text no smaller than about 1.25rem, headings much larger;
+- use a fluid type scale with clamp so the deck survives any projector;
+- strong contrast between text and background in both themes.
+
+Aim for 40 to 60 slides for a 90 minute class. A short lecture may need fewer. Do not pad the deck to reach a number, and do not compress two ideas onto one slide to save space.
+
+=== 7. CLICK-TO-REVEAL FRAGMENTS ===
+
+Anything the professor wants to hold back until after the class has thought about it goes in a fragment:
+
+<li class="fragment"><span class="lang-en">...</span><span class="lang-es">...</span></li>
+
+A fragment is hidden until the professor advances. Use fragments for answers, conclusions, and the punchline of an example. Do not wrap ordinary bullet lists in fragments.
+
+=== 8. PAUSE CHECK SLIDES — THE MOST IMPORTANT PART ===
+
+The class stops several times so every student answers a question on their phone. Each of those stops is a real slide in your deck. The question bank prompt will read these slides and will not invent its own, so if you do not place a pause check here, there is no question there during class.
+
+WHERE THEY GO
+
+Place a pause check where a concept finishes — after the class has been taught something complete enough to be asked about.
+
+Do not place them on a fixed interval. Do not place one every N slides. Uneven gaps are correct and expected: a dense concept may earn a pause after four slides, an extended example may run eleven slides before one makes sense.
+
+Never place a pause check:
+
+- on the title slide or in the first few slides, before anything has been taught;
+- immediately after a section divider;
+- in the middle of a worked example or a multi-slide argument;
+- two slides after the previous pause check.
+
+Produce 6 to 8 pause checks in a normal lecture. Fewer only if the lecture is genuinely short.
+
+EXACT MARKUP
+
+Every pause check slide must follow this pattern exactly:
+
+<section class="slide activity" data-slide="17"
+         data-section-en="Security mindset" data-section-es="Mentalidad de seguridad"
+         data-title-en="Checkpoint: what stolen data buys" data-title-es="Checkpoint: que compran los datos robados"
+         data-pause-id="attacker-monetization"
+         data-pause-topic-en="Attacker monetization" data-pause-topic-es="Monetizacion del atacante">
+  <div class="slide-inner">
+    <span class="activity-badge"><span class="lang-en">&#9670; Pulse check</span><span class="lang-es">&#9670; Pregunta rapida</span></span>
+    <h2><span class="lang-en">Stolen credentials are most directly used for what?</span><span class="lang-es">Para que se usan mas directamente las credenciales robadas?</span></h2>
+    <div class="choice-grid">
+      <button class="choice"><span class="lang-en">Fraudulent purchases and card fraud</span><span class="lang-es">Compras fraudulentas y fraude con tarjetas</span></button>
+      <button class="choice"><span class="lang-en">Espionage and political leverage</span><span class="lang-es">Espionaje y presion politica</span></button>
+      <button class="choice"><span class="lang-en">Denial of service against the victim</span><span class="lang-es">Denegacion de servicio contra la victima</span></button>
+      <button class="choice"><span class="lang-en">Account takeover and credential stuffing</span><span class="lang-es">Robo de cuentas y relleno de credenciales</span></button>
+    </div>
+    <div class="answer-reveal fragment correct">
+      <span class="answer-tag"><span class="lang-en">Answer</span><span class="lang-es">Respuesta</span></span>
+      <p><span class="lang-en"><strong>Account takeover and credential stuffing</strong> — reused passwords let one breach open many accounts.</span><span class="lang-es"><strong>Robo de cuentas y relleno de credenciales</strong> — las contrasenas reutilizadas permiten que una filtracion abra muchas cuentas.</span></p>
+    </div>
+  </div>
+</section>
+
+REQUIRED DETAILS
+
+- the badge text is exactly "Pulse check" in English and "Pregunta rapida" in Spanish, so the question bank prompt can find these slides;
+- the h2 holds the question, in both languages;
+- exactly four button elements with class choice, in both languages;
+- exactly one of them is the correct answer;
+- the three wrong ones are mistakes a student who attended this lecture could genuinely make — a neighbouring concept, a reversed definition, a property of something taught nearby;
+- keep the four options similar in length and grammar, and do not let the correct one be the longest;
+- vary which position is correct across the deck; never leave a predictable pattern;
+- the answer sits inside div class="answer-reveal fragment correct" so it stays hidden until the professor reveals it after the poll closes;
+- data-pause-id is a short lowercase slug naming the concept, unique in the deck, words joined by hyphens;
+- data-pause-topic-en and data-pause-topic-es are a two to four word label for the same concept. The question bank prompt copies these verbatim, so write them as a clean label, not a sentence.
+
+QUESTION STYLE ON A PAUSE SLIDE
+
+- ask about the concept just taught, not about slide wording;
+- the question reads 70 to 160 characters per language, and stays under 180;
+- each option reads 20 to 70 characters per language, and stays under 80;
+- ask directly; no "According to the lecture" and no "Which of the following statements is correct";
+- avoid negative questions unless the negative form is genuinely necessary;
+- never use "All of the above", "None of the above", "Both A and B", or any option referring to another option by letter or position, because students answer on a phone that may not show letters.
+
+OTHER ACTIVITY SLIDES
+
+You may also use class="slide activity" for a hands-on activity or an open discussion. Those are not pause checks. Give them a different badge — "Quick activity" / "Actividad rapida", or "Discussion" / "Discusion" — and do NOT give them the choice-grid, the four buttons, data-pause-id, or the pause-topic attributes. Only a slide whose badge says "Pulse check" becomes a question.
+
+=== 9. DECK SHAPE ===
+
+Build the lecture in this order:
+
+- one title slide with the lecture title, the course code, and one sentence on what the class will be able to do afterwards;
+- a section divider before each major part;
+- content slides teaching the material in the attachment's own order;
+- pause check slides where concepts finish, per section 8;
+- worked examples kept on consecutive slides with the reasoning revealed in fragments;
+- one closing wrap slide summarising what was taught.
+
+Follow the attachment's order. Do not reorganize the lecture into your own preferred structure.
+
+=== 10. OUTPUT FORMAT ===
+
+Return exactly one HTML code block containing the complete file, and nothing else.
+
+No introduction. No summary. No explanation. No commentary after the block.
+
+The file begins with <!DOCTYPE html> and ends with </html>.
+
+Never output a partial file. Never write comments such as "rest of slides here", "slides 20-40 omitted", "continue in the same pattern", or "... 15 more slides". If the complete deck will not fit in one reply, build a shorter but complete deck covering the whole lecture at lower slide density rather than truncating.
+
+=== 11. FINAL SILENT VALIDATION ===
+
+Before answering, silently check the whole file.
+
+CONTENT
+
+- Every slide is supported by the attachment.
+- No outside knowledge has entered the deck.
+- The lecture's own order is preserved.
+- Every worked example and activity in the attachment is represented.
+- The closing slide summarises what was actually taught.
+
+STRUCTURE
+
+- Exactly one file, opening with <!DOCTYPE html> and closing with </html>.
+- A title element is present.
+- data-slide runs 1, 2, 3 ... with no gaps, no repeats, and matches document order.
+- Every slide has data-section-en, data-section-es, data-title-en, data-title-es.
+- Exactly one slide has class active, and it is the first slide.
+- Exactly one title-slide and exactly one wrap slide.
+- No element anywhere carries data-course-deck-engine or data-teaching-slide.
+
+NO EXTERNAL REQUESTS
+
+- No link to an external stylesheet or font.
+- No script with a src attribute.
+- No img, video, audio, or iframe with a URL.
+- No relative paths anywhere.
+- Fonts are system stacks only.
+
+PAUSE CHECKS
+
+- Between 6 and 8 slides have a badge reading exactly "Pulse check".
+- Each sits after a concept finishes, not on a fixed interval, and not within two slides of another pause check.
+- None appears before the lecture has taught something.
+- Each has exactly four button elements with class choice.
+- Each has exactly one correct answer, held in a div with class "answer-reveal fragment correct".
+- Each has a unique data-pause-id and both pause-topic labels.
+- Correct-answer position varies across the deck.
+- No pause check uses "All of the above", "None of the above", or refers to options by letter.
+- Activity and discussion slides do NOT have the Pulse check badge or the choice grid.
+
+LANGUAGE
+
+- Every visible string has both a lang-en and a lang-es span.
+- No Spanish text sits inside lang-en and no English text inside lang-es.
+- Both languages say the same thing.
+
+BEHAVIOUR
+
+- Arrow keys move one slide and move the class active with them.
+- Two slides are never active at once.
+- Fragments reveal before the slide advances.
+- Nothing advances on its own.
+
+After completing this validation, output only the HTML code block.
