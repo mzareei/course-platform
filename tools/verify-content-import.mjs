@@ -228,7 +228,10 @@ assert.match(
   content, /function deckTitleFromHtml/,
   "a deck with no bank must name itself from its own <title>"
 );
-for (const key of ["commitAlone", "aloneHint", "titleMissing", "chooseFirst", "savedWithQuestions"]) {
+for (const key of [
+  "commitAlone", "aloneHint", "titleMissing", "chooseFirst", "savedWithQuestions",
+  "linksOutTo", "linksOutExplain"
+]) {
   assert.match(
     strings, new RegExp(`"import\\.deck\\.${key}"`),
     `import.deck.${key} must be bilingual`

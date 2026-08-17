@@ -823,6 +823,19 @@ function ImportResultSummary(
               ))}
             </ul>
           ) : null}
+          {/* Where the deck points outward. Reported after a successful
+              import, never as a reason to refuse one. */}
+          {result.deck.ok && result.deck.notices?.length ? (
+            <>
+              <p class="hint">{t("import.deck.linksOutTo")}</p>
+              <ul>
+                {result.deck.notices.map((notice, index) => (
+                  <li class="hint" key={index}>{notice.host || notice.reference}</li>
+                ))}
+              </ul>
+              <p class="hint">{t("import.deck.linksOutExplain")}</p>
+            </>
+          ) : null}
         </>
       ) : null}
     </div>

@@ -2151,12 +2151,20 @@ export const strings = {
   "import.deck.sectionTitle": ["Lecture deck (optional)", "Presentación de la clase (opcional)"],
   "import.deck.chooseFile": ["Choose the deck HTML file", "Elegir el archivo HTML de la presentación"],
   "import.deck.externalLinks": [
-    "Sites this deck legitimately links to",
-    "Sitios a los que esta presentación enlaza legítimamente"
+    "Sites this deck links to (optional)",
+    "Sitios a los que enlaza esta presentación (opcional)"
   ],
   "import.deck.externalLinksHint": [
-    "Separate multiple hostnames with a comma or a new line — e.g. example.com",
-    "Separa varios nombres de dominio con una coma o un salto de línea — por ejemplo example.com"
+    "You do not have to fill this in — a deck that links out will upload either way. Listing a site here just stops it being mentioned afterwards. Separate hostnames with a comma or a new line — e.g. example.com",
+    "No es obligatorio llenar esto — una presentación que enlaza a otros sitios se subirá de todas formas. Poner un sitio aquí solo evita que se te mencione después. Separa los dominios con una coma o un salto de línea — por ejemplo example.com"
+  ],
+  "import.deck.linksOutTo": [
+    "This deck links out to:",
+    "Esta presentación enlaza a:"
+  ],
+  "import.deck.linksOutExplain": [
+    "That is fine — students can click or scan a link and go there. Just note that anything the deck tries to load from outside, like an image or a font, will not appear, because the lecture is served sealed off. Put images in the file itself.",
+    "Eso está bien — los estudiantes pueden abrir o escanear un enlace e ir ahí. Solo ten en cuenta que lo que la presentación intente cargar desde fuera, como una imagen o una fuente, no aparecerá, porque la clase se sirve aislada. Incluye las imágenes dentro del archivo."
   ],
   "import.deck.commitAlone": ["Upload the deck", "Subir la presentación"],
   "import.deck.chooseFirst": [

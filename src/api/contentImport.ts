@@ -9,7 +9,18 @@ export interface DeckProblem {
 
 export interface ImportResult {
   bank: { ok: boolean; question_bank_id?: string; error?: string };
-  deck: { ok: boolean; content_item_id?: string; error?: string; problems?: DeckProblem[] };
+  deck: {
+    ok: boolean;
+    content_item_id?: string;
+    error?: string;
+    /** Blocking findings — present only when ok is false. */
+    problems?: DeckProblem[];
+    /** Non-blocking findings, reported alongside a successful import. An
+     *  outbound link to an undeclared host lands here rather than in
+     *  `problems`: the deck uploads, and the professor is told where it
+     *  points. */
+    notices?: DeckProblem[];
+  };
 }
 
 export async function importContent(input: {
