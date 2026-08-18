@@ -2507,3 +2507,33 @@ here:
   `localStorage`.** A Node verifier imports both directly to self-test them
   against real data; either import breaks that verifier's ability to run at
   all, not just its assertions.
+
+---
+
+## 86. "Defaults to the student's own section" is wrong the moment they have two
+
+**Reported by the professor on 2026-08-18**, from a full run-through of a test
+class in 501: slides, live questions, timers, leaderboard all fine — then
+**Submit reflection** answered *Class session is not available for this section.*
+
+`course-exit-ticket` took the section from the request, and when the phone
+didn't send one (it never does), from `sections[0]` — the first active student
+enrollment that happened to come back from the database. It then checked that
+the class session belonged to *that* section. His test account is enrolled in
+401 **and** 501; the first row was 401; the class was in 501; the check failed.
+Every real student is in exactly one section, so nobody in class had ever hit
+it — which is exactly why it survived until the professor tested with an
+account that isn't shaped like a student.
+
+**Fix:** when a `class_session_id` is given, the *session* decides the section.
+Load the session by id + course, take its `section_id`, and only then confirm
+the student is enrolled there. The caller-supplied / first-enrollment fallback
+is now used solely for tickets with no class session at all.
+
+**Rule:** if the request names a class session, an activity instance, or any
+other section-owned object, resolve the section *from that object* and check
+enrollment against it. Never pick "the student's section" first and then test
+the object against it — for anyone with more than one enrollment (test
+accounts, TAs, a student who transferred groups mid-term) the pick is a coin
+flip. `course-portfolio-entry` still uses `sections[0]`, but nothing it accepts
+is section-owned, so it is fine as long as that stays true.

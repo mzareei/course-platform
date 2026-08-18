@@ -1,6 +1,17 @@
 # Status
 
-**Last updated:** 2026-08-17
+**Last updated:** 2026-08-18
+
+### Reflection submit no longer fails for a student enrolled in two sections (2026-08-18)
+
+The professor's full test run in 501 got through the whole class and then hit
+*Class session is not available for this section* on **Submit reflection**.
+`course-exit-ticket` was choosing the section from the student's *first*
+enrollment and checking the class against it; his test account is in 401 and
+501, and 401 came back first. Real students have one section each, so no
+student had ever seen it. The function now takes the section from the class
+session itself and checks enrollment against that. Deployed 2026-08-18;
+pitfall #86.
 
 ### Step 1 is now the universal lecture prompt, and its reference deck is downloadable (2026-08-17)
 
