@@ -44,9 +44,11 @@ export function Schedule() {
   const [sectionId, setSectionId] = useState("");
   const [contentItemId, setContentItemId] = useState("");
 
-  async function load() {
+  async function load(viewSectionId: string | null) {
     try {
-      const [s, sec, library] = await Promise.all([listSessions(), listSections(), contentLibrary()]);
+      const [s, sec, library] = await Promise.all([
+        listSessions(), listSections(), contentLibrary(viewSectionId)
+      ]);
       setSessions(s.sessions);
       setSections(sec.sections);
       setLectures(
@@ -63,9 +65,12 @@ export function Schedule() {
     }
   }
 
+  // The lecture picker offers this group's lectures, so it reloads when the
+  // group changes — attaching 401's lecture to a 501 class is not a choice
+  // this screen should be able to offer.
   useEffect(() => {
-    void load();
-  }, []);
+    void load(activeSectionId.value);
+  }, [activeSectionId.value]);
 
   // Keep the "add a class day" group in step with the switcher, including when
   // the professor changes groups while this screen is open.
@@ -88,7 +93,7 @@ export function Schedule() {
       setTitle("");
       setDate("");
       setContentItemId("");
-      await load();
+      await load(activeSectionId.value);
       // Home and the student Today screen both read teacher_sessions from the
       // auth context, so a new class day is invisible until that is refetched.
       await refreshContext();
@@ -106,7 +111,7 @@ export function Schedule() {
     try {
       await cancelSession(session.session_id);
       setNotice(t("schedule.cancelled", { title: session.title }));
-      await load();
+      await load(activeSectionId.value);
       await refreshContext();
     } catch (e) {
       setError(apiErrorText(e, "schedule.addFailed"));
@@ -123,7 +128,7 @@ export function Schedule() {
       await deleteSession(session.session_id, { force });
       setNotice(t("schedule.deleted", { title: session.title }));
       setForceDeleteSessionId(null);
-      await load();
+      await load(activeSectionId.value);
       await refreshContext();
     } catch (e) {
       const message = apiErrorText(e, "schedule.deleteFailed");
@@ -139,7 +144,7 @@ export function Schedule() {
   async function onSessionSaved(session: ClassSession) {
     setEditingSessionId(null);
     setNotice(t("schedule.saved", { title: session.title }));
-    await load();
+    await load(activeSectionId.value);
     await refreshContext();
   }
 

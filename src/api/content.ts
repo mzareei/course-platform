@@ -96,8 +96,17 @@ export interface ContentLibrary {
   shareable_sections: ShareableSection[];
 }
 
-export function contentLibrary() {
-  return callFn<ContentLibrary>("course-content-library", {});
+/**
+ * The library as the named group's instructor sees it.
+ *
+ * `viewSectionId` is the group in the scope switcher, and null means the
+ * all-groups view. Passing it is what makes the switcher a viewpoint rather
+ * than decoration: without it the platform owner's global-owner bypass shows
+ * every item in the course inside every group. The server never widens on it.
+ */
+export function contentLibrary(viewSectionId?: string | null) {
+  return callFn<ContentLibrary>("course-content-library",
+    viewSectionId ? { view_section_id: viewSectionId } : {});
 }
 
 export interface RepositorySyncResult {

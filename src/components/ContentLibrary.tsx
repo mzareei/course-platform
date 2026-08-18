@@ -60,9 +60,11 @@ export function ContentLibraryView() {
   // treatment: the select stages the class, the ConfirmButton performs it.
   const [assignTarget, setAssignTarget] = useState<{ itemId: string; sessionId: string } | null>(null);
 
-  async function load() {
+  async function load(viewSectionId: string | null) {
     try {
-      const [lib, rel, classes] = await Promise.all([contentLibrary(), listReleases(), listSessions()]);
+      const [lib, rel, classes] = await Promise.all([
+        contentLibrary(viewSectionId), listReleases(), listSessions()
+      ]);
       setLibrary(lib);
       setReleases(rel.releases);
       setSessions(classes.sessions);
@@ -71,9 +73,13 @@ export function ContentLibraryView() {
     }
   }
 
+  // Reloads on every group change, not just on mount: the library is now
+  // answered per group by the server, so a stale payload would show the
+  // previous group's lectures under the new group's name.
   useEffect(() => {
-    void load();
-  }, []);
+    setLibrary(null);
+    void load(activeSectionId.value);
+  }, [activeSectionId.value]);
 
   async function run(itemId: string, work: () => Promise<void>, failureKey: StringKey = "content.library.changeFailed", failureVars?: Record<string, string | number>) {
     setNotice(null);
@@ -81,7 +87,7 @@ export function ContentLibraryView() {
     setBusy(itemId);
     try {
       await work();
-      await load();
+      await load(activeSectionId.value);
     } catch (e) {
       const deleteErrorKey: StringKey | null = e instanceof ApiError ? contentItemDeleteErrorKey(e.code) : null;
       setItemError((current) => ({
