@@ -2194,8 +2194,8 @@ export const strings = {
     "Crea una clase en dos pasos"
   ],
   "import.prompt.lede": [
-    "Use your own AI subscription — ChatGPT, Claude or Gemini, whichever you already pay for. Step 1 turns your PDF into the slide deck. Step 2 reads that deck and writes the questions. Then upload both files below.",
-    "Usa tu propia suscripción de IA — ChatGPT, Claude o Gemini, la que ya pagues. El paso 1 convierte tu PDF en la presentación. El paso 2 lee esa presentación y escribe las preguntas. Después sube ambos archivos aquí abajo."
+    "Use whichever AI you already use — ChatGPT, Claude or Gemini. Step 1 turns your lecture into the slide deck. Step 2 reads that deck and writes the questions. Then upload both files below.",
+    "Usa la IA que ya uses — ChatGPT, Claude o Gemini. El paso 1 convierte tu clase en la presentación. El paso 2 lee esa presentación y escribe las preguntas. Después sube ambos archivos aquí abajo."
   ],
   "import.prompt.howRule": [
     "The deck decides where the class pauses. Step 1 places a Pulse check slide wherever a concept finishes, and step 2 only copies those questions across — which is why every question lands on the slide it belongs to.",
@@ -2209,20 +2209,34 @@ export const strings = {
     "Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
   ],
   "import.prompt.attach": [
-    "In both steps, attach the file in the same message as the prompt. Send nothing else with it — the AI must take the lecture only from the attachment.",
-    "En ambos pasos, adjunta el archivo en el mismo mensaje que el prompt. No envíes nada más — la IA debe tomar la clase únicamente del archivo adjunto."
+    "In both steps, attach the files in the same message as the prompt. Send nothing else with them — the AI must take the lecture only from what you attach.",
+    "En ambos pasos, adjunta los archivos en el mismo mensaje que el prompt. No envíes nada más — la IA debe tomar la clase únicamente de lo que adjuntes."
+  ],
+  // Half of step 1's input, not a documentation link — see REFERENCE_DECK_PATH
+  // in ImportPromptCard.tsx for why it is downloaded rather than opened.
+  "import.prompt.referenceTitle": [
+    "The style reference deck",
+    "La presentación de referencia"
+  ],
+  "import.prompt.referenceLede": [
+    "Download it once and attach it every time you run step 1. It is what the prompt means by the reference file: it sets the look, the presenter controls, and the Pulse check slide the AI copies.",
+    "Descárgala una vez y adjúntala cada vez que uses el paso 1. Es lo que el prompt llama el archivo de referencia: define el diseño, los controles del presentador y la diapositiva de Pulse check que la IA copia."
+  ],
+  "import.prompt.referenceDownload": [
+    "Download the reference",
+    "Descargar la referencia"
   ],
   "import.prompt.step1Title": [
     "Step 1 — the slide deck",
     "Paso 1 — la presentación"
   ],
   "import.prompt.step1Lede": [
-    "Attach your lecture PDF and paste this prompt. It answers with one HTML file: your slides in both languages, with a Pulse check slide everywhere the class should stop and answer.",
-    "Adjunta el PDF de tu clase y pega este prompt. Responde con un solo archivo HTML: tus diapositivas en ambos idiomas, con una diapositiva de Pulse check donde la clase deba detenerse a responder."
+    "Attach two files — the style reference deck below and your own lecture PPTX or PDF — then paste this prompt. It answers with one HTML file: your slides in both languages, with a Pulse check slide everywhere the class should stop and answer.",
+    "Adjunta dos archivos — la presentación de referencia de aquí abajo y tu propia clase en PPTX o PDF — y luego pega este prompt. Responde con un solo archivo HTML: tus diapositivas en ambos idiomas, con una diapositiva de Pulse check donde la clase deba detenerse a responder."
   ],
   "import.prompt.step1Save": [
-    "Save the reply as a file ending in .html, then upload it under Lecture deck below.",
-    "Guarda la respuesta como un archivo que termine en .html y súbelo en Presentación aquí abajo."
+    "Download the file the AI gives you, or save its reply as a file ending in .html. Either way, upload it under Lecture deck below.",
+    "Descarga el archivo que te dé la IA, o guarda su respuesta como un archivo que termine en .html. En cualquier caso, súbelo en Presentación aquí abajo."
   ],
   "import.prompt.step2Title": [
     "Step 2 — the questions",

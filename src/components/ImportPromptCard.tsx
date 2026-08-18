@@ -681,6 +681,19 @@ const COPIED_MS = 3000;
 
 type CopyState = "idle" | "copied" | "failed";
 
+/** Where the style reference deck is served from. It sits in public/, so it is
+ *  a plain static file on the same origin — no API call, no auth, nothing to go
+ *  stale between deploys.
+ *
+ *  Step 1's prompt opens by saying it is being handed two files: this deck and
+ *  the professor's own lecture. Without the deck the model has no design, no
+ *  presenter controls, and — the part that matters to the platform — no worked
+ *  example of a Pulse Check slide carrying the five markers §17 asks it to
+ *  reproduce. So the download is not a nicety on this screen; it is half of
+ *  step 1's input, and it belongs inside the step-1 card rather than filed away
+ *  under documentation. */
+const REFERENCE_DECK_PATH = "/TC2007B_Presentation_Style_Reference.html";
+
 /** One numbered step of the two-step flow: what it does, what to attach, a
  *  copy button, and the prompt text itself folded away.
  *
@@ -694,12 +707,14 @@ function PromptStep({
   titleKey,
   ledeKey,
   saveKey,
-  body
+  body,
+  reference = false
 }: {
   titleKey: StringKey;
   ledeKey: StringKey;
   saveKey: StringKey;
   body: string;
+  reference?: boolean;
 }) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const resetTimer = useRef<number | undefined>(undefined);
@@ -740,6 +755,33 @@ function PromptStep({
         </button>
       </div>
 
+      {reference ? (
+        <div class="card stack" style="margin: 0;">
+          <div class="row" style="justify-content: space-between; align-items: flex-start; gap: 16px;">
+            <div>
+              <strong>{t("import.prompt.referenceTitle")}</strong>
+              <p class="hint">{t("import.prompt.referenceLede")}</p>
+            </div>
+            {/* download, not a plain link: the deck's presenter engine is inline
+                script, which the app's own Content-Security-Policy blocks on
+                this origin. Opened in a tab it would render dead — saved to
+                disk and attached to the chat, which is what step 1 needs, it is
+                the file the professor wrote. */}
+            {/* text-decoration: an anchor wearing .btn still inherits the
+                global link underline, which reads as a link sitting inside a
+                button rather than as the button it is. */}
+            <a
+              class="btn"
+              style="flex: 0 0 auto; text-decoration: none;"
+              href={REFERENCE_DECK_PATH}
+              download="TC2007B_Presentation_Style_Reference.html"
+            >
+              {t("import.prompt.referenceDownload")}
+            </a>
+          </div>
+        </div>
+      ) : null}
+
       <p class="hint">{t(saveKey)}</p>
 
       {copyState === "failed" ? (
@@ -770,6 +812,7 @@ export function ImportPromptCard() {
         ledeKey="import.prompt.step1Lede"
         saveKey="import.prompt.step1Save"
         body={DECK_PROMPT}
+        reference
       />
 
       <PromptStep

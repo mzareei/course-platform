@@ -1,6 +1,51 @@
 # Status
 
-**Last updated:** 2026-08-14
+**Last updated:** 2026-08-17
+
+### Step 1 is now the universal lecture prompt, and its reference deck is downloadable (2026-08-17)
+
+The step-1 prompt on **Content ▸ Import** was replaced wholesale with the course
+owner's own *Universal Prompt — Generate a Teaching-First Interactive HTML
+Lecture*, adopted verbatim. The version it replaced described the slide markup
+in prose; this one hands the model a **reference deck** and says "reproduce this
+presentation system", which covers visual design, presenter controls, overview
+and help overlays, bilingual behaviour, progressive reveals and the preserved-
+media policy in one file instead of several pages of instructions.
+
+That reference deck now ships from `public/` and is offered as a **download
+inside the step-1 card**, because it is half of step 1's input: the prompt opens
+by saying two files are attached, and without the deck the model has neither the
+design nor a worked example to copy. It downloads rather than opens — served
+under the app's own CSP its inline presenter engine would be blocked and it
+would render dead in a tab.
+
+**The one addition to his text is §17.** His prompt says reproduce the reference
+file; the reference file is a *design*, not a contract. The platform reads five
+markers off a Pulse Check slide to turn it into a live phone question —
+`class="slide activity"`, the `Pulse check` / `Pregunta rapida` badge, four
+`.choice` buttons, `answer-reveal fragment correct`, and
+`data-pause-id` + `data-pause-topic-en/es` — and a model rewriting a slide drops
+them with nothing looking wrong on the projector. Step 2 would then find no
+pause slides, the bank would carry no `pulse` questions, and Create plan would
+build a class that never stops. §17 names every marker, and the shipped
+reference deck carries all five on its own Pulse Check slide so there is
+something concrete to copy. `verify-content-import` now asserts both halves —
+the prompt states each marker, and the served file actually has it.
+
+**Known regression, stated not hidden.** His prompt has no *NEVER CARRY PERSONAL
+IDENTITY ACROSS* clause, and adding one was out of scope for the swap. A name on
+an attached lecture's title slide can now reach the generated deck. Step 2 still
+refuses to carry a name into the question bank, and no name reaches the shared
+authoring surface, so the blast radius is the professor's own projected deck —
+but it is a real loss versus the prompt it replaced. Closing it is one added
+clause in his prompt text; `verify-content-import` asserts the gap deliberately,
+so putting the clause back will fail the verifier and force the note to be
+updated with it.
+
+**Both prompt files under `docs/prompts/` remain the source of truth.** The
+`.txt` is the `.ts` template literal unescaped — the prompt is markdown now and
+quotes markup in code spans, so its backticks are escaped in the TypeScript.
+Regenerate the two together, never one alone.
 
 ### Grades post themselves; the student meets theirs the second they finish (2026-08-14)
 

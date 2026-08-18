@@ -336,9 +336,29 @@ for (const [label, text] of [["strings", strings], ["step 2", promptCard], ["ste
 }
 
 // A name must not survive the trip from an attached PDF either: lecture title
-// slides routinely carry the author's name, and without this clause step 1
-// would copy it onto the deck and step 2 could lift it into a question.
-for (const [label, body] of [["step 1", deckPrompt], ["step 2", promptCard]]) {
+// slides routinely carry the author's name, and without this clause a prompt
+// copies it onto the deck or lifts it into a question.
+//
+// 2026-08-17: step 1 no longer carries the clause. Its prompt was replaced
+// wholesale by the course owner's own universal lecture prompt, adopted
+// verbatim on his instruction, and that prompt has no identity rule — it says
+// to preserve the source lecture's visuals and personal teaching elements,
+// which is the opposite instinct. So the assertion below now covers step 2
+// only, and this is a real regression stated rather than hidden: a name on an
+// attached lecture's title slide can now reach the generated deck.
+//
+// It is not unguarded end to end. Step 2 still refuses to carry a name into
+// the question bank, and the guard above still keeps every name off this
+// shared surface. What is gone is the guard on the deck itself, which is
+// projected in the professor's own classroom — the narrower blast radius of
+// the two. Closing it means one added clause in step 1's prompt text, which
+// was explicitly out of scope for the swap; raise it with him rather than
+// slipping it in.
+assert.doesNotMatch(
+  deckPrompt, /NEVER CARRY PERSONAL IDENTITY ACROSS/,
+  "step 1's identity clause is a known, deliberate gap — if it has been added back, restore this file's assertion to the two-prompt loop instead of leaving a stale note"
+);
+for (const [label, body] of [["step 2", promptCard]]) {
   assert.match(
     body, /NEVER CARRY PERSONAL IDENTITY ACROSS/,
     `${label}: must instruct the model to drop instructor and student identity found in the attachment`
@@ -425,24 +445,87 @@ assert.match(
   deckPrompt, /^export const DECK_PROMPT = `/m,
   "DECK_PROMPT must be an exported module-scope template literal"
 );
-const deckBody = deckPrompt.match(/export const DECK_PROMPT = `([\s\S]*?)`;\n/)?.[1];
+// The prompt is markdown and quotes markup in code spans, so its own backticks
+// are escaped in the source. A lazy [\s\S]*? would stop at the first one and
+// silently hand every clause check below a truncated body that still passes —
+// so match escapes explicitly, and prove the extraction reached the end.
+const deckBody = deckPrompt
+  .match(/export const DECK_PROMPT = `((?:[^`\\]|\\[\s\S])*)`;\n/)?.[1]
+  ?.replace(/\\([\s\S])/g, "$1");
 assert.ok(deckBody, "DECK_PROMPT must be readable as a template literal");
+assert.match(
+  deckBody, /Core principle/,
+  "the extracted prompt must run to the end — a truncated body would pass the clause checks below on the half that survived"
+);
 
+// The prompt delegates the presentation system to the reference deck the
+// professor downloads from this same tab, so most of what used to be spelled
+// out inline now lives in that file. What CANNOT live there is the contract:
+// the reference is a design, and a model rewriting a slide drops an attribute
+// without anything looking wrong on the projector. Section 17 names every
+// marker the platform reads, and these clauses hold it in place — if step 1
+// stops demanding the badge, the pause attributes, or the four .choice
+// buttons, step 2 silently produces a bank with no live questions at all and
+// the class runs with nothing to ask.
 for (const [clause, why] of [
-  [/The attachment always wins/i, "the PDF is the only source; a title must never become content"],
+  [/Use the newly uploaded PPTX\/PDF for \*\*WHAT the lecture teaches\*\*/, "the uploaded lecture is the only source of subject matter; the reference supplies design, never content"],
+  [/Do \*\*not\*\* reuse the placeholder subject matter from the reference HTML/, "the reference's own placeholder slides must not leak into a real lecture"],
   [/Pulse check/, "step 2 finds pause slides by this exact badge text"],
   [/data-pause-topic-en/, "the checkpoint's name on the plan board comes from this attribute"],
   [/data-pause-id/, "the stable pause slug, forward-compatible with checkpoint matching by id"],
   [/data-slide/, "the platform tracks position by this attribute, and step 2 reads it for covers_up_to_slide"],
-  [/exactly four button elements with class choice/i, "four options is a display requirement the bank inherits"],
+  [/exactly four button elements with class .?choice/i, "four options is a display requirement the bank inherits"],
   [/answer-reveal fragment correct/, "the answer must stay hidden until the professor reveals it"],
-  [/Never add the attribute data-course-deck-engine/i, "that attribute suppresses the injected slide reporter — the deck would stop reporting position"],
-  [/Never add the attribute data-teaching-slide/i, "a second numbering system silently competes with data-slide"],
+  [/Never add the attribute .?data-course-deck-engine/i, "that attribute suppresses the injected slide reporter — the deck would stop reporting position"],
+  [/Never add the attribute .?data-teaching-slide/i, "a second numbering system silently competes with data-slide"],
   [/no link to an external stylesheet or font/i, "deck-validation rejects a deck that reaches outside itself"],
-  [/exactly one HTML code block/i, "commentary around the block breaks the upload"],
-  [/class active/, "the slide reporter finds the current slide by this class"]
+  [/class .?active/, "the slide reporter finds the current slide by this class"],
+  [/class="slide activity"/, "step 2 finds a pause slide by the activity class as well as the badge"]
 ]) {
   assert.match(deckBody, clause, `deck prompt must state: ${why}`);
+}
+
+// ------------------------------------------ step 1: the reference deck itself
+// Section 17 tells the model to reproduce five markers. The reference deck is
+// the worked example it copies them from, and it is served straight out of
+// public/ — so if that file's own Pulse Check slide loses a marker, every deck
+// generated afterwards loses it too, and nothing on the projector looks wrong.
+// The prompt and the file it points at have to be checked together or not at
+// all.
+const referenceDeck = await readFile(
+  new URL("public/TC2007B_Presentation_Style_Reference.html", root), "utf8"
+);
+for (const [marker, why] of [
+  ['class="slide activity"', "the pause slide must carry the activity class step 2 looks for"],
+  ['data-pause-id="', "the pause slug the prompt asks every Pulse Check to carry"],
+  ['data-pause-topic-en="', "the checkpoint label the plan board reads"],
+  ['data-pause-topic-es="', "the Spanish half of that label"],
+  ['<span class="lang-en">Pulse check</span>', "the English badge, spelled exactly as step 2 searches for it"],
+  ['<span class="lang-es">Pregunta rapida</span>', "the Spanish badge, spelled exactly as step 2 searches for it"],
+  ['answer-reveal fragment correct', "the answer stays hidden behind a fragment until the professor reveals it"],
+  ['data-slide="1"', "slide numbering starts at 1, as the platform's position tracking assumes"]
+]) {
+  assert.ok(referenceDeck.includes(marker), `the reference deck must carry: ${why}`);
+}
+assert.equal(
+  (referenceDeck.match(/class="choice"/g) ?? []).length, 4,
+  "the reference deck's Pulse Check must show exactly four options, or it teaches the wrong shape"
+);
+// It is attached to a chat and it renders offline in front of a class. Either
+// way a remote reference is a broken reference.
+assert.doesNotMatch(
+  referenceDeck, /(?:src|href)="(?:https?:)?\/\//,
+  "the reference deck must stay self-contained — no remote script, style, font, or image"
+);
+assert.match(
+  promptCard, /href=\{REFERENCE_DECK_PATH\}[\s\S]*?download=/,
+  "the reference must be offered as a download: served under the app's own CSP it would render with its presenter engine blocked"
+);
+for (const key of ["referenceTitle", "referenceLede", "referenceDownload"]) {
+  assert.match(
+    strings, new RegExp(`"import\\.prompt\\.${key}"`),
+    `import.prompt.${key} must be bilingual — the reference download is part of step 1, not documentation`
+  );
 }
 
 // The two prompts have to agree on the badge, or step 2 finds nothing.

@@ -1,20 +1,28 @@
 # The two authoring prompts
 
-Two prompts, run in order, in whichever AI subscription you already pay for.
+Two prompts, run in order, in whichever AI you already use.
 The platform makes no model call on this path — these prompts are the whole
 pipeline.
 
 ```
-lecture PDF ──▶ prompt 1 ──▶ lecture.html ──▶ prompt 2 ──▶ bank.json
-                                    │                          │
-                                    └──────── both uploaded ────┘
-                                       Content ▸ Import
+reference deck ─┐
+                ├─▶ prompt 1 ──▶ lecture.html ──▶ prompt 2 ──▶ bank.json
+lecture PPTX/PDF┘                      │                          │
+                                       └──────── both uploaded ────┘
+                                          Content ▸ Import
 ```
 
 | | File | Attach | Returns |
 |---|---|---|---|
-| Step 1 | `01-lecture-deck-prompt.txt` | your lecture PDF | one self-contained HTML deck |
+| Step 1 | `01-lecture-deck-prompt.txt` | the style reference deck **and** your lecture PPTX/PDF | one self-contained HTML deck |
 | Step 2 | `02-question-bank-prompt.txt` | **the HTML from step 1** | one `tc2007b.bank.v1` JSON |
+
+Step 1 takes **two** attachments. The reference deck
+(`course-platform/public/TC2007B_Presentation_Style_Reference.html`, downloadable
+from the step-1 card on the Import tab) supplies the presentation system —
+design, presenter controls, bilingual behaviour, progressive reveals, media
+policy. The lecture supplies the subject matter. The prompt is explicit that the
+reference's own placeholder slides must never become content.
 
 Upload both together on **Content ▸ Import** — the HTML in the deck field, the
 JSON in the question field. Then open the class in Run Class and hit **Create
@@ -24,7 +32,7 @@ plan**; the checkpoints build themselves from the questions.
 
 **The deck owns the pauses. The bank only copies them.**
 
-Prompt 1 places 6–8 `Pulse check` slides where concepts finish, and writes the
+Prompt 1 places 5–7 `Pulse Check` slides where concepts finish, and writes the
 question and its four options onto the slide. Prompt 2 reads those slides and
 carries each question across verbatim, taking the slide's own `data-slide`
 number as `covers_up_to_slide`.
@@ -105,3 +113,40 @@ prompt (`IMPORT_PROMPT`) on the Import tab. Replacing it with
 `02-question-bank-prompt.txt`, and adding a card for prompt 1, is a separate
 change — the in-app prompt was adopted verbatim by the professor and should not
 be swapped without his review.
+
+
+## What changed in prompt 1 (2026-08-17)
+
+Replaced wholesale by the course owner's own *Universal Prompt — Generate a
+Teaching-First Interactive HTML Lecture*, adopted verbatim through §16. Where the
+old prompt spelled the slide markup out in prose, this one delegates the whole
+presentation system to the reference deck and spends its length on pedagogy:
+understand the lecture before rebuilding it, preserve teaching intent, improve it
+where that genuinely helps, preserve source visuals rather than redrawing them
+badly, keep animated GIFs animated, end on a recap.
+
+**§17 is the one addition**, made at his request. His prompt says reproduce the
+reference file; the reference file is a design, not a contract. §17 names the
+markers the platform actually reads — `data-slide`, the `active` class, the four
+`data-section`/`data-title` attributes, and on a Pulse Check slide
+`class="slide activity"`, the `Pulse check` / `Pregunta rapida` badge, four
+`.choice` buttons, `answer-reveal fragment correct`, `data-pause-id` and
+`data-pause-topic-en/es` — plus the two attributes that must never appear. The
+shipped reference deck carries all of them on its own Pulse Check slide, so the
+model has a worked example rather than only a rule.
+
+`verify-content-import` checks the prompt and the reference file together. Either
+one drifting on its own is the failure mode this guards.
+
+## Known gap: no identity clause in prompt 1
+
+Prompt 1 no longer carries **NEVER CARRY PERSONAL IDENTITY ACROSS**. His prompt
+does not have one, and adding it was out of scope for adopting his text. A name
+on an attached lecture's title slide can now reach the generated deck. Prompt 2
+still refuses to carry one into the question bank, and the guard keeping names
+off this shared surface is untouched — so what is exposed is the professor's own
+projected deck, not everyone else's banks.
+
+`verify-content-import` asserts the absence deliberately. Putting the clause back
+fails the verifier, which forces this note to be updated in the same change
+rather than left stale.

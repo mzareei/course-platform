@@ -1,4 +1,4 @@
-// The step-1 authoring prompt: lecture PDF in, one self-contained HTML deck out.
+// The step-1 authoring prompt: lecture PPTX/PDF in, one self-contained HTML deck out.
 //
 // It lives in a .ts file, not beside the step-2 prompt in ImportPromptCard.tsx,
 // for one concrete reason: this prompt quotes real slide markup, and
@@ -9,322 +9,564 @@
 // regex, and would fail the build. The walker only collects .tsx, so the prompt
 // is safe here and the bilingual guard stays strict where it matters.
 //
-// Paired with IMPORT_PROMPT (step 2) in ImportPromptCard.tsx. The deck this
-// prompt describes is modelled on the real Week 1 "Security Mindset and the
-// CIA Triad" deck already running in production: 54 slides, data-slide
-// numbering, .lang-en/.lang-es spans, and seven "Pulse check" activity slides
-// carrying the question, four .choice buttons and a hidden .answer-reveal.
-// Source of truth for both prompts: docs/prompts/.
+// ---------------------------------------------------------------------------
+// PROVENANCE
+//
+// Adopted on 2026-08-17 from the course owner's own universal lecture prompt,
+// verbatim through section 16, replacing the earlier version that spelled the
+// slide markup out inline. This version delegates the whole presentation system
+// — visual design, controls, bilingual behaviour, progressive reveals, media
+// policy, Pulse Check interaction — to a reference deck the professor wrote and
+// downloads from the Import tab, rather than describing it in prose.
+//
+// Section 17 is the one addition, made at his explicit request. His prompt says
+// "reproduce the reference file"; the reference file is the design, not the
+// contract. The platform reads five markers off a Pulse Check slide to turn it
+// into a live phone question, and a model rewriting a slide loses them without
+// anything looking wrong on the projector. Section 17 names them, and the
+// reference deck served at /TC2007B_Presentation_Style_Reference.html carries
+// them on its own Pulse Check slide so the model has a worked example to copy.
+// Keep the two in step: verify-content-import asserts the prompt states each
+// marker and that the served reference actually carries it.
+//
+// Also dropped in that swap, and NOT restored: the NEVER CARRY PERSONAL
+// IDENTITY ACROSS clause the previous version carried. His prompt has none, and
+// adding one was out of scope for adopting his text — so a name on an attached
+// lecture's title slide can now reach the generated deck. Step 2 still refuses
+// to carry a name into the question bank. verify-content-import asserts the gap
+// deliberately, so restoring the clause fails the build until the note goes
+// with it.
+//
+// Source of truth for both prompts: docs/prompts/. The .txt there is this
+// string unescaped — regenerate them together, never one alone.
+// ---------------------------------------------------------------------------
+//
+// Paired with IMPORT_PROMPT (step 2) in ImportPromptCard.tsx, which finds the
+// pause slides by the "Pulse check" badge and the activity class, copies the
+// four .choice options across verbatim, and takes covers_up_to_slide from the
+// slide's own data-slide number.
 
 /** Exported so the verifier can assert the contract clauses are still present. */
-export const DECK_PROMPT = `You are building the slide deck for ONE lecture of TC2007B Information Security at Tecnologico de Monterrey.
+export const DECK_PROMPT = `# Universal Prompt — Generate a Teaching-First Interactive HTML Lecture
 
-Your output is a single HTML file that is projected in a real classroom and imported into the course platform. A second prompt will later read your finished HTML to build the question bank, so your file is not a draft — it is the source of truth for what gets taught and where the class pauses. Follow every requirement below exactly.
+I am attaching two files:
 
-=== 1. THE ATTACHED FILE IS THE ONLY SOURCE OF SUBJECT MATTER ===
+1. **\`TC2007B_Presentation_Style_Reference.html\`** — this is the canonical reference for the presentation's **visual design, controls, navigation, bilingual behavior, progressive click-to-reveal system, preserved-media behavior, Pulse Check interaction, overview/help overlays, and presenter UX**.
+2. A new **PPTX/PDF lecture** — this is the primary source of the **actual lecture-specific content, concepts, examples, activities, visuals, terminology, and teaching intent**.
 
-The attached lecture material is the complete and only source of subject matter.
+Create a complete classroom-ready standalone HTML lecture.
 
-Every slide, claim, example, and number must be supported by what the attachment actually contains.
+## Critical separation of roles
 
-Do not:
+Use the reference HTML for **HOW the presentation looks and behaves**.
 
-- add information from your own knowledge;
-- update or correct the lecture;
-- assume what a lecture with this title should contain;
-- use material from other lectures or courses;
-- treat the file name or anything written in this chat as subject matter.
+Use the newly uploaded PPTX/PDF for **WHAT the lecture teaches**.
 
-The attachment always wins.
+Do **not** reuse the placeholder subject matter from the reference HTML. Do not let the placeholder slides influence the topic or concepts of the new lecture.
 
-You may reorganize, tighten, and rephrase for the projector. You may not introduce content the attachment does not teach.
+The final lecture should feel like it was built with the same presentation system as the reference file, but its content must come from the new lecture.
 
-NEVER CARRY PERSONAL IDENTITY ACROSS
+---
 
-Subject matter comes across. Identity does not.
+## 1. Understand the entire lecture before rebuilding it
 
-If the attachment shows an instructor name, a student name, an email address, a phone number, an employee or payroll number, an office location, a signature, a photograph of a person, a social media handle, or any other personal contact detail — on the title slide, in a footer, in a header, in the file metadata, or anywhere else — leave every bit of it out of your deck.
+Inspect the complete uploaded PPTX/PDF before creating the HTML. Review all slides/pages, including text, definitions, examples, analogies, equations, code, diagrams, tables, screenshots, figures, photos, GIFs, questions, activities, humor, references, and transitions.
 
-The title slide names the course and the lecture. It never names a person.
+Determine:
 
-This deck template is shared by many instructors. A name copied out of one attachment would travel into everyone else's lectures.
+- the major concepts;
+- the intended teaching sequence;
+- which ideas depend on earlier ideas;
+- which examples and visuals are important;
+- which slides are introductory, explanatory, interactive, application-oriented, or summary;
+- what students should understand by the end.
 
-The only exception is a person who is genuinely part of the subject matter — a named researcher in a cited paper, or a historical figure the lecture actually teaches about. That is content. The person who wrote the slides is not.
+Do not begin redesigning after reading only part of the lecture.
 
-If no attachment is available, or you cannot read it reliably, reply in plain sentences explaining that and stop. Never build a deck from the title alone.
+---
 
-=== 2. ONE SELF-CONTAINED FILE, NO EXTERNAL REQUESTS ===
+## 2. Preserve my teaching intent
 
-Return exactly one complete HTML file.
+The uploaded lecture is the primary source of what I want to teach.
 
-The file must render fully with no network access. The platform rejects a deck that reaches outside itself.
+Do not lose any meaningful concept.
 
-Required:
+You may improve:
 
-- all CSS inside one or more style elements in the head;
-- all JavaScript inside a script element in the file;
-- a title element describing the lecture.
+- wording and grammar;
+- explanations;
+- examples and analogies;
+- visual organization;
+- slide sequence;
+- slide count;
+- conceptual comparisons;
+- interaction design.
 
-Forbidden:
+A dense source slide may become multiple HTML slides. Several repetitive slides may be reorganized if no teaching concept is lost.
 
-- link elements to external stylesheets or fonts, including Google Fonts;
-- script elements with a src attribute;
-- images, video, audio, or iframes loaded from a URL;
-- any relative path such as ./style.css, images/logo.png, or /assets/x.js;
-- web fonts of any kind.
+Do not preserve the original slide count merely for consistency.
 
-Use system font stacks only, for example:
+Do not remove a concept because it is difficult to present cleanly. Give it more space instead.
 
-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+---
 
-If a diagram is genuinely needed, draw it with inline SVG or with HTML and CSS. Never link to an image file. Do not embed large base64 images.
+## 3. Improve the pedagogy when useful
 
-=== 3. SLIDE STRUCTURE ===
+You are explicitly allowed to improve the lecture when doing so genuinely helps students understand the material.
 
-The body contains a flat sequence of slide sections. Do not nest slides inside one another.
+You may:
 
-Every slide is:
+- clarify confusing explanations;
+- improve weak examples;
+- introduce a better analogy;
+- add a short intermediate explanation that the original lecture assumes;
+- explicitly compare concepts students may confuse;
+- convert disconnected bullets into a meaningful model or relationship;
+- add a second example when it materially improves understanding;
+- correct an obvious conceptual or terminology mistake.
 
-<section class="slide" data-slide="1" data-section-en="Section name" data-section-es="Nombre de la seccion" data-title-en="Slide title" data-title-es="Titulo de la diapositiva">
-  <div class="slide-inner">
-    ...
-  </div>
-</section>
+However, stay close to the intended scope and academic level. Do not expand the lecture into unrelated material simply because it is relevant to the general subject.
 
-Rules:
+If my original explanation or example is already effective, preserve it.
 
-- data-slide starts at 1 on the very first slide and increases by exactly 1 with no gaps and no repeats, in document order;
-- every slide carries all four data-section and data-title attributes;
-- the platform reads the slide position to know where the professor is, so the numbering must be perfect.
+If something appears factually questionable and correcting it would require substantial outside research, do not silently invent a correction. Preserve the intended teaching concept and mention the uncertainty in your final report if necessary.
 
-Allowed additional classes on a slide:
+---
 
-class="slide title-slide"    the opening slide, exactly one
-class="slide section"        a divider announcing a new part of the lecture
-class="slide activity"       a pause check, quick activity, or discussion slide
-class="slide wrap"           the closing summary slide, exactly one
-class="slide"                an ordinary content slide
+## 4. Use the reference HTML as the canonical presentation system
 
-Never add the attribute data-course-deck-engine to any element.
+Reproduce the presentation behavior and visual language demonstrated by \`TC2007B_Presentation_Style_Reference.html\`.
 
-Never add the attribute data-teaching-slide to any slide.
+This includes, at minimum:
 
-Both of those belong to a different deck system and will stop the platform from tracking your slides.
+- full-viewport 16:9 slide presentation;
+- dark theme by default and light-theme option;
+- large projection-safe typography;
+- top progress bar;
+- fixed upper-right controls for fullscreen, overview, EN/ES, theme, and help;
+- bottom-center previous/next buttons;
+- footer with lecture/course label, current section, and slide number;
+- \`click to reveal\` / \`clic para revelar\` hint while hidden fragments remain;
+- slide overview overlay;
+- help overlay;
+- URL hash slide tracking;
+- keyboard navigation;
+- click navigation;
+- touch/swipe navigation;
+- localStorage persistence for language and theme;
+- responsive and print fallbacks.
 
-=== 4. THE CURRENT SLIDE AND THE NAVIGATION SCRIPT ===
+Do not redesign the interface into a different presentation system unless absolutely necessary. The goal is visual and behavioral consistency across lectures.
 
-Exactly one slide carries the class active at all times. The first slide starts with it:
+---
 
-<section class="slide title-slide active" data-slide="1" ...>
+## 5. Teaching-first progressive disclosure
 
-The platform watches which slide has the class active. If more than one has it, or none has it, the platform cannot tell where the professor is.
+This is a live teaching deck, not a static reading document.
 
-Write a small navigation script that:
+Use progressive \`.fragment\` reveals whenever they help control attention.
 
-- moves forward on ArrowRight, ArrowDown, PageDown, and Space;
-- moves back on ArrowLeft, ArrowUp, and PageUp;
-- jumps to the first slide on Home and the last on End;
-- moves the class active from the old slide to the new one and never leaves two slides active;
-- reveals click-to-reveal fragments one at a time before advancing past the slide (see section 7);
-- toggles language when the professor presses L;
-- toggles light and dark theme when the professor presses T;
-- never navigates on its own and never uses a timer to advance.
+A forward action should:
 
-CSS hides every slide except the active one:
+1. reveal the next hidden teaching element;
+2. stay on the same slide;
+3. move to the next slide only when no hidden fragments remain.
 
-.slide { display: none; }
-.slide.active { display: flex; }
+A backward action should:
 
-=== 5. BILINGUAL TEXT ===
+1. hide the most recently revealed fragment;
+2. stay on the same slide;
+3. move to the previous slide only when no revealed fragments remain.
 
-The class is taught bilingually. Every visible string appears twice, once in English and once in Spanish, wrapped in spans:
+Good candidates for progressive reveals include:
 
-<h2><span class="lang-en">Threat versus vulnerability</span><span class="lang-es">Amenaza contra vulnerabilidad</span></h2>
+- bullets;
+- stages in a process;
+- cards;
+- comparison points;
+- examples;
+- diagram nodes/arrows;
+- conclusions;
+- equations or derivation steps;
+- important takeaways;
+- answer explanations.
 
-Rules:
+Do not animate content merely for decoration. Reveals should correspond to how a professor would naturally explain the idea step by step.
 
-- the html element carries lang="en" data-theme="light" data-lang="en";
-- CSS shows one language at a time based on the data-lang attribute on the html element:
+---
 
-  html[data-lang="en"] .lang-es { display: none; }
-  html[data-lang="es"] .lang-en { display: none; }
+## 6. Classroom readability
 
-- never put Spanish text inside a lang-en span or English text inside a lang-es span;
-- both versions must say the same thing, with the same numbers and the same meaning;
-- use natural Mexican academic Spanish, not literal translation;
-- keep technical terms in the form the attachment uses.
+The primary target is a large classroom projector at approximately 1920×1080.
 
-=== 6. HOW MUCH GOES ON A SLIDE ===
+Keep text large and consistent with the reference HTML.
 
-These slides are read from the back of a lecture hall.
+If content does not fit comfortably, split it into additional slides rather than shrinking important text.
 
-- one idea per slide;
-- a heading plus at most four or five short lines;
-- never a paragraph of prose on a projected slide;
-- headings around 30 to 60 characters per language;
-- bullet lines around 40 to 90 characters per language;
-- body text no smaller than about 1.25rem, headings much larger;
-- use a fluid type scale with clamp so the deck survives any projector;
-- strong contrast between text and background in both themes.
+Prefer:
 
-Aim for 40 to 60 slides for a 90 minute class. A short lecture may need fewer. Do not pad the deck to reach a number, and do not compress two ideas onto one slide to save space.
+- one primary teaching idea per slide;
+- generous margins;
+- short lines;
+- clear visual hierarchy;
+- no more than 2–3 major columns;
+- large meaningful images and diagrams.
 
-=== 7. CLICK-TO-REVEAL FRAGMENTS ===
+Avoid dense walls of text, tiny tables, tiny screenshots, or excessive numbers of small cards.
 
-Anything the professor wants to hold back until after the class has thought about it goes in a fragment:
+---
 
-<li class="fragment"><span class="lang-en">...</span><span class="lang-es">...</span></li>
+## 7. Full English / Spanish support
 
-A fragment is hidden until the professor advances. Use fragments for answers, conclusions, and the punchline of an example. Do not wrap ordinary bullet lists in fragments.
+The complete lecture must be bilingual.
 
-=== 8. PAUSE CHECK SLIDES — THE MOST IMPORTANT PART ===
+English is the default.
 
-The class stops several times so every student answers a question on their phone. Each of those stops is a real slide in your deck. The question bank prompt will read these slides and will not invent its own, so if you do not place a pause check here, there is no question there during class.
+Use the same EN/ES interaction demonstrated by the reference file.
 
-WHERE THEY GO
+Translate all meaningful user-facing content, including:
 
-Place a pause check where a concept finishes — after the class has been taught something complete enough to be asked about.
+- titles and subtitles;
+- body text;
+- cards and labels;
+- definitions;
+- questions;
+- Pulse Checks;
+- A/B/C/D options;
+- answer explanations;
+- activities;
+- captions;
+- section names;
+- final recap;
+- any new teaching text you introduce.
 
-Do not place them on a fixed interval. Do not place one every N slides. Uneven gaps are correct and expected: a dense concept may earn a pause after four slides, an extended example may run eleven slides before one makes sense.
+Spanish should be natural professional neutral/Mexican Spanish, not literal machine translation.
 
-Never place a pause check:
+---
 
-- on the title slide or in the first few slides, before anything has been taught;
-- immediately after a section divider;
-- in the middle of a worked example or a multi-slide argument;
-- two slides after the previous pause check.
+## 8. Pulse Checks — required
 
-Produce 6 to 8 pause checks in a normal lecture. Fewer only if the lecture is genuinely short.
+For a normal **90–120 minute lecture**, include approximately **5–7 meaningful Pulse Check slides** distributed naturally throughout the lecture.
 
-EXACT MARKUP
+A Pulse Check is specifically a **short multiple-choice mini-quiz with exactly four options: A, B, C, and D**.
 
-Every pause check slide must follow this pattern exactly:
+There must be **exactly one best/correct answer**.
 
-<section class="slide activity" data-slide="17"
-         data-section-en="Security mindset" data-section-es="Mentalidad de seguridad"
-         data-title-en="Checkpoint: what stolen data buys" data-title-es="Checkpoint: que compran los datos robados"
-         data-pause-id="attacker-monetization"
-         data-pause-topic-en="Attacker monetization" data-pause-topic-es="Monetizacion del atacante">
-  <div class="slide-inner">
-    <span class="activity-badge"><span class="lang-en">&#9670; Pulse check</span><span class="lang-es">&#9670; Pregunta rapida</span></span>
-    <h2><span class="lang-en">Stolen credentials are most directly used for what?</span><span class="lang-es">Para que se usan mas directamente las credenciales robadas?</span></h2>
-    <div class="choice-grid">
-      <button class="choice"><span class="lang-en">Fraudulent purchases and card fraud</span><span class="lang-es">Compras fraudulentas y fraude con tarjetas</span></button>
-      <button class="choice"><span class="lang-en">Espionage and political leverage</span><span class="lang-es">Espionaje y presion politica</span></button>
-      <button class="choice"><span class="lang-en">Denial of service against the victim</span><span class="lang-es">Denegacion de servicio contra la victima</span></button>
-      <button class="choice"><span class="lang-en">Account takeover and credential stuffing</span><span class="lang-es">Robo de cuentas y relleno de credenciales</span></button>
-    </div>
-    <div class="answer-reveal fragment correct">
-      <span class="answer-tag"><span class="lang-en">Answer</span><span class="lang-es">Respuesta</span></span>
-      <p><span class="lang-en"><strong>Account takeover and credential stuffing</strong> — reused passwords let one breach open many accounts.</span><span class="lang-es"><strong>Robo de cuentas y relleno de credenciales</strong> — las contrasenas reutilizadas permiten que una filtracion abra muchas cuentas.</span></p>
-    </div>
-  </div>
-</section>
+Pulse Checks are intended to verify that students have been paying attention and understood the material just taught. They should normally be **easy to moderate**, not difficult exam questions.
 
-REQUIRED DETAILS
+### Placement
 
-- the badge text is exactly "Pulse check" in English and "Pregunta rapida" in Spanish, so the question bank prompt can find these slides;
-- the h2 holds the question, in both languages;
-- exactly four button elements with class choice, in both languages;
-- exactly one of them is the correct answer;
-- the three wrong ones are mistakes a student who attended this lecture could genuinely make — a neighbouring concept, a reversed definition, a property of something taught nearby;
-- keep the four options similar in length and grammar, and do not let the correct one be the longest;
-- vary which position is correct across the deck; never leave a predictable pattern;
-- the answer sits inside div class="answer-reveal fragment correct" so it stays hidden until the professor reveals it after the poll closes;
-- data-pause-id is a short lowercase slug naming the concept, unique in the deck, words joined by hyphens;
-- data-pause-topic-en and data-pause-topic-es are a two to four word label for the same concept. The question bank prompt copies these verbatim, so write them as a clean label, not a sentence.
+Do not insert them mechanically after a fixed number of slides.
 
-QUESTION STYLE ON A PAUSE SLIDE
+Place them after meaningful conceptual blocks. As a rough consequence they may often occur every 6–10 slides, but conceptual timing is more important than slide count.
 
-- ask about the concept just taught, not about slide wording;
-- the question reads 70 to 160 characters per language, and stays under 180;
-- each option reads 20 to 70 characters per language, and stays under 80;
-- ask directly; no "According to the lecture" and no "Which of the following statements is correct";
-- avoid negative questions unless the negative form is genuinely necessary;
-- never use "All of the above", "None of the above", "Both A and B", or any option referring to another option by letter or position, because students answer on a phone that may not show letters.
+Spread them across the lecture.
 
-OTHER ACTIVITY SLIDES
+If the lecture is unusually short and cannot support five strong questions, use fewer rather than forcing bad questions.
 
-You may also use class="slide activity" for a hands-on activity or an open discussion. Those are not pause checks. Give them a different badge — "Quick activity" / "Actividad rapida", or "Discussion" / "Discusion" — and do NOT give them the choice-grid, the four buttons, data-pause-id, or the pause-topic attributes. Only a slide whose badge says "Pulse check" becomes a question.
+### Content rule
 
-=== 9. DECK SHAPE ===
+Every Pulse Check must be answerable using **only material that students have already seen earlier in this lecture**.
 
-Build the lecture in this order:
+Do not require future-slide knowledge, outside reading, unrelated trivia, or obscure prior knowledge.
 
-- one title slide with the lecture title, the course code, and one sentence on what the class will be able to do afterwards;
-- a section divider before each major part;
-- content slides teaching the material in the attachment's own order;
-- pause check slides where concepts finish, per section 8;
-- worked examples kept on consecutive slides with the reasoning revealed in fragments;
-- one closing wrap slide summarising what was taught.
+An attentive student should normally be able to answer.
 
-Follow the attachment's order. Do not reorganize the lecture into your own preferred structure.
+### Question quality
 
-=== 10. OUTPUT FORMAT ===
+Prefer questions that test:
 
-Return exactly one HTML code block containing the complete file, and nothing else.
+- recognition of an important concept;
+- distinction between related concepts;
+- simple application to a scenario;
+- interpretation of an example, diagram, process, or result;
+- a straightforward conceptual relationship.
 
-No introduction. No summary. No explanation. No commentary after the block.
+The three incorrect options must be plausible distractors based on related concepts, common misunderstandings, reversed relationships, or reasonable but incorrect interpretations.
 
-The file begins with <!DOCTYPE html> and ends with </html>.
+Do not use silly distractors. Keep all four options reasonably parallel in style and length.
 
-Never output a partial file. Never write comments such as "rest of slides here", "slides 20-40 omitted", "continue in the same pattern", or "... 15 more slides". If the complete deck will not fit in one reply, build a shorter but complete deck covering the whole lecture at lower slide density rather than truncating.
+### Interaction behavior
 
-=== 11. FINAL SILENT VALIDATION ===
+Match the Pulse Check behavior in the reference HTML exactly:
 
-Before answering, silently check the whole file.
+1. show the question and four clickable A/B/C/D options;
+2. clicking an option marks it selected but **does not reveal correctness**;
+3. the next normal presentation reveal highlights the correct answer in green;
+4. if a wrong selected answer exists, highlight it in red;
+5. reveal a concise explanation panel.
 
-CONTENT
+Existing source questions may count as Pulse Checks if they naturally meet these requirements. Preserve other useful open-ended or discussion questions separately; they do not need to become Pulse Checks.
 
-- Every slide is supported by the attachment.
-- No outside knowledge has entered the deck.
-- No instructor name, student name, email address, phone number, employee number, signature, or personal contact detail from the attachment appears anywhere in the deck, including the title slide, any footer, and the title element.
-- The lecture's own order is preserved.
-- Every worked example and activity in the attachment is represented.
-- The closing slide summarises what was actually taught.
+---
 
-STRUCTURE
+## 9. Examples, analogies, comparisons, and diagrams
 
-- Exactly one file, opening with <!DOCTYPE html> and closing with </html>.
-- A title element is present.
-- data-slide runs 1, 2, 3 ... with no gaps, no repeats, and matches document order.
-- Every slide has data-section-en, data-section-es, data-title-en, data-title-es.
-- Exactly one slide has class active, and it is the first slide.
-- Exactly one title-slide and exactly one wrap slide.
-- No element anywhere carries data-course-deck-engine or data-teaching-slide.
+When an abstract concept would benefit from a clearer example or analogy, improve it using a familiar context appropriate to the students.
 
-NO EXTERNAL REQUESTS
+When concepts form a meaningful relationship, consider a simple visual flow, comparison, chain, timeline, or process diagram.
 
-- No link to an external stylesheet or font.
-- No script with a src attribute.
-- No img, video, audio, or iframe with a URL.
-- No relative paths anywhere.
-- Fonts are system stacks only.
+Do not force every idea into the same model. The structure must emerge from the lecture content.
 
-PAUSE CHECKS
+When students are likely to confuse concepts, explicitly compare them using side-by-side cards, X vs. Y layouts, before/after structures, or another clear comparison.
 
-- Between 6 and 8 slides have a badge reading exactly "Pulse check".
-- Each sits after a concept finishes, not on a fixed interval, and not within two slides of another pause check.
-- None appears before the lecture has taught something.
-- Each has exactly four button elements with class choice.
-- Each has exactly one correct answer, held in a div with class "answer-reveal fragment correct".
-- Each has a unique data-pause-id and both pause-topic labels.
-- Correct-answer position varies across the deck.
-- No pause check uses "All of the above", "None of the above", or refers to options by letter.
-- Activity and discussion slides do NOT have the Pulse check badge or the choice grid.
+---
 
-LANGUAGE
+## 10. Definitions and technical material
 
-- Every visible string has both a lang-en and a lang-es span.
-- No Spanish text sits inside lang-en and no English text inside lang-es.
-- Both languages say the same thing.
+Preserve important formal definitions and terminology.
 
-BEHAVIOUR
+When useful, show the formal definition followed by a plain-language explanation.
 
-- Arrow keys move one slide and move the class active with them.
-- Two slides are never active at once.
-- Fragments reveal before the slide advances.
-- Nothing advances on its own.
+If the lecture contains mathematics, code, algorithms, procedures, or derivations, preserve them accurately. Break complex steps across progressive reveals or additional slides rather than making them unreadably small.
 
-After completing this validation, output only the HTML code block.`;
+---
+
+## 11. Activities and existing classroom interactions
+
+Preserve meaningful activities from the source lecture.
+
+Present them clearly with elements such as:
+
+- TASK;
+- TIME;
+- INSTRUCTIONS;
+- WHAT TO NOTICE / DISCUSS.
+
+If an activity uses a URL, preserve it and embed a QR code when that meaningfully improves classroom use.
+
+Do not reveal an activity solution before students are supposed to work on it.
+
+Preserve useful humor, personal teaching elements, anecdotes, memes, class rules, acknowledgments, and informal interactions when they contribute to the lecture experience.
+
+---
+
+## 12. Visual fidelity policy — preserve source visuals when necessary
+
+Inspect the source lecture visually.
+
+Meaningful source visuals include, but are not limited to:
+
+- diagrams;
+- screenshots;
+- photos;
+- figures;
+- charts;
+- illustrations;
+- memes;
+- historical visuals;
+- interface captures;
+- animated GIFs.
+
+Use this decision rule:
+
+> **Preserve the source visual unless recreating or replacing it produces an equal or better teaching result with no meaningful loss of information, fidelity, recognizability, behavior, context, or pedagogical intent. When uncertain, preserve the original.**
+
+### Recreate in native HTML/CSS/SVG when appropriate
+
+Rebuild a visual natively only when it is primarily something like:
+
+- boxes and arrows;
+- simple flow diagrams;
+- structured comparison tables;
+- simple labeled charts;
+- clean shapes and labels;
+- simple callouts.
+
+Only do this when the recreated version is at least as clear, accurate, and readable as the source.
+
+### Preserve the original static image when appropriate
+
+Preserve the original image when it is something like:
+
+- a photo;
+- a screenshot;
+- a meme;
+- a distinctive illustration;
+- a historical image;
+- a complex chart/figure;
+- a figure whose exact appearance matters;
+- anything that would lose quality or meaning if redrawn poorly.
+
+If an HTML recreation would look worse, be less precise, or change the teaching meaning, **do not recreate it**. Preserve the original.
+
+### Preserve animated GIFs when motion matters
+
+If the source includes an animated GIF or another animated visual whose motion is part of the teaching value, preserve that animation unless you can replace it with something clearly better.
+
+Do **not** silently flatten an animated GIF into a single static frame when the animation itself demonstrates a process, sequence, behavior, or effect.
+
+### Replacement rule
+
+You may replace a source visual only when the replacement is clearly better and still preserves the same teaching intent.
+
+If the replacement is worse, less faithful, less recognizable, or less precise, preserve the original visual instead.
+
+### Embedding rule
+
+Preserved visuals must still live inside the standalone HTML file.
+
+- Preserve static images as Base64/Data URIs when appropriate.
+- Preserve animated GIFs as \`data:image/gif;base64,...\` when appropriate.
+- Native diagrams may use HTML/CSS/SVG.
+
+Do not simply convert every source slide into one big image. Rebuild surrounding text and layout natively wherever practical, while preserving the meaningful visual component itself.
+
+Compress or resize responsibly, but do not degrade readability, animation, or important visual detail just to reduce file size.
+
+---
+
+## 13. One completely standalone HTML file
+
+The final deliverable must be one standalone HTML file containing:
+
+- HTML;
+- CSS;
+- JavaScript;
+- English and Spanish content;
+- embedded images;
+- embedded GIFs when needed;
+- inline diagrams;
+- presenter interactions.
+
+Do not require external CSS, JavaScript, Google Fonts, CDN libraries, image folders, asset folders, or remote rendering dependencies.
+
+External websites mentioned by the lecture may remain clickable links, but the deck itself must render and function offline.
+
+---
+
+## 14. Final recap
+
+Before the final Questions/Discussion slide, create a concise recap titled approximately:
+
+**What you should leave with today**
+
+Include roughly 3–6 major ideas from the lecture.
+
+Use progressive reveal if helpful.
+
+Then optionally end with a Questions/Discussion slide or reveal.
+
+---
+
+## 15. Verification before delivery
+
+Before giving me the final HTML, verify:
+
+### Content
+
+- the entire source lecture was inspected;
+- no meaningful source concept was unintentionally omitted;
+- improvements remain within the lecture's intended scope.
+
+### Presentation engine
+
+- one slide active at a time;
+- next reveals fragments before advancing;
+- previous hides fragments before moving back;
+- upper-right controls work;
+- bottom navigation works;
+- progress bar and footer update;
+- reveal hint works;
+- overview and help overlays work;
+- keyboard/click/swipe navigation exists;
+- language/theme persistence works.
+
+### Pulse Checks
+
+- report the number of Pulse Checks and their slide numbers;
+- each has exactly A/B/C/D;
+- exactly one best answer;
+- only previously taught material is tested;
+- distractors are plausible;
+- selection does not immediately reveal correctness;
+- next reveal displays answer feedback and explanation;
+- English and Spanish versions are equivalent.
+
+### Visual fidelity
+
+- report how many source visuals were preserved, how many were recreated, and how many were replaced;
+- confirm that preserved visuals were embedded inside the HTML;
+- confirm that any preserved animated GIFs remain animated rather than flattened into a static frame;
+- confirm that visuals were not recreated when the recreation would have reduced fidelity or teaching value.
+
+### Offline / portability
+
+- no required external stylesheets, scripts, fonts, or remote images;
+- all required visuals embedded;
+- no broken relative asset paths;
+- copy the HTML to another directory and confirm it remains self-contained.
+
+### Visual QA
+
+If browser rendering is available, inspect representative slides around 1920×1080, including title, dense concept, progressive reveal, Pulse Check before/after answer, preserved image or GIF example where relevant, activity, and final recap.
+
+Check for overflow, clipping, tiny text, poor contrast, bad alignment, controls covering content, or inconsistent typography.
+
+If browser visual testing is unavailable or fails, state that limitation clearly rather than claiming it passed.
+
+---
+
+## 16. Final response
+
+Do not paste the entire HTML source into the chat unless I explicitly request it.
+
+Create the finished file and give me:
+
+1. the download link;
+2. final slide count;
+3. number of Pulse Checks and their slide numbers;
+4. short summary of the main pedagogical improvements;
+5. confirmation of full English/Spanish support;
+6. confirmation that required visuals are embedded;
+7. confirmation that the file is standalone/offline;
+8. a short visual-fidelity summary describing preserved vs recreated vs replaced visuals;
+9. verification performed;
+10. any verification limitations.
+
+Unless essential information is genuinely missing, **do not stop at a plan**. Analyze the uploaded lecture and produce the completed HTML artifact.
+
+---
+
+## 17. Course-platform markers — reproduce them, never invent your own
+
+The reference HTML carries a small set of class names and attributes that the course platform reads while the class is running. None of them is visible on the projector, and all of them are easy to lose while rewriting a slide. Reproduce every one of them exactly.
+
+### On every slide
+
+- \`class="slide"\`, plus \`title-slide\`, \`section\`, \`activity\`, or \`wrap\` when that applies;
+- \`data-slide\`, starting at 1 on the first slide and increasing by exactly 1 with no gaps and no repeats, in document order;
+- \`data-section-en\`, \`data-section-es\`, \`data-title-en\`, and \`data-title-es\`.
+
+Exactly one slide carries the class \`active\` at any moment, and the first slide starts with it. The platform finds the professor's position from that class and from \`data-slide\`, so the numbering must be perfect.
+
+### On every Pulse Check slide
+
+A Pulse Check is where the class stops and every student answers on their phone. The platform builds that live question by reading the slide, so all five markers below must be present:
+
+- the slide is \`class="slide activity"\`;
+- the badge reads exactly \`Pulse check\` in English and \`Pregunta rapida\` in Spanish, each in its own language span;
+- exactly four button elements with class \`choice\`, one per option, in both languages;
+- the answer and its explanation sit inside \`<div class="answer-reveal fragment correct">\`, so they stay hidden until you reveal them;
+- the slide carries \`data-pause-id\` — a short lowercase slug naming the concept, unique in the deck, words joined by hyphens — together with \`data-pause-topic-en\` and \`data-pause-topic-es\`, a two to four word label for the same concept.
+
+A Pulse Check that loses any of these still looks correct on the projector, and the class silently has nothing to answer.
+
+### Never add these
+
+Never add the attribute \`data-course-deck-engine\` to any element.
+
+Never add the attribute \`data-teaching-slide\` to any slide.
+
+Both belong to a different deck system and will stop the platform from tracking your slides.
+
+### Reachable offline
+
+Keep the whole deck self-contained, exactly as section 13 requires: no link to an external stylesheet or font, no script with a src attribute, no image, video, audio, or iframe loaded from a URL, and no relative paths. The platform rejects a deck that reaches outside itself.
+
+---
+
+# Core principle
+
+> **The reference HTML defines the presentation system. The new PPTX/PDF defines the lecture. Preserve what I teach, improve how I teach it, preserve source visuals when necessary, and produce a complete bilingual interactive standalone HTML deck in the same presentation family.**
+`;
