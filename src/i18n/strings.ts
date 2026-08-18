@@ -2153,8 +2153,8 @@ export const strings = {
   ],
   "import.slug": ["Lecture slug", "Identificador de la clase"],
   "import.slugHint": [
-    "Links the question bank and the deck to the same lecture. Lowercase letters, numbers and dashes.",
-    "Vincula el banco de preguntas y la presentación a la misma clase. Minúsculas, números y guiones."
+    "Links the question bank and the deck to the same lecture. Lowercase letters, numbers and dashes. If you upload the deck now and its questions later, use this exact same slug both times — a different one creates a second, separate lecture.",
+    "Vincula el banco de preguntas y la presentación a la misma clase. Minúsculas, números y guiones. Si subes la presentación ahora y sus preguntas después, usa exactamente el mismo slug las dos veces — uno distinto crea una segunda clase aparte."
   ],
   "import.slugRequired": [
     "Enter a lecture slug before saving.",
@@ -2167,12 +2167,37 @@ export const strings = {
   "import.deck.sectionTitle": ["Lecture deck (optional)", "Presentación de la clase (opcional)"],
   "import.deck.chooseFile": ["Choose the deck HTML file", "Elegir el archivo HTML de la presentación"],
   "import.deck.externalLinks": [
-    "Sites this deck legitimately links to",
-    "Sitios a los que esta presentación enlaza legítimamente"
+    "Sites this deck links to (optional)",
+    "Sitios a los que enlaza esta presentación (opcional)"
   ],
   "import.deck.externalLinksHint": [
-    "Separate multiple hostnames with a comma or a new line — e.g. example.com",
-    "Separa varios nombres de dominio con una coma o un salto de línea — por ejemplo example.com"
+    "You do not have to fill this in — a deck that links out will upload either way. Listing a site here just stops it being mentioned afterwards. Separate hostnames with a comma or a new line — e.g. example.com",
+    "No es obligatorio llenar esto — una presentación que enlaza a otros sitios se subirá de todas formas. Poner un sitio aquí solo evita que se te mencione después. Separa los dominios con una coma o un salto de línea — por ejemplo example.com"
+  ],
+  "import.deck.linksOutTo": [
+    "This deck links out to:",
+    "Esta presentación enlaza a:"
+  ],
+  "import.deck.linksOutExplain": [
+    "That is fine — students can click or scan a link and go there. Just note that anything the deck tries to load from outside, like an image or a font, will not appear, because the lecture is served sealed off. Put images in the file itself.",
+    "Eso está bien — los estudiantes pueden abrir o escanear un enlace e ir ahí. Solo ten en cuenta que lo que la presentación intente cargar desde fuera, como una imagen o una fuente, no aparecerá, porque la clase se sirve aislada. Incluye las imágenes dentro del archivo."
+  ],
+  "import.deck.commitAlone": ["Upload the deck", "Subir la presentación"],
+  "import.deck.chooseFirst": [
+    "Choose the deck HTML file above, then this button will send it.",
+    "Elige arriba el archivo HTML de la presentación y este botón la enviará."
+  ],
+  "import.deck.aloneHint": [
+    "You can upload the deck now and add its questions later — step 2 needs this file first.",
+    "Puedes subir la presentación ahora y agregar sus preguntas después — el paso 2 necesita este archivo primero."
+  ],
+  "import.deck.savedWithQuestions": [
+    "This deck will be saved together with the questions — use Save to the course at the bottom of the page. You do not need a separate button for it.",
+    "Esta presentación se guardará junto con las preguntas — usa Guardar en el curso al final de la página. No necesitas un botón aparte para ella."
+  ],
+  "import.deck.titleMissing": [
+    "This deck has no title, so there is nothing to name it in the library. Add a <title> line to the HTML and choose the file again.",
+    "Esta presentación no tiene título, así que no hay cómo nombrarla en la biblioteca. Agrega una línea <title> al HTML y elige el archivo de nuevo."
   ],
   "import.deck.success": ["Lecture deck imported.", "Presentación importada."],
   "import.deck.failed": ["The lecture deck could not be imported.", "No se pudo importar la presentación."],
@@ -2180,18 +2205,70 @@ export const strings = {
   // ------------------------------------------------- import · authoring prompt
   // Chrome only. The prompt body itself stays in English — it is instructions
   // to a model, not text a person reads.
-  "import.prompt.title": ["The authoring prompt", "El prompt de autoría"],
-  "import.prompt.lede": [
-    "Paste this into ChatGPT, Claude or Gemini — whichever you already pay for. It answers with the question file you upload below.",
-    "Pega esto en ChatGPT, Claude o Gemini — el que ya pagues. Responderá con el archivo de preguntas que subes abajo."
+  "import.prompt.title": [
+    "Build a lecture in two steps",
+    "Crea una clase en dos pasos"
   ],
+  "import.prompt.lede": [
+    "Use whichever AI you already use — ChatGPT, Claude or Gemini. Step 1 turns your lecture into the slide deck. Step 2 reads that deck and writes the questions. Then upload both files below.",
+    "Usa la IA que ya uses — ChatGPT, Claude o Gemini. El paso 1 convierte tu clase en la presentación. El paso 2 lee esa presentación y escribe las preguntas. Después sube ambos archivos aquí abajo."
+  ],
+  "import.prompt.howRule": [
+    "The deck decides where the class pauses. Step 1 places a Pulse check slide wherever a concept finishes, and step 2 only copies those questions across — which is why every question lands on the slide it belongs to.",
+    "La presentación decide dónde se pausa la clase. El paso 1 coloca una diapositiva de Pulse check donde termina cada concepto, y el paso 2 solo copia esas preguntas — por eso cada pregunta cae en la diapositiva que le corresponde."
+  ],
+  // No individual is credited here. The platform serves many instructors, and
+  // a name on the shared authoring surface reads as ownership of everyone's
+  // lectures. The warning is the part that earns its place; the byline isn't.
   "import.prompt.validationCaveat": [
-    "Written and tested by Prof. Zareei. As with any AI-generated content, check the result in the preview before relying on it in front of a class.",
-    "Escrito y probado por el Prof. Zareei. Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
+    "As with any AI-generated content, check the result in the preview before relying on it in front of a class.",
+    "Como con cualquier contenido generado por IA, revisa el resultado en la vista previa antes de confiar en él frente a un grupo."
   ],
   "import.prompt.attach": [
-    "Attach the lecture itself — the PDF or slide export — in the same message, and say how many slides it has so the questions land on the right ones.",
-    "Adjunta la clase misma — el PDF o la exportación de diapositivas — en el mismo mensaje, e indica cuántas diapositivas tiene para que las preguntas apunten a las correctas."
+    "In both steps, attach the files in the same message as the prompt. Send nothing else with them — the AI must take the lecture only from what you attach.",
+    "En ambos pasos, adjunta los archivos en el mismo mensaje que el prompt. No envíes nada más — la IA debe tomar la clase únicamente de lo que adjuntes."
+  ],
+  // Half of step 1's input, not a documentation link — see REFERENCE_DECK_PATH
+  // in ImportPromptCard.tsx for why it is downloaded rather than opened.
+  "import.prompt.referenceTitle": [
+    "The style reference deck",
+    "La presentación de referencia"
+  ],
+  "import.prompt.referenceLede": [
+    "Download it once and attach it every time you run step 1. It is what the prompt means by the reference file: it sets the look, the presenter controls, and the Pulse check slide the AI copies.",
+    "Descárgala una vez y adjúntala cada vez que uses el paso 1. Es lo que el prompt llama el archivo de referencia: define el diseño, los controles del presentador y la diapositiva de Pulse check que la IA copia."
+  ],
+  "import.prompt.referenceDownload": [
+    "Download the reference",
+    "Descargar la referencia"
+  ],
+  "import.prompt.step1Title": [
+    "Step 1 — the slide deck",
+    "Paso 1 — la presentación"
+  ],
+  "import.prompt.step1Lede": [
+    "Attach two files — the style reference deck below and your own lecture PPTX or PDF — then paste this prompt. It answers with one HTML file: your slides in both languages, with a Pulse check slide everywhere the class should stop and answer.",
+    "Adjunta dos archivos — la presentación de referencia de aquí abajo y tu propia clase en PPTX o PDF — y luego pega este prompt. Responde con un solo archivo HTML: tus diapositivas en ambos idiomas, con una diapositiva de Pulse check donde la clase deba detenerse a responder."
+  ],
+  "import.prompt.step1Save": [
+    "Download the file the AI gives you, or save its reply as a file ending in .html. Either way, upload it under Lecture deck below.",
+    "Descarga el archivo que te dé la IA, o guarda su respuesta como un archivo que termine en .html. En cualquier caso, súbelo en Presentación aquí abajo."
+  ],
+  "import.prompt.step2Title": [
+    "Step 2 — the questions",
+    "Paso 2 — las preguntas"
+  ],
+  "import.prompt.step2Lede": [
+    "Open a new chat, attach the .html file from step 1, and paste this prompt. It answers with the question file.",
+    "Abre un chat nuevo, adjunta el archivo .html del paso 1 y pega este prompt. Responde con el archivo de preguntas."
+  ],
+  "import.prompt.step2Save": [
+    "Attach the .html file, not the PDF — the questions have to be read from the finished slides. Save the reply as a file ending in .json and upload it as the question file below.",
+    "Adjunta el archivo .html, no el PDF — las preguntas deben leerse de las diapositivas terminadas. Guarda la respuesta como un archivo que termine en .json y súbelo como archivo de preguntas aquí abajo."
+  ],
+  "import.prompt.showText": [
+    "Show the prompt text",
+    "Ver el texto del prompt"
   ],
   "import.prompt.copy": ["Copy the prompt", "Copiar el prompt"],
   "import.prompt.copied": ["Copied!", "¡Copiado!"],

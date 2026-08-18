@@ -166,16 +166,77 @@ assert.deepEqual(
   "groups ascend by slide with ungrouped questions last"
 );
 
-const [api, preview, content, strings, promptCard] = await Promise.all([
+const [api, preview, content, strings, promptCard, deckPrompt] = await Promise.all([
   readFile(new URL("src/api/contentImport.ts", root), "utf8"),
   readFile(new URL("src/components/ImportPreview.tsx", root), "utf8"),
   readFile(new URL("src/screens/instructor/Content.tsx", root), "utf8"),
   readFile(new URL("src/i18n/strings.ts", root), "utf8"),
-  readFile(new URL("src/components/ImportPromptCard.tsx", root), "utf8")
+  readFile(new URL("src/components/ImportPromptCard.tsx", root), "utf8"),
+  // Step 1 lives outside the .tsx on purpose — it quotes slide markup, and
+  // verify-i18n.mjs reads >English sentence< inside any .tsx component as
+  // untranslated JSX. See the header comment in deckPrompt.ts.
+  readFile(new URL("src/features/import/deckPrompt.ts", root), "utf8")
 ]);
 
 assert.match(api, /export async function importContent/);
 assert.match(api, /course-content-import/);
+
+// ------------------------------------------------- either half may go alone
+// The edge function seeds {bank:{ok:false},deck:{ok:false}} and fills in only
+// the halves it was given; writeDeck resolves its own slug, uploads its own
+// bytes and writes its own content_items row with no bank involved. Both
+// halves of the API type are optional. The screen was the only thing that
+// required a bank — onCommit returned early without one, and the sole commit
+// button lived inside ImportPreview, which renders only for a loaded bank. A
+// professor could choose a deck HTML, see its filename echoed back, and have
+// nothing on the page to press. That is the exact order the two-step authoring
+// flow produces files in, so the deck was unuploadable precisely when it was
+// the only thing that existed.
+assert.doesNotMatch(
+  content, /if \(!bank \|\| !bankIsImportable\(bank\)\) return;/,
+  "onCommit must not refuse a deck-only import — a deck with no bank yet is the normal state in the two-step flow"
+);
+assert.match(
+  content, /const hasBank = Boolean\(bank && bankIsImportable\(bank\)\)/,
+  "onCommit must decide the two halves independently"
+);
+assert.match(
+  content, /if \(!hasBank && !hasDeck\) return;/,
+  "onCommit must still refuse when there is nothing at all to send"
+);
+// The button must be visible before a file is chosen, not summoned by choosing
+// one: gating its existence on deckHtml hid the missing control behind the very
+// action the professor was hunting for it to perform. Disabled-and-present is
+// the discoverable form.
+assert.match(
+  content, /disabled=\{busy \|\| !deckHtml\.trim\(\)\}/,
+  "the deck commit button must render disabled when no deck is chosen, not vanish"
+);
+assert.doesNotMatch(
+  content, /\{deckHtml\.trim\(\) && !\(bank && bank\.ok && !replacing\) \?/,
+  "the deck commit button must not be conditional on a file already being chosen"
+);
+assert.match(
+  content, /t\("import\.deck\.savedWithQuestions"\)/,
+  "when a bank is loaded ImportPreview owns the only button and sends the deck with it — that must be stated, or the deck button disappearing reads as the deck being dropped"
+);
+assert.match(
+  content, /hasBank=\{resultHadBank\}/,
+  "the result summary must know whether a bank was sent, or a deck-only import reports a bank failure that never happened"
+);
+assert.match(
+  content, /function deckTitleFromHtml/,
+  "a deck with no bank must name itself from its own <title>"
+);
+for (const key of [
+  "commitAlone", "aloneHint", "titleMissing", "chooseFirst", "savedWithQuestions",
+  "linksOutTo", "linksOutExplain"
+]) {
+  assert.match(
+    strings, new RegExp(`"import\\.deck\\.${key}"`),
+    `import.deck.${key} must be bilingual`
+  );
+}
 assert.match(preview, /groupBySlide/, "the preview must group by slide range as designed");
 assert.match(preview, /difficulty_defaulted/, "a defaulted difficulty must be visible");
 assert.match(preview, /questionIsImportable/);
@@ -252,10 +313,61 @@ assert.match(
 // tested by him directly rather than through this repo's self-test loop —
 // the lede/caveat strings and the clause list below were updated to match
 // his actual wording, not the version they used to describe.
+//
+// 2026-08-17, later the same day: the credit came out entirely, at the course
+// owner's request. Many instructors use this platform, and one instructor's
+// name on the shared authoring surface reads as ownership of everyone's
+// lectures. So the assertion inverts — the caveat must keep the warning and
+// name nobody, and no personal name may appear in the dictionary at all.
 assert.match(
-  strings, /Written and tested by Prof\. Zareei/,
-  "the caveat must credit the actual author/tester of the current prompt, not a stale claim about a prior version"
+  strings, /As with any AI-generated content, check the result in the preview/,
+  "the caveat must keep the AI-content warning — it is the only thing telling a professor to read the output before teaching from it"
 );
+// Deliberately a shape, not a name: spelling the surname here would put back
+// the very string this guard exists to keep out. "Prof. X", "Professor X" and
+// "Dr. X" are the forms a byline actually takes; the dictionary's many lowercase
+// uses of "professor" as a role are untouched by it.
+const BYLINE = /(Prof\.|Professor|Dr\.)\s+[A-Z]/;
+for (const [label, text] of [["strings", strings], ["step 2", promptCard], ["step 1", deckPrompt]]) {
+  assert.doesNotMatch(
+    text, BYLINE,
+    `${label}: no individual may be named on the shared authoring surface — it is read, copied and re-used by every instructor on the platform`
+  );
+}
+
+// A name must not survive the trip from an attached PDF either: lecture title
+// slides routinely carry the author's name, and without this clause a prompt
+// copies it onto the deck or lifts it into a question.
+//
+// 2026-08-17: step 1 no longer carries the clause. Its prompt was replaced
+// wholesale by the course owner's own universal lecture prompt, adopted
+// verbatim on his instruction, and that prompt has no identity rule — it says
+// to preserve the source lecture's visuals and personal teaching elements,
+// which is the opposite instinct. So the assertion below now covers step 2
+// only, and this is a real regression stated rather than hidden: a name on an
+// attached lecture's title slide can now reach the generated deck.
+//
+// It is not unguarded end to end. Step 2 still refuses to carry a name into
+// the question bank, and the guard above still keeps every name off this
+// shared surface. What is gone is the guard on the deck itself, which is
+// projected in the professor's own classroom — the narrower blast radius of
+// the two. Closing it means one added clause in step 1's prompt text, which
+// was explicitly out of scope for the swap; raise it with him rather than
+// slipping it in.
+assert.doesNotMatch(
+  deckPrompt, /NEVER CARRY PERSONAL IDENTITY ACROSS/,
+  "step 1's identity clause is a known, deliberate gap — if it has been added back, restore this file's assertion to the two-prompt loop instead of leaving a stale note"
+);
+for (const [label, body] of [["step 2", promptCard]]) {
+  assert.match(
+    body, /NEVER CARRY PERSONAL IDENTITY ACROSS/,
+    `${label}: must instruct the model to drop instructor and student identity found in the attachment`
+  );
+  assert.match(
+    body, /historical figure the lecture actually teaches about/,
+    `${label}: must carve out people who are genuinely subject matter, or it would strip cited researchers too`
+  );
+}
 assert.match(
   promptCard, /t\("import\.prompt\.validationCaveat"\)/,
   "the validation caveat must be rendered in the UI, not left as a code comment only the next developer reads"
@@ -312,8 +424,126 @@ assert.equal(exampleBank.questions[0].options.length, 4);
 assert.equal(exampleBank.questions[0].options.filter((o) => o.is_correct).length, 1);
 
 // The prompt body is deliberately English-only; the chrome around it is not.
-for (const key of ["title", "lede", "attach", "copy", "copied", "copyFailed"]) {
+// Every instruction a professor reads has to exist in both languages, and
+// verify-i18n.mjs proves each of these keys carries a distinct Spanish string.
+for (const key of [
+  "title", "lede", "attach", "copy", "copied", "copyFailed",
+  "howRule", "showText",
+  "step1Title", "step1Lede", "step1Save",
+  "step2Title", "step2Lede", "step2Save"
+]) {
   assert.match(strings, new RegExp(`"import\\.prompt\\.${key}"`), `import.prompt.${key} must be bilingual`);
 }
+
+// ------------------------------------------------- step 1: the deck prompt
+// Step 2 copies the pause questions instead of inventing them, which only
+// works if step 1 actually planted them. These clauses are the seam between
+// the two prompts — if step 1 stops emitting the badge, the attributes, or
+// the four .choice buttons, step 2 silently produces a bank with no live
+// questions at all and the class runs with nothing to ask.
+assert.match(
+  deckPrompt, /^export const DECK_PROMPT = `/m,
+  "DECK_PROMPT must be an exported module-scope template literal"
+);
+// The prompt is markdown and quotes markup in code spans, so its own backticks
+// are escaped in the source. A lazy [\s\S]*? would stop at the first one and
+// silently hand every clause check below a truncated body that still passes —
+// so match escapes explicitly, and prove the extraction reached the end.
+const deckBody = deckPrompt
+  .match(/export const DECK_PROMPT = `((?:[^`\\]|\\[\s\S])*)`;\n/)?.[1]
+  ?.replace(/\\([\s\S])/g, "$1");
+assert.ok(deckBody, "DECK_PROMPT must be readable as a template literal");
+assert.match(
+  deckBody, /Core principle/,
+  "the extracted prompt must run to the end — a truncated body would pass the clause checks below on the half that survived"
+);
+
+// The prompt delegates the presentation system to the reference deck the
+// professor downloads from this same tab, so most of what used to be spelled
+// out inline now lives in that file. What CANNOT live there is the contract:
+// the reference is a design, and a model rewriting a slide drops an attribute
+// without anything looking wrong on the projector. Section 17 names every
+// marker the platform reads, and these clauses hold it in place — if step 1
+// stops demanding the badge, the pause attributes, or the four .choice
+// buttons, step 2 silently produces a bank with no live questions at all and
+// the class runs with nothing to ask.
+for (const [clause, why] of [
+  [/Use the newly uploaded PPTX\/PDF for \*\*WHAT the lecture teaches\*\*/, "the uploaded lecture is the only source of subject matter; the reference supplies design, never content"],
+  [/Do \*\*not\*\* reuse the placeholder subject matter from the reference HTML/, "the reference's own placeholder slides must not leak into a real lecture"],
+  [/Pulse check/, "step 2 finds pause slides by this exact badge text"],
+  [/data-pause-topic-en/, "the checkpoint's name on the plan board comes from this attribute"],
+  [/data-pause-id/, "the stable pause slug, forward-compatible with checkpoint matching by id"],
+  [/data-slide/, "the platform tracks position by this attribute, and step 2 reads it for covers_up_to_slide"],
+  [/exactly four button elements with class .?choice/i, "four options is a display requirement the bank inherits"],
+  [/answer-reveal fragment correct/, "the answer must stay hidden until the professor reveals it"],
+  [/Never add the attribute .?data-course-deck-engine/i, "that attribute suppresses the injected slide reporter — the deck would stop reporting position"],
+  [/Never add the attribute .?data-teaching-slide/i, "a second numbering system silently competes with data-slide"],
+  [/no link to an external stylesheet or font/i, "deck-validation rejects a deck that reaches outside itself"],
+  [/class .?active/, "the slide reporter finds the current slide by this class"],
+  [/class="slide activity"/, "step 2 finds a pause slide by the activity class as well as the badge"]
+]) {
+  assert.match(deckBody, clause, `deck prompt must state: ${why}`);
+}
+
+// ------------------------------------------ step 1: the reference deck itself
+// Section 17 tells the model to reproduce five markers. The reference deck is
+// the worked example it copies them from, and it is served straight out of
+// public/ — so if that file's own Pulse Check slide loses a marker, every deck
+// generated afterwards loses it too, and nothing on the projector looks wrong.
+// The prompt and the file it points at have to be checked together or not at
+// all.
+const referenceDeck = await readFile(
+  new URL("public/TC2007B_Presentation_Style_Reference.html", root), "utf8"
+);
+for (const [marker, why] of [
+  ['class="slide activity"', "the pause slide must carry the activity class step 2 looks for"],
+  ['data-pause-id="', "the pause slug the prompt asks every Pulse Check to carry"],
+  ['data-pause-topic-en="', "the checkpoint label the plan board reads"],
+  ['data-pause-topic-es="', "the Spanish half of that label"],
+  ['<span class="lang-en">Pulse check</span>', "the English badge, spelled exactly as step 2 searches for it"],
+  ['<span class="lang-es">Pregunta rapida</span>', "the Spanish badge, spelled exactly as step 2 searches for it"],
+  ['answer-reveal fragment correct', "the answer stays hidden behind a fragment until the professor reveals it"],
+  ['data-slide="1"', "slide numbering starts at 1, as the platform's position tracking assumes"]
+]) {
+  assert.ok(referenceDeck.includes(marker), `the reference deck must carry: ${why}`);
+}
+assert.equal(
+  (referenceDeck.match(/class="choice"/g) ?? []).length, 4,
+  "the reference deck's Pulse Check must show exactly four options, or it teaches the wrong shape"
+);
+// It is attached to a chat and it renders offline in front of a class. Either
+// way a remote reference is a broken reference.
+assert.doesNotMatch(
+  referenceDeck, /(?:src|href)="(?:https?:)?\/\//,
+  "the reference deck must stay self-contained — no remote script, style, font, or image"
+);
+assert.match(
+  promptCard, /href=\{REFERENCE_DECK_PATH\}[\s\S]*?download=/,
+  "the reference must be offered as a download: served under the app's own CSP it would render with its presenter engine blocked"
+);
+for (const key of ["referenceTitle", "referenceLede", "referenceDownload"]) {
+  assert.match(
+    strings, new RegExp(`"import\\.prompt\\.${key}"`),
+    `import.prompt.${key} must be bilingual — the reference download is part of step 1, not documentation`
+  );
+}
+
+// The two prompts have to agree on the badge, or step 2 finds nothing.
+assert.ok(
+  promptBody.includes("Pulse check") && deckBody.includes("Pulse check"),
+  "both prompts must name the same badge text, or step 2 finds no pause slides"
+);
+assert.match(
+  promptBody, /intended_use uses only pulse or final\. The value both never appears\./,
+  "step 2 must ban intended_use=both: the plan builder treats it as checkpoint-eligible, so it would stop the class at a slide with no pause slide behind it"
+);
+assert.match(
+  promptBody, /equal the number of Pulse check slides/i,
+  "step 2 must assert one pulse question per pause slide, in both the instructions and its own final check"
+);
+assert.doesNotMatch(
+  deckBody, /\$\{/,
+  "an interpolation inside the prompt would splice app state into instructions sent to a model"
+);
 
 console.log("content import parser verified");

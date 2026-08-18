@@ -2452,6 +2452,43 @@ backend". A verifier that needs it calls `backendPath` / `backendUrl` and, when
 it may legitimately be absent, `skipWithoutBackend` — which prints the root it
 looked in, so a skip that should not have happened is visible in the log.
 
+## 76. A prompt that points at a reference file inherits the reference's gaps
+
+Step 1's prompt (2026-08-17) no longer describes the slide markup. It hands the
+model a reference deck and says *reproduce this presentation system*. That is a
+better prompt — it carries the whole visual language, presenter controls,
+overlays and media policy in one attachment instead of pages of prose — but it
+moves the contract out of the text and into a file, and a design file does not
+know it is a contract.
+
+The five markers the platform reads off a Pulse Check slide are invisible.
+`class="slide activity"`, the `Pulse check` / `Pregunta rapida` badge, four
+`.choice` buttons, `answer-reveal fragment correct`, `data-pause-id` and
+`data-pause-topic-en/es` change nothing on the projector. A deck that loses them
+looks perfect in the room and produces a bank with zero `pulse` questions, so
+Create plan builds a class that never stops and nobody finds out until the
+lecture is running.
+
+Three consequences worth holding onto:
+
+- **State the markers in the prompt AND carry them in the reference file.**
+  Either alone fails: prose without an example gets paraphrased away, an example
+  without prose gets rewritten. `verify-content-import` checks both, together,
+  and that pairing is the point.
+- **`public/TC2007B_Presentation_Style_Reference.html` is a contract artifact,
+  not documentation.** Editing its Pulse Check slide changes every deck
+  generated afterwards. Treat it like source.
+- **The reference is offered as a download, never a link.** Served under the
+  app's own CSP its inline presenter engine is blocked, so a professor who
+  clicks through to it sees a dead page and reasonably concludes the reference
+  is broken. This is pitfall #2 wearing different clothes: deck HTML never
+  renders under the app's CSP.
+
+A prompt swap is not a text edit. Diff what the old prompt *guaranteed* against
+what the new one guarantees, and treat every dropped guarantee as a decision to
+make out loud — see the identity clause dropped in the same change, recorded in
+`docs/prompts/README.md` and asserted, deliberately, in the verifier.
+
 ## 85. A Teach screen that filters by section on its own will drift
 
 Every screen scoped by the instructor/admin switcher (2026-08-15) narrows
