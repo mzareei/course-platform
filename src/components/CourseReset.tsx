@@ -1,12 +1,23 @@
-// Reset the course — for the morning after a rehearsal, when the invented
-// students have to go and the real semester starts from zero.
+// Reset — for the morning after a rehearsal, when the invented students have to
+// go and the real semester starts from zero.
+//
+// It follows the group in the top bar. Looking at Group 501 resets Group 501,
+// and nothing in 402 or 502 moves; the whole course only goes when All groups
+// is deliberately chosen, and then the confirmation phrase is a different one.
+// The screen is scoped to a group everywhere else, so a reset that ignored the
+// switcher would read as "reset 501" and mean "reset everything".
+//
+// Owner only, and hidden rather than disabled for anyone else: a control that
+// always 403s is a broken screen (pitfall #17).
 //
 // Nothing is destroyed until the professor has seen a count of every row at
 // stake and typed the confirmation. The preview is loaded on demand rather than
 // with the screen: this control should cost nothing to anyone who is not
 // deliberately looking for it.
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { t, apiErrorText } from "../i18n";
+import { isOwner } from "../state/session";
+import { activeGroupName, activeSectionId, isAllGroups } from "../state/scope";
 import {
   executeCourseReset,
   previewCourseReset,
@@ -15,6 +26,7 @@ import {
 } from "../api/courseReset";
 
 const CONFIRM_TOKEN = "RESET";
+const CONFIRM_TOKEN_ALL = "RESET ALL";
 
 function total(counts: Record<string, number>) {
   return Object.values(counts).reduce((sum, value) => sum + value, 0);
@@ -29,12 +41,28 @@ export function CourseReset() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ResetResult | null>(null);
 
+  const owner = isOwner.value;
+  const sectionId = activeSectionId.value;
+  const allGroups = isAllGroups.value;
+  const groupName = activeGroupName.value;
+
+  // Changing the group in the top bar invalidates everything on screen: those
+  // counts and those ticked names belong to the group you were looking at.
+  useEffect(() => {
+    setOpen(false);
+    setPreview(null);
+    setSelected(new Set());
+    setConfirm("");
+    setResult(null);
+    setError(null);
+  }, [sectionId]);
+
   async function load() {
     setBusy(true);
     setError(null);
     setResult(null);
     try {
-      const data = await previewCourseReset();
+      const data = await previewCourseReset(sectionId);
       setPreview(data);
       setSelected(new Set());
       setOpen(true);
@@ -50,13 +78,14 @@ export function CourseReset() {
     setError(null);
     try {
       const outcome = await executeCourseReset({
+        sectionId,
         confirm,
         remove_profile_ids: [...selected]
       });
       setResult(outcome);
       setConfirm("");
       // Reload so the screen shows the emptied state rather than stale numbers.
-      const fresh = await previewCourseReset().catch(() => null);
+      const fresh = await previewCourseReset(sectionId).catch(() => null);
       if (fresh) setPreview(fresh);
       setSelected(new Set());
     } catch (e) {
@@ -75,11 +104,19 @@ export function CourseReset() {
     });
   }
 
+  // Not the owner: no card at all. An instructor clears one class at a time
+  // from Run Class, which is the reversible tool for the same instinct.
+  if (!owner) return null;
+
+  const title = allGroups ? t("reset.title.all") : t("reset.title.group", { group: groupName });
+  const body = allGroups ? t("reset.body.all") : t("reset.body.group", { group: groupName });
+
   if (!open) {
     return (
       <section class="card">
-        <h2>{t("reset.title")}</h2>
-        <p class="hint">{t("reset.body")}</p>
+        <h2>{title}</h2>
+        <p class="hint">{body}</p>
+        <p class="hint">{allGroups ? t("reset.scope.all") : t("reset.scope.group")}</p>
         {error ? <p class="error-text" role="alert">{error}</p> : null}
         <button class="btn quiet" type="button" disabled={busy} onClick={load}>
           {busy ? t("reset.checking") : t("reset.check")}
@@ -90,11 +127,13 @@ export function CourseReset() {
 
   const activityTotal = preview ? total(preview.counts) : 0;
   const legacyTotal = preview ? total(preview.legacy_counts) : 0;
-  const ready = confirm.trim().toUpperCase() === CONFIRM_TOKEN;
+  const expected = allGroups ? CONFIRM_TOKEN_ALL : CONFIRM_TOKEN;
+  const ready = confirm.trim().toUpperCase().replace(/\s+/g, " ") === expected;
 
   return (
     <section class="card">
-      <h2>{t("reset.title")}</h2>
+      <h2>{title}</h2>
+      <p class="hint">{allGroups ? t("reset.scope.all") : t("reset.scope.group")}</p>
       {error ? <p class="error-text" role="alert">{error}</p> : null}
 
       {result ? (
@@ -115,12 +154,19 @@ export function CourseReset() {
       {preview ? (
         <>
           <p class="hint">
-            {t("reset.summary", {
-              activity: activityTotal,
-              legacy: legacyTotal,
-              sessions: preview.counts.class_sessions_rewound,
-              kept: preview.kept.class_sessions
-            })}
+            {allGroups
+              ? t("reset.summary", {
+                  activity: activityTotal,
+                  legacy: legacyTotal,
+                  sessions: preview.counts.class_sessions_rewound,
+                  kept: preview.kept.class_sessions
+                })
+              : t("reset.summary.group", {
+                  group: preview.group_name || groupName,
+                  activity: activityTotal,
+                  sessions: preview.counts.class_sessions_rewound,
+                  kept: preview.kept.class_sessions
+                })}
           </p>
 
           <div class="table-scroll">
@@ -142,16 +188,20 @@ export function CourseReset() {
                 <tr><td>{t("reset.row.overrides")}</td><td class="num">{preview.counts.class_grade_overrides}</td></tr>
                 <tr><td>{t("reset.row.participation")}</td><td class="num">{preview.counts.participation_events}</td></tr>
                 <tr><td>{t("reset.row.notes")}</td><td class="num">{preview.counts.class_student_notes}</td></tr>
-                <tr><td>{t("reset.row.legacy")}</td><td class="num">{legacyTotal}</td></tr>
+                {/* The old pilot tables carry no group, so they are a
+                    whole-course matter only. */}
+                {allGroups ? (
+                  <tr><td>{t("reset.row.legacy")}</td><td class="num">{legacyTotal}</td></tr>
+                ) : null}
                 <tr><td>{t("reset.row.rewound")}</td><td class="num">{preview.counts.class_sessions_rewound}</td></tr>
               </tbody>
             </table>
           </div>
 
-          <p class="hint">{t("reset.keptNote")}</p>
+          <p class="hint">{allGroups ? t("reset.keptNote") : t("reset.keptNote.group")}</p>
 
-          <h3>{t("reset.students")}</h3>
-          <p class="hint">{t("reset.studentsBody")}</p>
+          <h3>{allGroups ? t("reset.students") : t("reset.students.group")}</h3>
+          <p class="hint">{allGroups ? t("reset.studentsBody") : t("reset.studentsBody.group")}</p>
           {!preview.students.length ? (
             <p class="hint">{t("reset.noStudents")}</p>
           ) : (
@@ -183,6 +233,9 @@ export function CourseReset() {
                       <td>
                         {student.name}
                         {student.email ? <span class="hint"> · {student.email}</span> : null}
+                        {student.in_other_groups ? (
+                          <span class="hint"> · {t("reset.alsoElsewhere")}</span>
+                        ) : null}
                       </td>
                       <td>{student.student_identifier || "—"}</td>
                       <td class="num">{student.check_ins}</td>
@@ -198,17 +251,31 @@ export function CourseReset() {
 
           <div class="stack" style="gap: 0.4rem; margin-top: 0.8rem;">
             <p class="error-text">
-              {t("reset.warning", { rows: activityTotal + legacyTotal, students: selected.size })}
+              {allGroups
+                ? t("reset.warning.all", {
+                    rows: activityTotal + legacyTotal,
+                    students: selected.size,
+                    groups: preview.group_count
+                  })
+                : t("reset.warning.group", {
+                    group: preview.group_name || groupName,
+                    rows: activityTotal,
+                    students: selected.size
+                  })}
             </p>
             <input
               type="text"
               value={confirm}
-              placeholder={t("reset.placeholder")}
+              placeholder={allGroups ? t("reset.placeholder.all") : t("reset.placeholder")}
               onInput={(event) => setConfirm((event.target as HTMLInputElement).value)}
             />
             <div class="row" style="gap: 0.5rem;">
               <button class="btn danger" type="button" disabled={busy || !ready} onClick={run}>
-                {busy ? t("reset.running") : t("reset.confirm")}
+                {busy
+                  ? t("reset.running")
+                  : allGroups
+                    ? t("reset.confirm.all")
+                    : t("reset.confirm.group", { group: preview.group_name || groupName })}
               </button>
               <button
                 class="btn quiet"

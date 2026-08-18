@@ -2424,10 +2424,23 @@ export const strings = {
   ],
 
   // ------------------------------------------------------------ course reset
-  "reset.title": ["Reset the course", "Reiniciar el curso"],
-  "reset.body": [
-    "Clears everything students did — check-ins, answers, quizzes, reflections, grades — and rewinds every class to not-yet-held. Your lectures, question banks, schedule and groups stay exactly as they are.",
-    "Borra todo lo que hicieron los estudiantes — registros, respuestas, quizzes, reflexiones, calificaciones — y regresa cada clase a no impartida. Tus lecciones, bancos de preguntas, calendario y grupos quedan intactos."
+  "reset.title.group": ["Reset {group}", "Reiniciar {group}"],
+  "reset.title.all": ["Reset every group", "Reiniciar todos los grupos"],
+  "reset.body.group": [
+    "Clears everything the students of {group} did — check-ins, answers, quizzes, reflections, grades — and rewinds that group's classes to not-yet-held. Every other group is left alone. Your lectures, question banks, schedule and groups stay exactly as they are.",
+    "Borra todo lo que hicieron los estudiantes de {group} — registros, respuestas, quizzes, reflexiones, calificaciones — y regresa las clases de ese grupo a no impartidas. Los demás grupos no se tocan. Tus lecciones, bancos de preguntas, calendario y grupos quedan intactos."
+  ],
+  "reset.body.all": [
+    "Clears everything students did in every group — check-ins, answers, quizzes, reflections, grades — and rewinds every class to not-yet-held. Your lectures, question banks, schedule and groups stay exactly as they are.",
+    "Borra todo lo que hicieron los estudiantes en todos los grupos — registros, respuestas, quizzes, reflexiones, calificaciones — y regresa cada clase a no impartida. Tus lecciones, bancos de preguntas, calendario y grupos quedan intactos."
+  ],
+  "reset.scope.group": [
+    "Only the group chosen in the top bar. Switch groups up there to clear a different one.",
+    "Solo el grupo elegido en la barra superior. Cambia de grupo ahí arriba para borrar otro."
+  ],
+  "reset.scope.all": [
+    "You are looking at All groups, so this clears every group at once. Choose one group in the top bar to clear only that one.",
+    "Estás viendo Todos los grupos, así que esto borra todos los grupos a la vez. Elige un grupo en la barra superior para borrar solo ese."
   ],
   "reset.check": ["See what would be cleared", "Ver qué se borraría"],
   "reset.checking": ["Counting…", "Contando…"],
@@ -2438,6 +2451,10 @@ export const strings = {
   "reset.summary": [
     "{activity} rows of student activity and {legacy} rows from the old pilot apps. {sessions} classes would be rewound; all {kept} stay in the schedule.",
     "{activity} registros de actividad de estudiantes y {legacy} registros de las apps piloto anteriores. {sessions} clases se regresarían a no impartidas; las {kept} permanecen en el calendario."
+  ],
+  "reset.summary.group": [
+    "{activity} rows of student activity in {group}. {sessions} of its classes would be rewound; all {kept} stay in the schedule.",
+    "{activity} registros de actividad de estudiantes en {group}. {sessions} de sus clases se regresarían a no impartidas; las {kept} permanecen en el calendario."
   ],
   "reset.col.what": ["What", "Qué"],
   "reset.col.rows": ["Rows", "Registros"],
@@ -2462,19 +2479,35 @@ export const strings = {
     "Kept: lectures, question banks, the schedule, groups, the roster, gradebook categories, and the record that this reset happened.",
     "Se conservan: lecciones, bancos de preguntas, calendario, grupos, lista de estudiantes, categorías del libro de calificaciones y el registro de que este reinicio ocurrió."
   ],
+  "reset.keptNote.group": [
+    "Kept: every other group untouched, plus lectures, question banks, the schedule, the roster, gradebook categories and items, and the record that this reset happened.",
+    "Se conservan: los demás grupos intactos, además de lecciones, bancos de preguntas, calendario, lista de estudiantes, categorías y rubros del libro de calificaciones, y el registro de que este reinicio ocurrió."
+  ],
   "reset.students": ["Students in the roster", "Estudiantes en la lista"],
   "reset.studentsBody": [
     "Tick anyone invented for a rehearsal to remove their account entirely. Leave real students unticked — their activity is cleared either way.",
     "Marca a quien hayas inventado para un ensayo para eliminar su cuenta por completo. Deja sin marcar a los estudiantes reales — su actividad se borra de todos modos."
   ],
+  "reset.students.group": ["Students in this group", "Estudiantes de este grupo"],
+  "reset.studentsBody.group": [
+    "Tick anyone invented for a rehearsal to take them out of this group. Someone who also sits in another group keeps that seat and their account. Leave real students unticked — their activity is cleared either way.",
+    "Marca a quien hayas inventado para un ensayo para sacarlo de este grupo. Quien también esté en otro grupo conserva ese lugar y su cuenta. Deja sin marcar a los estudiantes reales — su actividad se borra de todos modos."
+  ],
+  "reset.alsoElsewhere": ["also in another group", "también en otro grupo"],
   "reset.noStudents": ["Nobody is enrolled yet.", "Todavía no hay nadie inscrito."],
-  "reset.removeAria": ["Remove {name} from the course", "Quitar a {name} del curso"],
-  "reset.warning": [
-    "This deletes {rows} rows and {students} student accounts, and cannot be undone.",
-    "Esto elimina {rows} registros y {students} cuentas de estudiante, y no se puede deshacer."
+  "reset.removeAria": ["Remove {name}", "Quitar a {name}"],
+  "reset.warning.group": [
+    "This deletes {rows} rows from {group} and takes {students} students out of it, and cannot be undone.",
+    "Esto elimina {rows} registros de {group} y saca a {students} estudiantes del grupo, y no se puede deshacer."
+  ],
+  "reset.warning.all": [
+    "This deletes {rows} rows across all {groups} groups and {students} student accounts, and cannot be undone.",
+    "Esto elimina {rows} registros en los {groups} grupos y {students} cuentas de estudiante, y no se puede deshacer."
   ],
   "reset.placeholder": ["Type RESET to confirm", "Escribe RESET para confirmar"],
-  "reset.confirm": ["Reset the course now", "Reiniciar el curso ahora"],
+  "reset.placeholder.all": ["Type RESET ALL to confirm", "Escribe RESET ALL para confirmar"],
+  "reset.confirm.group": ["Reset {group} now", "Reiniciar {group} ahora"],
+  "reset.confirm.all": ["Reset every group now", "Reiniciar todos los grupos ahora"],
   "reset.running": ["Resetting…", "Reiniciando…"],
   "reset.cancel": ["Cancel", "Cancelar"],
   "reset.failed": ["The reset did not complete.", "El reinicio no se completó."],
