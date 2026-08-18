@@ -106,14 +106,6 @@ the pause id and write the real checkpoint column when the paired HTML contains
 that id — not done yet. Until then the slug is forward-compatible data sitting
 in the deck, costing nothing.
 
-## Not yet wired into the app
-
-`src/components/ImportPromptCard.tsx` still serves the original single-step
-prompt (`IMPORT_PROMPT`) on the Import tab. Replacing it with
-`02-question-bank-prompt.txt`, and adding a card for prompt 1, is a separate
-change — the in-app prompt was adopted verbatim by the professor and should not
-be swapped without his review.
-
 
 ## What changed in prompt 1 (2026-08-17)
 
