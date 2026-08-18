@@ -2,6 +2,52 @@
 
 **Last updated:** 2026-08-18
 
+### The scope switcher is now a viewpoint, and Content answers as that group's instructor (2026-08-18)
+
+The professor opened **Content** inside Group 501 and saw all four of his 401
+lectures. Two causes, stacked:
+
+1. `course-content-library`'s `isGlobalOwner` bypass answers "visible" before
+   any group is consulted, so the platform owner sees every item in the course
+   everywhere.
+2. Ownership lives on the **professor**, not on the group. There is no
+   `section_id` on `content_items` at all, so even without the bypass "mine"
+   would still have matched inside 501.
+
+The switcher's purpose is to let the owner see exactly what that group's
+instructor sees. So a listing made under one group now sends `view_section_id`
+and swaps its ownership test: not "owned by me" but **owned by an instructor of
+this group**, plus anything shared into it. *All groups* sends nothing and
+keeps the full owner view.
+
+Listing only. Every write keeps the caller's real permissions, so the owner can
+still delete or share his own item while standing in another group's view — the
+switcher must not read as a permission downgrade. The server cannot widen on
+the field: the bypass is dropped rather than granted, and a caller who neither
+owns the course nor teaches the named group gets their ordinary permissions
+back.
+
+Schedule's lecture picker follows the same rule, so a 502 class day can no
+longer be given a lecture that belongs to 401.
+
+**Verified in the professor's own Chrome against production, 2026-08-18:**
+401 → 4 lectures; 501 → empty; 502 → empty; 402 → exactly the 2 lectures
+shared into it; All groups → all 4; 502's lecture picker → "No lecture yet"
+only. No console errors.
+
+**Behaviour change, not a bug:** a group whose instructor has authored nothing
+and received no share now shows an empty Content library. That is what that
+group's instructor sees.
+
+**Known and deliberate difference from full fidelity:** inside another group's
+view the owner still gets his own item's owner controls (Make available, Share,
+Delete), where the real instructor of that group would see a read-only *Shared*
+card with a Copy button. The *list* is faithful; the *controls* are still his,
+because he owns the item and needs them to fix what he finds. Revisit if the
+professor wants strict what-they-see fidelity.
+
+Frontend `ebd594c`; `course-content-library` deployed to `ojmbupftdikwmlqvibwt`.
+
 ### Reflection submit no longer fails for a student enrolled in two sections (2026-08-18)
 
 The professor's full test run in 501 got through the whole class and then hit

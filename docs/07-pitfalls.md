@@ -6,6 +6,38 @@ the UI is silently wrong.**
 
 ---
 
+## 87. A permission bypass makes every group-scoped screen lie, silently
+
+**Reported 2026-08-18: "I select Group 501 and I see all four of my lectures."**
+
+`course-content-library` grants the platform owner `isGlobalOwner`, and
+`canEditContentItem` returns true on it before anything else is checked.
+Visibility is derived from editability, so the owner saw the whole course
+library inside every group. Nothing errored; the switcher simply had no effect
+on that screen, and the client-side scope filters (`scopedReleases`,
+`scopedSessions`) all ran correctly on the *releases* and *sessions* while the
+item list they hung off had never been narrowed at all.
+
+Two things worth keeping:
+
+**A screen is only as scoped as its least-scoped query.** Content filtered its
+releases, its shares, and its assignable classes by group — five correct
+filters — around one list that was never filtered. The correct filters made it
+look scoped, which is why it survived so long.
+
+**An owner bypass is not a superset of a normal view, it is a different view.**
+"See what they see" cannot be built on top of a permission check that answers
+early and true. The bypass has to be *dropped* for the impersonated view, and
+the ownership test replaced — not merely narrowed — because the owner's own
+profile id still matches his own items inside somebody else's group.
+
+**Rule:** when a role can bypass a visibility check, every screen that claims
+to be scoped needs a test *as that role*. A non-owner instructor would never
+have reproduced this — the bug was only visible to the one account that could
+not see it was a bug.
+
+---
+
 ## 84. A gate whose only key is a habit is not a gate, it is a dead end
 
 **Reported 2026-08-14 with a screenshot of "No grades yet" on a phone whose
