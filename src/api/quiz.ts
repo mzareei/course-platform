@@ -72,6 +72,7 @@ export function setQuizNameReveal(input: { attempt_id: string; revealed: boolean
 }
 
 // ---------------------------------------------------------------- instructor
+/** The time_limit_seconds includes the professor's one-minute cushion. */
 export function startClassQuiz(input: { class_session_id: string; content_slug: string; question_count?: number; time_limit_seconds?: number }) {
   return callFn<{ instance_id: string; reused: boolean }>("course-class-quiz", { action: "start", ...input });
 }

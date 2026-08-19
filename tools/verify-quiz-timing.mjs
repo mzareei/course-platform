@@ -119,7 +119,7 @@ assert.equal(
   MAX_TOTAL_SECONDS,
   "an absurd quiz clamps to the one-hour ceiling"
 );
-assert.equal(CUSHION_SECONDS, 120, "the cushion is the professor's two minutes");
+assert.equal(CUSHION_SECONDS, 60, "the cushion is the professor's one minute");
 
 // ------------------------------------------------------ no second copy of it
 // The server stamps each question with its own `seconds`; the player reads that
