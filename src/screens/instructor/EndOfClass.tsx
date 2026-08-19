@@ -223,6 +223,11 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
               </button>
             </div>
           ) : null}
+          {raceInstanceId && !showingPinata ? (
+            <button class="btn" type="button" onClick={() => setShowingPinata(true)}>
+              {t("pinata.show")}
+            </button>
+          ) : null}
           <button class="btn primary" type="button" disabled={busy} onClick={onStart}>
             {busy
               ? t("endOfClass.starting")

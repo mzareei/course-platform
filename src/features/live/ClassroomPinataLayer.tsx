@@ -10,12 +10,13 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { classQuizRace, type RaceStatus, type PodiumEntry } from "../../api/quiz";
 import { clockText } from "../quiz/clock";
-import { raceEvents, chantLine, type RaceSnap } from "../quiz/commentary";
+import { raceEvents, chantLine, BURST_LINE, type RaceSnap } from "../quiz/commentary";
 import { t, lang } from "../../i18n";
 
 const POLL_MS = 2000;
 const LINE_MS = 4000;   // each event line holds at least this long
 const CHANT_MS = 8000;  // idle time before a chant fills the silence
+const QUEUE_CAP = 6;    // a mass finish must never build a multi-minute backlog
 
 function toSnap(race: RaceStatus): RaceSnap {
   return {
@@ -63,26 +64,62 @@ export function ClassroomPinataLayer({
   // The race poll. Stops for good on the first closed payload — the freeze.
   useEffect(() => {
     let cancelled = false;
+    let id: ReturnType<typeof setInterval> | undefined;
+    const freeze = () => {
+      frozen.current = true;
+      if (id !== undefined) clearInterval(id);
+    };
     const tick = () => {
       if (frozen.current) return;
       classQuizRace(instanceId)
         .then((res) => {
           if (cancelled) return;
           const snap = toSnap(res);
+
+          // The first payload after mount is a baseline, not an event: with
+          // no prior snapshot to diff against, raceEvents would replay every
+          // milestone the race already passed (25/50/75, even the burst) and
+          // the rain would fire again on a race that already popped minutes
+          // ago. Reopening after Escape hits this same path.
+          if (prevSnap.current === null) {
+            prevSnap.current = snap;
+            setRace(res);
+            if (res.state === "closed") freeze();
+            return;
+          }
+
           const events = raceEvents(prevSnap.current, snap, lang.value === "es" ? "es" : "en");
-          queue.current.push(...events);
+          const burstIndex = events.indexOf(BURST_LINE);
+          if (burstIndex !== -1) {
+            // The burst is the loudest moment on this screen. It must not sit
+            // behind a backlog of candy lines from the same mass-finish poll,
+            // and the rain (below) already fires the instant it happens — so
+            // the line jumps the queue too, dropping whatever was pending.
+            queue.current = events.slice(burstIndex + 1);
+            setLine(BURST_LINE);
+            lastLineAt.current = Date.now();
+          } else {
+            queue.current.push(...events);
+          }
+          // A mass finish (everyone submits in the same poll) can enqueue
+          // dozens of candy lines; draining one per LINE_MS would take
+          // minutes. Keep only the freshest few.
+          if (queue.current.length > QUEUE_CAP) {
+            queue.current = queue.current.slice(-QUEUE_CAP);
+          }
+
           if (!prevSnap.current?.burst && snap.burst && !reducedMotion) {
             setRaining(true);
             setTimeout(() => setRaining(false), 3000);
           }
           prevSnap.current = snap;
           setRace(res);
-          if (res.state === "closed") frozen.current = true;
+          if (res.state === "closed") freeze();
         })
         .catch(() => { /* one missed poll is invisible; the next one catches up */ });
     };
     tick();
-    const id = setInterval(tick, POLL_MS);
+    id = setInterval(tick, POLL_MS);
     return () => { cancelled = true; clearInterval(id); };
   }, [instanceId]);
 
