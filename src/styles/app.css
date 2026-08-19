@@ -1305,3 +1305,42 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* The piñata race — the room's screen. Same posture as the podium layer:
+   fixed, opaque, dark whatever the app theme, nothing translucent for the
+   room to read the professor's screen through. */
+.classroom-pinata-layer {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+  gap: 1rem; padding: 1.5rem 2rem; background: #0f1420; color: #f4f6fb;
+}
+.pinata-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
+.pinata-clock { font-size: 3.2rem; font-weight: 800; line-height: 1; margin: 0; }
+.pinata-line { min-height: 1.4em; color: #ffd166; font-size: 1.15rem; margin: 0.4rem 0 0; }
+.pinata-counts { text-align: right; color: #aab3c5; }
+.pinata-counts b { color: #fff; }
+.pinata-main { flex: 1; display: grid; grid-template-columns: 1fr 22%; gap: 1.2rem; min-height: 0; }
+.pinata-track { display: grid; gap: 4px; align-items: end; }
+.pinata-col { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px;
+  min-height: 100%; border-left: 1px dashed rgba(255, 255, 255, 0.12); padding-bottom: 1.4rem; position: relative; }
+.pinata-col-label { position: absolute; bottom: 0; font-size: 0.7rem; color: #6f7a90; }
+.pinata-racer { font-size: 1.5rem; line-height: 1.1; text-align: center; transition: transform 400ms ease; }
+.pinata-racer small { display: block; font-size: 0.55rem; color: #c9d1e0; max-width: 5.5rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pinata-side { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; }
+.pinata-figure { font-size: 5rem; transform: rotate(-10deg); }
+.pinata-figure.burst { transform: none; filter: drop-shadow(0 0 20px rgba(255, 209, 102, 0.7)); }
+.pinata-side .pinata-bar { width: 100%; }
+.pinata-name { color: #ffd166; font-size: 0.9rem; margin: 0; }
+.pinata-casi { font-weight: 700; margin: 0; }
+.pinata-porra { margin-top: auto; background: rgba(255, 255, 255, 0.06); border-radius: 10px;
+  padding: 0.6rem; width: 100%; }
+.pinata-porra p { margin: 0; font-size: 0.85rem; }
+.pinata-porra-row { font-size: 1.3rem; letter-spacing: 0.1em; }
+.pinata-rain { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.pinata-rain span { position: absolute; top: -2rem; font-size: 2rem; animation: pinata-fall 2.6s ease-in forwards; }
+@keyframes pinata-fall { to { transform: translateY(110vh) rotate(300deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .pinata-rain { display: none; }
+  .pinata-racer { transition: none; }
+}
+.pinata-actions { display: flex; justify-content: center; gap: 0.8rem; }

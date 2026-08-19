@@ -36,7 +36,8 @@ const allowedIdentical = new Set([
   "people.col.id",
   "type.material",
   "state.live",
-  "pinata.burst"
+  "pinata.burst",
+  "pinata.porra"
 ]);
 
 for (const [, key, en, es] of entries) {

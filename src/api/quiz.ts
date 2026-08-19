@@ -160,3 +160,40 @@ export function classQuizPodium(input: { class_session_id: string }) {
     { action: "podium", ...input }
   );
 }
+
+export interface RaceRacer {
+  racer_name: string;
+  racer_emoji: string;
+  position: number;
+  answered: number;
+  finished: boolean;
+  finish_place: number | null;
+}
+
+export interface RaceCheer {
+  from_name: string;
+  from_emoji: string;
+  to_name: string;
+  to_emoji: string;
+  at: string;
+}
+
+export interface RaceStatus {
+  instance_id: string;
+  state: string;
+  ends_at: string | null;
+  question_count: number | null;
+  present: number;
+  started: number;
+  submitted: number;
+  closed_reason: "time" | "everyone" | null;
+  pinata: { name: string; hits: number; total: number; percent: number; burst: boolean };
+  racers: RaceRacer[];
+  cheers: RaceCheer[];
+  cheers_total: number;
+}
+
+/** The room's screen, in one call: counts, racers by secret name, the piñata. */
+export function classQuizRace(activityInstanceId: string) {
+  return callFn<RaceStatus>("course-class-quiz", { action: "race", activity_instance_id: activityInstanceId });
+}

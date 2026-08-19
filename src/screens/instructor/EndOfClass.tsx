@@ -20,6 +20,7 @@ import { classReflections, type ClassReflection } from "../../api/reflection";
 import { clockText } from "../../features/quiz/clock";
 import { Podium } from "../../features/quiz/Podium";
 import { ClassroomPodiumLayer } from "../../features/live/ClassroomPodiumLayer";
+import { ClassroomPinataLayer } from "../../features/live/ClassroomPinataLayer";
 
 const POLL_MS = 4000;
 
@@ -30,6 +31,11 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   const [reflections, setReflections] = useState<ClassReflection[] | null>(null);
   const [podium, setPodium] = useState<PodiumEntry[]>([]);
   const [showingPodium, setShowingPodium] = useState(false);
+  // The race outlives the instance: EndOfClass clears `instanceId` when the
+  // quiz closes, but the frozen final screen must survive that. Replaced on
+  // the next start, not on close.
+  const [raceInstanceId, setRaceInstanceId] = useState<string | null>(null);
+  const [showingPinata, setShowingPinata] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
@@ -55,6 +61,8 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
         if (cancelled) return;
         if (res.instance_id) {
           setInstanceId(res.instance_id);
+          setRaceInstanceId(res.instance_id);
+          setShowingPinata(true);
         } else if (res.last_closed_instance_id) {
           const done = await classQuizStatus(res.last_closed_instance_id).catch(() => null);
           if (done && !cancelled) setLastResult(done);
@@ -128,6 +136,8 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
       setLastResult(null);
       setStatus(null);
       setInstanceId(instance_id);
+      setRaceInstanceId(instance_id);
+      setShowingPinata(true);
     } catch (e) {
       setError(apiErrorText(e, "endOfClass.startFailed"));
     } finally {
@@ -182,6 +192,9 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
           ) : null}
           <button class="btn" type="button" disabled={busy} onClick={onClose}>
             {busy ? t("endOfClass.closing") : t("endOfClass.close")}
+          </button>
+          <button class="btn" type="button" onClick={() => setShowingPinata(true)}>
+            {t("pinata.show")}
           </button>
         </div>
       ) : (
@@ -238,6 +251,14 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
 
       {showingPodium ? (
         <ClassroomPodiumLayer entries={podium} onClose={() => setShowingPodium(false)} />
+      ) : null}
+      {showingPinata && raceInstanceId ? (
+        <ClassroomPinataLayer
+          instanceId={raceInstanceId}
+          podium={podium}
+          onShowPodium={() => { setShowingPinata(false); setShowingPodium(true); }}
+          onClose={() => setShowingPinata(false)}
+        />
       ) : null}
     </section>
   );

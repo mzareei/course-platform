@@ -203,4 +203,17 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   }
 }
 
+// ------------------------------------------------- the room's screen
+{
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  assert.match(layer, /classQuizRace\(/, "the layer polls the race action");
+  assert.match(layer, /raceEvents\(/, "poll diffs feed the announcer");
+  assert.match(layer, /chantLine\(/, "idle time cheers the back of the pack");
+  assert.match(layer, /Escape/, "Escape closes the layer");
+  assert.match(layer, /prefers-reduced-motion|reducedMotion/, "candy rain respects reduced motion");
+  const endOfClass = readFileSync(frontend("src/screens/instructor/EndOfClass.tsx"), "utf8");
+  assert.match(endOfClass, /ClassroomPinataLayer/, "End of Class mounts the layer");
+  assert.match(endOfClass, /setShowingPinata\(true\)/, "the layer opens on start/adopt");
+}
+
 console.log("verify-quiz-race passed");
