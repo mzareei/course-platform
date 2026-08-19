@@ -132,4 +132,13 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(positionAt(dl, t0 + 999_000), 3, "clamped to the final question");
 }
 
+// ------------------------------------------------- the player
+{
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.match(player, /from "\.\/budget"/, "the player uses the shared budget module");
+  assert.match(player, /reportProgress\(/, "the player pings progress");
+  assert.match(player, /quiz\.letsGo/, "the splash has a Let's go button");
+  assert.ok(!/setQuestionDeadline/.test(player), "the per-question deadline state is gone — the budget rules");
+}
+
 console.log("verify-quiz-race passed");

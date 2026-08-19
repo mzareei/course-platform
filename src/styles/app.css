@@ -1263,6 +1263,10 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   background: var(--primary-soft);
 }
 
+/* The racer splash: one identity, one button, nothing to study. */
+.quiz-splash { align-items: center; text-align: center; padding: 1.5rem 0; }
+.quiz-splash-racer { font-size: 1.8rem; font-weight: 800; }
+
 /* ---------------------------------------------------------------- generation progress */
 .progress-track {
   height: 6px;

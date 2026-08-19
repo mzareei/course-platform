@@ -36,6 +36,9 @@ export interface QuizAttempt {
   score_raw?: number | null;
   score_percent?: number | null;
   score_final?: number | null;
+  /** Secret racer identity for the piñata race; null outside live-class quizzes. */
+  racer_name?: string | null;
+  racer_emoji?: string | null;
 }
 
 export interface StartAttemptResponse {
@@ -62,6 +65,13 @@ export function submitQuizAttempt(input: {
   integrity?: Record<string, unknown>;
 }) {
   return callFn<SubmitAttemptResponse>("course-activity-attempt", { action: "submit_attempt", ...input });
+}
+
+/** Fire-and-forget: "I'm on question `position`, answered `answered`." Moves
+ *  this student's racer on the room's screen. Callers swallow failures — a
+ *  dropped ping must never interrupt a student mid-quiz. */
+export function reportProgress(input: { attempt_id: string; position: number; answered: number }) {
+  return callFn<{ ok: boolean }>("course-activity-attempt", { action: "report_progress", ...input });
 }
 
 export function setQuizNameReveal(input: { attempt_id: string; revealed: boolean }) {

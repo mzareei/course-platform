@@ -2058,6 +2058,9 @@ export const strings = {
   ],
   "quiz.timeUpAdvancing": ["Time's up — moving on…", "Se acabó el tiempo — avanzando…"],
   "quiz.totalLeft": ["{time} left in total", "{time} en total"],
+  "quiz.splashEyebrow": ["Today you are", "Hoy eres"],
+  "quiz.splashHint": ["Only you know — find yourself on the big screen.", "Solo tú lo sabes — búscate en la pantalla."],
+  "quiz.letsGo": ["Let's go!", "¡Vamos!"],
 
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],

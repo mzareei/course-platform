@@ -12,8 +12,9 @@
 // duration.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t, lang, apiErrorText } from "../../i18n";
-import { startQuizAttempt, submitQuizAttempt, type QuizQuestion, type SubmitAttemptResponse } from "../../api/quiz";
+import { startQuizAttempt, submitQuizAttempt, reportProgress, type QuizQuestion, type SubmitAttemptResponse } from "../../api/quiz";
 import { clockText } from "./clock";
+import { deadlines, positionAt } from "./budget";
 
 // The server sends each question's own time. The fallback is the floor, never
 // a table: if a stale deployment omits the field, a student gets the minimum
@@ -51,7 +52,8 @@ export function QuizPlayer({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [questionDeadline, setQuestionDeadline] = useState<number | null>(null);
+  const [t0, setT0] = useState<number | null>(null);
+  const [racer, setRacer] = useState<{ name: string; emoji: string } | null>(null);
   const [instanceEndsAt, setInstanceEndsAt] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
   const questionRef = useRef<HTMLHeadingElement | null>(null);
@@ -86,7 +88,13 @@ export function QuizPlayer({
           // the server sent one, and never a fabricated 0%.
           setResumed({ percent: typeof res.attempt.score_percent === "number" ? res.attempt.score_percent : null });
         } else if (res.questions.length) {
-          setQuestionDeadline(Date.now() + secondsFor(res.questions[0]) * 1000);
+          if (res.attempt.racer_name) {
+            // The splash owns the clock: T0 is set when the student taps.
+            setRacer({ name: res.attempt.racer_name, emoji: res.attempt.racer_emoji || "🎒" });
+          } else {
+            // Stale server without racer names — no splash, clock starts now.
+            setT0(Date.now());
+          }
         }
       })
       .catch((e) => setError(apiErrorText(e, "quiz.startFailed")));
@@ -164,20 +172,47 @@ export function QuizPlayer({
     }
     const nextIndex = i + 1;
     setIndex(nextIndex);
-    setQuestionDeadline(Date.now() + secondsFor(qs[nextIndex]) * 1000);
+    ping(nextIndex);
   }
 
-  // Auto-advance (or auto-submit on the last question) the moment a
-  // question's own timer expires — the whole point of a live, timed,
-  // one-after-another quiz instead of a browse-at-your-own-pace one.
+  function ping(position: number) {
+    if (!attemptId) return;
+    const answered = Object.keys(stateRef.current.answers).length;
+    reportProgress({ attempt_id: attemptId, position, answered }).catch(() => {
+      /* fire-and-forget: the race is cosmetic, the quiz is not */
+    });
+  }
+
+  function onLetsGo() {
+    setT0(Date.now());
+    ping(0);
+  }
+
+  // Deadlines are derived, not stored.
+  const dl = questions && t0 !== null ? deadlines(questions.map(secondsFor), t0) : null;
+
+  // The budget clock. One effect owns both moves: skip forward to wherever
+  // the running budget says the student should be (a phone asleep through
+  // three questions lands on the right one in a single tick), and submit
+  // when the final deadline passes.
   useEffect(() => {
-    const { busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
-    // hasError: a failed auto-submit must not re-fire every clock tick — the
-    // student retries from the visible Submit button instead.
-    if (!questionDeadline || hasResult || hasResumed || isBusy || hasError) return;
-    if (now >= questionDeadline) advance();
+    const { index: i, questions: qs, answers: a, busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
+    if (!dl || !qs || hasResult || hasResumed || isBusy || hasError) return;
+    if (now >= dl[dl.length - 1] && i >= qs.length - 1) {
+      if (Object.keys(a).length === 0) {
+        setResumed({ percent: null });
+        return;
+      }
+      void submitNow(a);
+      return;
+    }
+    const target = positionAt(dl, now);
+    if (target > i) {
+      setIndex(target);
+      ping(target);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, questionDeadline]);
+  }, [now, dl === null]);
 
   // The whole quiz has a deadline, not just each question. When it passes the
   // player stops feeding new questions and sends what the student has, landing
@@ -259,6 +294,19 @@ export function QuizPlayer({
   }
   if (!questions) return <p class="hint">{t("quiz.loading")}</p>;
 
+  // The racer splash: the identity is secret, so it shows once, full screen,
+  // and the clock does not run until the student says go.
+  if (racer && t0 === null && !resumed && !result) {
+    return (
+      <div class="stack quiz-splash">
+        <p class="eyebrow">{t("quiz.splashEyebrow")}</p>
+        <p class="quiz-splash-racer"><span aria-hidden="true">{racer.emoji}</span> {racer.name}</p>
+        <p class="hint">{t("quiz.splashHint")}</p>
+        <button class="btn primary" type="button" onClick={onLetsGo}>{t("quiz.letsGo")}</button>
+      </div>
+    );
+  }
+
   if (resumed) {
     return (
       <div class="stack">
@@ -279,7 +327,7 @@ export function QuizPlayer({
     );
   }
 
-  const remaining = questionDeadline ? Math.max(0, Math.round((questionDeadline - now) / 1000)) : null;
+  const remaining = dl ? Math.max(0, Math.round((dl[index] - now) / 1000)) : null;
   const current = questions[index];
   const answered = Object.keys(answers).length;
   const difficultyLabel = t(`quiz.difficulty.${current.difficulty}` as "quiz.difficulty.easy");
