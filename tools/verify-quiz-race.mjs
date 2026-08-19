@@ -109,4 +109,11 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(quiz, /🎒 Mochila/, "an unnamed attempt is labelled, never hidden");
 }
 
+// ------------------------------------------------- course-pulse my_race
+{
+  const pulse = readFileSync(fn("course-pulse/index.ts"), "utf8");
+  assert.match(pulse, /my_race/, "the student poll carries my_race");
+  assert.match(pulse, /from "\.\.\/_shared\/pinata\.ts"/, "the phone and the room share one piñata formula");
+}
+
 console.log("verify-quiz-race passed");
