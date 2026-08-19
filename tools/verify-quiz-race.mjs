@@ -150,4 +150,57 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(live, /myRace=\{/, "Live hands my_race to the player");
 }
 
+// ------------------------------------------------- the announcer
+{
+  const c = await import(frontend("src/features/quiz/commentary.ts").href);
+  assert.equal(c.SONG_25, "🎶 Dale, dale, dale…");
+  assert.equal(c.SONG_50, "🎶 …no pierdas el tino…");
+  assert.equal(c.SONG_75, "🎶 …porque si lo pierdes…");
+  assert.equal(c.BURST_LINE, "🎶 …¡pierdes el camino! — ¡SE ROMPIÓ! 🪅💥");
+
+  const racer = (name, emoji, position, finished = false, place = null) =>
+    ({ racer_name: name, racer_emoji: emoji, position, answered: position, finished, finish_place: place });
+  const snap = (percent, racers, extra = {}) =>
+    ({ percent, burst: false, closed_reason: null, state: "live", racers, cheers: [], ...extra });
+
+  const pack = [
+    racer("Perezoso Zen", "🦥", 0), racer("Ardilla Turbo", "🐿️", 1), racer("Delfín Zen", "🐬", 2),
+    racer("Caballo Épico", "🐴", 4), racer("Pulpo Ninja", "🐙", 5), racer("Rana Viral", "🐸", 5),
+    racer("Águila Jedi", "🦅", 6), racer("Abeja Zen", "🐝", 6), racer("Coyote Astral", "🐺", 7),
+    racer("Oso Genial", "🐻", 8), racer("Ajolote Veloz", "🦎", 11, true, 1), racer("Jaguar Audaz", "🐆", 11, true, 2)
+  ];
+
+  // Milestones fire once each, in order, on crossings.
+  let events = c.raceEvents(snap(20, pack), snap(55, pack), "en");
+  assert.ok(events.includes(c.SONG_25) && events.includes(c.SONG_50), "crossed milestones sing");
+  // A new finisher gets a candy line; a new cheer gets a porra line.
+  const before = snap(50, pack);
+  const after = snap(52, pack.map((r) => r.racer_name === "Oso Genial" ? { ...r, finished: true, finish_place: 3 } : r),
+    { cheers: [{ from_name: "Ajolote Veloz", from_emoji: "🦎", to_name: "Perezoso Zen", to_emoji: "🦥", at: "x" }] });
+  events = c.raceEvents(before, after, "en");
+  assert.ok(events.some((l) => l.includes("Oso Genial") && l.includes("🍬")), "finisher line");
+  assert.ok(events.some((l) => l.includes("cheers for")), "cheer line");
+  // Closing by time without a burst is a near-miss, never a defeat-shame.
+  events = c.raceEvents(snap(71, pack), snap(71, pack, { state: "closed", closed_reason: "time" }), "en");
+  assert.ok(events.some((l) => l.includes("¡Casi!")), "the time close says casi");
+
+  // 10,000 chants: never a banned word, never the same target twice running.
+  let seed = 42;
+  const rng = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  let lastTarget = null;
+  for (let i = 0; i < 10000; i++) {
+    const chant = c.chantLine(snap(40, pack), lastTarget, rng);
+    assert.ok(chant, "a live pack always has someone to cheer");
+    for (const word of c.BANNED_WORDS) {
+      assert.ok(!chant.line.toLowerCase().includes(word), `banned word "${word}" in: ${chant.line}`);
+    }
+    assert.notEqual(chant.target, lastTarget, "never the same racer twice in a row");
+    lastTarget = chant.target;
+  }
+  // Every event template is also banned-word-free.
+  for (const line of events) {
+    for (const word of c.BANNED_WORDS) assert.ok(!line.toLowerCase().includes(word), `banned word in event: ${line}`);
+  }
+}
+
 console.log("verify-quiz-race passed");
