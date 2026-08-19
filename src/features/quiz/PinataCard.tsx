@@ -13,11 +13,33 @@ export function PinataCard({ race, attemptId }: { race: MyRace; attemptId: strin
   const [cooldown, setCooldown] = useState(0);
   const [lastCheer, setLastCheer] = useState<{ name: string; emoji: string } | null>(null);
   const [nobodyLeft, setNobodyLeft] = useState(false);
+  // Guards the async gap between tap and cheerRacer() resolving — without it
+  // a fast double-tap fires two concurrent cheers before `cooldown` (which
+  // only starts ticking once a response lands) has a chance to disable the
+  // button.
+  const [busy, setBusy] = useState(false);
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => () => clearInterval(timer.current), []);
 
+  // The single place a cooldown begins, whether the cheer landed or the
+  // server said "wait" — both leave the student on the same 20-second timer,
+  // and both need the interval actually running so the button re-enables on
+  // its own instead of getting stuck at "Next cheer in 20s" forever.
+  function startCooldown() {
+    setCooldown(COOLDOWN_SECONDS);
+    clearInterval(timer.current);
+    timer.current = setInterval(() => {
+      setCooldown((s) => {
+        if (s <= 1) clearInterval(timer.current);
+        return Math.max(0, s - 1);
+      });
+    }, 1000) as unknown as number;
+  }
+
   async function onCheer() {
+    if (busy) return;
+    setBusy(true);
     try {
       const res = await cheerRacer({ attempt_id: attemptId });
       if (!res.ok) {
@@ -25,18 +47,13 @@ export function PinataCard({ race, attemptId }: { race: MyRace; attemptId: strin
         return;
       }
       if (res.to) setLastCheer({ name: res.to.racer_name, emoji: res.to.racer_emoji });
-      setCooldown(COOLDOWN_SECONDS);
-      clearInterval(timer.current);
-      timer.current = setInterval(() => {
-        setCooldown((s) => {
-          if (s <= 1) clearInterval(timer.current);
-          return Math.max(0, s - 1);
-        });
-      }, 1000) as unknown as number;
+      startCooldown();
     } catch {
       // The server said "wait" (or the quiz just closed). Either way the
       // student loses nothing — show the cooldown and move on.
-      setCooldown(COOLDOWN_SECONDS);
+      startCooldown();
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -60,7 +77,7 @@ export function PinataCard({ race, attemptId }: { race: MyRace; attemptId: strin
         <p class="hint">{t("pinata.nobodyLeft")}</p>
       ) : (
         <>
-          <button class="btn" type="button" disabled={cooldown > 0} onClick={onCheer}>
+          <button class="btn" type="button" disabled={cooldown > 0 || busy} onClick={onCheer}>
             {cooldown > 0 ? t("pinata.cheerCooldown", { seconds: cooldown }) : t("pinata.cheerButton")}
           </button>
           {lastCheer ? <p class="hint">{t("pinata.youCheered", { emoji: lastCheer.emoji, name: lastCheer.name })}</p> : null}

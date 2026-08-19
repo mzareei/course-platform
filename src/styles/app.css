@@ -1269,6 +1269,7 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 
 /* The done-screen race card and its crack bar. */
 .pinata-card { display: grid; gap: 0.5rem; }
+.pinata-card-bar-label { margin: 0; font-weight: 650; }
 .pinata-bar { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
 .pinata-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff6ec7, #ffd166, #6ee7ff); transition: width 400ms ease; }
 
