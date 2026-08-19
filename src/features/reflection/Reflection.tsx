@@ -1,5 +1,5 @@
 // The end-of-class reflection: one paragraph on what was learned, within the
-// professor's word range (50-100 by default). The counter updates live so a
+// professor's word range (40-100 by default). The counter updates live so a
 // student knows before they try to submit, not after a rejection.
 import { useState } from "preact/hooks";
 import type { ClassGrade } from "../../api/types";

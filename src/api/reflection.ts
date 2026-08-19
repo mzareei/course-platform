@@ -1,5 +1,5 @@
 // The end-of-class reflection: one paragraph, a professor-set word range
-// (50-100 by default). Enforced server-side; the client mirrors the bounds so
+// (40-100 by default). Enforced server-side; the client mirrors the bounds so
 // the counter is accurate before submitting.
 import { callFn } from "./client";
 import type { ClassGrade } from "./types";
