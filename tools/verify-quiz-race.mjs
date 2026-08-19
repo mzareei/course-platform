@@ -116,4 +116,20 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(pulse, /from "\.\.\/_shared\/pinata\.ts"/, "the phone and the room share one piñata formula");
 }
 
+// ------------------------------------------------- the carry-over budget
+{
+  const { deadlines, positionAt } = await import(frontend("src/features/quiz/budget.ts").href);
+  const t0 = 1_000_000;
+  // 30/30/45/30: cumulative deadlines, so saved time visibly rolls forward.
+  const dl = deadlines([30, 30, 45, 30], t0);
+  assert.deepEqual(dl, [t0 + 30_000, t0 + 60_000, t0 + 105_000, t0 + 135_000], "deadlines are cumulative");
+  // Answering Q1 at 25s leaves 35s on Q2 — the spec's example.
+  assert.equal(dl[1] - (t0 + 25_000), 35_000, "25s on Q1 leaves 35s for Q2");
+  assert.equal(positionAt(dl, t0 + 5_000), 0, "before the first deadline you are on Q1");
+  assert.equal(positionAt(dl, t0 + 30_000), 1, "at the deadline you have moved on");
+  // A phone asleep through three deadlines lands on the right question in one call.
+  assert.equal(positionAt(dl, t0 + 110_000), 3, "skip-forward over missed questions");
+  assert.equal(positionAt(dl, t0 + 999_000), 3, "clamped to the final question");
+}
+
 console.log("verify-quiz-race passed");
