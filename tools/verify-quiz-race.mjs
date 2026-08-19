@@ -87,4 +87,17 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   }
 }
 
+// ------------------------------------------------- course-activity-attempt wiring
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /from "\.\.\/_shared\/racer-names\.ts"/, "imports the racer-name generator");
+  assert.match(attempt, /report_progress/, "has the report_progress action");
+  assert.match(attempt, /"cheer"/, "has the cheer action");
+  assert.match(attempt, /Wait a moment before the next cheer\./, "cheer enforces the cooldown server-side");
+  assert.match(attempt, /nobody_left/, "cheer reports an empty room");
+  assert.match(attempt, /progress_position: questionCount/, "submit stamps final progress position");
+  assert.match(attempt, /racer_name, racer_emoji/, "attempt selects carry the racer identity");
+  assert.match(attempt, /\.is\("racer_name", null\)/, "racer assignment cannot overwrite an existing name");
+}
+
 console.log("verify-quiz-race passed");
