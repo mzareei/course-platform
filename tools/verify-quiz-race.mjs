@@ -100,4 +100,13 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(attempt, /\.is\("racer_name", null\)/, "racer assignment cannot overwrite an existing name");
 }
 
+// ------------------------------------------------- course-class-quiz race action
+{
+  const quiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
+  assert.match(quiz, /case "race":/, "router exposes the race action");
+  assert.match(quiz, /from "\.\.\/_shared\/pinata\.ts"/, "race uses the shared piñata formula");
+  assert.match(quiz, /finish_place/, "race ranks finishers by submitted_at");
+  assert.match(quiz, /🎒 Mochila/, "an unnamed attempt is labelled, never hidden");
+}
+
 console.log("verify-quiz-race passed");
