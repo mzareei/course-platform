@@ -2062,6 +2062,16 @@ export const strings = {
   "quiz.splashHint": ["Only you know — find yourself on the big screen.", "Solo tú lo sabes — búscate en la pantalla."],
   "quiz.letsGo": ["Let's go!", "¡Vamos!"],
 
+  "pinata.cardTitle": ["🪅 Piñata: {percent}% cracked", "🪅 Piñata: {percent}% quebrada"],
+  "pinata.burst": ["¡SE ROMPIÓ! 🪅💥", "¡SE ROMPIÓ! 🪅💥"],
+  "pinata.gotCandy": ["🍬 You grabbed a candy", "🍬 Agarraste un dulce"],
+  "pinata.yourRacer": ["You were {emoji} {name} — #{place} across the line", "Fuiste {emoji} {name} — #{place} en llegar"],
+  "pinata.yourRacerNoPlace": ["You were {emoji} {name}", "Fuiste {emoji} {name}"],
+  "pinata.cheerButton": ["📣 Cheer someone on!", "📣 ¡Échale porra!"],
+  "pinata.cheerCooldown": ["Next cheer in {seconds}s", "Siguiente porra en {seconds}s"],
+  "pinata.youCheered": ["📣 You cheered for {emoji} {name}!", "📣 ¡Le echaste porra a {emoji} {name}!"],
+  "pinata.nobodyLeft": ["Everyone's done — watch the piñata!", "Ya terminaron todos — ¡mira la piñata!"],
+
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],
   "reflection.title": ["What did you learn today?", "¿Qué aprendiste hoy?"],

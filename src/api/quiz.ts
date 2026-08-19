@@ -81,6 +81,15 @@ export function setQuizNameReveal(input: { attempt_id: string; revealed: boolean
   );
 }
 
+/** One cheer from a finished student. The server picks who receives it and
+ *  enforces a 20-second cooldown. */
+export function cheerRacer(input: { attempt_id: string }) {
+  return callFn<{ ok: boolean; reason?: string; to?: { racer_name: string; racer_emoji: string } }>(
+    "course-activity-attempt",
+    { action: "cheer", ...input }
+  );
+}
+
 // ---------------------------------------------------------------- instructor
 /** The time_limit_seconds includes the professor's one-minute cushion. */
 export function startClassQuiz(input: { class_session_id: string; content_slug: string; question_count?: number; time_limit_seconds?: number }) {

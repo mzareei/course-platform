@@ -13,8 +13,10 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t, lang, apiErrorText } from "../../i18n";
 import { startQuizAttempt, submitQuizAttempt, reportProgress, type QuizQuestion, type SubmitAttemptResponse } from "../../api/quiz";
+import type { MyRace } from "../../api/pulse";
 import { clockText } from "./clock";
 import { deadlines, positionAt } from "./budget";
+import { PinataCard } from "./PinataCard";
 
 // The server sends each question's own time. The fallback is the floor, never
 // a table: if a stale deployment omits the field, a student gets the minimum
@@ -28,7 +30,8 @@ function secondsFor(question: QuizQuestion) {
 export function QuizPlayer({
   activityInstanceId,
   quizClosed,
-  onFinished
+  onFinished,
+  myRace
 }: {
   activityInstanceId: string;
   /**
@@ -41,6 +44,8 @@ export function QuizPlayer({
   quizClosed: boolean;
   /** The player has nothing left to send. Live.tsx may take the screen back. */
   onFinished: () => void;
+  /** The race card for a finished student's phone; null once the quiz closes. */
+  myRace?: MyRace | null;
 }) {
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
@@ -313,6 +318,7 @@ export function QuizPlayer({
         <p class="eyebrow">{t("quiz.done")}</p>
         {resumed.percent !== null ? <span class="big-number">{resumed.percent}%</span> : null}
         <p class="hint">{resumed.percent !== null ? t("quiz.doneBody") : t("quiz.resumedNoScore")}</p>
+        {myRace && attemptId ? <PinataCard race={myRace} attemptId={attemptId} /> : null}
       </div>
     );
   }
@@ -323,6 +329,7 @@ export function QuizPlayer({
         <p class="eyebrow">{t("quiz.done")}</p>
         <span class="big-number">{result.percent}%</span>
         <p class="hint">{t("quiz.doneBody")}</p>
+        {myRace && attemptId ? <PinataCard race={myRace} attemptId={attemptId} /> : null}
       </div>
     );
   }

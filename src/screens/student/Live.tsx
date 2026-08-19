@@ -316,6 +316,7 @@ export function Live() {
             activityInstanceId={quizInstanceId}
             quizClosed={quizState === "closed"}
             onFinished={() => setQuizFinishedFor(quizInstanceId)}
+            myRace={view?.quiz.my_race ?? null}
           />
         </div>
       </LiveShell>

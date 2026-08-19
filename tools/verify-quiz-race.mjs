@@ -141,4 +141,13 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.ok(!/setQuestionDeadline/.test(player), "the per-question deadline state is gone — the budget rules");
 }
 
+// ------------------------------------------------- the phone's done card
+{
+  const card = readFileSync(frontend("src/features/quiz/PinataCard.tsx"), "utf8");
+  assert.match(card, /pinata\.cheerButton/, "the card has the cheer button");
+  assert.match(card, /cheerRacer\(/, "the button calls the cheer action");
+  const live = readFileSync(frontend("src/screens/student/Live.tsx"), "utf8");
+  assert.match(live, /myRace=\{/, "Live hands my_race to the player");
+}
+
 console.log("verify-quiz-race passed");

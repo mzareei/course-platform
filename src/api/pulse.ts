@@ -67,6 +67,16 @@ export interface QuizRank {
   name_revealed: boolean;
 }
 
+/** The finished student's own window into the piñata race. */
+export interface MyRace {
+  racer_name: string;
+  racer_emoji: string;
+  finished: boolean;
+  finish_place: number | null;
+  pinata: { percent: number; burst: boolean };
+  swinging: number;
+}
+
 export interface StudentPulseView {
   session_state: string;
   round: PulseRound | null;
@@ -94,6 +104,8 @@ export interface StudentPulseView {
     question_count?: number | null;
     /** Null while the quiz runs, and for a student who never submitted. */
     my_rank?: QuizRank | null;
+    /** The race card for a finished student's phone; null once the quiz closes. */
+    my_race?: MyRace | null;
   };
   reflection: {
     submitted: boolean;
