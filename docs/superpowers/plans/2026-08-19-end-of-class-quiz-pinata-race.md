@@ -4,13 +4,13 @@
 
 **Goal:** Carry-over question timer, 60 s cushion, 40-word exit ticket, and a gamified "piñata race" projector layer with secret racer names, progress pings, and a cheer button — per the spec at `docs/superpowers/specs/2026-08-19-end-of-class-quiz-pinata-race-design.md`.
 
-**Architecture:** Two repos. Backend = Supabase edge functions + SQL migrations in `~/Documents/GitHub/mzareei.github.io` (Deno). Frontend = Preact SPA in `~/Documents/GitHub/Tec Hub/course-platform` (Vite + TypeScript, no test framework — the repo's tests are `tools/verify-*.mjs` Node scripts run by `npm run verify`; several import backend modules directly via `tools/lib/backend-root.mjs`). Pure logic goes in small importable modules (`_shared/racer-names.ts`, `_shared/pinata.ts`, `src/features/quiz/budget.ts`, `src/features/quiz/commentary.ts`) so verifiers execute it instead of grepping for it.
+**Architecture:** Two repos. Backend = Supabase edge functions + SQL migrations in `~/Documents/GitHub/Tec Hub/mzareei.github.io` (Deno). Frontend = Preact SPA in `~/Documents/GitHub/Tec Hub/course-platform` (Vite + TypeScript, no test framework — the repo's tests are `tools/verify-*.mjs` Node scripts run by `npm run verify`; several import backend modules directly via `tools/lib/backend-root.mjs`). Pure logic goes in small importable modules (`_shared/racer-names.ts`, `_shared/pinata.ts`, `src/features/quiz/budget.ts`, `src/features/quiz/commentary.ts`) so verifiers execute it instead of grepping for it.
 
 **Tech Stack:** Deno edge functions, Supabase (Postgres + RLS-locked tables, service-role access only), Preact + signals, `t()` i18n with EN/ES pairs in `src/i18n/strings.ts`.
 
 ## Global Constraints
 
-- Backend repo root: `/Users/mzareei/Documents/GitHub/mzareei.github.io`. Frontend repo root: `/Users/mzareei/Documents/GitHub/Tec Hub/course-platform`. They are **separate git repos** — commit each in its own repo.
+- Backend repo root: `/Users/mzareei/Documents/GitHub/Tec Hub/mzareei.github.io`. Frontend repo root: `/Users/mzareei/Documents/GitHub/Tec Hub/course-platform`. They are **separate git repos** — commit each in its own repo.
 - Frontend deploys on `git push` (Cloudflare Pages). Edge functions do NOT: each changed function needs `npx supabase functions deploy <name>` from the backend repo; migrations need `npx supabase db push`.
 - Every user-facing string goes through `t()` with an EN + ES pair in `src/i18n/strings.ts`. Strings deliberately identical in both languages must be added to `allowedIdentical` in `tools/verify-i18n.mjs`.
 - The client holds NO timing constants except the documented 30 s fallback in `Player.tsx` (`tools/verify-quiz-timing.mjs` asserts `!/\b(20|30|45)\s*\*\s*1000/` in Player).
@@ -18,7 +18,7 @@
 - The piñata burst threshold is 85, defined once in `_shared/pinata.ts`.
 - New tables/columns keep the repo's RLS posture: RLS on, no policies, revoke from anon/authenticated.
 - Never test against group 402 (holds ~26 real students). Manual testing uses empty groups 501/502.
-- All tasks run `npm run verify` from the frontend repo (it imports backend files through `BACKEND_ROOT` auto-detection in `tools/lib/backend-root.mjs` — the sibling checkout at `../mzareei.github.io` relative to the Tec Hub folder is found automatically; if it skips, set `BACKEND_ROOT=/Users/mzareei/Documents/GitHub/mzareei.github.io`).
+- All tasks run `npm run verify` from the frontend repo (it imports backend files through `BACKEND_ROOT` auto-detection in `tools/lib/backend-root.mjs` — the sibling checkout at `../mzareei.github.io` relative to the Tec Hub folder is found automatically; if it skips, set `BACKEND_ROOT=/Users/mzareei/Documents/GitHub/Tec Hub/mzareei.github.io`).
 - Commit messages follow the repos' sentence style, e.g. `Quiz race: racers get secret Spanish names`.
 
 ---
@@ -82,7 +82,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit both repos**
 
 ```bash
-cd /Users/mzareei/Documents/GitHub/mzareei.github.io && git add supabase/functions/_shared/question-timing.ts && git commit -m "Quiz cushion: one minute, not two"
+cd /Users/mzareei/Documents/GitHub/Tec Hub/mzareei.github.io && git add supabase/functions/_shared/question-timing.ts && git commit -m "Quiz cushion: one minute, not two"
 cd "/Users/mzareei/Documents/GitHub/Tec Hub/course-platform" && git add tools/verify-quiz-timing.mjs src/api/quiz.ts && git commit -m "Quiz cushion: verifier expects one minute"
 ```
 
@@ -174,7 +174,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit both repos**
 
 ```bash
-cd /Users/mzareei/Documents/GitHub/mzareei.github.io && git add supabase/migrations/0055_reflection_min_words_40.sql supabase/functions/course-exit-ticket/index.ts supabase/functions/course-pulse/index.ts && git commit -m "Exit ticket: 40-word minimum for every class not yet finished"
+cd /Users/mzareei/Documents/GitHub/Tec Hub/mzareei.github.io && git add supabase/migrations/0055_reflection_min_words_40.sql supabase/functions/course-exit-ticket/index.ts supabase/functions/course-pulse/index.ts && git commit -m "Exit ticket: 40-word minimum for every class not yet finished"
 cd "/Users/mzareei/Documents/GitHub/Tec Hub/course-platform" && git add tools/verify-quiz-race.mjs src/features/reflection/Reflection.tsx src/api/reflection.ts && git commit -m "Exit ticket: verifier pins the 40-word minimum"
 ```
 
@@ -299,7 +299,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/mzareei/Documents/GitHub/mzareei.github.io && git add supabase/functions/_shared/racer-names.ts && git commit -m "Quiz race: secret Spanish racer names, gender-invariant by construction"
+cd /Users/mzareei/Documents/GitHub/Tec Hub/mzareei.github.io && git add supabase/functions/_shared/racer-names.ts && git commit -m "Quiz race: secret Spanish racer names, gender-invariant by construction"
 cd "/Users/mzareei/Documents/GitHub/Tec Hub/course-platform" && git add tools/verify-quiz-race.mjs && git commit -m "Quiz race: verifier executes the racer-name generator"
 ```
 
@@ -658,7 +658,7 @@ async function sendCheer(db: Db, profile: Record<string, unknown>, attemptId: st
 }
 ```
 
-- [ ] **Step 4: Run the verifier** — expected: PASS. Also run `cd /Users/mzareei/Documents/GitHub/mzareei.github.io && deno check supabase/functions/course-activity-attempt/index.ts` — expected: no type errors.
+- [ ] **Step 4: Run the verifier** — expected: PASS. Also run `cd /Users/mzareei/Documents/GitHub/Tec Hub/mzareei.github.io && deno check supabase/functions/course-activity-attempt/index.ts` — expected: no type errors.
 
 - [ ] **Step 5: Commit** (backend: `Quiz race: racer identity at start, progress pings, and server-picked cheers`; frontend: `Quiz race: verifier pins the attempt-side wiring`).
 
@@ -2049,7 +2049,7 @@ cd "/Users/mzareei/Documents/GitHub/Tec Hub/course-platform" && git add docs/05-
 - [ ] **Step 4: Deploy backend**
 
 ```bash
-cd /Users/mzareei/Documents/GitHub/mzareei.github.io && npx supabase db push
+cd /Users/mzareei/Documents/GitHub/Tec Hub/mzareei.github.io && npx supabase db push
 npx supabase functions deploy course-activity-attempt
 npx supabase functions deploy course-class-quiz
 npx supabase functions deploy course-pulse
