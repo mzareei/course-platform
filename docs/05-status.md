@@ -1,6 +1,22 @@
 # Status
 
-**Last updated:** 2026-08-18
+**Last updated:** 2026-08-19
+
+### End-of-class quiz runs as a piñata race with live projector layer (2026-08-19)
+
+The end-of-class quiz now plays as a **"piñata race"** — each student is assigned a secret Spanish racer name on the server side, racers advance along a question track fed by fire-and-forget `report_progress` pings, a lecture-named piñata cracks with every answer, and bursts at 85% completion. The projector shows the live race in a new `ClassroomPinataLayer` inside Run Class, and finished students land in "la porra" (top 3 crowned). Finished students' phones get a `PinataCard` showing crack %, their candy/place, and a server-rate-limited "¡Échale porra!" cheer button.
+
+**What shipped:**
+
+- **Per-question timer carries over** — 30s/45s budgets now accumulate; seconds saved roll to the next question; sleeping phones skip forward in one tick; clock starts when student taps "Let's go!" on the new racer splash.
+- **Whole-quiz cushion cut** — 120s → 60s in backend `_shared/question-timing.ts`.
+- **Exit ticket minimum shortened** — 50 → 40 words (migration 0055 + both function defaults).
+- **Projector race layer** (`ClassroomPinataLayer`) — question track, piñata crack state, top-3 crowns. Lecture-named piñata, calm one-line commentary (shaming words banned + verifier). Freezes at close; hands off to existing podium.
+- **Backend surfaces**: `race` action on `course-class-quiz`; `report_progress` / `cheer` on `course-activity-attempt`; `my_race` on `course-pulse`. Migration 0056 (racer columns + `quiz_cheers` table).
+- **Shared modules** — `racer-names.ts`, `pinata.ts`, and frontend `budget.ts`, `commentary.ts`, all executed (not grepped) by new `tools/verify-quiz-race.mjs`.
+- **Specs and plans** — `docs/superpowers/specs/2026-08-19-end-of-class-quiz-pinata-race-design.md` and `docs/superpowers/plans/2026-08-19-end-of-class-quiz-pinata-race.md`.
+
+**Not yet done** (immediate next steps): edge-function deploys, database push, and live run-through in an empty group (501 or 502).
 
 ### The scope switcher is now a viewpoint, and Content answers as that group's instructor (2026-08-18)
 
