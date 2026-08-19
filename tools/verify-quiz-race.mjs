@@ -49,4 +49,25 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(pickRacerName(all), null, "an exhausted pool yields null");
 }
 
+// ------------------------------------------------- piñata maths
+{
+  const { BURST_PERCENT, pinataState } = await import(backend("_shared/pinata.ts").href);
+  assert.equal(BURST_PERCENT, 85, "the piñata bursts at 85%");
+  assert.equal(pinataState({ hits: 0, started: 0, questionCount: 12 }).percent, 0, "nobody started → 0%");
+  assert.equal(pinataState({ hits: 156, started: 26, questionCount: 12 }).percent, 50, "156 of 312 → 50%");
+  assert.equal(pinataState({ hits: 500, started: 26, questionCount: 12 }).percent, 100, "clamped to 100");
+  assert.equal(pinataState({ hits: 266, started: 26, questionCount: 12 }).burst, true, "85% bursts");
+  assert.equal(pinataState({ hits: 262, started: 26, questionCount: 12 }).burst, false, "84% does not");
+  assert.equal(
+    pinataState({ hits: 100, started: 26, questionCount: 12, closedReason: "everyone" }).burst,
+    true,
+    "a room where everyone finished broke it, whatever the percent"
+  );
+  assert.equal(
+    pinataState({ hits: 262, started: 26, questionCount: 12, closedReason: "time" }).burst,
+    false,
+    "closing by time does not burst below the threshold"
+  );
+}
+
 console.log("verify-quiz-race passed");
