@@ -293,9 +293,9 @@ appear there.
   `finish_place` is the 1-based order of `submitted_at` among submitted
   attempts. Attempts without a racer name (none expected) are labelled
   `🎒 Mochila` so nothing is hidden.
-- `start` — unchanged except it records the lecture title in
-  `activity_instances.metadata.lecture_title` so `race` can name the piñata
-  without a second lookup.
+- `start` — unchanged. (`activity_instances` has no metadata column, so
+  `race` resolves the piñata's name by following the instance's template to
+  its content item and reading the title.)
 
 ### `course-pulse` (student poll)
 
@@ -326,7 +326,7 @@ appear there.
 | `supabase/functions/_shared/racer-names.ts` | new — animals, adjectives, `pickRacerName(used)` |
 | `supabase/functions/_shared/pinata.ts` | new — `pinataState({ hits, started, questionCount, closedReason })` |
 | `supabase/functions/course-activity-attempt/index.ts` | racer name at creation and in `start_attempt`; `report_progress`; progress set at submit; `cheer` |
-| `supabase/functions/course-class-quiz/index.ts` | `race` action; `lecture_title` in start metadata |
+| `supabase/functions/course-class-quiz/index.ts` | `race` action (resolves the piñata name via the template's content item) |
 | `supabase/functions/course-pulse/index.ts` | `my_race`; min-words fallback 40 |
 | `supabase/functions/course-exit-ticket/index.ts` | default min words 40 |
 
