@@ -2072,6 +2072,7 @@ export const strings = {
   "pinata.youCheered": ["📣 You cheered for {emoji} {name}!", "📣 ¡Le echaste porra a {emoji} {name}!"],
   "pinata.nobodyLeft": ["Everyone's done — watch the piñata!", "Ya terminaron todos — ¡mira la piñata!"],
   "pinata.layerTitle": ["🪅 Today's piñata: {title}", "🪅 La piñata de hoy: {title}"],
+  "pinata.layerTitleNoName": ["🪅 Today's piñata", "🪅 La piñata de hoy"],
   "pinata.swinging": ["{count} swinging", "{count} dándole"],
   "pinata.candies": ["{count} got candy 🍬", "{count} con dulce 🍬"],
   "pinata.present": ["{count} present", "{count} presentes"],

@@ -192,7 +192,9 @@ export function ClassroomPinataLayer({
           <p class="pinata-name">
             {race?.pinata.burst
               ? t("pinata.burst")
-              : t("pinata.layerTitle", { title: race?.pinata.name || "" })}
+              : race?.pinata.name
+              ? t("pinata.layerTitle", { title: race.pinata.name })
+              : t("pinata.layerTitleNoName")}
             {" · "}{race?.pinata.percent ?? 0}%
           </p>
           {closed && !race?.pinata.burst ? (

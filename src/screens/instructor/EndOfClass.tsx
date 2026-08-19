@@ -259,6 +259,7 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
       ) : null}
       {showingPinata && raceInstanceId ? (
         <ClassroomPinataLayer
+          key={raceInstanceId}
           instanceId={raceInstanceId}
           podium={podium}
           onShowPodium={() => { setShowingPinata(false); setShowingPodium(true); }}
