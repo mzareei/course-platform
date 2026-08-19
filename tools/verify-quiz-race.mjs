@@ -70,4 +70,21 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   );
 }
 
+// ------------------------------------------------- migration 0056
+{
+  const migration = readFileSync(backendPath("supabase/migrations/0056_quiz_pinata_race.sql"), "utf8");
+  for (const needle of [
+    "racer_name text",
+    "racer_emoji text",
+    "progress_position int not null default 0",
+    "progress_answered int not null default 0",
+    "student_attempts_racer_name_key",
+    "create table if not exists public.quiz_cheers",
+    "alter table public.quiz_cheers enable row level security",
+    "revoke all on public.quiz_cheers from anon, authenticated"
+  ]) {
+    assert.ok(migration.includes(needle), `0056 must contain: ${needle}`);
+  }
+}
+
 console.log("verify-quiz-race passed");
