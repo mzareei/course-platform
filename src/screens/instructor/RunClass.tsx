@@ -690,6 +690,26 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     activeCheckpoint?.afterSlide
   ]);
 
+  // A reloaded (or re-navigated) Run Class must put a RUNNING quiz back on the
+  // instructor's screen. The End of Class box owns the quiz controls and the
+  // piñata race layer, but it only mounts once showFinalQuiz flips — and a
+  // fresh mount forgets that. Without this, starting the quiz and then coming
+  // back to Run Class showed NOTHING: no box, no race, no way to close the
+  // quiz short of finding the jump button again. Ask the server whether a quiz
+  // is running and re-open the box; its own adopt effect then brings the race
+  // layer back by itself.
+  useEffect(() => {
+    if (!sessionId || !isLive || !bank?.content_slug || showFinalQuiz) return;
+    let cancelled = false;
+    currentClassQuiz({ class_session_id: sessionId, content_slug: bank.content_slug })
+      .then((res) => {
+        if (!cancelled && res.instance_id) setShowFinalQuiz(true);
+      })
+      .catch(() => { /* the box can still be opened from the checkpoint rail */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, isLive, bank?.content_slug, showFinalQuiz]);
+
   if (!sessionId || !session) {
     return (
       <div class="empty-state card">
