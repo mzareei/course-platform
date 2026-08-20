@@ -6,9 +6,23 @@
 
 In today's 10:46 class, three students were thrown out of the quiz mid-attempt
 and restarted from question 1; one (A01641342, 11 of 12 answered) never got
-back in and has **no responses stored — the professor needs to decide what to
-do about their grade** (the answers themselves are unrecoverable). Full
-anatomy in pitfall #87. What shipped, across both repos:
+back in and has no responses stored. Full anatomy in pitfall #87. The victims
+were identified by the player-elapsed fingerprint (the phone's own timer
+resets on remount, so a restarted attempt shows player-elapsed ≪ wall time):
+A01639197, A01647334, A01640019 restarted and re-answered all 12; A01641342
+never returned; A01646423's mid-quiz re-sign-in turned out to be AFTER
+submitting (100, unharmed).
+
+**Grade resolution (same day, professor's rule: grade to where they advanced,
+questions the system prevented count correct):** A01641342 (Dario Garay Rojo)
+class grade overridden 26.79 → **100** via the class_grade_overrides
+mechanism (override row + audit_log `set_grade_override` + re-posted
+gradebook score, written bilingual reason attached; applied through the
+service connection mirroring `recordOverride`, actor = platform owner). The
+three who re-answered every question keep their redo grades under the stated
+rule (72.47 / 100 / 97.77) — the attempt row for A01641342 was left as
+`started` on purpose: the override is the grade, the row is the honest record
+of the incident. What shipped, across both repos:
 
 - **Migration 0057** (`0057_quiz_attempt_resume.sql`):
   `student_attempts.questions_json` / `progress_answers` / `clock_t0`.
