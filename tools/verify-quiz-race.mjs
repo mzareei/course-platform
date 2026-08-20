@@ -118,10 +118,11 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 
 // ------------------------------------------------- the carry-over budget
 {
-  const { deadlines, positionAt } = await import(frontend("src/features/quiz/budget.ts").href);
+  const { deadlines, positionAt, rebase, MAX_QUESTION_SECONDS } = await import(frontend("src/features/quiz/budget.ts").href);
   const t0 = 1_000_000;
+  const secs = [30, 30, 45, 30];
   // 30/30/45/30: cumulative deadlines, so saved time visibly rolls forward.
-  const dl = deadlines([30, 30, 45, 30], t0);
+  const dl = deadlines(secs, t0);
   assert.deepEqual(dl, [t0 + 30_000, t0 + 60_000, t0 + 105_000, t0 + 135_000], "deadlines are cumulative");
   // Answering Q1 at 25s leaves 35s on Q2 — the spec's example.
   assert.equal(dl[1] - (t0 + 25_000), 35_000, "25s on Q1 leaves 35s for Q2");
@@ -130,12 +131,29 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // A phone asleep through three deadlines lands on the right question in one call.
   assert.equal(positionAt(dl, t0 + 110_000), 3, "skip-forward over missed questions");
   assert.equal(positionAt(dl, t0 + 999_000), 3, "clamped to the final question");
+
+  // The ceiling. Saved seconds roll forward, but no question is ever worth
+  // more than sixty — the professor's rule, executed rather than trusted.
+  assert.equal(MAX_QUESTION_SECONDS, 60, "the per-question ceiling is sixty seconds");
+  // A small saving rebases to the very schedule the cumulative clock already
+  // had: 25s on Q1 leaves the standing deadlines untouched.
+  assert.deepEqual(rebase(dl, secs, 0, t0 + 25_000), dl, "an under-cap carry keeps the cumulative schedule");
+  // An instant answer banks all 30: Q2 is worth exactly 60 — the top, allowed.
+  const afterQ1 = rebase(dl, secs, 0, t0);
+  assert.equal(afterQ1[1], t0 + 60_000, "30 banked on 30 base sits exactly at the top");
+  // Instantly again: 60 banked onto a 45s question would be 105 — capped at 60.
+  const afterQ2 = rebase(afterQ1, secs, 1, t0);
+  assert.equal(afterQ2[2], t0 + 60_000, "the cap holds: never more than 60 on one question");
+  assert.equal(afterQ2[3], t0 + 90_000, "questions behind the capped one line up on their base");
+  // The last question has nowhere to carry to.
+  assert.deepEqual(rebase(dl, secs, 3, t0 + 5_000), dl, "no next question, no rebase");
 }
 
 // ------------------------------------------------- the player
 {
   const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
   assert.match(player, /from "\.\/budget"/, "the player uses the shared budget module");
+  assert.match(player, /rebase\(/, "an early answer rebases the schedule, so the sixty-second cap can bite");
   assert.match(player, /reportProgress\(/, "the player pings progress");
   assert.match(player, /quiz\.letsGo/, "the splash has a Let's go button");
   assert.ok(!/setQuestionDeadline/.test(player), "the per-question deadline state is gone — the budget rules");

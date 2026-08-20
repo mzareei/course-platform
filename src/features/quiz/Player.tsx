@@ -3,7 +3,9 @@
 // seconds for almost everything, and forty-five for a question that simply
 // takes longer to read. The server
 // decides and sends the number with the question; this file holds no timing
-// rule of its own. When a question's timer runs out the player moves on by
+// rule of its own — the carry-over (seconds saved on one question roll into
+// the next, never past the budget's sixty-second ceiling) lives in budget.ts.
+// When a question's timer runs out the player moves on by
 // itself; there is no going back once a question has passed, matching how a
 // live in-class quiz actually runs. Server-graded — the browser never learns
 // which option is correct until after submit. Questions are pre-mixed across
@@ -15,7 +17,7 @@ import { t, lang, apiErrorText } from "../../i18n";
 import { startQuizAttempt, submitQuizAttempt, reportProgress, type QuizQuestion, type SubmitAttemptResponse } from "../../api/quiz";
 import type { MyRace } from "../../api/pulse";
 import { clockText } from "./clock";
-import { deadlines, positionAt } from "./budget";
+import { deadlines, positionAt, rebase } from "./budget";
 import { PinataCard } from "./PinataCard";
 
 // The server sends each question's own time. The fallback is the floor, never
@@ -176,6 +178,9 @@ export function QuizPlayer({
       return;
     }
     const nextIndex = i + 1;
+    // A tap before the deadline saved time; the budget decides how much of it
+    // the next question may keep. A timeout never comes through here.
+    setDl((prev) => (prev ? rebase(prev, qs.map(secondsFor), i, Date.now()) : prev));
     setIndex(nextIndex);
     ping(nextIndex);
   }
@@ -193,8 +198,14 @@ export function QuizPlayer({
     ping(0);
   }
 
-  // Deadlines are derived, not stored.
-  const dl = questions && t0 !== null ? deadlines(questions.map(secondsFor), t0) : null;
+  // Deadlines are state, not derived: an early answer rebases the schedule so
+  // the carried seconds meet the sixty-second ceiling. Initialized once, the
+  // moment the clock has a start and the questions have arrived.
+  const [dl, setDl] = useState<number[] | null>(null);
+  useEffect(() => {
+    if (t0 === null || !questions) return;
+    setDl((prev) => prev ?? deadlines(questions.map(secondsFor), t0));
+  }, [t0, questions]);
 
   // The budget clock. One effect owns both moves: skip forward to wherever
   // the running budget says the student should be (a phone asleep through

@@ -1,6 +1,23 @@
 # Status
 
-**Last updated:** 2026-08-19
+**Last updated:** 2026-08-20
+
+### Quiz carry-over now has a 60-second ceiling per question (2026-08-20)
+
+The professor's rule, stated 2026-08-20: 30 seconds per question, seconds
+saved on an early answer roll into the next question, and **no question may
+ever be worth more than 60 seconds**. The carry-over shipped with the piñata
+race, but unbounded — a student answering instantly could bank 30s per
+question and walk into a later question with 90+ seconds on the clock.
+
+The cap lives in `src/features/quiz/budget.ts` (`MAX_QUESTION_SECONDS`, plus a
+`rebase` function) because the carry-over mechanic is entirely client-side; the
+per-question base times still come only from the server. `QuizPlayer` now holds
+the deadline schedule as state: a **tap** before the deadline rebases the
+schedule through the cap; a **timeout** touches nothing, since nothing was
+saved and the standing schedule already gives every later question exactly its
+base. Total quiz time can only shrink under the cap, so the instance
+`ends_at` sizing is untouched. Executed by `tools/verify-quiz-race.mjs`.
 
 ### End-of-class quiz runs as a piñata race with live projector layer (2026-08-19)
 
