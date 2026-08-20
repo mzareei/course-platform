@@ -87,6 +87,14 @@ export function Live() {
         return next;
       });
     } catch (e) {
+      // A mid-attempt quiz never loses its screen to a poll error. On
+      // 2026-08-20 three students were thrown out of the end-of-class quiz by
+      // exactly this: their one-hour token lapsed at quiz time, the poll got
+      // an auth error, and the branch below read it as "not in this class" —
+      // join cleared, view blanked, player unmounted, work gone. While the
+      // player is live, every poll failure is treated as a blip: keep the last
+      // view, keep the join, let the next poll (with a refreshed token) recover.
+      if (quizHold.current) return;
       const joinedSessionId = joinedClassSessionId();
       if (
         joinedSessionId === sessionId &&
@@ -152,10 +160,20 @@ export function Live() {
     }
   }, [quizBranchReachable, quizInstanceId, quizState]);
 
+  // Unfinished means: this screen mounted a player for an instance and the
+  // player has not reported done. The view being momentarily null (a poll
+  // error) or naming the SAME instance both keep it unfinished; only a
+  // different instance — a genuinely new quiz — releases the hold.
   const quizUnfinished =
-    quizInstanceId !== null &&
-    quizStartedFor === quizInstanceId &&
-    quizFinishedFor !== quizInstanceId;
+    quizStartedFor !== null &&
+    quizFinishedFor !== quizStartedFor &&
+    (quizInstanceId === null || quizInstanceId === quizStartedFor);
+
+  // The poll's catch runs in a closure from the render that armed the
+  // interval, so it cannot read fresh state — this ref is how it learns a
+  // quiz is mid-attempt RIGHT NOW and must not be disturbed.
+  const quizHold = useRef(false);
+  quizHold.current = quizUnfinished;
   const profileId = ctx?.profile?.id ?? "anon";
   const useSpanish = lang.value === "es";
 
@@ -195,6 +213,33 @@ export function Live() {
           <a class="btn" href="/">{t("live.backToToday")}</a>
         </div>
       </div>
+    );
+  }
+
+  // A player that has started outranks EVERYTHING below — the check-in gate,
+  // the pause screen, even a pulse question pushed mid-quiz. Unmounting a
+  // mid-attempt player throws away the student's clock and screen for reasons
+  // that are never worth it: the server enforces the real rules (check-in,
+  // windows, grading), and the player reports itself done. Before this hold,
+  // any flicker in the poll's answer yanked the quiz off a student's phone.
+  // First mount still goes through the gated branch further down — this arm
+  // only ever KEEPS a player that legitimately started.
+  const heldQuizId =
+    quizUnfinished && quizStartedFor
+      ? quizStartedFor
+      : null;
+  if (heldQuizId) {
+    return (
+      <LiveShell error={null}>
+        <div class="card">
+          <QuizPlayer
+            activityInstanceId={heldQuizId}
+            quizClosed={quizInstanceId === heldQuizId && quizState === "closed"}
+            onFinished={() => setQuizFinishedFor(heldQuizId)}
+            myRace={view?.quiz.my_race ?? null}
+          />
+        </div>
+      </LiveShell>
     );
   }
 
@@ -303,18 +348,20 @@ export function Live() {
     );
   }
 
-  // 2. The end-of-class quiz is live — take it. And it stays here after the
-  //    close too, for a student who was mid-attempt: `quizUnfinished` holds the
-  //    screen until the player says it has sent what it had. The `live` half of
-  //    the test still matters on its own — it is what keeps the score on screen
-  //    for a student who submitted early, before the quiz closed at all.
-  if (quizInstanceId && (quizState === "live" || quizUnfinished)) {
+  // 2. The end-of-class quiz is live — take it. This is the FIRST mount, and
+  //    it is properly gated (checked in, not paused, no pulse question). From
+  //    the moment the player mounts, the hold above the gates owns the screen:
+  //    it keeps the player through the close, through poll errors, and through
+  //    anything else, until the player reports it has sent what it had. The
+  //    `live` test also keeps the score on screen for a student who submitted
+  //    early, before the quiz closed at all.
+  if (quizInstanceId && quizState === "live") {
     return (
       <LiveShell error={error}>
         <div class="card">
           <QuizPlayer
             activityInstanceId={quizInstanceId}
-            quizClosed={quizState === "closed"}
+            quizClosed={false}
             onFinished={() => setQuizFinishedFor(quizInstanceId)}
             myRace={view?.quiz.my_race ?? null}
           />

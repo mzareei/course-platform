@@ -39,6 +39,15 @@ export interface QuizAttempt {
   /** Secret racer identity for the piñata race; null outside live-class quizzes. */
   racer_name?: string | null;
   racer_emoji?: string | null;
+  // The resume trio, saved as the student goes so a kicked or reloaded phone
+  // continues in place instead of starting over (added after 2026-08-20, when
+  // three students lost their quiz mid-class to expired-token kicks).
+  /** When the student tapped "Let's go" — the per-question schedule anchor. */
+  clock_t0?: string | null;
+  /** question_id -> selected_option_id, everything answered so far. */
+  progress_answers?: Record<string, string> | null;
+  /** The furthest question index reached (monotonic, server-clamped). */
+  progress_position?: number | null;
 }
 
 export interface StartAttemptResponse {
@@ -68,9 +77,17 @@ export function submitQuizAttempt(input: {
 }
 
 /** Fire-and-forget: "I'm on question `position`, answered `answered`." Moves
- *  this student's racer on the room's screen. Callers swallow failures — a
- *  dropped ping must never interrupt a student mid-quiz. */
-export function reportProgress(input: { attempt_id: string; position: number; answered: number }) {
+ *  this student's racer on the room's screen — and carries the full answer map,
+ *  the server-side recovery copy a kicked phone resumes from. `clock_start`
+ *  marks the "Let's go" tap that anchors the server clock. Callers swallow
+ *  failures — a dropped ping must never interrupt a student mid-quiz. */
+export function reportProgress(input: {
+  attempt_id: string;
+  position: number;
+  answered: number;
+  answers?: Record<string, string>;
+  clock_start?: boolean;
+}) {
   return callFn<{ ok: boolean }>("course-activity-attempt", { action: "report_progress", ...input });
 }
 

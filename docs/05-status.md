@@ -2,6 +2,34 @@
 
 **Last updated:** 2026-08-20
 
+### The end-of-class quiz now survives kicks, reloads, and sign-outs (2026-08-20)
+
+In today's 10:46 class, three students were thrown out of the quiz mid-attempt
+and restarted from question 1; one (A01641342, 11 of 12 answered) never got
+back in and has **no responses stored — the professor needs to decide what to
+do about their grade** (the answers themselves are unrecoverable). Full
+anatomy in pitfall #87. What shipped, across both repos:
+
+- **Migration 0057** (`0057_quiz_attempt_resume.sql`):
+  `student_attempts.questions_json` / `progress_answers` / `clock_t0`.
+- **`course-activity-attempt`**: questions frozen per attempt (no more
+  re-shuffle per call); `report_progress` saves the answer map and anchors the
+  clock; `start_attempt` resumes inside the submit grace; auth failures are
+  401.
+- **`course-pulse`**: auth failures are 401 (a 400 made Live clear the join).
+- **Player**: resumes from server state — saved answers, server clock anchor,
+  furthest position; pings answers on every tap; splash skipped on resume.
+- **Live**: a started-but-unfinished player holds the screen above every gate
+  and through every poll error (`quizHold`).
+- **Auth config**: `jwt_exp` raised 3600 → 7200 so a token issued at sign-in
+  outlives a two-hour class (the expiry landed exactly at quiz time).
+- New verifier `tools/verify-quiz-resume.mjs`;
+  `verify-quiz-auto-close` updated for the hoisted hold.
+
+**Deploy shape:** migration 0057 **before** the two functions (they select the
+new columns), then frontend. Old bundle + new backend and new bundle + old
+backend both degrade to today's behaviour — no lockstep.
+
 ### Quiz carry-over now has a 60-second ceiling per question (2026-08-20)
 
 The professor's rule, stated 2026-08-20: 30 seconds per question, seconds

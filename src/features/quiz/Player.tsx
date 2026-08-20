@@ -95,7 +95,21 @@ export function QuizPlayer({
           // the server sent one, and never a fabricated 0%.
           setResumed({ percent: typeof res.attempt.score_percent === "number" ? res.attempt.score_percent : null });
         } else if (res.questions.length) {
-          if (res.attempt.racer_name) {
+          const anchor = res.attempt.clock_t0 ? new Date(res.attempt.clock_t0).getTime() : NaN;
+          if (!Number.isNaN(anchor)) {
+            // A resumed attempt: the clock already started in a previous life
+            // (a kick, a reload, a re-sign-in). Everything comes back from the
+            // server — the saved answers, the clock anchor, the furthest
+            // question reached — and the budget effect walks the schedule
+            // forward to wherever "now" says. No splash: they already tapped.
+            setAnswers(res.attempt.progress_answers || {});
+            setT0(anchor);
+            const storedPosition = Math.min(
+              Math.max(0, Number(res.attempt.progress_position || 0)),
+              res.questions.length - 1
+            );
+            if (storedPosition > 0) setIndex(storedPosition);
+          } else if (res.attempt.racer_name) {
             // The splash owns the clock: T0 is set when the student taps.
             setRacer({ name: res.attempt.racer_name, emoji: res.attempt.racer_emoji || "🎒" });
           } else {
@@ -158,6 +172,9 @@ export function QuizPlayer({
     } catch (e) {
       setError(apiErrorText(e, "quiz.submitFailed"));
       submitting.current = false;
+      // The submit did not land; make sure the recovery copy has everything,
+      // in case this phone never gets another chance.
+      ping(stateRef.current.index, { map: finalAnswers });
     } finally {
       setBusy(false);
     }
@@ -185,17 +202,27 @@ export function QuizPlayer({
     ping(nextIndex);
   }
 
-  function ping(position: number) {
+  // Every ping carries the full answer map — the server's recovery copy, what
+  // a kicked or reloaded phone resumes from. Pass `map` when state has not
+  // caught up yet (an option was tapped microseconds ago).
+  function ping(position: number, opts?: { map?: Record<string, string>; clockStart?: boolean }) {
     if (!attemptId) return;
-    const answered = Object.keys(stateRef.current.answers).length;
-    reportProgress({ attempt_id: attemptId, position, answered }).catch(() => {
+    const answers = opts?.map ?? stateRef.current.answers;
+    reportProgress({
+      attempt_id: attemptId,
+      position,
+      answered: Object.keys(answers).length,
+      answers,
+      ...(opts?.clockStart ? { clock_start: true } : {})
+    }).catch(() => {
       /* fire-and-forget: the race is cosmetic, the quiz is not */
     });
   }
 
   function onLetsGo() {
     setT0(Date.now());
-    ping(0);
+    // clock_start anchors the server clock — the resume schedule counts from here.
+    ping(0, { clockStart: true });
   }
 
   // Deadlines are state, not derived: an early answer rebases the schedule so
@@ -378,7 +405,13 @@ export function QuizPlayer({
             class={`pulse-choice tappable${answers[current.id] === option.id ? " selected" : ""}`}
             type="button"
             disabled={busy}
-            onClick={() => setAnswers((prev) => ({ ...prev, [current.id]: option.id }))}
+            onClick={() => {
+              const next = { ...stateRef.current.answers, [current.id]: option.id };
+              setAnswers(next);
+              // Save on every tap, not only on advance: a kick mid-question
+              // must not lose the answer the student just chose.
+              ping(stateRef.current.index, { map: next });
+            }}
           >
             {(lang.value === "es" && option.option_text_es) || option.option_text}
           </button>

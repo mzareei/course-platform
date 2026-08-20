@@ -2569,3 +2569,52 @@ the object against it — for anyone with more than one enrollment (test
 accounts, TAs, a student who transferred groups mid-term) the pick is a coin
 flip. `course-portfolio-entry` still uses `sections[0]`, but nothing it accepts
 is section-owned, so it is fine as long as that stays true.
+
+## 87. A quiz attempt that lives only in component state dies with the component
+
+**Reported by the professor 2026-08-20: "the system basically kicked out three
+students from their session, and they had to refresh the end of the class quiz
+from the beginning."** One of them (A01641342) answered 11 of 12 questions and
+has zero responses stored — the answers only ever existed in their phone's
+memory.
+
+Two failures stacked:
+
+1. **The auth cliff at the one-hour mark.** Access tokens live 1 hour
+   (project `jwt_exp`), classes run longer, and phones sleep through the
+   lecture — so the token expires *exactly at end-of-class-quiz time*, and the
+   whole room refreshes at once on classroom Wi-Fi with refresh-token rotation
+   on. A refresh that loses the race gets the student **signed out**
+   (`App.tsx` drops to SignIn the instant the session signal is null). A
+   refresh that is merely *in flight* made the backend answer
+   `"Invalid or expired session."` with **status 400** — and `Live.tsx`
+   treated any 400/403/404 from the poll as "you are not in this class":
+   join cleared, view blanked, quiz player unmounted.
+2. **Nothing about a running attempt was recoverable.** Answers lived in
+   component state until the final submit; the clock (`t0`, deadlines) lived
+   in component state; and `start_attempt` re-ran
+   `shuffle_questions_and_options` with bare `Math.random()` on **every
+   call** — so even the same attempt id came back as a brand-new quiz.
+
+**The contract now** (verified by `tools/verify-quiz-resume.mjs`):
+
+- The dealt questions are **frozen on the attempt** (`questions_json`,
+  written once under an `IS NULL` guard) — a resume serves the same quiz,
+  same order, same option order.
+- Every progress ping carries the **full answer map**
+  (`progress_answers`, merged so a stale ping adds but never erases), and
+  answers are also pinged **on every option tap** and on submit failure.
+- The clock anchor (`clock_t0`) is set server-side on the first ping; a
+  resumed player rebuilds its schedule from it — a reload cannot mint fresh
+  time.
+- `start_attempt` **resumes through the submit-grace window** (the same
+  `withinSubmitGrace` submit honours), so a student kicked in the final
+  seconds can come back after the close and send what was saved.
+- Auth failures are **401**, never 400, from `course-pulse` and
+  `course-activity-attempt` — and `Live.tsx` holds a mid-attempt player on
+  screen through *any* poll error (`quizHold` ref) and above every gate.
+
+**Rule:** anything a student builds up over minutes (answers, position, a
+running clock) must exist server-side *before* the moment of submission, and
+anything randomized must be dealt once and stored, never re-rolled per
+request. A remount is not an edge case on phones — it is the normal case.

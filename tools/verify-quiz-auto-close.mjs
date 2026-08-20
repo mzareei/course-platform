@@ -416,7 +416,10 @@ check(
   "Live must hand the player the close and listen for the finish"
 );
 check(
-  /quizUnfinished/.test(live) && /quizState === "live" \|\| quizUnfinished/.test(live),
+  // Since the 2026-08-20 kick incident the hold is its own arm ABOVE the
+  // gates: a started-but-unfinished player keeps the screen through the
+  // close, poll errors, and everything else, until it reports done.
+  /quizUnfinished/.test(live) && /heldQuizId[\s\S]{0,600}?<QuizPlayer/.test(live),
   "Live must keep the player mounted for a STARTED-BUT-UNFINISHED instance, not only while the state still says live"
 );
 check(
