@@ -19,10 +19,13 @@ class grade overridden 26.79 → **100** via the class_grade_overrides
 mechanism (override row + audit_log `set_grade_override` + re-posted
 gradebook score, written bilingual reason attached; applied through the
 service connection mirroring `recordOverride`, actor = platform owner). The
-three who re-answered every question keep their redo grades under the stated
-rule (72.47 / 100 / 97.77) — the attempt row for A01641342 was left as
-`started` on purpose: the override is the grade, the row is the honest record
-of the incident. What shipped, across both repos:
+professor then extended the remedy to the restart victims: A01639197
+(Santiago Garzón, 72.47 → **100**) and A01640019 (Angela Castro, 97.77 →
+**100**) were overridden the same way; A01647334 (Diego Lizárraga) already sat
+at 100 from the formula, so no override exists for him. All three overrides
+verified (override row + audit row + posted 100 each). The attempt row for
+A01641342 was left as `started` on purpose: the override is the grade, the
+row is the honest record of the incident. What shipped, across both repos:
 
 - **Migration 0057** (`0057_quiz_attempt_resume.sql`):
   `student_attempts.questions_json` / `progress_answers` / `clock_t0`.
