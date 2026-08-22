@@ -147,12 +147,15 @@ check(
   "submitNow must latch on a ref against re-entry within a single clock tick"
 );
 
-// The two callers must both go through the shared rule.
+// course-class-quiz no longer sizes the instance from the per-question
+// estimate — the room clock (_shared/rounds.ts, see verify-quiz-race.mjs)
+// replaced it with a fixed per-round schedule. course-activity-attempt still
+// stamps each question with this module's per-question reading-time rule.
 const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
 const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
 check(
-  /question-timing\.ts/.test(classQuiz) && /estimateTotalSeconds/.test(classQuiz),
-  "course-class-quiz must size the instance with the shared estimate"
+  /rounds\.ts/.test(classQuiz) && /totalSecondsFor/.test(classQuiz),
+  "course-class-quiz must size the instance from the room clock"
 );
 check(
   /question-timing\.ts/.test(attempt) && /secondsForQuestion/.test(attempt),

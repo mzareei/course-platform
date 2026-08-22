@@ -315,4 +315,66 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.doesNotMatch(attempt, /function selectQuestions/, "round-robin selection is gone");
 }
 
+// ------------------------------------------------- the room clock
+{
+  const {
+    ANSWER_SECONDS, BREAK_SECONDS, ROUND_SECONDS, GOLDEN_SECONDS,
+    CANDY_CORRECT, CANDY_GOLDEN, windowFor, roundAt, candyFor, totalSecondsFor
+  } = await import(backend("_shared/rounds.ts").href);
+
+  assert.equal(ANSWER_SECONDS, 40, "forty seconds to answer");
+  assert.equal(BREAK_SECONDS, 10, "ten seconds of break");
+  assert.equal(ROUND_SECONDS, 50, "a round is fifty seconds");
+  assert.equal(GOLDEN_SECONDS, 20, "a golden candy needs an answer inside twenty seconds");
+
+  const T0 = 1_700_000_000_000;
+
+  const first = windowFor(T0, 0, 10);
+  assert.equal(first.answerStart, T0, "round 0 answers from the anchor");
+  assert.equal(first.answerEnd, T0 + 40_000, "round 0 stops taking answers at 40s");
+  assert.equal(first.breakEnd, T0 + 50_000, "round 0 ends at 50s");
+
+  const fifth = windowFor(T0, 4, 10);
+  assert.equal(fifth.answerStart, T0 + 200_000, "round 4 starts at 200s");
+  assert.equal(fifth.answerEnd, T0 + 240_000, "round 4 stops taking answers at 240s");
+
+  assert.equal(roundAt(T0, T0, 10).index, 0, "at the anchor we are in round 0");
+  assert.equal(roundAt(T0, T0, 10).phase, "answering", "and we are answering");
+  assert.equal(roundAt(T0, T0 + 39_999, 10).phase, "answering", "still answering at 39.999s");
+  assert.equal(roundAt(T0, T0 + 40_000, 10).phase, "break", "the break starts at 40s");
+  assert.equal(roundAt(T0, T0 + 49_999, 10).phase, "break", "and runs to 49.999s");
+  assert.equal(roundAt(T0, T0 + 50_000, 10).index, 1, "round 1 starts at 50s");
+  assert.equal(roundAt(T0, T0 + 50_000, 10).phase, "answering", "answering again");
+
+  // A late joiner lands on the live round, not at the start.
+  const late = roundAt(T0, T0 + 265_000, 10);
+  assert.equal(late.index, 5, "arriving at 4:25 lands in round 5");
+  assert.equal(late.phase, "answering", "with answering still open");
+
+  // Past the end.
+  assert.equal(roundAt(T0, T0 + 500_000, 10).phase, "done", "the quiz is done after ten rounds");
+  assert.equal(roundAt(T0, T0 + 499_999, 10).phase, "break", "the last break runs to the final millisecond");
+  // A clock that is behind the anchor must not produce a negative round.
+  assert.equal(roundAt(T0, T0 - 5_000, 10).index, 0, "before the anchor we are in round 0");
+
+  // Candy.
+  assert.equal(CANDY_CORRECT, 1, "a correct answer is one candy");
+  assert.equal(CANDY_GOLDEN, 2, "correct and fast is two");
+  assert.equal(candyFor({ correct: true, msIntoRound: 19_999 }), 2, "inside twenty seconds is golden");
+  assert.equal(candyFor({ correct: true, msIntoRound: 20_000 }), 1, "at twenty seconds it is not");
+  assert.equal(candyFor({ correct: true, msIntoRound: null }), 1, "no timestamp means no golden candy");
+  assert.equal(candyFor({ correct: false, msIntoRound: 500 }), 0, "a fast wrong answer earns nothing");
+  assert.equal(candyFor({ correct: false, msIntoRound: null }), 0, "an unanswered question earns nothing");
+
+  // Whole-quiz sizing: ten rounds of fifty seconds plus the existing cushion.
+  assert.equal(totalSecondsFor(10), 560, "ten rounds is 8:20 plus a 60s cushion");
+  assert.equal(totalSecondsFor(0), 60, "no questions clamps to the floor");
+}
+
+{
+  const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
+  assert.match(classQuiz, /totalSecondsFor\(/, "the instance clock is sized from the round schedule");
+  assert.doesNotMatch(classQuiz, /estimateTotalSeconds\(/, "the old per-question estimate no longer sizes the quiz");
+}
+
 console.log("verify-quiz-race passed");
