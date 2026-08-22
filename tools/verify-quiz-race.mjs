@@ -1002,17 +1002,48 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 // an explanation. Every explanation is collected here so a student can read it
 // at leisure while the exit ticket is open — the first time `explanation` /
 // `explanation_es` ever leave the question bank.
+//
+// A first pass of this got the timing wrong: it attached `explanation` /
+// `explanation_es` to start_attempt's own questions payload, which ships them
+// in the FIRST response of the quiz, before question 1 is on screen — the same
+// answer-key leak `is_correct` is deliberately left off the options for. The
+// assertions below pin the fix: explanations exist only from submit_attempt,
+// resolved fresh at grading time, never from the frozen deal start_attempt
+// hands back.
 {
   const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+
+  // start_attempt's own question loader must never select or attach an
+  // explanation. Matched against the exact original select (no explanation
+  // columns) rather than a `doesNotMatch(/explanation/)` over the whole file,
+  // since gradeResponses legitimately selects explanation elsewhere below.
   assert.match(
     attempt,
-    /explanation, explanation_es/,
-    "the server sends explanations with the questions"
+    /\.select\("id, prompt, prompt_es, question_type, difficulty, topic_tags, points"\)/,
+    "start_attempt's questions select carries no explanation column"
+  );
+  assert.doesNotMatch(
+    attempt,
+    /explanation: question\.explanation,/,
+    "start_attempt's returned question object attaches no explanation field"
+  );
+
+  // explanation / explanation_es are fetched ONLY inside gradeResponses, which
+  // only ever runs from submit_attempt — after the attempt is graded.
+  assert.match(
+    attempt,
+    /\.select\("id, points, explanation, explanation_es"\)/,
+    "explanations are fetched at grading time, not at start_attempt"
   );
   assert.match(
     attempt,
-    /explanation: question\.explanation,\s*\n\s*explanation_es: question\.explanation_es,/,
-    "the frozen deal carries the explanation forward to the client"
+    /explanations:\s*explanationsByQuestion/,
+    "gradeResponses returns a question id -> explanation map"
+  );
+  assert.match(
+    attempt,
+    /explanations:\s*graded\.explanations/,
+    "submit_attempt forwards the explanations map to the client"
   );
 
   // The correct-option map has to trace back to the server's OWN grading, not
@@ -1034,6 +1065,28 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
     "the correct option is resolved for every dealt question, not only the answered ones"
   );
 
+  // gradeResponses must not trust `question_id`s from the client on ANY path.
+  // The room-clock path already only ever passes `clock.questionIds` in, so
+  // this closes the gap on the standalone-activity path (no class_session_id,
+  // `roomClockFor` returns null), which used to grade `input.responses`
+  // directly — a crafted payload naming a question outside this attempt's own
+  // deal would get that question's correct option echoed back in `correct`.
+  assert.match(
+    attempt,
+    /async function gradeResponses\(db: Db, responses: Record<string, unknown>\[\], dealtIds: string\[\]\)/,
+    "gradeResponses takes this attempt's own dealt question ids"
+  );
+  assert.match(
+    attempt,
+    /allowed\.has\(response\.question_id\)/,
+    "gradeResponses filters every response to this attempt's own dealt ids"
+  );
+  assert.match(
+    attempt,
+    /gradeResponses\(db, serverResponses \?\? input\.responses, dealtQuestionIds\(attempt\.questions_json\)\)/,
+    "the dealt-id guard applies regardless of whether the room clock is present"
+  );
+
   const quiz = readFileSync(new URL("../src/api/quiz.ts", import.meta.url), "utf8");
   assert.match(quiz, /explanation\?:\s*string\s*\|\s*null;/, "QuizQuestion carries the English explanation");
   assert.match(quiz, /explanation_es\?:\s*string\s*\|\s*null;/, "QuizQuestion carries the Spanish explanation");
@@ -1041,6 +1094,11 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
     quiz,
     /correct:\s*Record<string,\s*string>;/,
     "SubmitAttemptResponse declares the correct-option map the review list needs"
+  );
+  assert.match(
+    quiz,
+    /explanations:\s*Record<string,\s*\{\s*explanation:\s*string\s*\|\s*null;\s*explanation_es:\s*string\s*\|\s*null\s*\}>;/,
+    "SubmitAttemptResponse declares the explanations map the review list needs"
   );
 
   const review = readFileSync(new URL("../src/features/quiz/ReviewList.tsx", import.meta.url), "utf8");
@@ -1058,7 +1116,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(player, /import \{ ReviewList \} from "\.\/ReviewList";/, "Player imports the review list");
   assert.match(
     player,
-    /if \(result\) \{[\s\S]{0,500}?<ReviewList/,
+    /if \(result\) \{[\s\S]{0,1500}?<ReviewList/,
     "the review renders in the result branch, after the attempt is graded"
   );
   // The review must never render anywhere a quiz still in progress could see
@@ -1075,6 +1133,42 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.ok(
     !player.slice(breakBranch).includes("<ReviewList"),
     "the review list never reaches the break or the live question view — the round could still be running"
+  );
+
+  // Finding 1: `response.correct || {}` defeats the exact guard the "no review
+  // on resume" decision relies on. An edge function that has not been
+  // redeployed yet (this repo's edge functions do not deploy on push; the
+  // frontend does) answers submit_attempt with no `correct` field at all —
+  // `response.correct` is `undefined`, `|| {}` substitutes a truthy empty
+  // object, and a guard that only checked "is correctMap set" would render
+  // every question ❌ regardless of what was chosen.
+  assert.doesNotMatch(
+    player,
+    /setCorrectMap\(response\.correct \|\| \{\}\)/,
+    "an empty correct map must never be substituted in — it has to read as absent"
+  );
+  assert.match(
+    player,
+    /setCorrectMap\(response\.correct \?\? null\)/,
+    "a missing correct map stays null rather than becoming a misleading empty object"
+  );
+  assert.match(
+    player,
+    /correctMap && Object\.keys\(correctMap\)\.length > 0/,
+    "the review only renders once the correct map is both present and non-empty"
+  );
+
+  // Explanations reach the review through a COPY of `questions`, never by
+  // mutating the `questions` state the live question view still reads from.
+  assert.match(
+    player,
+    /explanations\?\.\[q\.id\]\?\.explanation \?\? null/,
+    "explanations are merged onto a per-render copy of the dealt questions"
+  );
+  assert.doesNotMatch(
+    player,
+    /<ReviewList questions=\{questions\}/,
+    "the review must read from the merged copy, not the raw start_attempt questions"
   );
 
   // Task 7 left `quiz.next` behind with no reference anywhere in src/ once the

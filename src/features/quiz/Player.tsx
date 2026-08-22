@@ -75,7 +75,23 @@ export function QuizPlayer({
   // Only ever set alongside `result`, which is why the review list has no
   // fallback for a resumed attempt below: resuming never calls submit_attempt
   // again, so there is never a grading pass here to have set this from.
+  //
+  // `null` means "no submit response yet" and is what gates the review list
+  // below — deliberately NOT `response.correct || {}`. `||` treats an empty
+  // object as a substitute for a missing field, and an empty object is exactly
+  // what a frontend deployed ahead of an un-redeployed course-activity-attempt
+  // would get back (this repo's edge functions do not deploy on push; the
+  // frontend does). `{}` is truthy, so a naive render guard would pass and
+  // ReviewList would mark every question ❌ regardless of what was chosen —
+  // the same failure shape the "no review on resume" decision below exists to
+  // avoid, reintroduced through the one path that decision didn't cover.
   const [correctMap, setCorrectMap] = useState<Record<string, string> | null>(null);
+  // question id -> explanation, in both languages. Never present on the
+  // `questions` state itself — start_attempt's payload carries no explanation
+  // field at all (see the comment on QuizQuestion.explanation in
+  // src/api/quiz.ts) — so this is merged onto a copy of `questions` only for
+  // the review list, only after a submit response has actually arrived.
+  const [explanations, setExplanations] = useState<Record<string, { explanation: string | null; explanation_es: string | null }> | null>(null);
   const [resumed, setResumed] = useState<{ percent: number | null } | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -198,7 +214,11 @@ export function QuizPlayer({
         integrity: { ...integrity.current, elapsed_ms: Date.now() - startedAt.current, user_agent: navigator.userAgent.slice(0, 200) }
       });
       setResult(response.score);
-      setCorrectMap(response.correct || {});
+      // `?? null`, not `|| {}` — see the comment on the `correctMap` state
+      // above. An empty object here must read as "nothing to show", not as
+      // legitimate (empty) grading data.
+      setCorrectMap(response.correct ?? null);
+      setExplanations(response.explanations ?? null);
     } catch (e) {
       setError(apiErrorText(e, "quiz.submitFailed"));
       submitting.current = false;
@@ -442,13 +462,31 @@ export function QuizPlayer({
   }
 
   if (result) {
+    // Explanations are merged onto a COPY of `questions` here, never onto
+    // `questions` state itself — that state is what the question view above
+    // still reads from, and it must stay exactly what start_attempt sent for
+    // as long as a round could still be open. `explanations` starts `null`
+    // and every lookup is optional-chained, so a submit response that (for
+    // any reason) arrived without it still renders the rest of the review
+    // rather than throwing.
+    const reviewQuestions = questions.map((q) => ({
+      ...q,
+      explanation: explanations?.[q.id]?.explanation ?? null,
+      explanation_es: explanations?.[q.id]?.explanation_es ?? null
+    }));
     return (
       <div class="stack">
         <p class="eyebrow">{t("quiz.done")}</p>
         <span class="big-number">{result.percent}%</span>
         <p class="hint">{t("quiz.doneBody")}</p>
         {myRace && attemptId ? <PinataCard race={myRace} attemptId={attemptId} /> : null}
-        {questions && correctMap ? <ReviewList questions={questions} answers={answers} correct={correctMap} /> : null}
+        {/* Non-empty, not just non-null — see the correctMap state comment:
+            an edge function that hasn't redeployed yet answers with no
+            `correct` field at all, and `{}` must never read as "reviewed and
+            every answer was wrong". */}
+        {correctMap && Object.keys(correctMap).length > 0 ? (
+          <ReviewList questions={reviewQuestions} answers={answers} correct={correctMap} />
+        ) : null}
       </div>
     );
   }

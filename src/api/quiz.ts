@@ -22,10 +22,12 @@ export interface QuizQuestion {
    *  constant on both sides drifts silently. */
   seconds: number;
   options: QuizOption[];
-  /** Why the correct option is right. Frozen into the attempt's deal like
-   *  everything else here, but never read until the quiz is graded — the
-   *  ten-second break shows a mark, not a paragraph; the review list is where
-   *  this actually gets read. */
+  /** Why the correct option is right. NEVER populated by start_attempt — that
+   *  would ship the answer key before question 1 is even on screen, the same
+   *  leak `is_correct` is deliberately left off these options for. Optional
+   *  here because it only exists once Player.tsx merges submit_attempt's
+   *  `explanations` map onto a copy of this array, after the quiz is graded,
+   *  for the post-quiz review list alone. */
   explanation?: string | null;
   explanation_es?: string | null;
 }
@@ -70,6 +72,11 @@ export interface SubmitAttemptResponse {
    *  so it only ever arrives attached to a response that already closed the
    *  attempt out. */
   correct: Record<string, string>;
+  /** question id -> explanation, in both languages. `QuizQuestion.explanation`
+   *  is never populated by start_attempt (a review round found it was shipping
+   *  the answer key at quiz start otherwise) — this is the only place a
+   *  question's explanation ever arrives from. */
+  explanations: Record<string, { explanation: string | null; explanation_es: string | null }>;
 }
 
 export function startQuizAttempt(activityInstanceId: string) {
