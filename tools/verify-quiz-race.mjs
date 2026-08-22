@@ -970,6 +970,31 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   for (const key of ["quiz.waitingForRoom", "quiz.waitingForRoomBody"]) {
     assert.ok(strings.includes(`"${key}"`), `${key} is in the dictionary`);
   }
+
+  // 5. Every quiet card is an early return that never reaches the question
+  // view's error line, and every one of them can be on screen while a submit is
+  // failing — the room-schedule wait especially, because with no round the
+  // instance-deadline effect is the only submit path left AND it refuses to
+  // retry once `error` is set. A failed submit there reads as a screen that is
+  // simply thinking. One helper carries the error for all three so a fourth
+  // card cannot quietly drop it again.
+  assert.match(
+    player,
+    /function holdingCard\([\s\S]{0,400}?error\s*\n?\s*\? <p class="error-text" role="alert">\{error\}<\/p>/,
+    "the holding card surfaces a submit error, with the alert role the question view has"
+  );
+  for (const key of ["quiz.roundOver", "quiz.waitingForRoom", "quiz.quizOver"]) {
+    assert.match(
+      player,
+      new RegExp(`holdingCard\\(t\\("${key}"`),
+      `the ${key} card goes through the shared holding card`
+    );
+  }
+  assert.doesNotMatch(
+    player,
+    /error \|\| t\(/,
+    "an error belongs in error-text with role=alert, not swapped into a muted hint"
+  );
 }
 
 console.log("verify-quiz-race passed");

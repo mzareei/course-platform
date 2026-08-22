@@ -374,6 +374,30 @@ export function QuizPlayer({
   }
   if (!questions) return <p class="hint">{t("quiz.loading")}</p>;
 
+  // The three quiet cards — the break's wait, the room-schedule wait, and the
+  // last round's submit — are early returns that never reach the question
+  // view's error line, and every one of them can be on screen while a submit
+  // is failing. Without this, a failed submit reads as a screen that is simply
+  // thinking: the instance-deadline effect refuses to retry once `error` is
+  // set, so the student waits on a calm ellipsis until the room closes.
+  //
+  // One helper rather than the same four lines three times, so a fourth quiet
+  // card cannot be added without the error coming with it. Called as a plain
+  // function, never mounted as a component: a component declared inside a
+  // render gets a new identity every pass and remounts its whole subtree —
+  // the bug LiveShell in Live.tsx carries a comment about.
+  function holdingCard(eyebrow: string, body: string) {
+    return (
+      <div class="stack quiz-reveal">
+        <p class="eyebrow">{eyebrow}</p>
+        <p class="quiz-reveal-mark" aria-hidden="true">…</p>
+        {error
+          ? <p class="error-text" role="alert">{error}</p>
+          : <p class="hint">{body}</p>}
+      </div>
+    );
+  }
+
   // The racer splash: the identity is secret, so it shows once, full screen.
   // The tap costs the student nothing but the seconds they spend reading it —
   // it starts no clock, and the round waiting behind it is whichever one the
@@ -442,13 +466,7 @@ export function QuizPlayer({
       : undefined;
     const played = revealedIndex >= joinedAtRound.current;
     if (!revealed || !played || !correctOption) {
-      return (
-        <div class="stack quiz-reveal">
-          <p class="eyebrow">{t("quiz.roundOver")}</p>
-          <p class="quiz-reveal-mark" aria-hidden="true">…</p>
-          <p class="hint">{t("quiz.checkingAnswer")}</p>
-        </div>
-      );
+      return holdingCard(t("quiz.roundOver"), t("quiz.checkingAnswer"));
     }
     return (
       <div class="stack quiz-reveal">
@@ -468,12 +486,7 @@ export function QuizPlayer({
   // The room has run every round. The submit is already in flight from the
   // effect above; this is what the student looks at while it lands.
   if (round?.phase === "done") {
-    return (
-      <div class="stack quiz-reveal">
-        <p class="eyebrow">{t("quiz.quizOver")}</p>
-        <p class="hint">{error || t("quiz.submitting")}</p>
-      </div>
-    );
+    return holdingCard(t("quiz.quizOver"), t("quiz.submitting"));
   }
 
   // No round at all. In practice that means one thing: this frontend deployed
@@ -485,13 +498,7 @@ export function QuizPlayer({
   // ten. A legible wait is recoverable; a frozen question is not. The instance
   // deadline still submits whatever is stored.
   if (!round) {
-    return (
-      <div class="stack quiz-reveal">
-        <p class="eyebrow">{t("quiz.waitingForRoom")}</p>
-        <p class="quiz-reveal-mark" aria-hidden="true">…</p>
-        <p class="hint">{t("quiz.waitingForRoomBody")}</p>
-      </div>
-    );
+    return holdingCard(t("quiz.waitingForRoom"), t("quiz.waitingForRoomBody"));
   }
 
   const remaining = Math.ceil(remainingMs(round.answer_ends_at, now) / 1000);
