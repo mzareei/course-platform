@@ -163,9 +163,12 @@ export function QuizPlayer({
     try {
       const response = await submitQuizAttempt({
         attempt_id: attemptId,
+        // Every dealt question is submitted, answered or not. A question the
+        // student never reached is a question they got wrong, and the grade has
+        // to say so — filtering the blanks out is what made five-of-ten with
+        // four right score 80% instead of 40%.
         responses: stateRef.current.questions
-          .map((q) => ({ question_id: q.id, selected_option_id: finalAnswers[q.id] || "" }))
-          .filter((r) => r.selected_option_id),
+          .map((q) => ({ question_id: q.id, selected_option_id: finalAnswers[q.id] || "" })),
         integrity: { ...integrity.current, elapsed_ms: Date.now() - startedAt.current, user_agent: navigator.userAgent.slice(0, 200) }
       });
       setResult(response.score);
@@ -184,13 +187,9 @@ export function QuizPlayer({
     const { index: i, questions: qs, answers: a } = stateRef.current;
     if (!qs) return;
     if (i >= qs.length - 1) {
-      // Same rule as the deadline effect: the server refuses an empty
-      // submission, so a student who answered nothing must not be handed an
-      // error for never having started.
-      if (Object.keys(a).length === 0) {
-        setResumed({ percent: null });
-        return;
-      }
+      // Same rule as the deadline effect: every dealt question is submitted,
+      // even a student who answered nothing — submitNow sends the blanks and
+      // the server grades them as wrong rather than refusing the attempt.
       void submitNow(a);
       return;
     }
@@ -242,10 +241,9 @@ export function QuizPlayer({
     const { index: i, questions: qs, answers: a, busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
     if (!dl || !qs || hasResult || hasResumed || isBusy || hasError) return;
     if (now >= dl[dl.length - 1] && i >= qs.length - 1) {
-      if (Object.keys(a).length === 0) {
-        setResumed({ percent: null });
-        return;
-      }
+      // The clock ran out, answered or not — submitNow sends every dealt
+      // question either way, and a wholly blank attempt now grades as zero
+      // instead of being refused.
       void submitNow(a);
       return;
     }
@@ -261,17 +259,13 @@ export function QuizPlayer({
   // player stops feeding new questions and sends what the student has, landing
   // inside the server's sixty-second grace.
   //
-  // A student who answered nothing submits nothing: the server refuses an empty
-  // submission ("At least one response is required"), so auto-submitting a
-  // blank attempt would put an error on the phone of someone who never started.
+  // A student who answered nothing still submits: every dealt question goes in,
+  // blank or not, and the server grades the blanks as wrong instead of
+  // refusing an empty attempt.
   useEffect(() => {
     const { answers: a, busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
     if (!instanceEndsAt || hasResult || hasResumed || isBusy || hasError) return;
     if (now < instanceEndsAt) return;
-    if (Object.keys(a).length === 0) {
-      setResumed({ percent: null });
-      return;
-    }
     void submitNow(a);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, instanceEndsAt]);
@@ -294,13 +288,9 @@ export function QuizPlayer({
     if (hasResult || hasResumed || isBusy || submitting.current) return;
     // Still loading. The deps below bring us back the moment the attempt lands.
     if (!attemptId || !questions) return;
-    // A student who answered nothing submits nothing: the server refuses an
-    // empty submission, so this is the finished state rather than an error on
-    // the phone of someone who never started.
-    if (Object.keys(a).length === 0) {
-      setResumed({ percent: null });
-      return;
-    }
+    // A student who answered nothing is submitted too: every dealt question
+    // goes in blank, and the server grades those as wrong rather than
+    // refusing the attempt.
     void submitNow(a);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizClosed, attemptId, questions]);

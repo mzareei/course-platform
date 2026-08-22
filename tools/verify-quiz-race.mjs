@@ -478,4 +478,18 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(attempt, /candy, correct_count, settled_through/, "the attempt row exposes the race columns");
 }
 
+// ------------------------------------------------- grading counts all ten
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /maxSpeedBonusPercent = 0/, "speed no longer moves a grade");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.doesNotMatch(
+    player,
+    /\.filter\(\(r\) => r\.selected_option_id\)/,
+    "the player must submit every dealt question, including the unanswered ones"
+  );
+  assert.match(player, /selected_option_id: finalAnswers\[q\.id\] \|\| ""/, "unanswered questions submit an empty selection");
+}
+
 console.log("verify-quiz-race passed");
