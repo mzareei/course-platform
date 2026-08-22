@@ -135,8 +135,12 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(c.SONG_75, "🎶 …porque si lo pierdes…");
   assert.equal(c.BURST_LINE, "🎶 …¡pierdes el camino! — ¡SE ROMPIÓ! 🪅💥");
 
-  const racer = (name, emoji, position, finished = false, place = null) =>
-    ({ racer_name: name, racer_emoji: emoji, position, answered: position, finished, finish_place: place });
+  // The third argument was `position` until the track became La Subida. Every
+  // student is on the same question in the same round now, so the announcer
+  // reads height on the climb instead: candy, with the correct answers that
+  // earned it. The bottom third of the pack is still the bottom third.
+  const racer = (name, emoji, candy, finished = false, place = null) =>
+    ({ racer_name: name, racer_emoji: emoji, candy, correct_count: Math.ceil(candy / 2), finished, finish_place: place });
   const snap = (percent, racers, extra = {}) =>
     ({ percent, burst: false, closed_reason: null, state: "live", racers, cheers: [], ...extra });
 
@@ -191,6 +195,106 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const endOfClass = readFileSync(frontend("src/screens/instructor/EndOfClass.tsx"), "utf8");
   assert.match(endOfClass, /ClassroomPinataLayer/, "End of Class mounts the layer");
   assert.match(endOfClass, /setShowingPinata\(true\)/, "the layer opens on start/adopt");
+}
+
+// ------------------------------------------------- the climb
+{
+  const {
+    CANDY_PER_QUESTION, FALLBACK_MAX_CANDY, MAX_SIZE, BOB_MS,
+    ceilingFor, sizeFor, heightFor, lanePercent, laneOrder, topThree, bobDelayMs
+  } = await import(frontend("src/features/live/subida.ts").href);
+
+  // The ceiling is the SERVER's question quota, never a constant of ours. The
+  // plan's brief said MAX_CANDY = 20; Task 6 had just finished cleaning up a
+  // frontend default of 12 questions against a dealt 10, and a hardcoded 20
+  // here would pin every racer at the top of the rope the day the professor
+  // changes the quota. The per-question ceiling still has to agree with the
+  // backend that hands out the candy, so both sides are executed here.
+  const { CANDY_GOLDEN } = await import(backend("_shared/rounds.ts").href);
+  assert.equal(CANDY_PER_QUESTION, CANDY_GOLDEN, "the climb's ceiling uses the server's best-case candy");
+  assert.equal(FALLBACK_MAX_CANDY, 20, "a payload with no question count falls back to the ten-question deal");
+  assert.equal(ceilingFor(10), 20, "ten questions at two candy each");
+  assert.equal(ceilingFor(12), 24, "a twelve-question quota raises the ceiling with it");
+  assert.equal(ceilingFor(null), FALLBACK_MAX_CANDY, "a stale payload still draws a climb");
+  assert.equal(ceilingFor(0), FALLBACK_MAX_CANDY, "so does an instance that reports no questions");
+
+  assert.equal(MAX_SIZE, 3, "nobody grows past three times base");
+  assert.equal(sizeFor(0), 1, "a racer starts at base size");
+  assert.equal(Math.round(sizeFor(5) * 100) / 100, 2, "five correct is double size");
+  assert.equal(sizeFor(10), 3, "ten correct is triple size");
+  assert.equal(sizeFor(50), 3, "size is capped, never unbounded");
+  assert.ok(sizeFor(3) > sizeFor(2), "size only ever grows with correct answers");
+  assert.equal(sizeFor(-4), 1, "a nonsense count never shrinks a racer below base");
+
+  assert.equal(heightFor(0, 10), 0, "no candy is the ground");
+  assert.equal(heightFor(20, 10), 100, "the ceiling is the piñata");
+  assert.equal(heightFor(10, 10), 50, "half the candy is half the rope");
+  assert.equal(heightFor(999, 10), 100, "height is clamped");
+  assert.equal(heightFor(20, null), 100, "with no question count the ten-question rope is the fallback");
+  // The drift the ruling exists to prevent.
+  assert.ok(heightFor(20, 12), "a twelve-question class still climbs");
+  assert.ok(heightFor(20, 12) < 100, "a bigger quota is a longer rope, not a full one");
+  assert.equal(heightFor(24, 12), 100, "and its own ceiling is still the piñata");
+
+  // Lanes. Twenty-six racers is the class that broke the old column track, and
+  // a fixed 3.78% step runs off the right-hand edge at thirty — the roster
+  // decides the spacing.
+  for (const total of [1, 2, 7, 26, 40]) {
+    for (let i = 0; i < total; i++) {
+      const left = lanePercent(i, total);
+      assert.ok(left >= 0 && left <= 100, `lane ${i} of ${total} stays inside the field (${left}%)`);
+      if (i > 0) assert.ok(left > lanePercent(i - 1, total), "lanes keep the field's order");
+    }
+  }
+
+  const racer = (name, candy, correct) => ({
+    racer_name: name, racer_emoji: "🐢", candy, correct_count: correct, finished: false, finish_place: null
+  });
+  const field = [racer("Rana Zen", 1, 1), racer("Jaguar Ninja", 9, 5), racer("Tortuga Veloz", 4, 4), racer("Oso Genial", 9, 3)];
+  const names = (list) => list.map((r) => r.racer_name);
+  const asDealt = names(field);
+
+  // A racer must stand in the same lane from the first poll to the last. The
+  // payload cannot supply that on its own: course-class-quiz selects the
+  // attempts with no ORDER BY and settleRoom rewrites those same rows every
+  // round, so Postgres may hand back a different row order next poll.
+  const shuffled = [field[2], field[0], field[3], field[1]];
+  assert.deepEqual(names(laneOrder(shuffled)), names(laneOrder(field)),
+    "the same room draws the same lanes whatever order the payload arrives in");
+  assert.deepEqual(names(field), asDealt, "laneOrder copies rather than sorting the caller's array");
+
+  // The rail sorts; the field never does. `.sort()` on race.racers would
+  // reorder every lane on screen.
+  const top = topThree(field);
+  assert.deepEqual(names(field), asDealt, "the rail must never re-sort the field");
+  assert.deepEqual(names(top), ["Jaguar Ninja", "Oso Genial", "Tortuga Veloz"], "top three by candy, then by correct answers");
+  assert.equal(topThree([]).length, 0, "an empty room has no rail rows");
+  assert.equal(topThree(field.slice(0, 2)).length, 2, "a class of two fills what it can");
+
+  // The idle bob is the fix for "nothing moved": twenty-six animals breathing
+  // in unison read as one object, so every lane gets its own phase.
+  const delays = new Set(Array.from({ length: 26 }, (_, i) => bobDelayMs(i)));
+  assert.equal(delays.size, 26, "no two racers in a full class bob together");
+  for (const delay of delays) assert.ok(delay <= 0 && delay > -BOB_MS, "a phase offset is a negative slice of one cycle");
+
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  assert.doesNotMatch(layer, /pinata-col-label/, "the column track is gone");
+  assert.doesNotMatch(layer, /difficulty/, "difficulty never appears on the room's screen");
+  assert.doesNotMatch(layer, /student_identifier|profile_id/, "nothing on this screen maps a racer to a student");
+  assert.match(layer, /subida-rope/, "every racer has a rope");
+  assert.match(layer, /subida-rail/, "the top three are always on screen");
+  assert.match(layer, /subida-lane-name/, "and every rope is labelled at the ground");
+  assert.match(layer, /laneOrder\(/, "the field is drawn in a lane order that survives a reordered payload");
+  assert.match(layer, /heightFor\([^)]*question_count/, "the rope's ceiling comes from the server's question count");
+  assert.ok((layer.match(/lanePercent\(/g) || []).length >= 3,
+    "rope, animal and ground label all take their lane from one function so they cannot drift apart");
+
+  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
+  assert.match(css, /@keyframes subida-bob/, "the idle bob exists at all");
+  assert.doesNotMatch(css, /\.pinata-track|\.pinata-col\b/, "the column track's styles are gone with it");
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
+  assert.ok(reducedBlocks.some((b) => /\.subida-racer\s*\{[^}]*animation:\s*none/.test(b)), "reduced motion stops the bob");
+  assert.ok(reducedBlocks.some((b) => /\.subida-racer\s*\{[^}]*transition:\s*none/.test(b)), "and stops the climb tween");
 }
 
 // ------------------------------------------------- fair shuffle

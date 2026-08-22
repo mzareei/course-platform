@@ -2093,14 +2093,16 @@ export const strings = {
   "pinata.nobodyLeft": ["Everyone's done — watch the piñata!", "Ya terminaron todos — ¡mira la piñata!"],
   "pinata.layerTitle": ["🪅 Today's piñata: {title}", "🪅 La piñata de hoy: {title}"],
   "pinata.layerTitleNoName": ["🪅 Today's piñata", "🪅 La piñata de hoy"],
-  "pinata.swinging": ["{count} swinging", "{count} dándole"],
-  "pinata.candies": ["{count} got candy 🍬", "{count} con dulce 🍬"],
   "pinata.present": ["{count} present", "{count} presentes"],
   "pinata.blindfolded": ["{count} still blindfolded", "{count} con la venda puesta"],
-  "pinata.start": ["start", "salida"],
-  "pinata.porra": ["La porra ({count})", "La porra ({count})"],
   "pinata.casi": ["¡Casi! {percent}% — next class it falls", "¡Casi! {percent}% — la próxima clase cae"],
   "pinata.show": ["Show the piñata", "Mostrar la piñata"],
+  // ------------------------------------------------------------- La Subida
+  "subida.roundOf": ["Round {n} of {total}", "Ronda {n} de {total}"],
+  "subida.round": ["Round {n}", "Ronda {n}"],
+  "subida.roundGotIt": ["{count} of {total} got it", "{count} de {total} le atinaron"],
+  "subida.candyInRoom": ["{count} candy in the room", "{count} dulces en el salón"],
+  "subida.rail": ["Out in front", "Van arriba"],
 
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],

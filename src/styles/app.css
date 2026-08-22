@@ -1328,34 +1328,69 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
   gap: 1rem; padding: 1.5rem 2rem; background: #0f1420; color: #f4f6fb;
 }
-.pinata-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
-.pinata-clock { font-size: 3.2rem; font-weight: 800; line-height: 1; margin: 0; }
-.pinata-line { min-height: 1.4em; color: #ffd166; font-size: 1.15rem; margin: 0.4rem 0 0; }
-.pinata-counts { text-align: right; color: #aab3c5; }
-.pinata-counts b { color: #fff; }
-.pinata-main { flex: 1; display: grid; grid-template-columns: 1fr 22%; gap: 1.2rem; min-height: 0; }
-.pinata-track { display: grid; gap: 4px; align-items: end; }
-.pinata-col { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px;
-  min-height: 100%; border-left: 1px dashed rgba(255, 255, 255, 0.12); padding-bottom: 1.4rem; position: relative; }
-.pinata-col-label { position: absolute; bottom: 0; font-size: 0.7rem; color: #6f7a90; }
-.pinata-racer { font-size: 1.5rem; line-height: 1.1; text-align: center; transition: transform 400ms ease; }
-.pinata-racer small { display: block; font-size: 0.55rem; color: #c9d1e0; max-width: 5.5rem;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pinata-side { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; }
-.pinata-figure { font-size: 5rem; transform: rotate(-10deg); }
+/* La Subida — the climb toward the piñata, on the room's screen.
+   Replaces the column track: with the room clock every student is on the same
+   question at the same time, so on 2026-08-21 all twenty-six racers stacked
+   into question 1's column and pushed the layer taller than the display.
+   Height is the whole point of a climb, so that bug cannot recur here. */
+.subida-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.subida-hud { min-width: 10rem; }
+.subida-eyebrow { margin: 0 0 0.25rem; min-height: 1.2em; color: #aab3c5; font-size: 0.85rem;
+  letter-spacing: 0.06em; text-transform: uppercase; }
+.subida-clock { font-size: 3rem; font-weight: 800; line-height: 1; margin: 0; font-variant-numeric: tabular-nums; }
+.subida-pinata { flex: 1; max-width: 24rem; display: flex; flex-direction: column; align-items: center;
+  gap: 0.3rem; text-align: center; }
+.subida-pinata .pinata-bar { width: 100%; }
+.subida-counts { min-width: 10rem; text-align: right; color: #aab3c5; }
+.subida-counts p { margin: 0 0 0.15rem; font-size: 0.85rem; }
+.subida-counts b { color: #fff; }
+
+/* The sky is the reserve above the field. A racer is positioned by its BOTTOM
+   edge, so one at 100% draws entirely above the field — 16px × MAX_SIZE of
+   emoji, rounded up. Without this the leader lands on the piñata's head.
+   The right margin is the top-three rail's lane, kept clear of the ropes so a
+   racer high in the last lane is never hidden behind it. */
+.subida-sky { flex: 1; min-height: 0; display: flex; padding-top: 60px; margin-right: 154px; }
+.subida-field { position: relative; flex: 1; min-height: 0; }
+.subida-rope { position: absolute; bottom: 0; width: 1px; height: 100%; background: rgba(255, 255, 255, 0.055); }
+.subida-racer { position: absolute; line-height: 1; transform: translate(-50%, 0);
+  transition: bottom 640ms cubic-bezier(.34, 1.3, .64, 1), font-size 460ms ease;
+  animation: subida-bob 3.2s ease-in-out infinite; }
+.subida-floats { position: absolute; inset: 0; pointer-events: none; }
+/* The idle loop. Each lane carries its own negative animation-delay from the
+   markup: twenty-six animals breathing in unison read as one object, and a
+   still screen between rounds was half the 2026-08-21 complaint. The keyframes
+   repeat the -50% because an animated transform replaces the base one. */
+@keyframes subida-bob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -6px); }
+}
+/* The ground. A name marks its LANE for the whole quiz and never moves with
+   its animal; rotated because twenty-six of them have no room to lie flat.
+   The strip is tall enough for the longest name a racer can be dealt
+   ("Dinosaurio Invencible"), and clips with an ellipsis rather than spilling. */
+.subida-lanes { position: relative; height: 92px; margin-right: 154px; }
+.subida-lane-name { position: absolute; top: 2px; transform-origin: left top;
+  transform: rotate(90deg) translateY(-50%); font-size: 0.46rem; color: #7a8399;
+  white-space: nowrap; max-width: 86px; overflow: hidden; text-overflow: ellipsis; }
+.subida-rail { position: absolute; right: 0.75rem; top: 6.5rem; width: 142px; z-index: 40;
+  background: #182034; border-radius: 12px; padding: 0.55rem 0.62rem; }
+.subida-rail-title { margin: 0 0 0.3rem; font-size: 0.62rem; color: #aab3c5;
+  letter-spacing: 0.08em; text-transform: uppercase; }
+.subida-rail-row { display: flex; align-items: center; gap: 0.38rem; padding: 0.18rem 0; }
+.subida-rail-name { font-size: 0.6rem; line-height: 1.15; flex: 1; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.subida-rail-candy { font-size: 0.62rem; color: #ffd166; font-weight: 700; }
+.pinata-figure { font-size: 3.4rem; transform: rotate(-10deg); }
 .pinata-figure.burst { transform: none; filter: drop-shadow(0 0 20px rgba(255, 209, 102, 0.7)); }
-.pinata-side .pinata-bar { width: 100%; }
 .pinata-name { color: #ffd166; font-size: 0.9rem; margin: 0; }
 .pinata-casi { font-weight: 700; margin: 0; }
-.pinata-porra { margin-top: auto; background: rgba(255, 255, 255, 0.06); border-radius: 10px;
-  padding: 0.6rem; width: 100%; }
-.pinata-porra p { margin: 0; font-size: 0.85rem; }
-.pinata-porra-row { font-size: 1.3rem; letter-spacing: 0.1em; }
+.pinata-line { min-height: 1.4em; margin: 0; color: #ffd166; font-size: 1.15rem; text-align: center; }
 .pinata-rain { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .pinata-rain span { position: absolute; top: -2rem; font-size: 2rem; animation: pinata-fall 2.6s ease-in forwards; }
 @keyframes pinata-fall { to { transform: translateY(110vh) rotate(300deg); } }
 @media (prefers-reduced-motion: reduce) {
   .pinata-rain { display: none; }
-  .pinata-racer { transition: none; }
+  .subida-racer { animation: none; transition: none; }
 }
 .pinata-actions { display: flex; justify-content: center; gap: 0.8rem; }
