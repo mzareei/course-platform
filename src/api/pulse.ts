@@ -89,8 +89,20 @@ export interface MyRace {
   candy: number;
   /** Size on the climb — cumulative, so a racer never shrinks. */
   correct_count: number;
-  /** The reveal for the round that just closed. Null while answering — the
-   *  correct answer never reaches a phone that could still use it. */
+  /**
+   * The reveal for the round that just closed. Null in two different cases,
+   * and the phone has to tell them apart:
+   *
+   * - while the room is answering, because the correct answer must never reach
+   *   a phone that could still use it;
+   * - for the FIRST THREE SECONDS of the break, because an answer is still
+   *   accepted for a couple of seconds past the countdown and the reveal is
+   *   held back until that window has provably shut.
+   *
+   * So a `break` round with no `last_result` is a WAIT, not a verdict. Falling
+   * back to the question there flashes it onto the screen for three seconds
+   * and then snatches it away.
+   */
   last_result: {
     question_id: string;
     correct: boolean;

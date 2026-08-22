@@ -122,20 +122,23 @@ assert.equal(
 assert.equal(CUSHION_SECONDS, 60, "the cushion is the professor's one minute");
 
 // ------------------------------------------------------ no second copy of it
-// The server stamps each question with its own `seconds`; the player reads that
-// field. A constant table in the client is the drift this prevents.
+// The client keeps no duration at all. It used to read each question's own
+// `seconds` off the server, which was already the anti-drift rule; the room
+// clock of 2026-08-21 went further — every phone now renders the ABSOLUTE
+// instant the server put on the round, so there is nothing left on this side
+// to disagree with the backend when only one of the two repos deploys.
 const player = readFileSync("src/features/quiz/Player.tsx", "utf8");
 check(
   !/SECONDS_BY_DIFFICULTY/.test(player),
   "the client must not keep a difficulty-to-seconds table"
 );
 check(
-  !/\b(20|30|45)\s*\*\s*1000/.test(player),
-  "the client must not compute a question deadline from a literal number of seconds"
+  !/\b(20|30|40|45|50)\s*\*\s*1000/.test(player),
+  "the client must not compute a deadline from a literal number of seconds"
 );
 check(
-  /question\.seconds|current\.seconds|\.seconds\b/.test(player),
-  "the player must take each question's time from the server's `seconds` field"
+  /remainingMs\(round\.answer_ends_at/.test(player),
+  "the player must count down to the room's own deadline, not to a duration of its own"
 );
 
 // Two effects share one stateRef snapshot per tick, so `busy` (state) cannot

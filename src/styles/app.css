@@ -1267,6 +1267,14 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .quiz-splash { align-items: center; text-align: center; padding: 1.5rem 0; }
 .quiz-splash-racer { font-size: 1.8rem; font-weight: 800; }
 
+/* The break's reveal. Read in about a second and then looked away from: the
+   mark carries it, the option text confirms it, and the last line is the whole
+   point of the ten seconds. */
+.quiz-reveal { align-items: center; text-align: center; padding: 1.25rem 0; }
+.quiz-reveal-mark { font-size: 3rem; line-height: 1; margin: 0; }
+.quiz-reveal-answer { font-size: 1.15rem; font-weight: 650; margin: 0; }
+.quiz-reveal-lookup { font-size: 1.3rem; font-weight: 700; margin: 0.5rem 0 0; }
+
 /* The done-screen race card and its crack bar. */
 .pinata-card { display: grid; gap: 0.5rem; }
 .pinata-card-bar-label { margin: 0; font-weight: 650; }

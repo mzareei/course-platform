@@ -1,4 +1,4 @@
-// The piñata race, the carry-over timer, and the 40-word exit ticket.
+// The piñata race, the room clock, and the 40-word exit ticket.
 // Pure modules are imported and executed; wiring is grepped. Sections are
 // appended task by task — see docs/superpowers/plans/2026-08-19-end-of-class-quiz-pinata-race.md.
 import assert from "node:assert/strict";
@@ -116,49 +116,6 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const pulse = readFileSync(fn("course-pulse/index.ts"), "utf8");
   assert.match(pulse, /my_race/, "the student poll carries my_race");
   assert.match(pulse, /from "\.\.\/_shared\/pinata\.ts"/, "the phone and the room share one piñata formula");
-}
-
-// ------------------------------------------------- the carry-over budget
-{
-  const { deadlines, positionAt, rebase, MAX_QUESTION_SECONDS } = await import(frontend("src/features/quiz/budget.ts").href);
-  const t0 = 1_000_000;
-  const secs = [30, 30, 45, 30];
-  // 30/30/45/30: cumulative deadlines, so saved time visibly rolls forward.
-  const dl = deadlines(secs, t0);
-  assert.deepEqual(dl, [t0 + 30_000, t0 + 60_000, t0 + 105_000, t0 + 135_000], "deadlines are cumulative");
-  // Answering Q1 at 25s leaves 35s on Q2 — the spec's example.
-  assert.equal(dl[1] - (t0 + 25_000), 35_000, "25s on Q1 leaves 35s for Q2");
-  assert.equal(positionAt(dl, t0 + 5_000), 0, "before the first deadline you are on Q1");
-  assert.equal(positionAt(dl, t0 + 30_000), 1, "at the deadline you have moved on");
-  // A phone asleep through three deadlines lands on the right question in one call.
-  assert.equal(positionAt(dl, t0 + 110_000), 3, "skip-forward over missed questions");
-  assert.equal(positionAt(dl, t0 + 999_000), 3, "clamped to the final question");
-
-  // The ceiling. Saved seconds roll forward, but no question is ever worth
-  // more than sixty — the professor's rule, executed rather than trusted.
-  assert.equal(MAX_QUESTION_SECONDS, 60, "the per-question ceiling is sixty seconds");
-  // A small saving rebases to the very schedule the cumulative clock already
-  // had: 25s on Q1 leaves the standing deadlines untouched.
-  assert.deepEqual(rebase(dl, secs, 0, t0 + 25_000), dl, "an under-cap carry keeps the cumulative schedule");
-  // An instant answer banks all 30: Q2 is worth exactly 60 — the top, allowed.
-  const afterQ1 = rebase(dl, secs, 0, t0);
-  assert.equal(afterQ1[1], t0 + 60_000, "30 banked on 30 base sits exactly at the top");
-  // Instantly again: 60 banked onto a 45s question would be 105 — capped at 60.
-  const afterQ2 = rebase(afterQ1, secs, 1, t0);
-  assert.equal(afterQ2[2], t0 + 60_000, "the cap holds: never more than 60 on one question");
-  assert.equal(afterQ2[3], t0 + 90_000, "questions behind the capped one line up on their base");
-  // The last question has nowhere to carry to.
-  assert.deepEqual(rebase(dl, secs, 3, t0 + 5_000), dl, "no next question, no rebase");
-}
-
-// ------------------------------------------------- the player
-{
-  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
-  assert.match(player, /from "\.\/budget"/, "the player uses the shared budget module");
-  assert.match(player, /rebase\(/, "an early answer rebases the schedule, so the sixty-second cap can bite");
-  assert.match(player, /reportProgress\(/, "the player pings progress");
-  assert.match(player, /quiz\.letsGo/, "the splash has a Let's go button");
-  assert.ok(!/setQuestionDeadline/.test(player), "the per-question deadline state is gone — the budget rules");
 }
 
 // ------------------------------------------------- the phone's done card
@@ -852,6 +809,80 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   );
   const api = readFileSync(frontend("src/api/quiz.ts"), "utf8");
   assert.doesNotMatch(api, /question_count\?: number/, "the dead question_count parameter is gone");
+}
+
+// ------------------------------------------------- the phone obeys the room
+// The quiz ran with a real class on 2026-08-20 and failed for one reason that
+// was never a bug: every phone counted down from the moment its own student
+// tapped "Let's go", so no two students were ever on the same question and
+// nobody ever had a spare second to look up. The room publishes one schedule
+// now, and this block is what keeps the phone from inventing a second one.
+{
+  const { existsSync } = await import("node:fs");
+  assert.ok(
+    !existsSync(new URL("../src/features/quiz/budget.ts", import.meta.url)),
+    "the carry-over budget is deleted"
+  );
+
+  const { remainingMs, isBreak } = await import(frontend("src/features/quiz/rounds.ts").href);
+  const now = 1_000_000;
+  assert.equal(
+    remainingMs(new Date(now + 12_000).toISOString(), now),
+    12_000,
+    "a live deadline reads as the milliseconds still on it"
+  );
+  assert.equal(remainingMs(new Date(now - 5_000).toISOString(), now), 0, "a passed deadline is zero, never negative");
+  assert.equal(remainingMs(null, now), 0, "a stale server that sends no deadline reads as zero, not NaN");
+  assert.equal(remainingMs("half past four", now), 0, "an unparseable deadline reads as zero, not NaN");
+
+  assert.equal(isBreak({ phase: "break" }), true, "the break is the break");
+  assert.equal(isBreak({ phase: "answering" }), false, "answering is not the break");
+  assert.equal(isBreak({ phase: "done" }), false, "a finished quiz is not a break");
+  assert.equal(isBreak(null), false, "no round at all is not a break");
+
+  // The phone renders the server's absolute timestamps and holds no duration of
+  // its own. The two repos deploy independently; a number kept on both sides
+  // drifts the moment one of them ships without the other.
+  const rounds = readFileSync(frontend("src/features/quiz/rounds.ts"), "utf8");
+  assert.doesNotMatch(rounds, /\d+\s*\*\s*1000/, "rounds.ts converts what the server sent — it does not own a duration");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.doesNotMatch(player, /from "\.\/budget"/, "nothing imports the carry-over budget");
+  assert.doesNotMatch(player, /quiz\.next/, "there is no Next button — the room clock advances");
+  assert.doesNotMatch(player, /\d+\s*\*\s*1000|SECONDS/, "no duration constant survives on the phone");
+  assert.match(player, /round\.index/, "the player follows the room's round index");
+  assert.match(player, /last_result/, "the break shows the student their result");
+  assert.match(
+    player,
+    /remainingMs\(round\.answer_ends_at/,
+    "the countdown pill reads the room's deadline, not a clock the phone started"
+  );
+  // The splash survives the room clock — a student still meets their secret
+  // racer name — but it no longer anchors anything.
+  assert.match(player, /quiz\.letsGo/, "the splash still hands the student their racer name");
+  // The grade now comes from the server's record of what was pinged, so the
+  // per-tap ping is no longer cosmetic.
+  assert.match(player, /reportProgress\(/, "every option tap still pings — that ping is what earns the grade");
+
+  // `phase` is "break" for the whole ten seconds, but `last_result` is held
+  // back for the first three: an answer is still accepted two seconds past the
+  // countdown, and a reveal must never reach a phone that could still ping the
+  // answer it just read. So "break with no result" is a WAIT. Falling through
+  // to the question there would flash it back onto the screen and snatch it
+  // away three seconds later.
+  assert.match(
+    player,
+    /if \(isBreak\(round\)\)[\s\S]{0,600}?quiz\.checkingAnswer/,
+    "a break with no result yet holds a calm beat instead of flashing the question back"
+  );
+
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  for (const key of ["quiz.correctAnswerWas", "quiz.earnedCandy", "quiz.lookUp", "quiz.checkingAnswer"]) {
+    assert.ok(strings.includes(`"${key}"`), `${key} is in the dictionary`);
+  }
+
+  const live = readFileSync(frontend("src/screens/student/Live.tsx"), "utf8");
+  assert.match(live, /round=\{view\?\.quiz\.round/, "Live hands the room's round to the player");
 }
 
 console.log("verify-quiz-race passed");

@@ -2061,6 +2061,14 @@ export const strings = {
   "quiz.splashEyebrow": ["Today you are", "Hoy eres"],
   "quiz.splashHint": ["Only you know — find yourself on the big screen.", "Solo tú lo sabes — búscate en la pantalla."],
   "quiz.letsGo": ["Let's go!", "¡Vamos!"],
+  // The ten-second break. The phone shows the student their own result and
+  // then points them at the room's screen — the reason the break exists.
+  "quiz.roundOver": ["Round over", "Ronda terminada"],
+  "quiz.checkingAnswer": ["Checking your answer…", "Revisando tu respuesta…"],
+  "quiz.correctAnswerWas": ["The answer was: {answer}", "La respuesta era: {answer}"],
+  "quiz.earnedCandy": ["+{candy} 🍬", "+{candy} 🍬"],
+  "quiz.lookUp": ["👀 Look up at the screen!", "👀 ¡Mira la pantalla!"],
+  "quiz.quizOver": ["That was the last round", "Esa fue la última ronda"],
 
   "pinata.cardTitle": ["🪅 Piñata: {percent}% cracked", "🪅 Piñata: {percent}% quebrada"],
   "pinata.burst": ["¡SE ROMPIÓ! 🪅💥", "¡SE ROMPIÓ! 🪅💥"],

@@ -78,8 +78,10 @@ export function submitQuizAttempt(input: {
 
 /** Fire-and-forget: "I'm on question `position`, answered `answered`." Moves
  *  this student's racer on the room's screen — and carries the full answer map,
- *  the server-side recovery copy a kicked phone resumes from. `clock_start`
- *  marks the "Let's go" tap that anchors the server clock. Callers swallow
+ *  which is BOTH the recovery copy a kicked phone resumes from and the record
+ *  the server grades from. `clock_start` marks the "Let's go" tap; since the
+ *  room clock replaced the per-phone one it anchors nothing, and the server
+ *  stamps `clock_t0` on the first ping it sees either way. Callers swallow
  *  failures — a dropped ping must never interrupt a student mid-quiz. */
 export function reportProgress(input: {
   attempt_id: string;

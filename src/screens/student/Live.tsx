@@ -237,6 +237,7 @@ export function Live() {
             quizClosed={quizInstanceId === heldQuizId && quizState === "closed"}
             onFinished={() => setQuizFinishedFor(heldQuizId)}
             myRace={view?.quiz.my_race ?? null}
+            round={view?.quiz.round ?? null}
           />
         </div>
       </LiveShell>
@@ -364,6 +365,7 @@ export function Live() {
             quizClosed={false}
             onFinished={() => setQuizFinishedFor(quizInstanceId)}
             myRace={view?.quiz.my_race ?? null}
+            round={view?.quiz.round ?? null}
           />
         </div>
       </LiveShell>

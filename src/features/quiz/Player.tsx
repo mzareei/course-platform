@@ -1,39 +1,38 @@
 // The end-of-class quiz, taken inside the student's live screen. Phone-first,
-// ONE question on screen at a time, each with its own countdown — thirty
-// seconds for almost everything, and forty-five for a question that simply
-// takes longer to read. The server
-// decides and sends the number with the question; this file holds no timing
-// rule of its own — the carry-over (seconds saved on one question roll into
-// the next, never past the budget's sixty-second ceiling) lives in budget.ts.
-// When a question's timer runs out the player moves on by
-// itself; there is no going back once a question has passed, matching how a
-// live in-class quiz actually runs. Server-graded — the browser never learns
-// which option is correct until after submit. Questions are pre-mixed across
-// difficulty tiers by the server (course-activity-attempt); this component
-// just presents them in the order it received them, each timed by its own
-// duration.
+// ONE question on screen at a time — but the clock is the ROOM's, not this
+// phone's.
+//
+// It used to be this phone's. Every student's countdown started when they
+// tapped "Let's go", so no two phones were ever on the same question, nobody
+// ever had a spare second to look up, and the room's screen played to an
+// audience of one. The 2026-08-20 class run is what proved it. The activity
+// instance now publishes one schedule — round k answers for its window, then
+// the whole room breaks — and this component only renders what the server
+// says: which round it is, and the absolute instant its window closes.
+//
+// So there is no Next button and no Submit button. The room advances, and the
+// room ends the quiz. What the student does is tap an option, and every tap
+// pings the server, which is no longer cosmetic: the grade is computed from
+// the server's own record of what it was pinged, not from the submit payload.
+//
+// The ten-second break is the point of the whole design. The phone shows the
+// student their own result, then sends their eyes to the screen. Server-graded
+// throughout — the browser learns which option was correct only in the break
+// after that round's answers have stopped being accepted.
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t, lang, apiErrorText } from "../../i18n";
 import { startQuizAttempt, submitQuizAttempt, reportProgress, type QuizQuestion, type SubmitAttemptResponse } from "../../api/quiz";
-import type { MyRace } from "../../api/pulse";
+import type { MyRace, PulseQuizRound } from "../../api/pulse";
 import { clockText } from "./clock";
-import { deadlines, positionAt, rebase } from "./budget";
+import { remainingMs, isBreak } from "./rounds";
 import { PinataCard } from "./PinataCard";
-
-// The server sends each question's own time. The fallback is the floor, never
-// a table: if a stale deployment omits the field, a student gets the minimum
-// the professor asked for rather than a number this file invented.
-const FALLBACK_SECONDS = 30;
-
-function secondsFor(question: QuizQuestion) {
-  return Number(question.seconds) > 0 ? Number(question.seconds) : FALLBACK_SECONDS;
-}
 
 export function QuizPlayer({
   activityInstanceId,
   quizClosed,
   onFinished,
-  myRace
+  myRace,
+  round
 }: {
   activityInstanceId: string;
   /**
@@ -48,9 +47,18 @@ export function QuizPlayer({
   onFinished: () => void;
   /** The race card for a finished student's phone; null once the quiz closes. */
   myRace?: MyRace | null;
+  /**
+   * The room's round, straight from the class poll. Null only while a stale
+   * backend is deployed without the schedule, or for the instant a poll fails.
+   */
+  round: PulseQuizRound | null;
 }) {
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
+  // Which question is on screen. The room owns this — the effect below copies
+  // the round index across — and it is state rather than a plain read of
+  // `round` so that a poll blinking to null cannot throw a student back to
+  // question one on a request that merely timed out.
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<SubmitAttemptResponse["score"] | null>(null);
@@ -59,8 +67,12 @@ export function QuizPlayer({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [t0, setT0] = useState<number | null>(null);
   const [racer, setRacer] = useState<{ name: string; emoji: string } | null>(null);
+  // The student has tapped through the racer splash. It gates nothing but the
+  // splash itself: the room's schedule runs whether this phone has tapped or
+  // not, so a student who taps thirty seconds into round three lands in round
+  // three with whatever is left of it.
+  const [joined, setJoined] = useState(false);
   const [instanceEndsAt, setInstanceEndsAt] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
   const questionRef = useRef<HTMLHeadingElement | null>(null);
@@ -74,8 +86,9 @@ export function QuizPlayer({
   // makes sure Live.tsx is told exactly once that the player is done. Without
   // it, every re-render after a terminal state would fire the callback again.
   const finished = useRef(false);
-  // Refs mirror the latest state so the auto-advance effect (keyed only on the
-  // clock tick) always reads current values without re-subscribing every render.
+  // Refs mirror the latest state so the effects (keyed only on the clock tick
+  // or on the round) always read current values without re-subscribing every
+  // render.
   const stateRef = useRef({ index: 0, questions: null as QuizQuestion[] | null, answers: {} as Record<string, string>, busy: false, result: null as SubmitAttemptResponse["score"] | null, resumed: null as { percent: number | null } | null, error: null as string | null });
   stateRef.current = { index, questions, answers, busy, result, resumed, error };
 
@@ -95,26 +108,21 @@ export function QuizPlayer({
           // the server sent one, and never a fabricated 0%.
           setResumed({ percent: typeof res.attempt.score_percent === "number" ? res.attempt.score_percent : null });
         } else if (res.questions.length) {
-          const anchor = res.attempt.clock_t0 ? new Date(res.attempt.clock_t0).getTime() : NaN;
-          if (!Number.isNaN(anchor)) {
-            // A resumed attempt: the clock already started in a previous life
-            // (a kick, a reload, a re-sign-in). Everything comes back from the
-            // server — the saved answers, the clock anchor, the furthest
-            // question reached — and the budget effect walks the schedule
-            // forward to wherever "now" says. No splash: they already tapped.
-            setAnswers(res.attempt.progress_answers || {});
-            setT0(anchor);
-            const storedPosition = Math.min(
-              Math.max(0, Number(res.attempt.progress_position || 0)),
-              res.questions.length - 1
-            );
-            if (storedPosition > 0) setIndex(storedPosition);
+          // Everything the student already chose comes back from the server —
+          // a kick, a reload or a re-sign-in resumes in place. The position
+          // does not: the room says which round it is, and this phone's
+          // furthest-reached question no longer has a vote.
+          setAnswers(res.attempt.progress_answers || {});
+          if (res.attempt.clock_t0) {
+            // clock_t0 no longer anchors a countdown. It survives as the
+            // record that this student already tapped, so a phone that
+            // reloads mid-quiz is not handed the racer splash a second time.
+            setJoined(true);
           } else if (res.attempt.racer_name) {
-            // The splash owns the clock: T0 is set when the student taps.
             setRacer({ name: res.attempt.racer_name, emoji: res.attempt.racer_emoji || "🎒" });
           } else {
-            // Stale server without racer names — no splash, clock starts now.
-            setT0(Date.now());
+            // Stale server without racer names — there is no splash to show.
+            setJoined(true);
           }
         }
       })
@@ -142,8 +150,8 @@ export function QuizPlayer({
     return () => clearInterval(clock);
   }, []);
 
-  // Every advance — tap or timeout — announces the new question to a screen
-  // reader and scrolls it into view. Not on first paint (index 0).
+  // Every advance announces the new question to a screen reader and scrolls it
+  // into view. Not on first paint (index 0).
   useEffect(() => {
     if (index > 0) questionRef.current?.focus();
   }, [index]);
@@ -183,26 +191,9 @@ export function QuizPlayer({
     }
   }
 
-  function advance() {
-    const { index: i, questions: qs, answers: a } = stateRef.current;
-    if (!qs) return;
-    if (i >= qs.length - 1) {
-      // Same rule as the deadline effect: every dealt question is submitted,
-      // even a student who answered nothing — submitNow sends the blanks and
-      // the server grades them as wrong rather than refusing the attempt.
-      void submitNow(a);
-      return;
-    }
-    const nextIndex = i + 1;
-    // A tap before the deadline saved time; the budget decides how much of it
-    // the next question may keep. A timeout never comes through here.
-    setDl((prev) => (prev ? rebase(prev, qs.map(secondsFor), i, Date.now()) : prev));
-    setIndex(nextIndex);
-    ping(nextIndex);
-  }
-
-  // Every ping carries the full answer map — the server's recovery copy, what
-  // a kicked or reloaded phone resumes from. Pass `map` when state has not
+  // Every ping carries the full answer map — the server's record of what this
+  // student chose, which is both what a kicked or reloaded phone resumes from
+  // AND what the grade is computed against. Pass `map` when state has not
   // caught up yet (an option was tapped microseconds ago).
   function ping(position: number, opts?: { map?: Record<string, string>; clockStart?: boolean }) {
     if (!attemptId) return;
@@ -214,50 +205,61 @@ export function QuizPlayer({
       answers,
       ...(opts?.clockStart ? { clock_start: true } : {})
     }).catch(() => {
-      /* fire-and-forget: the race is cosmetic, the quiz is not */
+      /* fire-and-forget: a dropped ping must never interrupt a student */
     });
   }
 
   function onLetsGo() {
-    setT0(Date.now());
-    // clock_start anchors the server clock — the resume schedule counts from here.
-    ping(0, { clockStart: true });
+    setJoined(true);
+    // The tap registers this phone rather than starting anything: the server
+    // stamps clock_t0 on the first ping it sees, and that stamp is what puts
+    // this racer on the room's screen. The room's schedule has been running
+    // since the professor pressed start, with or without this student.
+    ping(stateRef.current.index, { clockStart: true });
   }
 
-  // Deadlines are state, not derived: an early answer rebases the schedule so
-  // the carried seconds meet the sixty-second ceiling. Initialized once, the
-  // moment the clock has a start and the questions have arrived.
-  const [dl, setDl] = useState<number[] | null>(null);
+  // The room's round, copied across as it changes. One effect, one move: a
+  // phone that slept through three rounds lands on the live one in a single
+  // poll, because the server sends where the room IS rather than how far it
+  // has travelled. The ping tells the server this phone is on the round with
+  // everyone else — the server clamps it forward-only.
+  //
+  // `joined` is read but deliberately NOT a dependency. A phone still on the
+  // splash tracks the room silently so that the tap lands the student straight
+  // into the live round, but it must not ping: the first ping is what stamps
+  // this attempt as started and pops the racer onto the room's screen, and
+  // that moment belongs to the tap. Depending on `joined` would fire this
+  // effect on the tap as well and send the same ping twice.
   useEffect(() => {
-    if (t0 === null || !questions) return;
-    setDl((prev) => prev ?? deadlines(questions.map(secondsFor), t0));
-  }, [t0, questions]);
-
-  // The budget clock. One effect owns both moves: skip forward to wherever
-  // the running budget says the student should be (a phone asleep through
-  // three questions lands on the right one in a single tick), and submit
-  // when the final deadline passes.
-  useEffect(() => {
-    const { index: i, questions: qs, answers: a, busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
-    if (!dl || !qs || hasResult || hasResumed || isBusy || hasError) return;
-    if (now >= dl[dl.length - 1] && i >= qs.length - 1) {
-      // The clock ran out, answered or not — submitNow sends every dealt
-      // question either way, and a wholly blank attempt now grades as zero
-      // instead of being refused.
-      void submitNow(a);
-      return;
-    }
-    const target = positionAt(dl, now);
-    if (target > i) {
-      setIndex(target);
-      ping(target);
-    }
+    const total = questions?.length ?? 0;
+    if (!round || total === 0) return;
+    const target = Math.max(0, Math.min(round.index, total - 1));
+    setIndex(target);
+    if (joined) ping(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [now, dl === null]);
+  }, [round?.index, questions, attemptId]);
 
-  // The whole quiz has a deadline, not just each question. When it passes the
-  // player stops feeding new questions and sends what the student has, landing
-  // inside the server's sixty-second grace.
+  // The room clock ends the quiz. When the schedule reports every round done,
+  // this phone sends what it has instead of sitting on the last question until
+  // the instance's own deadline — that gap is the professor's cushion, and
+  // waiting it out is a full minute of dead air with every phone showing a
+  // question nobody is allowed to answer. It is also what lets the room close
+  // early once everyone has submitted.
+  useEffect(() => {
+    const { answers: a, busy: isBusy, result: hasResult, resumed: hasResumed, error: hasError } = stateRef.current;
+    if (!round || round.phase !== "done") return;
+    if (!attemptId || !questions) return;
+    if (hasResult || hasResumed || isBusy || hasError || submitting.current) return;
+    // Every dealt question goes in, blank or not; the server grades the blanks
+    // as wrong rather than refusing an empty attempt.
+    void submitNow(a);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round?.phase, attemptId, questions]);
+
+  // The whole quiz has a deadline, not just each round. When it passes the
+  // player sends what the student has, landing inside the server's sixty-second
+  // grace. This is the backstop for a phone the room clock never reached — a
+  // poll that has been failing, or a backend deployed without the schedule.
   //
   // A student who answered nothing still submits: every dealt question goes in,
   // blank or not, and the server grades the blanks as wrong instead of
@@ -279,7 +281,9 @@ export function QuizPlayer({
   //
   // So the player is no longer allowed to be surprised by the close. It is told,
   // and it sends what the student has straight away, landing inside the server's
-  // sixty-second grace instead of waiting for its own tick.
+  // sixty-second grace instead of waiting for its own tick. With the Submit
+  // button gone this is also the retry: a submit that failed at the end of the
+  // last round gets one more attempt when the instance closes.
   useEffect(() => {
     if (!quizClosed) return;
     const { answers: a, busy: isBusy, result: hasResult, resumed: hasResumed } = stateRef.current;
@@ -327,9 +331,11 @@ export function QuizPlayer({
   }
   if (!questions) return <p class="hint">{t("quiz.loading")}</p>;
 
-  // The racer splash: the identity is secret, so it shows once, full screen,
-  // and the clock does not run until the student says go.
-  if (racer && t0 === null && !resumed && !result) {
+  // The racer splash: the identity is secret, so it shows once, full screen.
+  // The tap costs the student nothing but the seconds they spend reading it —
+  // it starts no clock, and the round waiting behind it is whichever one the
+  // room is on.
+  if (racer && !joined && !resumed && !result) {
     return (
       <div class="stack quiz-splash">
         <p class="eyebrow">{t("quiz.splashEyebrow")}</p>
@@ -362,7 +368,61 @@ export function QuizPlayer({
     );
   }
 
-  const remaining = dl ? Math.max(0, Math.round((dl[index] - now) / 1000)) : null;
+  // The break. This is the moment the whole room shares, so the phone gives up
+  // the question for all ten seconds of it and never takes it back.
+  //
+  // The reveal does not arrive with the break. The server accepts an answer for
+  // a couple of seconds past the countdown — a tap at 39.5s whose ping crosses
+  // classroom wifi is a real answer, not a late one — and it will not publish
+  // the correct option until after that window has provably shut. So the first
+  // beat of a break carries no `last_result`, and that is a WAIT, not an
+  // absence. Falling through to the question here would flash it back onto the
+  // screen and snatch it away again three seconds later.
+  if (isBreak(round)) {
+    const revealed = myRace?.last_result ?? null;
+    if (!revealed) {
+      return (
+        <div class="stack quiz-reveal">
+          <p class="eyebrow">{t("quiz.roundOver")}</p>
+          <p class="quiz-reveal-mark" aria-hidden="true">…</p>
+          <p class="hint">{t("quiz.checkingAnswer")}</p>
+        </div>
+      );
+    }
+    const correctOption = questions
+      .find((q) => q.id === revealed.question_id)?.options
+      .find((o) => o.id === revealed.correct_option_id);
+    return (
+      <div class="stack quiz-reveal">
+        <p class="eyebrow">{t("quiz.roundOver")}</p>
+        <p class="quiz-reveal-mark">{revealed.correct ? "✅" : "❌"}</p>
+        <p class="quiz-reveal-answer">
+          {t("quiz.correctAnswerWas", {
+            answer: (lang.value === "es" && correctOption?.option_text_es) || correctOption?.option_text || ""
+          })}
+        </p>
+        {revealed.candy > 0 ? <p class="hint">{t("quiz.earnedCandy", { candy: revealed.candy })}</p> : null}
+        <p class="quiz-reveal-lookup">{t("quiz.lookUp")}</p>
+      </div>
+    );
+  }
+
+  // The room has run every round. The submit is already in flight from the
+  // effect above; this is what the student looks at while it lands.
+  if (round?.phase === "done") {
+    return (
+      <div class="stack quiz-reveal">
+        <p class="eyebrow">{t("quiz.quizOver")}</p>
+        <p class="hint">{error || t("quiz.submitting")}</p>
+      </div>
+    );
+  }
+
+  // Null only for a backend deployed without the room schedule, or for the
+  // instant a poll failed on a phone that has not seen a round yet. There is no
+  // countdown to draw then — the phone will not invent one — and the instance
+  // deadline above is what finishes the attempt.
+  const remaining = round ? Math.ceil(remainingMs(round.answer_ends_at, now) / 1000) : null;
   const current = questions[index];
   const answered = Object.keys(answers).length;
   const difficultyLabel = t(`quiz.difficulty.${current.difficulty}` as "quiz.difficulty.easy");
@@ -398,8 +458,10 @@ export function QuizPlayer({
             onClick={() => {
               const next = { ...stateRef.current.answers, [current.id]: option.id };
               setAnswers(next);
-              // Save on every tap, not only on advance: a kick mid-question
-              // must not lose the answer the student just chose.
+              // The ping goes out on the tap, not on some later advance, and it
+              // is never gated on the countdown this phone happens to be
+              // showing: a tap in the last half-second is a real answer, and
+              // whether it arrives in time is the server's call, not ours.
               ping(stateRef.current.index, { map: next });
             }}
           >
@@ -408,21 +470,10 @@ export function QuizPlayer({
         ))}
       </div>
 
-      {/* A submit failure shows here, inside the question view, so the Submit
-          button stays on screen and pressing it again is the retry. */}
+      {/* A failed submit shows here. There is no button to press again — the
+          room's close is the retry. */}
       {error ? <p class="error-text" role="alert">{error}</p> : null}
 
-      <div class="row" style="justify-content: flex-end;">
-        {index < questions.length - 1 ? (
-          <button class="btn primary" type="button" disabled={!answers[current.id] || busy} onClick={advance}>
-            {t("quiz.next")}
-          </button>
-        ) : (
-          <button class={`btn primary${busy ? " loading" : ""}`} type="button" disabled={busy || answered === 0} aria-busy={busy} onClick={() => submitNow(answers)}>
-            {busy ? t("quiz.submitting") : t("quiz.submit")}
-          </button>
-        )}
-      </div>
       <p class="hint">{t("quiz.answeredOf", { answered, total: questions.length })}</p>
       <p class="hint">{t("quiz.oneAtATime")}</p>
     </div>
