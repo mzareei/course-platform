@@ -481,13 +481,19 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 // ------------------------------------------------- grading counts all ten
 {
   const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
-  assert.match(attempt, /maxSpeedBonusPercent = 0/, "speed no longer moves a grade");
+  // Anchored on the statement end so a re-introduced fractional bonus (e.g.
+  // "= 0.5") cannot sail past a bare `= 0` prefix match.
+  assert.match(attempt, /maxSpeedBonusPercent = 0;/, "speed no longer moves a grade");
 
   const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  // Not a match on the exact old predicate — any .filter( chained straight
+  // onto this map would silently drop dealt-but-unanswered questions again,
+  // whatever it filters on (e.g. a re-added `.filter((r) => Boolean(r.selected_option_id))`
+  // would sail past a narrower regex tied to the old predicate's text).
   assert.doesNotMatch(
     player,
-    /\.filter\(\(r\) => r\.selected_option_id\)/,
-    "the player must submit every dealt question, including the unanswered ones"
+    /selected_option_id: finalAnswers\[q\.id\] \|\| ""\s*\}\)\)\s*\.filter\(/,
+    "the player must submit every dealt question — no filter may follow the responses map, whatever it filters on"
   );
   assert.match(player, /selected_option_id: finalAnswers\[q\.id\] \|\| ""/, "unanswered questions submit an empty selection");
 }

@@ -24,8 +24,12 @@ if (skipWithoutBackend("verify-quiz-podium")) process.exit(0);
 const { PODIUM_PLACES, rankAttempts, podiumCut, rankOf } =
   await import(backend("_shared/quiz-rank.ts").href);
 
-const a = (profile_id, score_final, submitted_at, status = "submitted") =>
-  ({ profile_id, score_final, submitted_at, status });
+// progress_answered defaults to 1 (answered something) so every existing call
+// below keeps meaning "a normal ranked attempt" — Task 5 made every dealt
+// question submit whether answered or not, so status alone no longer tells a
+// graded attempt apart from a fully blank one; progress_answered does.
+const a = (profile_id, score_final, submitted_at, status = "submitted", progress_answered = 1) =>
+  ({ profile_id, score_final, submitted_at, status, progress_answered });
 
 const T = (m) => `2026-08-14T18:${String(m).padStart(2, "0")}:00.000Z`;
 
@@ -72,6 +76,47 @@ assert.deepEqual(
   "a submitted attempt with no score yet still holds a place"
 );
 assert.deepEqual(rankAttempts([]), [], "no submissions rank nobody");
+
+// A submitted attempt with zero answers is Task 5's fully-blank case: every
+// dealt question now submits (blank or not), so it reaches "submitted" just
+// like real work does, and the grade the professor asked for is real — 0%,
+// not an error. But the ranking's job is different from the grade's, and
+// quiz-rank.ts's own rule (see the header comment) is that the software never
+// points at a struggling student, so this attempt stays off the leaderboard.
+const withBlank = rankAttempts([
+  a("finished", 80, T(4)),
+  a("blank", 0, T(5), "submitted", 0)
+]);
+assert.deepEqual(
+  withBlank.map((r) => r.profile_id),
+  ["finished"],
+  "an all-blank submitted attempt is absent from the ranking even though it graded"
+);
+
+const withOneAnswer = rankAttempts([
+  a("finished", 80, T(4)),
+  a("one_answer", 10, T(5), "submitted", 1)
+]);
+assert.deepEqual(
+  withOneAnswer.map((r) => r.profile_id).sort(),
+  ["finished", "one_answer"],
+  "a single real answer is enough to be ranked, whatever the score"
+);
+
+// The "3rd of 24" a ranked student reads must not count the abandoned
+// attempts — they were never on the leaderboard, so they cannot inflate the
+// denominator either.
+const boardWithAbandoned = rankAttempts([
+  a("a", 90, T(1)),
+  a("b", 80, T(1)),
+  a("ghost1", 0, T(2), "submitted", 0),
+  a("ghost2", 0, T(3), "late", 0)
+]);
+assert.deepEqual(
+  rankOf(boardWithAbandoned, "b"),
+  { rank: 2, of: 2, is_top3: true },
+  "the 'of N' a ranked student reads counts only attempts with at least one answer"
+);
 
 // ------------------------------------------------------------------- podium
 assert.equal(PODIUM_PLACES, 3, "the podium is a top three");
