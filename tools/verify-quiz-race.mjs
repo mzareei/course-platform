@@ -234,4 +234,85 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(endOfClass, /setShowingPinata\(true\)/, "the layer opens on start/adopt");
 }
 
+// ------------------------------------------------- fair shuffle
+{
+  const { shuffle } = await import(backend("_shared/shuffle.ts").href);
+
+  // A biased shuffle leaves element 0 near the front far more often than 1/4.
+  // Over 40k trials on 4 items, each position should hold ~10000 (±5%).
+  const counts = [0, 0, 0, 0];
+  for (let i = 0; i < 40000; i++) {
+    const out = shuffle(["a", "b", "c", "d"]);
+    counts[out.indexOf("a")] += 1;
+  }
+  for (const c of counts) {
+    assert.ok(Math.abs(c - 10000) < 500, `fair shuffle: position count ${c} is within 5% of 10000`);
+  }
+
+  // The old approach must actually fail that bar — otherwise the test proves nothing.
+  const biased = [0, 0, 0, 0];
+  for (let i = 0; i < 40000; i++) {
+    const out = ["a", "b", "c", "d"].sort(() => Math.random() - 0.5);
+    biased[out.indexOf("a")] += 1;
+  }
+  assert.ok(
+    biased.some((c) => Math.abs(c - 10000) >= 500),
+    "the sort-based shuffle is biased; if this passes the test is not measuring bias"
+  );
+
+  assert.deepEqual(shuffle([]).length, 0, "empty input is safe");
+  const source = [1, 2, 3, 4, 5];
+  const copy = shuffle(source);
+  assert.equal(copy.length, 5, "length is preserved");
+  assert.deepEqual([...copy].sort(), [1, 2, 3, 4, 5], "membership is preserved");
+  assert.deepEqual(source, [1, 2, 3, 4, 5], "the input array is not mutated");
+}
+
+// ------------------------------------------------- the 4/3/3 deal
+{
+  const { dealQuestions, QUOTA } = await import(backend("_shared/shuffle.ts").href);
+  assert.deepEqual(QUOTA, { easy: 4, medium: 3, hard: 3 }, "the mix is 4 easy, 3 medium, 3 hard");
+
+  const pool = [];
+  for (let i = 0; i < 12; i++) pool.push({ id: `e${i}`, difficulty: "easy" });
+  for (let i = 0; i < 12; i++) pool.push({ id: `m${i}`, difficulty: "medium" });
+  for (let i = 0; i < 12; i++) pool.push({ id: `h${i}`, difficulty: "hard" });
+
+  const dealt = dealQuestions(pool, QUOTA);
+  assert.equal(dealt.length, 10, "ten questions are dealt");
+  const byTier = (t) => dealt.filter((q) => q.difficulty === t).length;
+  assert.equal(byTier("easy"), 4, "four easy");
+  assert.equal(byTier("medium"), 3, "three medium");
+  assert.equal(byTier("hard"), 3, "three hard");
+  assert.equal(new Set(dealt.map((q) => q.id)).size, 10, "no question is dealt twice");
+
+  // Order is shuffled, not easy-then-medium-then-hard. Over 40 deals the
+  // difficulty sequence must not be constant.
+  const sequences = new Set();
+  for (let i = 0; i < 40; i++) sequences.add(dealQuestions(pool, QUOTA).map((q) => q.difficulty).join(","));
+  assert.ok(sequences.size > 5, "two students do not meet the same difficulty order");
+
+  // A short tier backfills rather than serving fewer than ten.
+  const shortPool = [
+    ...pool.filter((q) => q.difficulty === "easy"),
+    ...pool.filter((q) => q.difficulty === "medium"),
+    { id: "h0", difficulty: "hard" }
+  ];
+  const backfilled = dealQuestions(shortPool, QUOTA);
+  assert.equal(backfilled.length, 10, "a short hard tier still yields ten questions");
+  assert.equal(backfilled.filter((q) => q.difficulty === "hard").length, 1, "it uses the one hard question available");
+
+  // A pool smaller than the quota yields the whole pool, not a crash.
+  assert.equal(dealQuestions([{ id: "x", difficulty: "easy" }], QUOTA).length, 1, "a tiny pool yields what exists");
+}
+
+// ------------------------------------------------- the deal is wired in
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /dealQuestions\(pool, QUOTA\)/, "the deal uses the 4/3/3 quota");
+  assert.match(attempt, /shuffle\(optionsByQuestion\.get/, "options use the fair shuffle");
+  assert.doesNotMatch(attempt, /maybeShuffle/, "the biased shuffle is gone");
+  assert.doesNotMatch(attempt, /function selectQuestions/, "round-robin selection is gone");
+}
+
 console.log("verify-quiz-race passed");
