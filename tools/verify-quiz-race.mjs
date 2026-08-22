@@ -200,8 +200,9 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 // ------------------------------------------------- the climb
 {
   const {
-    CANDY_PER_QUESTION, FALLBACK_MAX_CANDY, MAX_SIZE, BOB_MS,
-    ceilingFor, sizeFor, heightFor, lanePercent, laneOrder, topThree, bobDelayMs
+    CANDY_PER_QUESTION, FALLBACK_MAX_CANDY, MAX_SIZE, MAX_LANES, BOB_MS,
+    BASE_EMOJI_PX, SETTLE_MARGIN_MS, ceilingFor, sizeFor, heightFor, lanePercent,
+    laneKeys, laneRoster, laneCountFor, topThree, bobDelayMs, roundCountIsSettled
   } = await import(frontend("src/features/live/subida.ts").href);
 
   // The ceiling is the SERVER's question quota, never a constant of ours. The
@@ -254,15 +255,6 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const names = (list) => list.map((r) => r.racer_name);
   const asDealt = names(field);
 
-  // A racer must stand in the same lane from the first poll to the last. The
-  // payload cannot supply that on its own: course-class-quiz selects the
-  // attempts with no ORDER BY and settleRoom rewrites those same rows every
-  // round, so Postgres may hand back a different row order next poll.
-  const shuffled = [field[2], field[0], field[3], field[1]];
-  assert.deepEqual(names(laneOrder(shuffled)), names(laneOrder(field)),
-    "the same room draws the same lanes whatever order the payload arrives in");
-  assert.deepEqual(names(field), asDealt, "laneOrder copies rather than sorting the caller's array");
-
   // The rail sorts; the field never does. `.sort()` on race.racers would
   // reorder every lane on screen.
   const top = topThree(field);
@@ -277,6 +269,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(delays.size, 26, "no two racers in a full class bob together");
   for (const delay of delays) assert.ok(delay <= 0 && delay > -BOB_MS, "a phase offset is a negative slice of one cycle");
 
+  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
   const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
   assert.doesNotMatch(layer, /pinata-col-label/, "the column track is gone");
   assert.doesNotMatch(layer, /difficulty/, "difficulty never appears on the room's screen");
@@ -284,17 +277,129 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(layer, /subida-rope/, "every racer has a rope");
   assert.match(layer, /subida-rail/, "the top three are always on screen");
   assert.match(layer, /subida-lane-name/, "and every rope is labelled at the ground");
-  assert.match(layer, /laneOrder\(/, "the field is drawn in a lane order that survives a reordered payload");
+  assert.match(layer, /laneRoster\(/, "lanes are handed out once and kept, not recomputed from the payload");
+  assert.match(layer, /laneCountFor\(/, "and the field's width is pinned by the room, not by who has started");
+  assert.match(layer, /roundCountIsSettled\(/, "the round count is withheld until it belongs to the round on screen");
+  assert.doesNotMatch(layer, /key=\{racer\.racer_name\}/,
+    "nothing keys on a bare racer name — two unassigned attempts both read \"🎒 Mochila\"");
   assert.match(layer, /heightFor\([^)]*question_count/, "the rope's ceiling comes from the server's question count");
   assert.ok((layer.match(/lanePercent\(/g) || []).length >= 3,
     "rope, animal and ground label all take their lane from one function so they cannot drift apart");
 
-  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
   assert.match(css, /@keyframes subida-bob/, "the idle bob exists at all");
   assert.doesNotMatch(css, /\.pinata-track|\.pinata-col\b/, "the column track's styles are gone with it");
+
+  // ---- Finding 1: the count must never sit under the wrong round number.
+  // course-class-quiz derives round_correct from closedRoundIndex, which keeps
+  // reporting the PREVIOUS round until the answering window has closed for good
+  // — including through the first two seconds of the break, while the grace is
+  // still open. Sweeping a whole ten-round quiz against both repos is the only
+  // way to prove the screen never prints one round's count under another's.
+  const { roundAt, ANSWER_GRACE_MS, BREAK_SECONDS } = await import(backend("_shared/rounds.ts").href);
+  const { closedRoundIndex } = await import(backend("_shared/settle.ts").href);
+  assert.ok(SETTLE_MARGIN_MS >= ANSWER_GRACE_MS,
+    "the screen must wait out at least the server's answer grace");
+  assert.ok(SETTLE_MARGIN_MS < BREAK_SECONDS * 1000,
+    "and still inside the break, or the count would never appear at all");
+
+  const T0 = 1_700_000_000_000;
+  let everSettled = false;
+  for (let ms = 0; ms <= 505_000; ms += 250) {
+    const at = T0 + ms;
+    const live = roundAt(T0, at, 10);
+    const view = {
+      index: live.index,
+      phase: live.phase,
+      answer_ends_at: new Date(live.answerEnd).toISOString(),
+      break_ends_at: new Date(live.breakEnd).toISOString()
+    };
+    if (roundCountIsSettled(view, at)) {
+      everSettled = true;
+      assert.equal(closedRoundIndex(live, at), live.index,
+        `at +${ms}ms the count shown must belong to the round the HUD names`);
+    }
+  }
+  assert.ok(everSettled, "the count does appear during the break, it is not withheld forever");
+  // Round 1's answering phase is the case a room misreads as nobody getting it.
+  const roundOne = roundAt(T0, T0 + 5_000, 10);
+  assert.equal(roundOne.index, 0);
+  assert.equal(
+    roundCountIsSettled({ index: 0, phase: roundOne.phase, answer_ends_at: new Date(roundOne.answerEnd).toISOString(), break_ends_at: new Date(roundOne.breakEnd).toISOString() }, T0 + 5_000),
+    false, "round 1 never prints a flat zero while the room is still answering");
+  assert.equal(roundCountIsSettled(null, T0), false, "no round, no count");
+  assert.equal(roundCountIsSettled({ index: 2, phase: "break", answer_ends_at: "half past four", break_ends_at: "" }, T0),
+    false, "an unparseable deadline withholds the number rather than guessing");
+
+  // ---- Finding 2: a late starter must not shove the field sideways.
+  const named = (name) => racer(name, 0, 0);
+  const early = laneRoster([], [named("Tortuga Veloz"), named("Jaguar Ninja")]);
+  const later = laneRoster(early, [named("Jaguar Ninja"), named("Ardilla Turbo"), named("Tortuga Veloz")]);
+  assert.deepEqual(later.slice(0, early.length), early,
+    "a racer already on the climb keeps the lane it was handed");
+  assert.equal(later[later.length - 1], "Ardilla Turbo",
+    "the newcomer takes the next free lane, not an alphabetical slot in the middle");
+  assert.equal(laneRoster(early, [named("Jaguar Ninja"), named("Tortuga Veloz")]), early,
+    "a poll with nothing new returns the roster unchanged");
+  // Payload order is untrusted; the roster it produces must not depend on it.
+  assert.deepEqual(laneRoster([], [named("Rana Zen"), named("Abeja Sagaz")]),
+    laneRoster([], [named("Abeja Sagaz"), named("Rana Zen")]),
+    "the same first payload hands out the same lanes whatever order it arrives in");
+
+  // The geometry, not just the ordering: with the room holding the field open,
+  // an existing racer's lane percentage is identical before and after.
+  const room = 26;
+  for (let i = 0; i < early.length; i++) {
+    assert.equal(
+      lanePercent(i, laneCountFor(early.length, room)),
+      lanePercent(i, laneCountFor(later.length, room)),
+      "growing the racer array must not move a lane that is already on screen");
+  }
+  assert.equal(laneCountFor(3, 26), 26, "the room's size holds the field open before everyone has started");
+  assert.equal(laneCountFor(30, 26), 30, "but never fewer lanes than there are racers standing in them");
+  assert.equal(laneCountFor(0, 0), 1, "an empty room still has a field");
+  assert.equal(laneCountFor(4, 5000), MAX_LANES, "a nonsense present cannot shrink the ropes to threads");
+  assert.equal(laneCountFor(80, 5000), 80, "and the cap never squeezes out a real racer");
+
+  // ---- Finding 3: two attempts with no racer name yet both read "🎒 Mochila".
+  const twins = [racer("🎒 Mochila", 0, 0), racer("Jaguar Ninja", 3, 2), racer("🎒 Mochila", 5, 3)];
+  assert.equal(new Set(laneKeys(twins)).size, 3, "two unnamed attempts get two lane keys, not one");
+  assert.equal(new Set(laneRoster([], twins)).size, 3, "and two lanes on the field");
+  assert.equal(topThree(twins).length, 3, "the rail still ranks all three");
+  assert.deepEqual(names(twins), ["🎒 Mochila", "Jaguar Ninja", "🎒 Mochila"], "and the payload is left alone");
+
+  // ---- Finding 4: numbers duplicated between TypeScript and the stylesheet.
+  const bob = css.match(/animation:\s*subida-bob\s+([\d.]+)s/);
+  assert.ok(bob, "the bob's duration is declared once in the stylesheet");
+  assert.equal(Math.round(parseFloat(bob[1]) * 1000), BOB_MS,
+    "BOB_MS must equal the CSS cycle, or the phase offsets stop covering one breath");
+  const reserve = css.match(/\.subida-sky\s*\{[^}]*padding-top:\s*(\d+)px/);
+  assert.ok(reserve, "the sky reserves room above the field");
+  assert.ok(Number(reserve[1]) >= BASE_EMOJI_PX * MAX_SIZE,
+    `the reserve (${reserve && reserve[1]}px) must cover the tallest racer (${BASE_EMOJI_PX * MAX_SIZE}px) or the leader clips the piñata`);
+  // The withheld count leaves a hole; the hole has to be exactly one line tall
+  // or the two counts below it move every time the round turns over.
+  const countsRule = css.match(/\.subida-counts p \{[^}]*\}/);
+  assert.ok(countsRule, "the counts have a rule of their own");
+  const lineBox = countsRule[0].match(/line-height:\s*([\d.]+)/);
+  const reserved = countsRule[0].match(/min-height:\s*([\d.]+)em/);
+  assert.ok(lineBox && reserved, "and both an explicit line box and a reserve");
+  assert.equal(reserved[1], lineBox[1],
+    "the blank round-count slot must reserve exactly one line, or the counts below it shift every round");
+
+  // Rope, animal and label slide on one shared token, so a name is never under
+  // the wrong animal for the length of a transition.
+  assert.match(css, /--subida-slide:\s*\d+ms/, "the sideways slide has one duration");
+  for (const selector of ["subida-racer", "subida-rope", "subida-lane-name"]) {
+    const rule = css.match(new RegExp(`\\.${selector} \\{[\\s\\S]*?\\}`));
+    assert.ok(rule && /left var\(--subida-slide\)/.test(rule[0]),
+      `.${selector} must slide on the shared duration`);
+  }
+
   const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
   assert.ok(reducedBlocks.some((b) => /\.subida-racer\s*\{[^}]*animation:\s*none/.test(b)), "reduced motion stops the bob");
   assert.ok(reducedBlocks.some((b) => /\.subida-racer\s*\{[^}]*transition:\s*none/.test(b)), "and stops the climb tween");
+  assert.ok(reducedBlocks.some((b) => /\.subida-rope,\s*\.subida-lane-name\s*\{[^}]*transition:\s*none/.test(b)),
+    "and the sideways slide on the rope and its label with it");
 }
 
 // ------------------------------------------------- fair shuffle

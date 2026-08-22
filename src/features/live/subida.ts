@@ -7,7 +7,7 @@
 //
 // Pure on purpose: tools/verify-quiz-race.mjs imports and executes every
 // function here rather than grepping for it.
-import type { RaceRacer } from "../../api/quiz";
+import type { RaceRacer, RaceRound } from "../../api/quiz";
 
 /** The best one question can pay: correct, inside twenty seconds.
  *
@@ -28,8 +28,32 @@ export const FALLBACK_MAX_CANDY = 20;
 /** Nobody grows past three times base — a bigger leader crowds the room out. */
 export const MAX_SIZE = 3;
 
-/** One breath of the idle bob. */
+/** One breath of the idle bob. Must equal the CSS `subida-bob` duration, or the
+ *  per-lane phase offsets stop covering exactly one cycle; the verifier reads
+ *  the stylesheet and asserts it. */
 export const BOB_MS = 3200;
+
+/** Base emoji size in pixels, before `sizeFor`. `BASE_EMOJI_PX × MAX_SIZE` is
+ *  the tallest a racer can draw, and `.subida-sky`'s reserve has to cover it or
+ *  the leader clips the piñata. The verifier asserts that too. */
+export const BASE_EMOJI_PX = 16;
+
+/** More lanes than this and the ropes are threads. A roster larger than the cap
+ *  still gets a lane each — a real racer is never squeezed out. */
+export const MAX_LANES = 60;
+
+/** How long after a round's countdown ends before `round_correct` is certainly
+ *  that round's number.
+ *
+ *  The server keeps taking answers for `ANSWER_GRACE_MS` after the countdown
+ *  ends — flight time, not thinking time — and `closedRoundIndex` deliberately
+ *  keeps reporting the PREVIOUS round until that window shuts, because settled
+ *  has to mean final. The room's screen waits out the same window rather than
+ *  printing one round's count under another round's number. `answersCloseAt` is
+ *  not in the payload (it is documented as invisible to the UI), so this mirrors
+ *  the grace and the verifier imports the backend's constant to prove it covers
+ *  it. */
+export const SETTLE_MARGIN_MS = 2000;
 
 /** The most candy this instance can hand out, from the server's own count. */
 export function ceilingFor(questionCount?: number | null): number {
@@ -63,33 +87,101 @@ export function lanePercent(index: number, total: number): number {
   return ((lane + 0.5) / lanes) * 100;
 }
 
-/** The field, in the order the lanes are drawn — fixed for the whole quiz.
+/** A racer's lane key, unique inside one payload.
  *
- *  NOT the payload's own order. `course-class-quiz` selects the attempts with
- *  no ORDER BY, and `settleRoom` rewrites those same rows at every round
- *  boundary, so Postgres can legitimately hand back a different row order on
- *  the next poll. Trusting it would reshuffle all twenty-six lanes mid-climb —
- *  the room would lose track of the animal it was following. `racer_name` is
- *  assigned once and never changes, so sorting on it gives the same field every
- *  poll. Returns a copy: sorting the caller's array in place is the same bug
- *  wearing a different hat. */
-export function laneOrder(racers: RaceRacer[]): RaceRacer[] {
-  return [...racers].sort((a, b) => a.racer_name.localeCompare(b.racer_name));
+ *  `racer_name` normally. `course-class-quiz` renders any attempt whose racer
+ *  name has not been assigned yet as "🎒 Mochila", so two of them can arrive in
+ *  the same payload; the occurrence suffix exists so those two get two lanes and
+ *  two render keys instead of fighting over one. Two such rows are identical on
+ *  screen anyway, so which of them takes which lane does not matter. */
+export function laneKeys(racers: RaceRacer[]): string[] {
+  const seen = new Map<string, number>();
+  return racers.map((racer) => {
+    const name = String(racer.racer_name || "");
+    const nth = (seen.get(name) ?? 0) + 1;
+    seen.set(name, nth);
+    return nth === 1 ? name : `${name}#${nth}`;
+  });
+}
+
+/** The lane roster: lane keys in the order the lanes were handed out.
+ *
+ *  A racer keeps its index for the whole quiz. That matters twice over. First,
+ *  `course-class-quiz` selects the attempts with no ORDER BY while `settleRoom`
+ *  rewrites those same rows every round, so Postgres may return a different row
+ *  order on the next poll and the payload's own order cannot be trusted.
+ *  Second — and this is what a plain alphabetical sort got wrong — a student who
+ *  starts late adds a racer mid-quiz, and an alphabetical insert lands in the
+ *  MIDDLE and shoves every lane after it sideways in one frame. Appending puts
+ *  the newcomer in the next free lane and moves nobody.
+ *
+ *  Newcomers arriving in the same poll are sorted among themselves so the roster
+ *  never depends on the payload's row order. Returns `previous` unchanged when
+ *  there is nothing new, so the caller's state identity is stable. */
+export function laneRoster(previous: string[], racers: RaceRacer[]): string[] {
+  const known = new Set(previous);
+  const fresh: string[] = [];
+  for (const key of laneKeys(racers)) {
+    if (!known.has(key)) {
+      known.add(key);
+      fresh.push(key);
+    }
+  }
+  if (!fresh.length) return previous;
+  fresh.sort((a, b) => a.localeCompare(b));
+  return [...previous, ...fresh];
+}
+
+/** How many lanes the field is divided into.
+ *
+ *  Pinned to the ROOM, not to how many students have tapped "Let's go" yet:
+ *  dividing by the live racer count moves every lane the moment one more racer
+ *  appears. Attendance is taken before the quiz, so `present` holds the field
+ *  open at its final width from the first poll and nothing shifts as the room
+ *  fills. Never fewer lanes than there are racers standing in them, and never
+ *  more than `MAX_LANES` on the strength of `present` alone. */
+export function laneCountFor(racerCount: number, present: number): number {
+  const racers = Math.max(0, Math.floor(Number(racerCount) || 0));
+  const room = Math.max(0, Math.floor(Number(present) || 0));
+  return Math.max(1, racers, Math.min(MAX_LANES, room));
 }
 
 /** The permanent right rail.
  *
- *  Returns a copy for the same reason `laneOrder` does: `race.racers.sort()`
- *  here would reorder every lane on the field as a side effect of ranking three
- *  of them. Candy first (that is the climb), then correct answers, then the
- *  name so two identical racers never swap places between polls. */
+ *  Never sorts the caller's array: `race.racers.sort()` here would reorder every
+ *  lane on the field as a side effect of ranking three of them. Candy first
+ *  (that is the climb), then correct answers, then the lane key — the key rather
+ *  than the bare name so that two attempts both showing as "🎒 Mochila" still
+ *  have a deterministic order instead of leaving it to the untrusted payload. */
 export function topThree(racers: RaceRacer[]): RaceRacer[] {
-  return [...racers]
+  const keys = laneKeys(racers);
+  return racers
+    .map((racer, index) => ({ racer, key: keys[index] }))
     .sort((a, b) =>
-      (b.candy - a.candy)
-      || (b.correct_count - a.correct_count)
-      || a.racer_name.localeCompare(b.racer_name))
-    .slice(0, 3);
+      (b.racer.candy - a.racer.candy)
+      || (b.racer.correct_count - a.racer.correct_count)
+      || a.key.localeCompare(b.key))
+    .slice(0, 3)
+    .map((entry) => entry.racer);
+}
+
+/** Does `round_correct` describe the round the HUD is naming?
+ *
+ *  It does not while the room is still answering. `closedRoundIndex` returns
+ *  `round.index - 1` until the answering window has closed for good, so during
+ *  the forty seconds of every round the count belongs to the round BEFORE the
+ *  one the eyebrow prints — and in round 1 it is a flat zero, which a room reads
+ *  as nobody getting it. It is not current for the first couple of seconds of
+ *  the break either, because the grace is still open. Withhold the number until
+ *  both are past; the break beat is when it means something anyway.
+ *
+ *  True through the `done` phase as well: the last round's answering window has
+ *  long closed by then, so the final count keeps standing until the quiz shuts. */
+export function roundCountIsSettled(round: RaceRound | null | undefined, now: number): boolean {
+  if (!round || round.phase === "answering") return false;
+  const answerEnded = Date.parse(String(round.answer_ends_at || ""));
+  if (!Number.isFinite(answerEnded)) return false;
+  return Number(now) - answerEnded >= SETTLE_MARGIN_MS;
 }
 
 /** A per-racer phase offset for the idle bob, as a negative animation-delay.

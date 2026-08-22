@@ -1327,6 +1327,10 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .classroom-pinata-layer {
   position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
   gap: 1rem; padding: 1.5rem 2rem; background: #0f1420; color: #f4f6fb;
+  /* One duration for every sideways move. The rope, the animal and its ground
+     label must slide together or, for those milliseconds, a name is under the
+     wrong animal — so all three read this, and nothing hardcodes it. */
+  --subida-slide: 640ms;
 }
 /* La Subida — the climb toward the piñata, on the room's screen.
    Replaces the column track: with the room clock every student is on the same
@@ -1342,7 +1346,10 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   gap: 0.3rem; text-align: center; }
 .subida-pinata .pinata-bar { width: 100%; }
 .subida-counts { min-width: 10rem; text-align: right; color: #aab3c5; }
-.subida-counts p { margin: 0 0 0.15rem; font-size: 0.85rem; }
+/* An explicit line box, matched by min-height: the round count is blank while
+   the room is answering, and an empty line has to hold exactly the height of
+   a full one or the two lines below it shift every round. */
+.subida-counts p { margin: 0 0 0.15rem; font-size: 0.85rem; line-height: 1.35; min-height: 1.35em; }
 .subida-counts b { color: #fff; }
 
 /* The sky is the reserve above the field. A racer is positioned by its BOTTOM
@@ -1352,9 +1359,11 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
    racer high in the last lane is never hidden behind it. */
 .subida-sky { flex: 1; min-height: 0; display: flex; padding-top: 60px; margin-right: 154px; }
 .subida-field { position: relative; flex: 1; min-height: 0; }
-.subida-rope { position: absolute; bottom: 0; width: 1px; height: 100%; background: rgba(255, 255, 255, 0.055); }
+.subida-rope { position: absolute; bottom: 0; width: 1px; height: 100%;
+  background: rgba(255, 255, 255, 0.055); transition: left var(--subida-slide) ease; }
 .subida-racer { position: absolute; line-height: 1; transform: translate(-50%, 0);
-  transition: bottom 640ms cubic-bezier(.34, 1.3, .64, 1), font-size 460ms ease;
+  transition: bottom var(--subida-slide) cubic-bezier(.34, 1.3, .64, 1),
+    left var(--subida-slide) ease, font-size 460ms ease;
   animation: subida-bob 3.2s ease-in-out infinite; }
 .subida-floats { position: absolute; inset: 0; pointer-events: none; }
 /* The idle loop. Each lane carries its own negative animation-delay from the
@@ -1372,7 +1381,8 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .subida-lanes { position: relative; height: 92px; margin-right: 154px; }
 .subida-lane-name { position: absolute; top: 2px; transform-origin: left top;
   transform: rotate(90deg) translateY(-50%); font-size: 0.46rem; color: #7a8399;
-  white-space: nowrap; max-width: 86px; overflow: hidden; text-overflow: ellipsis; }
+  white-space: nowrap; max-width: 86px; overflow: hidden; text-overflow: ellipsis;
+  transition: left var(--subida-slide) ease; }
 .subida-rail { position: absolute; right: 0.75rem; top: 6.5rem; width: 142px; z-index: 40;
   background: #182034; border-radius: 12px; padding: 0.55rem 0.62rem; }
 .subida-rail-title { margin: 0 0 0.3rem; font-size: 0.62rem; color: #aab3c5;
@@ -1392,5 +1402,6 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 @media (prefers-reduced-motion: reduce) {
   .pinata-rain { display: none; }
   .subida-racer { animation: none; transition: none; }
+  .subida-rope, .subida-lane-name { transition: none; }
 }
 .pinata-actions { display: flex; justify-content: center; gap: 0.8rem; }

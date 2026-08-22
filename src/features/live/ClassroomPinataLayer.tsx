@@ -20,14 +20,16 @@ import { classQuizRace, type RaceStatus, type PodiumEntry } from "../../api/quiz
 import { clockText } from "../quiz/clock";
 import { remainingMs } from "../quiz/rounds";
 import { raceEvents, chantLine, BURST_LINE, type RaceSnap } from "../quiz/commentary";
-import { bobDelayMs, heightFor, laneOrder, lanePercent, sizeFor, topThree } from "./subida";
+import {
+  BASE_EMOJI_PX, bobDelayMs, heightFor, laneCountFor, laneKeys, laneRoster,
+  lanePercent, roundCountIsSettled, sizeFor, topThree
+} from "./subida";
 import { t, lang } from "../../i18n";
 
 const POLL_MS = 2000;
 const LINE_MS = 4000;   // each event line holds at least this long
 const CHANT_MS = 8000;  // idle time before a chant fills the silence
 const QUEUE_CAP = 6;    // a mass finish must never build a multi-minute backlog
-const BASE_EMOJI_PX = 16;
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 function toSnap(race: RaceStatus): RaceSnap {
@@ -56,6 +58,9 @@ export function ClassroomPinataLayer({
   const [race, setRace] = useState<RaceStatus | null>(null);
   const [line, setLine] = useState<string>("");
   const [raining, setRaining] = useState(false);
+  // Which lane belongs to whom, for the life of this layer. Grown in the poll
+  // so a late starter takes the next free lane instead of shoving the field.
+  const [roster, setRoster] = useState<string[]>([]);
   const [now, setNow] = useState(Date.now());
   const prevSnap = useRef<RaceSnap | null>(null);
   const queue = useRef<string[]>([]);
@@ -75,6 +80,9 @@ export function ClassroomPinataLayer({
 
   // The race poll. Stops for good on the first closed payload — the freeze.
   useEffect(() => {
+    // A different instance is a different set of lanes. Carrying the old
+    // roster over would leave the new quiz's racers starting at lane 27.
+    setRoster([]);
     let cancelled = false;
     let id: ReturnType<typeof setInterval> | undefined;
     const freeze = () => {
@@ -95,6 +103,7 @@ export function ClassroomPinataLayer({
           // ago. Reopening after Escape hits this same path.
           if (prevSnap.current === null) {
             prevSnap.current = snap;
+            setRoster((prev) => laneRoster(prev, res.racers));
             setRace(res);
             if (res.state === "closed") freeze();
             return;
@@ -125,6 +134,7 @@ export function ClassroomPinataLayer({
             setTimeout(() => setRaining(false), 3000);
           }
           prevSnap.current = snap;
+          setRoster((prev) => laneRoster(prev, res.racers));
           setRace(res);
           if (res.state === "closed") freeze();
         })
@@ -158,17 +168,26 @@ export function ClassroomPinataLayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now]);
 
-  // The field, in lane order. Read once and used for every layer of the climb
-  // so the rope, the animal and the ground label can never disagree.
-  const field = laneOrder(race?.racers || []);
-  const lanes = field.length;
+  // The field, in lane order: one entry per lane that has been handed out, each
+  // carrying the index the rope, the animal and the ground label all draw from,
+  // so the three can never disagree. Lanes come from the roster rather than the
+  // payload's row order, and the lane COUNT comes from the room rather than from
+  // how many students have started — dividing by the live racer count would move
+  // every lane the moment one more racer appears.
+  const racers = race?.racers || [];
+  const byKey = new Map(laneKeys(racers).map((key, index) => [key, racers[index]]));
+  const field = roster.flatMap((key, index) => {
+    const racer = byKey.get(key);
+    return racer ? [{ key, index, racer }] : [];
+  });
+  const lanes = laneCountFor(roster.length, race?.present ?? 0);
   const round = race?.round ?? null;
   const closed = race?.state === "closed";
   const percent = race?.pinata.percent ?? 0;
   const burst = race?.pinata.burst ?? false;
   const started = race?.started ?? 0;
   const blindfolded = Math.max(0, (race?.present ?? 0) - started);
-  const candyInRoom = field.reduce((sum, racer) => sum + Math.max(0, racer.candy || 0), 0);
+  const candyInRoom = field.reduce((sum, entry) => sum + Math.max(0, entry.racer.candy || 0), 0);
 
   // The countdown follows whichever half of the round is running. Reading
   // answer_ends_at alone would park the clock at 0:00 for the whole ten-second
@@ -212,7 +231,15 @@ export function ClassroomPinataLayer({
         </div>
 
         <div class="subida-counts">
-          <p><b>{t("subida.roundGotIt", { count: race?.round_correct ?? 0, total: started })}</b></p>
+          {/* Withheld until the count is certainly the round the eyebrow names.
+              The server reports the PREVIOUS round's number while answering is
+              open, so printing it here would put round 2's count under "RONDA 3"
+              — and a flat "0 of 26 got it" through the whole of round 1, which a
+              room reads as nobody getting it. The slot keeps its height so the
+              two lines below never jump. */}
+          <p><b>{roundCountIsSettled(round, now)
+            ? t("subida.roundGotIt", { count: race?.round_correct ?? 0, total: started })
+            : ""}</b></p>
           <p><b>{t("subida.candyInRoom", { count: candyInRoom })}</b></p>
           <p>
             {t("pinata.present", { count: race?.present ?? 0 })}
@@ -226,15 +253,15 @@ export function ClassroomPinataLayer({
           field's top edge and would otherwise land on the piñata's head. */}
       <div class="subida-sky">
         <div class="subida-field">
-          {field.map((racer, index) => (
-            <span class="subida-rope" key={`rope:${racer.racer_name}`} aria-hidden="true"
+          {field.map(({ key, index }) => (
+            <span class="subida-rope" key={`rope:${key}`} aria-hidden="true"
               style={`left:${lanePercent(index, lanes)}%`} />
           ))}
-          {field.map((racer, index) => (
+          {field.map(({ key, index, racer }) => (
             // Height is candy, size is correct answers, and size only ever
             // grows. Bigger racers sit in front so a leader is never hidden
             // behind a neighbour that has answered less.
-            <span class="subida-racer" key={racer.racer_name} aria-hidden="true"
+            <span class="subida-racer" key={key} aria-hidden="true"
               style={
                 `left:${lanePercent(index, lanes)}%;`
                 + `bottom:${heightFor(racer.candy, race?.question_count)}%;`
@@ -256,8 +283,8 @@ export function ClassroomPinataLayer({
           twenty-six names read out in lane order is noise, and the rail below
           names the three that matter in plain text. */}
       <div class="subida-lanes" aria-hidden="true">
-        {field.map((racer, index) => (
-          <span class="subida-lane-name" key={racer.racer_name} style={`left:${lanePercent(index, lanes)}%`}>
+        {field.map(({ key, index, racer }) => (
+          <span class="subida-lane-name" key={key} style={`left:${lanePercent(index, lanes)}%`}>
             {racer.racer_name}
           </span>
         ))}
@@ -266,8 +293,10 @@ export function ClassroomPinataLayer({
       {/* The only place on this screen that sorts. The field keeps its lanes. */}
       <aside class="subida-rail">
         <p class="subida-rail-title">{t("subida.rail")}</p>
-        {topThree(field).map((racer, index) => (
-          <div class="subida-rail-row" key={racer.racer_name}>
+        {topThree(field.map((entry) => entry.racer)).map((racer, index) => (
+          // Keyed by rank, not by name: the rail is a ranked list, and two
+          // attempts still showing as "🎒 Mochila" would collide on a name.
+          <div class="subida-rail-row" key={`rank:${index}`}>
             <span aria-hidden="true">{MEDALS[index]}</span>
             <span aria-hidden="true">{racer.racer_emoji}</span>
             <span class="subida-rail-name">{racer.racer_name}</span>
