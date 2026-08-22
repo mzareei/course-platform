@@ -379,4 +379,88 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.doesNotMatch(classQuiz, /estimateTotalSeconds\(/, "the old per-question estimate no longer sizes the quiz");
 }
 
+// ------------------------------------------------- settling a closed round
+{
+  const { settleAttempt } = await import(backend("_shared/settle.ts").href);
+  const T0 = 1_700_000_000_000;
+  const questions = [
+    { id: "q0", correctOptionId: "a0" },
+    { id: "q1", correctOptionId: "a1" },
+    { id: "q2", correctOptionId: "a2" }
+  ];
+
+  // Round 0 answered correctly at 12s (golden), round 1 wrong, round 2 right
+  // but at 25s into its round — correct, not fast enough for golden.
+  //
+  // NB: the brief's draft stamped q2 at +5s, which candyFor (correctly) grades
+  // as golden — that draft value contradicted its own "plain 1" assertion
+  // below, so it is corrected here to +25s to match the intended fixture.
+  const answers = { q0: "a0", q1: "wrong", q2: "a2" };
+  const answerTimes = { q0: T0 + 12_000, q1: T0 + 50_000 + 30_000, q2: T0 + 100_000 + 25_000 };
+
+  // At 130s: rounds 0 and 1 are closed, round 2 is still answering.
+  const mid = settleAttempt({
+    startedAt: T0, now: T0 + 130_000, questionCount: 3, questions, answers, answerTimes, settledThrough: -1
+  });
+  assert.equal(mid.correctCount, 1, "only round 0 was right and only rounds 0-1 are settled");
+  assert.equal(mid.candy, 2, "answered correctly inside twenty seconds is a golden candy");
+  assert.equal(mid.settledThrough, 1, "rounds 0 and 1 are settled");
+
+  // At 160s every round is closed.
+  const end = settleAttempt({
+    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions, answers, answerTimes, settledThrough: 1
+  });
+  assert.equal(end.correctCount, 2, "round 2 was also correct");
+  assert.equal(end.candy, 3, "golden 2 plus a plain 1");
+  assert.equal(end.settledThrough, 2, "all three rounds are settled");
+
+  // Idempotent: calling again with the same clock changes nothing.
+  const again = settleAttempt({
+    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions, answers, answerTimes, settledThrough: 2
+  });
+  assert.deepEqual(again, end, "settling twice is the same as settling once");
+
+  // An answer that arrived after its round closed earns nothing.
+  const late = settleAttempt({
+    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions,
+    answers: { q0: "a0" }, answerTimes: { q0: T0 + 45_000 }, settledThrough: -1
+  });
+  assert.equal(late.correctCount, 0, "an answer stamped after the 40s window does not count");
+  assert.equal(late.candy, 0, "and earns no candy");
+
+  // Nothing answered at all.
+  const nothing = settleAttempt({
+    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions, answers: {}, answerTimes: {}, settledThrough: -1
+  });
+  assert.equal(nothing.correctCount, 0, "no answers, no correctness");
+  assert.equal(nothing.candy, 0, "no answers, no candy");
+}
+
+// ------------------------------------------------- migration 0058
+// NB: the brief named this 0057_quiz_la_subida.sql, but 0057 was already
+// taken by 0057_quiz_attempt_resume.sql (the same-day kick-resume hotfix,
+// see docs/05-status.md "Deploy shape: migration 0057 before the two
+// functions") by the time this task ran. Two files sharing one version
+// number would make `supabase db push` skip the second silently, so this
+// task's migration is 0058 instead.
+{
+  const migration = readFileSync(backendPath("supabase/migrations/0058_quiz_la_subida.sql"), "utf8");
+  for (const needle of [
+    "candy int not null default 0",
+    "correct_count int not null default 0",
+    "round_answer_times jsonb not null default",
+    "settled_through int not null default -1"
+  ]) {
+    assert.ok(migration.includes(needle), `migration 0058 declares ${needle}`);
+  }
+}
+
+// ------------------------------------------------- answer-time stamping
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /round_answer_times/, "report_progress stamps answer times");
+  assert.match(attempt, /mergedAnswerTimes\[questionId\] === undefined/, "the first answer's timestamp is never overwritten");
+  assert.match(attempt, /candy, correct_count, settled_through/, "the attempt row exposes the race columns");
+}
+
 console.log("verify-quiz-race passed");
