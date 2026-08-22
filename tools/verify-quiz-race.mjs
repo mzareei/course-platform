@@ -321,8 +321,22 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 {
   const {
     ANSWER_SECONDS, BREAK_SECONDS, ROUND_SECONDS, GOLDEN_SECONDS,
+    ANSWER_GRACE_MS, REVEAL_DELAY_MS,
     CANDY_CORRECT, CANDY_GOLDEN, windowFor, roundAt, candyFor, totalSecondsFor
   } = await import(backend("_shared/rounds.ts").href);
+
+  // THE INVARIANT. The grace keeps taking answers for two seconds after the
+  // countdown ends; the reveal is held back for three. Invert the two and a
+  // scripted client could read its round's correct option and ping it back
+  // while the window was still open — the forgery the whole grading path was
+  // rebuilt to close. This assertion is the guard rail, not the comment beside
+  // the constants.
+  assert.ok(
+    REVEAL_DELAY_MS > ANSWER_GRACE_MS,
+    `the reveal must land strictly after the grace closes (grace ${ANSWER_GRACE_MS}ms, reveal ${REVEAL_DELAY_MS}ms)`
+  );
+  assert.ok(ANSWER_GRACE_MS > 0, "there is a grace at all");
+  assert.ok(REVEAL_DELAY_MS < BREAK_SECONDS * 1000, "the reveal still lands inside the break");
 
   assert.equal(ANSWER_SECONDS, 40, "forty seconds to answer");
   assert.equal(BREAK_SECONDS, 10, "ten seconds of break");
@@ -333,8 +347,12 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 
   const first = windowFor(T0, 0, 10);
   assert.equal(first.answerStart, T0, "round 0 answers from the anchor");
-  assert.equal(first.answerEnd, T0 + 40_000, "round 0 stops taking answers at 40s");
+  assert.equal(first.answerEnd, T0 + 40_000, "round 0's countdown ends at 40s");
+  assert.equal(first.answersCloseAt, T0 + 40_000 + ANSWER_GRACE_MS, "and the last ping for it is accepted a grace later");
   assert.equal(first.breakEnd, T0 + 50_000, "round 0 ends at 50s");
+  // The student is told forty seconds and the phase flips at forty seconds:
+  // the grace covers flight time, it is not extra time to think.
+  assert.equal(roundAt(T0, T0 + 40_000, 10).phase, "break", "the grace does not extend the countdown the room sees");
 
   const fifth = windowFor(T0, 4, 10);
   assert.equal(fifth.answerStart, T0 + 200_000, "round 4 starts at 200s");
@@ -517,6 +535,13 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const room = readFileSync(fn("_shared/settle-room.ts"), "utf8");
   assert.match(room, /settleAttempt\(/, "the shared room settle runs the shared per-round rule");
 
+  // The reveal has two gates and needs both: the break, and the delay that
+  // pays for the answer grace.
+  const reveal = pulse.match(/const revealDue =[^;]+;[\s\S]*?const revealed =[\s\S]*?;/);
+  assert.ok(reveal, "course-pulse computes the reveal in one place");
+  assert.match(reveal[0], /phase === "break"|breakRound/, "the reveal is gated on the break");
+  assert.match(reveal[0], /REVEAL_DELAY_MS/, "the reveal waits out the answer grace");
+
   // One piñata, two doors. The screen used to sum freshly settled counts while
   // a phone summed everyone else's stored column — same formula, different
   // inputs, and up to eight points apart at the instant a round closed, which
@@ -623,6 +648,8 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 // round closed. This drives the real settleRoom against a stub database.
 {
   const { settleRoom } = await import(backend("_shared/settle-room.ts").href);
+  const { closedRoundIndex } = await import(backend("_shared/settle.ts").href);
+  const { roundAt } = await import(backend("_shared/rounds.ts").href);
   const T0 = 1_700_000_000_000;
   const COUNT = 10;
 
@@ -681,9 +708,12 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const light = (store) => store.map((r) => ({
     id: r.id, candy: r.candy, correct_count: r.correct_count, settled_through: r.settled_through
   }));
-  // 4:05 in: rounds 0-4 have closed, round 5 is still taking answers.
+  // 4:25 in: round 5 is still taking answers, so round 4 is the last one shut.
+  const NOW = T0 + 265_000;
+  const closedIndex = closedRoundIndex(roundAt(T0, NOW, COUNT), NOW);
+  assert.equal(closedIndex, 4, "the fixture sits with round 4 closed and round 5 open");
   const call = async (store, needDetailFor) => settleRoom(stubDb(store), {
-    rows: light(store), needDetailFor, startedAt: T0, now: T0 + 295_000, questionCount: COUNT, closedIndex: 4
+    rows: light(store), needDetailFor, startedAt: T0, now: NOW, questionCount: COUNT, closedIndex
   });
 
   // The screen, from cold: it asks for every racer's detail.
@@ -724,10 +754,16 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const T0 = 1_700_000_000_000;
   const ids = ["q0", "q1", "q2", "q3"];
 
-  // Answered rounds 0 and 1 in time; round 2's answer arrived after its window
-  // shut; round 3 never answered.
+  // One case per side of the grace. q0 lands mid-round. q1's ping arrives 1.5s
+  // after its countdown ended — the classroom-wifi case the grace exists for,
+  // and it counts. q2's arrives 2.5s after, past the grace, and does not.
+  // q3 was never answered.
   const answers = { q0: "a0", q1: "a1", q2: "a2" };
-  const times = { q0: T0 + 10_000, q1: T0 + 50_000 + 10_000, q2: T0 + 100_000 + 41_000 };
+  const times = {
+    q0: T0 + 10_000,
+    q1: T0 + 90_000 + 1_500,
+    q2: T0 + 140_000 + 2_500
+  };
   const committed = committedAnswers({ startedAt: T0, questionCount: 4, questionIds: ids, answers, answerTimes: times });
   assert.deepEqual(
     committed,
@@ -737,14 +773,29 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
       { question_id: "q2", selected_option_id: null },
       { question_id: "q3", selected_option_id: null }
     ],
-    "the grade counts only what the server saw inside each round's window"
+    "a ping inside the grace counts; one past it does not"
   );
   assert.equal(committed.length, 4, "every dealt question is graded, answered or not");
+
+  // The candy reads the same predicate, so the same ping earns on the same
+  // side of the same line — no round where the score says yes and the climb
+  // says no.
+  const { settleAttempt } = await import(backend("_shared/settle.ts").href);
+  const paid = settleAttempt({
+    startedAt: T0, now: T0 + 300_000, questionCount: 4,
+    questions: ids.map((id) => ({ id, correctOptionId: id.replace("q", "a") })),
+    answers, answerTimes: times, settledThrough: -1
+  });
+  assert.equal(paid.correctCount, 2, "the grace-accepted answer earns its correctness too");
+  assert.equal(paid.rounds[1].correct, true, "round 1 was answered inside the grace");
+  assert.equal(paid.rounds[2].correct, false, "round 2 was not");
 
   // The attack the break's reveal makes possible: during round 1's break, a
   // crafted ping rewrites round 0's answer to the revealed one. report_progress
   // pins the timestamp to the first answer, so without the accept rule the
   // rewrite would be graded — and paid in candy — as an early, correct answer.
+  // Past the grace, so the round really is shut. (Inside the grace a change is
+  // still allowed — and still safe, because the reveal has not been served.)
   const duringBreak = T0 + 45_000;
   const rewrite = acceptableAnswers({
     startedAt: T0, questionCount: 4, now: duringBreak, questionIds: ids,
