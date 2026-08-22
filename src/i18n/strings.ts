@@ -1546,7 +1546,6 @@ export const strings = {
   "quiz.submitFailed": ["Could not submit the quiz.", "No se pudo enviar el quiz."],
   "quiz.loading": ["Loading the quiz…", "Cargando el quiz…"],
   "quiz.questionN": ["Question {n} of {total}", "Pregunta {n} de {total}"],
-  "quiz.next": ["Next", "Siguiente"],
   "quiz.submit": ["Submit quiz", "Enviar quiz"],
   "quiz.submitting": ["Submitting…", "Enviando…"],
   "quiz.answeredOf": ["{answered} of {total} answered", "{answered} de {total} respondidas"],
@@ -2076,6 +2075,12 @@ export const strings = {
     "Your class's clock has not reached this phone yet. Hold on — nothing you have answered is lost.",
     "El reloj de tu clase todavía no llega a este teléfono. Espera — no se pierde nada de lo que ya respondiste."
   ],
+  // The post-quiz review: every question read back with its explanation,
+  // while the exit ticket is open. The break only ever had ten seconds for a
+  // mark — this is where the paragraph gets read.
+  "quiz.reviewTitle": ["How it went", "Cómo te fue"],
+  "quiz.youChose": ["You chose: {answer}", "Elegiste: {answer}"],
+  "quiz.youSkipped": ["You did not answer this one.", "Esta no la respondiste."],
 
   "pinata.cardTitle": ["🪅 Piñata: {percent}% cracked", "🪅 Piñata: {percent}% quebrada"],
   "pinata.burst": ["¡SE ROMPIÓ! 🪅💥", "¡SE ROMPIÓ! 🪅💥"],

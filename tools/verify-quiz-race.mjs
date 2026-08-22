@@ -997,4 +997,91 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   );
 }
 
+// ------------------------------------------------- the review list after submit
+// Ten seconds is enough to see a ✅ or an ❌; it is nowhere near enough to read
+// an explanation. Every explanation is collected here so a student can read it
+// at leisure while the exit ticket is open — the first time `explanation` /
+// `explanation_es` ever leave the question bank.
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(
+    attempt,
+    /explanation, explanation_es/,
+    "the server sends explanations with the questions"
+  );
+  assert.match(
+    attempt,
+    /explanation: question\.explanation,\s*\n\s*explanation_es: question\.explanation_es,/,
+    "the frozen deal carries the explanation forward to the client"
+  );
+
+  // The correct-option map has to trace back to the server's OWN grading, not
+  // to the client's submit payload — the entire point of server-side grading
+  // is that a scripted phone cannot hand itself a perfect score, and a
+  // `correct` map built from `input.responses` would hand it the answer key
+  // just as easily.
+  assert.match(
+    attempt,
+    /correct:\s*graded\.correct/,
+    "submit_attempt returns the server's own correct-option map, spelled the way the client expects it"
+  );
+  // Resolved for every question this attempt was DEALT, not just the ones it
+  // answered — a skipped question still has a right answer worth reviewing,
+  // and the old query only ever looked up options the student had selected.
+  assert.match(
+    attempt,
+    /\.in\("question_id", questionIds\)\s*\n\s*\.eq\("is_correct", true\)/,
+    "the correct option is resolved for every dealt question, not only the answered ones"
+  );
+
+  const quiz = readFileSync(new URL("../src/api/quiz.ts", import.meta.url), "utf8");
+  assert.match(quiz, /explanation\?:\s*string\s*\|\s*null;/, "QuizQuestion carries the English explanation");
+  assert.match(quiz, /explanation_es\?:\s*string\s*\|\s*null;/, "QuizQuestion carries the Spanish explanation");
+  assert.match(
+    quiz,
+    /correct:\s*Record<string,\s*string>;/,
+    "SubmitAttemptResponse declares the correct-option map the review list needs"
+  );
+
+  const review = readFileSync(new URL("../src/features/quiz/ReviewList.tsx", import.meta.url), "utf8");
+  assert.match(review, /explanation/, "the review shows explanations where the bank has them");
+  // Same bilingual fallback every other field in Player.tsx already follows: a
+  // missing Spanish explanation shows the English one rather than nothing.
+  assert.match(
+    review,
+    /\(es && question\.explanation_es\) \|\| question\.explanation/,
+    "a missing Spanish explanation falls back to English"
+  );
+  assert.match(review, /t\("quiz\.youSkipped"\)/, "a question the student never reached says so, not a blank");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.match(player, /import \{ ReviewList \} from "\.\/ReviewList";/, "Player imports the review list");
+  assert.match(
+    player,
+    /if \(result\) \{[\s\S]{0,500}?<ReviewList/,
+    "the review renders in the result branch, after the attempt is graded"
+  );
+  // The review must never render anywhere a quiz still in progress could see
+  // it — that would leak the correct option to a student mid-round. It has
+  // exactly one call site: the terminal `result` branch, above the break and
+  // the live question view in this file.
+  assert.equal(
+    (player.match(/<ReviewList/g) || []).length,
+    1,
+    "the review list has exactly one call site — the graded, terminal result branch"
+  );
+  const breakBranch = player.indexOf("if (isBreak(round))");
+  assert.ok(breakBranch > -1, "the break branch is still where past tasks left it");
+  assert.ok(
+    !player.slice(breakBranch).includes("<ReviewList"),
+    "the review list never reaches the break or the live question view — the round could still be running"
+  );
+
+  // Task 7 left `quiz.next` behind with no reference anywhere in src/ once the
+  // room clock removed the Next button. A dead dictionary entry is a silent
+  // trap for the next rename; this is the one place that would ever catch it.
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.doesNotMatch(strings, /"quiz\.next":/, "the orphaned quiz.next string was removed");
+}
+
 console.log("verify-quiz-race passed");

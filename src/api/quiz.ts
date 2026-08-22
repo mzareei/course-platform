@@ -22,6 +22,12 @@ export interface QuizQuestion {
    *  constant on both sides drifts silently. */
   seconds: number;
   options: QuizOption[];
+  /** Why the correct option is right. Frozen into the attempt's deal like
+   *  everything else here, but never read until the quiz is graded — the
+   *  ten-second break shows a mark, not a paragraph; the review list is where
+   *  this actually gets read. */
+  explanation?: string | null;
+  explanation_es?: string | null;
 }
 
 export interface QuizAttempt {
@@ -59,6 +65,11 @@ export interface StartAttemptResponse {
 export interface SubmitAttemptResponse {
   attempt: QuizAttempt;
   score: { raw: number; total: number; percent: number; speed_bonus: number; final: number };
+  /** question id -> correct option id, from the server's own grading of this
+   *  submit — never from anything the client sent. This is the answer key,
+   *  so it only ever arrives attached to a response that already closed the
+   *  attempt out. */
+  correct: Record<string, string>;
 }
 
 export function startQuizAttempt(activityInstanceId: string) {

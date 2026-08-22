@@ -1281,6 +1281,12 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .pinata-bar { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
 .pinata-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff6ec7, #ffd166, #6ee7ff); transition: width 400ms ease; }
 
+/* The post-quiz review: read at leisure while the exit ticket is open. */
+.quiz-review-item { padding: 0.7rem 0.85rem; }
+.quiz-review-prompt { font-weight: 650; margin: 0.2rem 0; }
+.quiz-review-answer { color: var(--text); font-weight: 600; margin: 0.2rem 0; }
+.quiz-review-why { color: var(--text-muted); font-size: 0.9rem; margin: 0.3rem 0 0; }
+
 /* ---------------------------------------------------------------- generation progress */
 .progress-track {
   height: 6px;

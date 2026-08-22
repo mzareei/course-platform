@@ -26,6 +26,7 @@ import type { MyRace, PulseQuizRound } from "../../api/pulse";
 import { clockText } from "./clock";
 import { remainingMs, isBreak } from "./rounds";
 import { PinataCard } from "./PinataCard";
+import { ReviewList } from "./ReviewList";
 
 // How long to wait before re-sending a tap that never left the phone, and how
 // many times. NOT a quiz duration — the quiz's own timings are the server's and
@@ -70,6 +71,11 @@ export function QuizPlayer({
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<SubmitAttemptResponse["score"] | null>(null);
+  // question id -> correct option id, straight from this submit's own grading.
+  // Only ever set alongside `result`, which is why the review list has no
+  // fallback for a resumed attempt below: resuming never calls submit_attempt
+  // again, so there is never a grading pass here to have set this from.
+  const [correctMap, setCorrectMap] = useState<Record<string, string> | null>(null);
   const [resumed, setResumed] = useState<{ percent: number | null } | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +198,7 @@ export function QuizPlayer({
         integrity: { ...integrity.current, elapsed_ms: Date.now() - startedAt.current, user_agent: navigator.userAgent.slice(0, 200) }
       });
       setResult(response.score);
+      setCorrectMap(response.correct || {});
     } catch (e) {
       setError(apiErrorText(e, "quiz.submitFailed"));
       submitting.current = false;
@@ -414,6 +421,16 @@ export function QuizPlayer({
   }
 
   if (resumed) {
+    // No review here. Resuming loads the attempt's stored score, not a fresh
+    // grade — there is no submit_attempt call in this path, so there is no
+    // `correct` map and no `answers` either (progress_answers is never copied
+    // into state for an attempt that already has a submitted_at). Rendering
+    // ReviewList against an empty map would mark every question ❌ regardless
+    // of what was actually chosen, which is worse than showing nothing.
+    // Sourcing the map another way would mean a second round trip on every
+    // reload just to redraw a screen that already told the student their
+    // score; not worth it for a page most students see once, right after
+    // they already read this same review post-submit.
     return (
       <div class="stack">
         <p class="eyebrow">{t("quiz.done")}</p>
@@ -431,6 +448,7 @@ export function QuizPlayer({
         <span class="big-number">{result.percent}%</span>
         <p class="hint">{t("quiz.doneBody")}</p>
         {myRace && attemptId ? <PinataCard race={myRace} attemptId={attemptId} /> : null}
+        {questions && correctMap ? <ReviewList questions={questions} answers={answers} correct={correctMap} /> : null}
       </div>
     );
   }
