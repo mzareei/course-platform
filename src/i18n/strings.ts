@@ -2104,7 +2104,7 @@ export const strings = {
   "subida.candyInRoom": ["{count} candy in the room", "{count} dulces en el salón"],
   "subida.rail": ["Out in front", "Van arriba"],
   "subida.spotlight": ["Play of the round", "Jugada de la ronda"],
-  "subida.spotStreak": ["{n} correct in a row", "{n} seguidas"],
+  "subida.spotStreak": ["{n} correct so far", "{n} aciertos hasta ahora"],
   "subida.spotTop3": ["Climbed into the top three", "Se metió al top 3"],
   "subida.spotFastest": ["Answered in under 20 seconds", "Contestó en menos de 20 segundos"],
   "subida.spotCandy": ["Picked up {count} candy", "Se llevó {count} dulces"],

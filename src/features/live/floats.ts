@@ -4,13 +4,20 @@
 // module decides what that moment says. Two rules the verifier enforces:
 //
 // 1. Numbers read flat, phrases are rotated. Twenty-six lanes sit about
-//    nineteen pixels apart, and a horizontal "🔥 3 seguidas" covers three or
+//    nineteen pixels apart, and a horizontal "🔥 3 aciertos" covers three or
 //    four neighbouring ropes — the room would read it as belonging to the wrong
 //    animal.
-// 2. Nothing negative ever floats. No label for a wrong answer, a broken
-//    streak, or a drop out of the top three. A racer who missed is silent, not
-//    marked, because a mark on the misses is a callout and this screen never
-//    points at a struggling student.
+// 2. Nothing negative ever floats. No label for a wrong answer, a broken run,
+//    or a drop out of the top three. A racer who missed is silent, not marked,
+//    because a mark on the misses is a callout and this screen never points at
+//    a struggling student.
+// 3. No label claims more than the payload knows. The first draft said
+//    "🔥 {n} seguidas" (n in a row) off `correct_count`, which this repo says
+//    twice over is a CUMULATIVE total — a student who got Q1, Q3 and Q4 would
+//    have been told they had three in a row, and they would have known it was
+//    false. It says "{n} aciertos" now. The bolt said "el más rápido" while the
+//    code picks the least-advanced golden answerer, so it says what the payload
+//    actually supports: the answer landed under twenty seconds.
 //
 // A spec carries a LANE KEY, never an index into `race.racers`. Task 9 found
 // out why: course-class-quiz selects the attempts with no ORDER BY while
@@ -56,8 +63,14 @@ export const PHRASE_STEP_MS = 260;
  *  itself; each phrase starts clear of the number, and each further phrase
  *  starts clear of the one below it. A racer that does three notable things in
  *  one round reads as a column of text climbing its own rope, not a pile. */
-export const NUMBER_CLEAR_PX = 34;
+export const NUMBER_CLEAR_PX = 36;
 export const PHRASE_SPAN_PX = 86;
+/** How tall the two kinds of label actually draw, so the verifier can prove the
+ *  clearances above survive the head start a lower label gains in flight rather
+ *  than restating them. A vertical phrase is a dozen characters of 0.6rem text
+ *  set vertically plus its emoji; a flat number is one line of 0.75rem. */
+export const PHRASE_HEIGHT_PX = 78;
+export const NUMBER_HEIGHT_PX = 14;
 
 /** The three beats of the ten-second break, measured from the poll that first
  *  sees the round settled. */
@@ -122,13 +135,21 @@ export interface FloatInput {
   /** The round that just closed. Only ever part of a key, so one round's labels
    *  can never be reused as DOM nodes by the next round's. */
   round: number;
+  /** How many rounds this diff spans. One normally; more when the layer missed
+   *  a beat, which costs the bolt because it is a per-round claim. */
+  roundsCovered: number;
 }
 
 interface Earner {
   laneKey: string;
   racer: RaceRacer;
   gained: number;
-  /** The streak this round REACHED, or 0. Only ever a multiple of three. */
+  /** Did this racer's one new correct answer land inside the golden window?
+   *  Only ever true when exactly ONE correct answer arrived in the diff — two
+   *  ordinary correct answers also add up to two candy. */
+  golden: boolean;
+  /** The count this racer's correct answers REACHED, or 0. Only ever a multiple
+   *  of three, and only ever set when exactly one answer arrived. */
   streak: number;
   /** Position in the wave, left to right. */
   order: number;
@@ -154,12 +175,19 @@ function earners(input: FloatInput): Earner[] {
     const gained = (entry.racer.candy || 0) - (was.candy || 0);
     if (gained <= 0) return [];
     const correct = entry.racer.correct_count || 0;
-    const rose = correct > (was.correct_count || 0);
+    // A round is one question, so a correct count that climbed by more than one
+    // means this diff spans rounds the layer never saw — four consecutive failed
+    // polls across the settled window is enough. Then two ordinary correct
+    // answers add up to two candy and would be read as one fast one, and a count
+    // stepping 2 → 4 would be read as reaching a milestone it stepped over.
+    // Neither inference is safe unless exactly one answer arrived.
+    const oneAnswer = correct - (was.correct_count || 0) === 1;
     return [{
       laneKey: entry.laneKey,
       racer: entry.racer,
       gained,
-      streak: rose && correct > 0 && correct % 3 === 0 ? correct : 0,
+      golden: oneAnswer && gained >= GOLDEN_CANDY,
+      streak: oneAnswer && correct > 0 && correct % 3 === 0 ? correct : 0,
       order: 0
     }];
   });
@@ -171,16 +199,24 @@ function earners(input: FloatInput): Earner[] {
 
 /** One racer a round, or none.
  *
- *  Who actually answered first is not knowable here: course-class-quiz sends
- *  candy and correct_count and nothing else, and the answer timestamps never
- *  leave the server. What the payload does carry is the golden gain — two candy
- *  means the answer landed inside the round's first twenty seconds. So the bolt
- *  goes to a golden answer, and among several it goes to the racer with the
- *  FEWEST correct answers so far: the rail and the size already celebrate the
- *  leader every second of the quiz, and stacking the round's loudest badge on
- *  the same animal ten times running is how a screen stops being looked at. */
-function fastestLane(list: Earner[]): string | null {
-  const golden = list.filter((earner) => earner.gained >= GOLDEN_CANDY);
+ *  Who was actually FIRST is not knowable here: course-class-quiz sends candy
+ *  and correct_count and nothing else, and the answer timestamps never leave the
+ *  server. What the payload does carry is the golden gain — two candy means the
+ *  answer landed inside the round's first twenty seconds. That, and only that,
+ *  is what the label says. It used to say "el más rápido" while the tiebreak
+ *  below deliberately picks someone who is NOT out in front, which named one
+ *  student to a room of twenty-six on a claim the data could not back.
+ *
+ *  The tiebreak stands: among several golden answers it goes to the racer with
+ *  the fewest correct answers so far, because the rail and the emoji size
+ *  already celebrate the leader every second of the quiz, and stacking the
+ *  round's loudest badge on the same animal ten rounds running is how a screen
+ *  stops being looked at. */
+function fastestLane(list: Earner[], roundsCovered: number): string | null {
+  // A per-round superlative cannot be pinned on a diff that spans more than one
+  // round. A beat that missed its window gives the bolt up rather than guess.
+  if (roundsCovered > 1) return null;
+  const golden = list.filter((earner) => earner.golden);
   if (!golden.length) return null;
   return golden.reduce((best, earner) => {
     const mine = earner.racer.correct_count || 0;
@@ -200,7 +236,7 @@ function waveStep(count: number): number {
 export function floatsFor(input: FloatInput): FloatSpec[] {
   const list = earners(input);
   const step = waveStep(list.length);
-  const fastest = fastestLane(list);
+  const fastest = fastestLane(list, input.roundsCovered);
   const wasTop = new Set(input.prevTop3);
   const promoted = new Set(input.nextTop3.filter((key) => !wasTop.has(key)));
   const specs: FloatSpec[] = [];
@@ -211,7 +247,7 @@ export function floatsFor(input: FloatInput): FloatSpec[] {
       key: `candy:${input.round}:${earner.laneKey}`,
       laneKey: earner.laneKey,
       text: `+${earner.gained}`,
-      color: earner.gained >= GOLDEN_CANDY ? GOLDEN_COLOR : CANDY_COLOR,
+      color: earner.golden ? GOLDEN_COLOR : CANDY_COLOR,
       vertical: false,
       delayMs: Math.round(NUMBER_AT_MS + earner.order * step),
       liftPx: 0
@@ -221,12 +257,12 @@ export function floatsFor(input: FloatInput): FloatSpec[] {
     // this racer's own number, never before it, and stacked above it.
     const phrases: Array<{ kind: string; text: string; color: string }> = [];
     if (earner.streak) {
-      phrases.push({ kind: "streak", text: `🔥 ${earner.streak} seguidas`, color: STREAK_COLOR });
+      phrases.push({ kind: "streak", text: `🔥 ${earner.streak} aciertos`, color: STREAK_COLOR });
     }
     if (earner.laneKey === fastest) {
-      phrases.push({ kind: "fastest", text: "⚡ el más rápido", color: FASTEST_COLOR });
+      phrases.push({ kind: "fastest", text: "⚡ bajo 20 s", color: FASTEST_COLOR });
     }
-    if (promoted.delete(earner.laneKey)) {
+    if (promoted.has(earner.laneKey)) {
       phrases.push({ kind: "top3", text: "🚀 al top 3", color: TOP3_COLOR });
     }
     phrases.forEach((phrase, nth) => specs.push({
@@ -240,24 +276,15 @@ export function floatsFor(input: FloatInput): FloatSpec[] {
     }));
   }
 
-  // A lane can reach the top three without gaining candy if another racer drops
-  // out of the payload entirely. Rare, but the rail would show the promotion and
-  // the field would say nothing, so the rocket is issued here too.
-  for (const laneKey of promoted) {
-    if (!input.next.some((entry) => entry.laneKey === laneKey)) continue;
-    specs.push({
-      key: `top3:${input.round}:${laneKey}`,
-      laneKey,
-      text: "🚀 al top 3",
-      color: TOP3_COLOR,
-      vertical: true,
-      delayMs: PHRASE_AT_MS + WAVE_MS,
-      // Nothing below it on this rope: this lane earned no candy, so it has no
-      // number for the phrase to clear.
-      liftPx: 0
-    });
-  }
-
+  // The rocket is issued INSIDE the earners loop and nowhere else, so it can
+  // only ever reach a racer who gained candy this round. A first draft also
+  // covered promotion by attrition — a lane rising into the top three because
+  // another racer left the payload — and that path handed a rocket to a racer
+  // who earned nothing, which is the one thing the beat must never do. Round 1
+  // in a room where nobody has answered is the case that exposed it: with every
+  // candy count at zero, topThreeKeys falls through to lane-key order and an
+  // alphabetically early newcomer collected a promotion for 0 candy. The rail
+  // still shows the change; the field simply does not announce it.
   return specs;
 }
 
@@ -296,7 +323,7 @@ export function spotlightFor(input: FloatInput): Spotlight | null {
 
   const wasTop = new Set(input.prevTop3);
   const promoted = new Set(input.nextTop3.filter((key) => !wasTop.has(key)));
-  const fastest = fastestLane(list);
+  const fastest = fastestLane(list, input.roundsCovered);
 
   const scored = list.map((earner) => ({
     earner,

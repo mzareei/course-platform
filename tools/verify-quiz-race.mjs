@@ -412,7 +412,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 {
   const {
     RISE_MS, RISE_PX, HOLD_MS, FADE_MS, STAGGER_MS, WAVE_MS, PHRASE_STEP_MS,
-    NUMBER_CLEAR_PX, PHRASE_SPAN_PX,
+    NUMBER_CLEAR_PX, PHRASE_SPAN_PX, PHRASE_HEIGHT_PX, NUMBER_HEIGHT_PX,
     FLASH_AT_MS, CLIMB_AT_MS, CLIMB_HOLD_MS, SPOTLIGHT_AT_MS, RING_MS, SPOTLIGHT_MS,
     floatsFor, ringingLanes, spotlightFor
   } = await import(frontend("src/features/live/floats.ts").href);
@@ -435,7 +435,8 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const prev = [lane("Tortuga Veloz", 2, 2), lane("Jaguar Ninja", 4, 3), lane("Rana Zen", 0, 0)];
   const next = [lane("Tortuga Veloz", 4, 3), lane("Jaguar Ninja", 4, 3), lane("Rana Zen", 0, 0)];
   const round = {
-    prev, next, prevTop3: ["Jaguar Ninja"], nextTop3: ["Tortuga Veloz", "Jaguar Ninja"], roster, round: 3
+    prev, next, prevTop3: ["Jaguar Ninja"], nextTop3: ["Tortuga Veloz", "Jaguar Ninja"],
+    roster, round: 3, roundsCovered: 1
   };
   const specs = floatsFor(round);
 
@@ -444,8 +445,16 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(gained[0].vertical, false, "candy numbers read flat");
   assert.equal(gained[0].laneKey, "Tortuga Veloz", "the number belongs to the racer who earned it");
 
-  const streak = specs.find((s) => s.text.includes("seguidas"));
-  assert.ok(streak, "a streak reaching three is called out");
+  // No label may claim more than the payload knows. correct_count is a running
+  // TOTAL that never decreases — this repo says so twice — so "{n} seguidas"
+  // told a student who got Q1, Q3 and Q4 that they had three in a row, which
+  // they personally knew was false. It counts what it can count.
+  assert.ok(!specs.some((s) => s.text.includes("seguidas")),
+    "no label may claim consecutive answers off a cumulative counter");
+  assert.ok(!specs.some((s) => s.text.includes("rápido")),
+    "and none may name one student of twenty-six the fastest on a payload with no answer times");
+  const streak = specs.find((s) => s.text.includes("aciertos"));
+  assert.ok(streak, "every third correct answer is still called out");
   assert.equal(streak.vertical, true, "phrases are set vertically so they stay in their lane");
   assert.equal(streak.laneKey, "Tortuga Veloz", "on the lane that reached it");
   assert.ok(streak.text.includes("3"), "and it says which streak");
@@ -455,9 +464,11 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(promoted.vertical, true, "and it is a phrase, so it is vertical");
   assert.equal(promoted.laneKey, "Tortuga Veloz", "on the lane that entered it");
 
-  const bolt = specs.filter((s) => s.text.includes("rápido"));
+  const bolt = specs.filter((s) => s.text.includes("20 s"));
   assert.equal(bolt.length, 1, "the bolt names one racer a round, never two");
   assert.equal(bolt[0].vertical, true, "and it is a phrase too");
+  assert.ok(/bajo 20 s/.test(bolt[0].text),
+    "and it says only what two candy proves: the answer landed inside the golden window");
 
   // The orientation rule, over every label the module can produce.
   for (const spec of specs) {
@@ -476,9 +487,20 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(specs.filter((s) => s.laneKey === "Rana Zen").length, 0, "a racer who missed gets no label at all");
   // Falling out of the top three is never announced.
   const demoted = floatsFor({
-    prev, next: prev, prevTop3: ["Tortuga Veloz", "Jaguar Ninja"], nextTop3: ["Jaguar Ninja"], roster, round: 4
+    prev, next: prev, prevTop3: ["Tortuga Veloz", "Jaguar Ninja"], nextTop3: ["Jaguar Ninja"],
+    roster, round: 4, roundsCovered: 1
   });
   assert.equal(demoted.length, 0, "dropping out of the top three produces no label");
+
+  // Nor does climbing INTO it without earning anything. Round 1 in a room where
+  // nobody has answered is the case: every candy count is zero, topThreeKeys
+  // falls through to lane-key order, and a promotion by attrition would hand a
+  // rocket to a racer who did nothing. A racer who gained nothing gets no spec.
+  const attrition = floatsFor({
+    prev, next: prev, prevTop3: ["Jaguar Ninja"], nextTop3: ["Rana Zen", "Jaguar Ninja"],
+    roster, round: 4, roundsCovered: 1
+  });
+  assert.equal(attrition.length, 0, "a racer who earned nothing is never promoted on screen");
 
   // ---- The carry-forward from Task 9: an index into race.racers is NOT a lane.
   // course-class-quiz selects the attempts with no ORDER BY while settleRoom
@@ -509,7 +531,9 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const tiedRoster = ["Abeja Sagaz", "Buho Astuto", "Coyote Listo"];
   const tiedPrev = tiedRoster.map((name) => lane(name, 0, 0));
   const tiedNext = tiedRoster.map((name) => lane(name, 2, 1));
-  const tie = (p, n) => spotlightFor({ prev: p, next: n, prevTop3: [], nextTop3: tiedRoster, roster: tiedRoster, round: 1 });
+  const tie = (p, n) => spotlightFor({
+    prev: p, next: n, prevTop3: [], nextTop3: tiedRoster, roster: tiedRoster, round: 1, roundsCovered: 1
+  });
   assert.equal(
     tie(tiedPrev, tiedNext).laneKey,
     tie([tiedPrev[2], tiedPrev[0], tiedPrev[1]], [tiedNext[1], tiedNext[2], tiedNext[0]]).laneKey,
@@ -524,11 +548,12 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const bigPrev = bigRoster.map((name) => lane(name, 4, 2));
   const bigNext = bigRoster.map((name) => lane(name, 6, 3));
   const big = floatsFor({
-    prev: bigPrev, next: bigNext, prevTop3: [], nextTop3: bigRoster.slice(0, 3), roster: bigRoster, round: 9
+    prev: bigPrev, next: bigNext, prevTop3: [], nextTop3: bigRoster.slice(0, 3),
+    roster: bigRoster, round: 9, roundsCovered: 1
   });
   assert.equal(big.filter((s) => !s.vertical).length, 26, "every earner gets a number");
-  assert.equal(big.filter((s) => s.text.includes("seguidas")).length, 26, "and every third correct answer says so");
-  assert.equal(big.filter((s) => s.text.includes("rápido")).length, 1, "and exactly one bolt, however many went golden");
+  assert.equal(big.filter((s) => s.text.includes("aciertos")).length, 26, "and every third correct answer says so");
+  assert.equal(big.filter((s) => s.text.includes("20 s")).length, 1, "and exactly one bolt, however many went golden");
 
   const layerSource = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
   const pollMs = Number((layerSource.match(/const POLL_MS = (\d+)/) || [])[1]);
@@ -549,7 +574,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   }
   assert.ok(WAVE_MS > 0 && PHRASE_STEP_MS > 0, "the wave and the gap between one racer's phrases are both declared");
   const small = floatsFor({
-    prev: tiedPrev, next: tiedNext, prevTop3: [], nextTop3: [], roster: tiedRoster, round: 2
+    prev: tiedPrev, next: tiedNext, prevTop3: [], nextTop3: [], roster: tiedRoster, round: 2, roundsCovered: 1
   }).filter((s) => !s.vertical);
   assert.equal(small[1].delayMs - small[0].delayMs, STAGGER_MS, "a small round staggers at the full step");
 
@@ -576,22 +601,62 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
     nextTop3: ["Tortuga Veloz"],
     roster: ["Tortuga Veloz"]
   });
-  assert.equal(stacked.filter((s) => !s.vertical)[0].liftPx, 0, "the number takes the anchor itself");
+  const stackedNumber = stacked.filter((s) => !s.vertical)[0];
+  assert.equal(stackedNumber.liftPx, 0, "the number takes the anchor itself");
   const phrases = stacked.filter((s) => s.vertical).sort((a, b) => a.delayMs - b.delayMs);
   assert.equal(phrases.length, 3, "one round can earn a streak, a bolt and a promotion at once");
-  assert.ok(phrases[0].liftPx >= NUMBER_CLEAR_PX,
-    "the first phrase starts clear of the number, or the two are drawn through each other");
-  const lostToDelay = (PHRASE_STEP_MS * RISE_PX) / RISE_MS;
+
+  // Clearance is a property of the geometry, not a threshold to restate: two
+  // labels on one rope drift at the same speed, so the only thing that eats the
+  // gap between them is the head start the lower one has by the time the upper
+  // one spawns. Both label heights come out of the module so this cannot drift.
+  const driftPerMs = RISE_PX / RISE_MS;
+  assert.ok(
+    phrases[0].liftPx >= (phrases[0].delayMs - stackedNumber.delayMs) * driftPerMs + NUMBER_HEIGHT_PX,
+    "the first phrase must start above where the number has already drifted to, or the two are drawn through each other"
+  );
   for (let i = 1; i < phrases.length; i++) {
     assert.ok(
-      phrases[i].liftPx - phrases[i - 1].liftPx >= PHRASE_SPAN_PX,
-      "each further phrase starts clear of the one below it"
-    );
-    assert.ok(
-      PHRASE_SPAN_PX - lostToDelay > 78,
-      "and the head start the earlier phrase gains in flight must not eat that clearance"
+      phrases[i].liftPx - phrases[i - 1].liftPx
+        >= (phrases[i].delayMs - phrases[i - 1].delayMs) * driftPerMs + PHRASE_HEIGHT_PX,
+      "and each further phrase must clear the whole height of the one below it, head start included"
     );
   }
+  assert.ok(PHRASE_SPAN_PX >= PHRASE_STEP_MS * driftPerMs + PHRASE_HEIGHT_PX,
+    "the declared span is what makes that hold for any two consecutive phrases");
+
+  // ---- A skipped beat corrupts three labels at once, so the inferences that
+  // depend on one round having passed are given up rather than guessed. Four
+  // consecutive failed polls across a settled window is all it takes: two
+  // ordinary correct answers then sum to two candy and read as one fast one, and
+  // a correct count stepping 2 → 4 steps straight over the milestone at 3.
+  const skippedRoster = ["Ardilla Turbo"];
+  const skipped = floatsFor({
+    prev: [lane("Ardilla Turbo", 4, 1)],
+    next: [lane("Ardilla Turbo", 6, 3)],
+    prevTop3: [], nextTop3: [], roster: skippedRoster, round: 6, roundsCovered: 2
+  });
+  assert.equal(skipped.length, 1, "two rounds of gain is still one number, and nothing else");
+  assert.equal(skipped[0].text, "+2", "the candy really did rise by two");
+  assert.ok(!skipped.some((s) => s.text.includes("20 s")),
+    "but two ordinary correct answers are not one fast one");
+  assert.ok(!skipped.some((s) => s.text.includes("aciertos")),
+    "and a count that stepped over three never reached three");
+  const goldColour = big.find((s) => !s.vertical).color;
+  assert.notEqual(skipped[0].color, goldColour, "nor is it coloured as a golden answer");
+  // Even a clean single answer loses the bolt when the diff spans rounds — it is
+  // a per-round claim and the beat can no longer say which round it belongs to.
+  const spanned = floatsFor({
+    prev: [lane("Ardilla Turbo", 4, 1)],
+    next: [lane("Ardilla Turbo", 6, 2)],
+    prevTop3: [], nextTop3: [], roster: skippedRoster, round: 6, roundsCovered: 2
+  });
+  assert.ok(!spanned.some((s) => s.text.includes("20 s")), "a per-round superlative needs one round");
+  assert.equal(spotlightFor({
+    prev: [lane("Ardilla Turbo", 4, 1)],
+    next: [lane("Ardilla Turbo", 6, 2)],
+    prevTop3: [], nextTop3: [], roster: skippedRoster, round: 6, roundsCovered: 2
+  }).fastest, false, "and the card does not claim it either");
 
   // ---- The rendering: lanes, anchors, orientation, and nothing that dims.
   const css = readFileSync(frontend("src/styles/app.css"), "utf8");
@@ -604,6 +669,15 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(layer, /BASE_EMOJI_PX \* sizeFor\(/,
     "a label clears its OWN emoji — a fixed offset puts a leader's label behind the animal that earned it");
   assert.match(layer, /float\.liftPx/, "and a second label on the same rope is stacked above the first");
+  // The poll swallows everything — that catch was bought for network failures.
+  // A throw out of the beats must not take the field's own update with it, so
+  // setRace and the freeze both land BEFORE runBeats is ever called.
+  assert.ok(
+    layer.indexOf("setRace(res);\n          if (res.state === \"closed\") freeze();\n          runBeats(") > -1,
+    "the frame and the freeze are committed before the beats can throw"
+  );
+  assert.match(layer, /roundsCovered: Math\.max\(1, round\.index - baseline\.round\)/,
+    "and the baseline carries the round it covers, so a skipped beat knows it skipped one");
   assert.match(layer, /subida-float/, "the labels render");
   assert.match(layer, /subida-spot/, "and the spotlight card does");
   assert.doesNotMatch(css, /\.subida-racer\.[\w-]+\s*\{[^}]*opacity/,
@@ -661,7 +735,8 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // module and executes it in Node, where the app's i18n does not exist.
   const floatsSource = readFileSync(frontend("src/features/live/floats.ts"), "utf8");
   assert.doesNotMatch(floatsSource, /from "\.\.\/\.\.\/i18n"/, "floats.ts must import cleanly in Node");
-  assert.doesNotMatch(floatsSource, /^import \{/m, "and carry no runtime import at all — Node cannot resolve one from a .ts file");
+  assert.doesNotMatch(floatsSource, /^import (?!type )/m,
+    "and carry no runtime import at all — default and namespace imports included, since Node cannot resolve any of them from a .ts file");
 }
 
 // ------------------------------------------------- fair shuffle

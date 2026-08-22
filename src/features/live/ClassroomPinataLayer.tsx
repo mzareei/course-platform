@@ -104,7 +104,7 @@ export function ClassroomPinataLayer({
   // What the field looked like when the LAST round's beat ran — not simply the
   // previous poll. Diffing whole rounds is what makes the flash show a round's
   // full gain however the polls happen to fall either side of the settle.
-  const beatBaseline = useRef<{ lanes: LaneRacer[]; top3: string[] } | null>(null);
+  const beatBaseline = useRef<{ lanes: LaneRacer[]; top3: string[]; round: number } | null>(null);
   const beatRound = useRef(-1);
   const queue = useRef<string[]>([]);
   const lastLineAt = useRef(0);
@@ -179,9 +179,14 @@ export function ClassroomPinataLayer({
         prevTop3: baseline.top3,
         nextTop3: top3,
         roster: lanes,
-        round: round.index
+        round: round.index,
+        // Normally 1. More when polls failed right across a settled window and
+        // a whole round went by unbeaten — two ordinary correct answers then sum
+        // to a golden-looking two candy, so the module gives up the inferences
+        // it can no longer make rather than inventing a fast answer.
+        roundsCovered: Math.max(1, round.index - baseline.round)
       };
-      beatBaseline.current = { lanes: next, top3 };
+      beatBaseline.current = { lanes: next, top3, round: round.index };
 
       const specs = floatsFor(input);
       const ringing = ringingLanes(input.prev, input.next);
@@ -233,7 +238,16 @@ export function ClassroomPinataLayer({
             // The beats need a whole round to diff against and this payload is
             // the only thing there has ever been, so it becomes the baseline and
             // celebrates nothing — the same ruling as the announcer's above.
-            beatBaseline.current = { lanes: laneSnapshot(res.racers), top3: topThreeKeys(res.racers) };
+            beatBaseline.current = {
+              lanes: laneSnapshot(res.racers),
+              top3: topThreeKeys(res.racers),
+              // Which round this payload's numbers already include. A round is
+              // settled partway through its own break, so the baseline covers
+              // round R only once that settle has landed.
+              round: res.round
+                ? (roundCountIsSettled(res.round, Date.now()) ? res.round.index : res.round.index - 1)
+                : -1
+            };
             setRace(res);
             if (res.state === "closed") freeze();
             return;
@@ -264,12 +278,18 @@ export function ClassroomPinataLayer({
             setTimeout(() => setRaining(false), 3000);
           }
           prevSnap.current = snap;
-          // The beats and the new state land in one render on purpose: the
-          // climb's transition-delay has to be on the element in the same commit
-          // that moves it, or the field jumps instead of holding.
-          runBeats(res, growRoster(res.racers));
+          const lanes = growRoster(res.racers);
+          // The field's own update goes in FIRST. runBeats sits inside the
+          // swallow-everything catch below, which was bought for network
+          // failures; a throw out of the beats must never take the frame with
+          // it, or prevSnap has already advanced, the announcer silently loses
+          // an event and the room's screen sits still for two seconds with no
+          // signal that anything went wrong. Both setState calls are still in
+          // one synchronous handler, so they still land in one render — which is
+          // what the climb's transition-delay needs.
           setRace(res);
           if (res.state === "closed") freeze();
+          runBeats(res, lanes);
         })
         .catch(() => { /* one missed poll is invisible; the next one catches up */ });
     };
