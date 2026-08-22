@@ -501,15 +501,46 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 // ------------------------------------------------- read surfaces
 {
   const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
-  assert.match(classQuiz, /settleAttempt\(/, "the race settles closed rounds before answering");
+  // Both surfaces settle through the one shared helper, which is what makes the
+  // piñata a single number rather than two computations that have to be trusted
+  // to agree. The chain to the rule itself is asserted below.
+  assert.match(classQuiz, /settleRoom\(/, "the race settles closed rounds before answering");
   assert.match(classQuiz, /round_correct/, "the race reports how many got the closed round right");
   assert.match(classQuiz, /roundAt\(/, "the race reports the room's round window");
   assert.doesNotMatch(classQuiz, /progress_position/, "racers are no longer placed by question position");
 
   const pulse = readFileSync(fn("course-pulse/index.ts"), "utf8");
-  assert.match(pulse, /settleAttempt\(/, "the phone poll settles closed rounds too");
+  assert.match(pulse, /settleRoom\(/, "the phone poll settles closed rounds too");
   assert.match(pulse, /last_result/, "the phone poll carries the reveal for the closed round");
   assert.match(pulse, /correct_option_id/, "the reveal names the correct option");
+
+  const room = readFileSync(fn("_shared/settle-room.ts"), "utf8");
+  assert.match(room, /settleAttempt\(/, "the shared room settle runs the shared per-round rule");
+
+  // One piñata, two doors. The screen used to sum freshly settled counts while
+  // a phone summed everyone else's stored column — same formula, different
+  // inputs, and up to eight points apart at the instant a round closed, which
+  // is the one moment the room and a phone are looked at together.
+  const pinataArgs = (source, file) => {
+    const call = source.match(/pinataState\(\{[\s\S]*?\}\)/);
+    assert.ok(call, `${file} calls pinataState`);
+    const text = call[0].replace(/\s+/g, " ");
+    const pick = (key) => {
+      const explicit = text.match(new RegExp(`${key}:\\s*([^,}]+)`));
+      if (explicit) return explicit[1].trim();
+      // Property shorthand: `questionCount,` is the local of that name.
+      return new RegExp(`[{,]\\s*${key}\\s*[,}]`).test(text) ? key : null;
+    };
+    return { correct: pick("correct"), started: pick("started"), questionCount: pick("questionCount") };
+  };
+  const screenArgs = pinataArgs(classQuiz, "course-class-quiz");
+  const phoneArgs = pinataArgs(pulse, "course-pulse");
+  assert.equal(screenArgs.correct, phoneArgs.correct, "both piñata call sites take the numerator from one expression");
+  assert.equal(screenArgs.started, phoneArgs.started, "both take the same denominator population");
+  assert.match(screenArgs.correct, /settled\.correctInRoom/, "the numerator is the shared room settle, not a local sum");
+  for (const [file, args] of [["course-class-quiz", screenArgs], ["course-pulse", phoneArgs]]) {
+    assert.match(args.questionCount, /questionCount$/, `${file} sizes the piñata by the room's question count`);
+  }
 
   const api = readFileSync(frontend("src/api/quiz.ts"), "utf8");
   // Read the RaceRacer block itself rather than the whole file: `position` and
@@ -582,6 +613,194 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(quiet.rounds.length, 4, "an unanswered round still closes");
   assert.ok(quiet.rounds.every((r) => r.answered === false && r.correct === false && r.candy === 0),
     "nothing answered earns nothing");
+}
+
+// ------------------------------------------------- one piñata, two doors
+// The room total must not depend on which surface asked for it. Before this,
+// `race` settled every attempt and summed the fresh counts while a phone
+// settled only its own and summed everyone else's stored column: same formula,
+// different inputs, ~8 points apart across a class of thirty at the instant a
+// round closed. This drives the real settleRoom against a stub database.
+{
+  const { settleRoom } = await import(backend("_shared/settle-room.ts").href);
+  const T0 = 1_700_000_000_000;
+  const COUNT = 10;
+
+  // Three students, ten questions each, dealt in their own order.
+  const deal = (offset) => Array.from({ length: COUNT }, (_, k) => ({ id: `q${(k + offset) % COUNT}` }));
+  const optionRows = Array.from({ length: COUNT }, (_, k) => ({ id: `right${k}`, question_id: `q${k}` }));
+  const answersFor = (deck, rightUpTo) => Object.fromEntries(
+    deck.slice(0, rightUpTo).map((q) => [q.id, `right${q.id.slice(1)}`])
+  );
+  const timesFor = (deck, upTo) => Object.fromEntries(
+    deck.slice(0, upTo).map((q, k) => [q.id, T0 + k * 50_000 + 5_000])
+  );
+
+  const makeStore = () => {
+    const decks = [deal(0), deal(3), deal(7)];
+    return decks.map((deck, i) => ({
+      id: `a${i}`,
+      questions_json: deck,
+      progress_answers: answersFor(deck, [10, 6, 0][i]),
+      round_answer_times: timesFor(deck, [10, 6, 0][i]),
+      settled_through: -1,
+      candy: 0,
+      correct_count: 0
+    }));
+  };
+
+  // A stub of the two queries and the one update settleRoom makes.
+  const stubDb = (store) => ({
+    writes: 0,
+    from(table) {
+      const q = { table, ids: null, update: null, eqs: {} };
+      q.select = () => q;
+      q.in = (column, ids) => { q.ids = { column, ids: ids.map(String) }; return q; };
+      q.eq = (column, value) => { q.eqs[column] = value; return q; };
+      q.update = (values) => { q.update_values = values; return q; };
+      q.then = (resolve, reject) => {
+        try {
+          if (q.update_values) {
+            const row = store.find((r) => r.id === q.eqs.id);
+            Object.assign(row, {
+              candy: q.update_values.candy,
+              correct_count: q.update_values.correct_count,
+              settled_through: q.update_values.settled_through
+            });
+            return Promise.resolve(resolve({ error: null }));
+          }
+          if (table === "question_options") return Promise.resolve(resolve({ data: optionRows, error: null }));
+          const rows = store.filter((r) => q.ids.ids.includes(r.id)).map((r) => ({ ...r }));
+          return Promise.resolve(resolve({ data: rows, error: null }));
+        } catch (e) { return Promise.resolve(reject ? reject(e) : Promise.reject(e)); }
+      };
+      return q;
+    }
+  });
+
+  const light = (store) => store.map((r) => ({
+    id: r.id, candy: r.candy, correct_count: r.correct_count, settled_through: r.settled_through
+  }));
+  // 4:05 in: rounds 0-4 have closed, round 5 is still taking answers.
+  const call = async (store, needDetailFor) => settleRoom(stubDb(store), {
+    rows: light(store), needDetailFor, startedAt: T0, now: T0 + 295_000, questionCount: COUNT, closedIndex: 4
+  });
+
+  // The screen, from cold: it asks for every racer's detail.
+  const cold = makeStore();
+  const screen = await call(cold, cold.map((r) => r.id));
+  assert.ok(screen.correctInRoom > 0, "the fixture has correct answers to count");
+
+  // A phone, from the SAME cold state, asking only for its own detail. It must
+  // still reach the screen's number, because settleRoom catches up every
+  // attempt whose cursor is behind the last closed round.
+  const coldAgain = makeStore();
+  const phoneCold = await call(coldAgain, ["a1"]);
+  assert.equal(phoneCold.correctInRoom, screen.correctInRoom, "a phone reading a cold room matches the screen");
+
+  // A phone reading a room the screen has already settled: nothing is behind,
+  // so it settles only itself and reads the stored counts for the rest.
+  const phoneWarm = await call(cold, ["a1"]);
+  assert.equal(phoneWarm.correctInRoom, screen.correctInRoom, "a phone reading a settled room matches the screen");
+
+  // And the screen again over the warm room, for the third direction.
+  const screenWarm = await call(cold, cold.map((r) => r.id));
+  assert.equal(screenWarm.correctInRoom, screen.correctInRoom, "settling twice does not move the room total");
+
+  // Per-attempt: detail where it was asked for, stored where it was not.
+  assert.ok(phoneWarm.results.has("a1"), "the caller always gets its own detail");
+  assert.equal(phoneWarm.correctFor("a0"), screen.correctFor("a0"), "another racer's count is the same either way");
+  assert.equal(phoneWarm.candyFor("a0"), screen.candyFor("a0"), "and so is their candy");
+
+  // The student who answered nothing earns nothing, and is still counted as a
+  // racer in the room.
+  assert.equal(screen.correctFor("a2"), 0, "no answers, no correctness");
+  assert.equal(screen.candyFor("a2"), 0, "no answers, no candy");
+}
+
+// ------------------------------------------------- the grade is the server's record
+{
+  const { committedAnswers, acceptableAnswers } = await import(backend("_shared/settle.ts").href);
+  const T0 = 1_700_000_000_000;
+  const ids = ["q0", "q1", "q2", "q3"];
+
+  // Answered rounds 0 and 1 in time; round 2's answer arrived after its window
+  // shut; round 3 never answered.
+  const answers = { q0: "a0", q1: "a1", q2: "a2" };
+  const times = { q0: T0 + 10_000, q1: T0 + 50_000 + 10_000, q2: T0 + 100_000 + 41_000 };
+  const committed = committedAnswers({ startedAt: T0, questionCount: 4, questionIds: ids, answers, answerTimes: times });
+  assert.deepEqual(
+    committed,
+    [
+      { question_id: "q0", selected_option_id: "a0" },
+      { question_id: "q1", selected_option_id: "a1" },
+      { question_id: "q2", selected_option_id: null },
+      { question_id: "q3", selected_option_id: null }
+    ],
+    "the grade counts only what the server saw inside each round's window"
+  );
+  assert.equal(committed.length, 4, "every dealt question is graded, answered or not");
+
+  // The attack the break's reveal makes possible: during round 1's break, a
+  // crafted ping rewrites round 0's answer to the revealed one. report_progress
+  // pins the timestamp to the first answer, so without the accept rule the
+  // rewrite would be graded — and paid in candy — as an early, correct answer.
+  const duringBreak = T0 + 45_000;
+  const rewrite = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: duringBreak, questionIds: ids,
+    stored: { q0: "wrong0" }, incoming: { q0: "a0" }
+  });
+  assert.deepEqual(rewrite, {}, "an answer cannot be changed after its round stopped taking answers");
+
+  // Changing your mind while the round is still open is exactly what a student
+  // is meant to be able to do.
+  const inRound = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: T0 + 30_000, questionIds: ids,
+    stored: { q0: "wrong0" }, incoming: { q0: "a0" }
+  });
+  assert.deepEqual(inRound, { q0: "a0" }, "a change inside the window is accepted");
+
+  // A first answer is always accepted — it arrives with a fresh stamp, which
+  // the window test then judges on its own merits. This is what stops a last
+  // tap being lost to a race between its ping and the submit.
+  const first = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: duringBreak, questionIds: ids,
+    stored: {}, incoming: { q0: "a0", q1: "a1" }
+  });
+  assert.deepEqual(first, { q0: "a0", q1: "a1" }, "a question with no stored answer is always accepted");
+
+  // Re-sending the same answer is not a change and must not be refused.
+  const same = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: duringBreak, questionIds: ids,
+    stored: { q0: "a0" }, incoming: { q0: "a0" }
+  });
+  assert.deepEqual(same, { q0: "a0" }, "re-sending the stored answer is not a change");
+
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /committedAnswers\(/, "submit grades from the server's record");
+  assert.match(attempt, /acceptableAnswers\(/, "report_progress refuses a post-reveal rewrite");
+  assert.match(attempt, /serverResponses \?\? input\.responses/, "the client payload is the fallback only where there is no room clock");
+  assert.match(attempt, /graded_from/, "the audit row records where the score came from");
+}
+
+// ------------------------------------------------- the deal sizes the instance
+{
+  const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
+  assert.match(
+    classQuiz,
+    /defaultQuestionCount = QUOTA\.easy \+ QUOTA\.medium \+ QUOTA\.hard/,
+    "the instance's question count is the quota, not a second hardcoded number"
+  );
+  assert.doesNotMatch(classQuiz, /defaultQuestionCount = 12/, "the 12 is gone");
+  // Twelve rounds for ten questions capped the piñata at 83% and left the last
+  // two rounds' flash beat permanently at zero.
+  assert.doesNotMatch(
+    classQuiz,
+    /Number\(body\.question_count\)/,
+    "a caller cannot size the clock away from the deal"
+  );
+  const api = readFileSync(frontend("src/api/quiz.ts"), "utf8");
+  assert.doesNotMatch(api, /question_count\?: number/, "the dead question_count parameter is gone");
 }
 
 console.log("verify-quiz-race passed");

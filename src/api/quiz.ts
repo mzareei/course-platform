@@ -108,8 +108,11 @@ export function cheerRacer(input: { attempt_id: string }) {
 }
 
 // ---------------------------------------------------------------- instructor
-/** The time_limit_seconds includes the professor's one-minute cushion. */
-export function startClassQuiz(input: { class_session_id: string; content_slug: string; question_count?: number; time_limit_seconds?: number }) {
+/** The time_limit_seconds includes the professor's one-minute cushion. There is
+ *  no question_count: the deal is the fixed 4/3/3 quota, and the server sizes
+ *  the instance from it so the clock, the rounds and the piñata's denominator
+ *  cannot disagree with the questions actually dealt. */
+export function startClassQuiz(input: { class_session_id: string; content_slug: string; time_limit_seconds?: number }) {
   return callFn<{ instance_id: string; reused: boolean }>("course-class-quiz", { action: "start", ...input });
 }
 
