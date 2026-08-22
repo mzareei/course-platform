@@ -386,43 +386,58 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const questions = [
     { id: "q0", correctOptionId: "a0" },
     { id: "q1", correctOptionId: "a1" },
-    { id: "q2", correctOptionId: "a2" }
+    { id: "q2", correctOptionId: "a2" },
+    { id: "q3", correctOptionId: "a3" }
   ];
 
-  // Round 0 answered correctly at 12s (golden), round 1 wrong, round 2 right
-  // but at 25s into its round — correct, not fast enough for golden.
+  // Round 0 correct at 12s (golden). Round 1 wrong. Round 2 correct but at
+  // 25s into its round — past golden, still in time. Round 3 correct at 8s
+  // into ITS round (golden) despite being 158s after the quiz started.
   //
-  // NB: the brief's draft stamped q2 at +5s, which candyFor (correctly) grades
-  // as golden — that draft value contradicted its own "plain 1" assertion
-  // below, so it is corrected here to +25s to match the intended fixture.
-  const answers = { q0: "a0", q1: "wrong", q2: "a2" };
-  const answerTimes = { q0: T0 + 12_000, q1: T0 + 50_000 + 30_000, q2: T0 + 100_000 + 25_000 };
+  // Round 3 is the point of this fixture: a settleAttempt that measured
+  // "fast" from the quiz's startedAt instead of from the round's own
+  // answerStart would grade q3 as a slow, non-golden answer (158s in) even
+  // though it was in fact answered in the first 8 seconds of its round —
+  // caught only by having a golden answer in a round other than round 0.
+  // Round 2 supplies the matching case for the other direction: a mutant
+  // that pays every correct answer the golden rate would overpay round 2.
+  //
+  // NB: the brief's draft stamped q2 at +5s, which candyFor (correctly)
+  // grades as golden — that draft value contradicted its own "plain 1"
+  // assertion below, so it is corrected here to +25s.
+  const answers = { q0: "a0", q1: "wrong", q2: "a2", q3: "a3" };
+  const answerTimes = {
+    q0: T0 + 12_000,
+    q1: T0 + 50_000 + 30_000,
+    q2: T0 + 100_000 + 25_000,
+    q3: T0 + 150_000 + 8_000
+  };
 
   // At 130s: rounds 0 and 1 are closed, round 2 is still answering.
   const mid = settleAttempt({
-    startedAt: T0, now: T0 + 130_000, questionCount: 3, questions, answers, answerTimes, settledThrough: -1
+    startedAt: T0, now: T0 + 130_000, questionCount: 4, questions, answers, answerTimes, settledThrough: -1
   });
   assert.equal(mid.correctCount, 1, "only round 0 was right and only rounds 0-1 are settled");
   assert.equal(mid.candy, 2, "answered correctly inside twenty seconds is a golden candy");
   assert.equal(mid.settledThrough, 1, "rounds 0 and 1 are settled");
 
-  // At 160s every round is closed.
+  // At 210s every round is closed.
   const end = settleAttempt({
-    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions, answers, answerTimes, settledThrough: 1
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers, answerTimes, settledThrough: 1
   });
-  assert.equal(end.correctCount, 2, "round 2 was also correct");
-  assert.equal(end.candy, 3, "golden 2 plus a plain 1");
-  assert.equal(end.settledThrough, 2, "all three rounds are settled");
+  assert.equal(end.correctCount, 3, "rounds 0, 2, and 3 were correct");
+  assert.equal(end.candy, 5, "golden 2 (round 0) + wrong 0 (round 1) + plain 1 (round 2) + golden 2 (round 3)");
+  assert.equal(end.settledThrough, 3, "all four rounds are settled");
 
   // Idempotent: calling again with the same clock changes nothing.
   const again = settleAttempt({
-    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions, answers, answerTimes, settledThrough: 2
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers, answerTimes, settledThrough: 3
   });
   assert.deepEqual(again, end, "settling twice is the same as settling once");
 
   // An answer that arrived after its round closed earns nothing.
   const late = settleAttempt({
-    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions,
+    startedAt: T0, now: T0 + 160_000, questionCount: 4, questions,
     answers: { q0: "a0" }, answerTimes: { q0: T0 + 45_000 }, settledThrough: -1
   });
   assert.equal(late.correctCount, 0, "an answer stamped after the 40s window does not count");
@@ -430,7 +445,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 
   // Nothing answered at all.
   const nothing = settleAttempt({
-    startedAt: T0, now: T0 + 160_000, questionCount: 3, questions, answers: {}, answerTimes: {}, settledThrough: -1
+    startedAt: T0, now: T0 + 160_000, questionCount: 4, questions, answers: {}, answerTimes: {}, settledThrough: -1
   });
   assert.equal(nothing.correctCount, 0, "no answers, no correctness");
   assert.equal(nothing.candy, 0, "no answers, no candy");
