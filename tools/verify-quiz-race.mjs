@@ -498,4 +498,90 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(player, /selected_option_id: finalAnswers\[q\.id\] \|\| ""/, "unanswered questions submit an empty selection");
 }
 
+// ------------------------------------------------- read surfaces
+{
+  const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
+  assert.match(classQuiz, /settleAttempt\(/, "the race settles closed rounds before answering");
+  assert.match(classQuiz, /round_correct/, "the race reports how many got the closed round right");
+  assert.match(classQuiz, /roundAt\(/, "the race reports the room's round window");
+  assert.doesNotMatch(classQuiz, /progress_position/, "racers are no longer placed by question position");
+
+  const pulse = readFileSync(fn("course-pulse/index.ts"), "utf8");
+  assert.match(pulse, /settleAttempt\(/, "the phone poll settles closed rounds too");
+  assert.match(pulse, /last_result/, "the phone poll carries the reveal for the closed round");
+  assert.match(pulse, /correct_option_id/, "the reveal names the correct option");
+
+  const api = readFileSync(frontend("src/api/quiz.ts"), "utf8");
+  // Read the RaceRacer block itself rather than the whole file: `position` and
+  // `answered` are still the honest signature of reportProgress, and a
+  // file-wide regex for them proves nothing about the racer.
+  const raceRacer = api.match(/export interface RaceRacer \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(raceRacer, "RaceRacer is declared");
+  assert.match(raceRacer, /candy: number/, "RaceRacer carries candy");
+  assert.match(raceRacer, /correct_count: number/, "RaceRacer carries the correct count");
+  assert.doesNotMatch(raceRacer, /position: number|answered: number/, "the old track fields are gone");
+  assert.match(api, /round_correct: number/, "RaceStatus carries the flash beat's count");
+  assert.match(api, /round: RaceRound \| null/, "RaceStatus carries the room's round");
+  // The piñata's damage is correctness now. `hits` was the participation sum,
+  // and leaving the word in the type would let a reader believe it still is.
+  assert.doesNotMatch(api, /hits: number/, "the piñata no longer reports participation hits");
+
+  const pulseApi = readFileSync(frontend("src/api/pulse.ts"), "utf8");
+  assert.match(pulseApi, /export interface PulseQuizRound/, "the phone is typed for the room's round");
+  assert.match(pulseApi, /last_result:/, "MyRace carries the break's reveal");
+}
+
+// ------------------------------------------------- the reveal only ever describes a closed round
+{
+  const { settleAttempt } = await import(backend("_shared/settle.ts").href);
+  const T0 = 1_700_000_000_000;
+  const questions = [
+    { id: "q0", correctOptionId: "a0" },
+    { id: "q1", correctOptionId: "a1" },
+    { id: "q2", correctOptionId: "a2" },
+    { id: "q3", correctOptionId: "a3" }
+  ];
+  const answers = { q0: "a0", q1: "wrong", q2: "a2", q3: "a3" };
+  const answerTimes = {
+    q0: T0 + 12_000,
+    q1: T0 + 50_000 + 30_000,
+    q2: T0 + 100_000 + 25_000,
+    q3: T0 + 150_000 + 8_000
+  };
+
+  // 130s in: rounds 0 and 1 are closed, round 2 is still taking answers. The
+  // phone's reveal is built from this list, so round 2 appearing here would
+  // hand a student the answer to the question they are still answering.
+  const mid = settleAttempt({
+    startedAt: T0, now: T0 + 130_000, questionCount: 4, questions, answers, answerTimes, settledThrough: -1
+  });
+  assert.deepEqual(mid.rounds.map((r) => r.index), [0, 1], "only closed rounds carry per-round detail");
+  assert.ok(
+    mid.rounds.every((r) => r.index <= mid.settledThrough),
+    "no round past the settled cursor is described"
+  );
+  assert.deepEqual(
+    mid.rounds.map((r) => [r.questionId, r.correctOptionId, r.correct, r.candy]),
+    [["q0", "a0", true, 2], ["q1", "a1", false, 0]],
+    "each closed round names its question, its answer key, the verdict and the candy"
+  );
+
+  // The last round closes at 190s; at 210s every round is described.
+  const end = settleAttempt({
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers, answerTimes, settledThrough: 1
+  });
+  assert.deepEqual(end.rounds.map((r) => r.index), [0, 1, 2, 3], "every closed round is described");
+  assert.equal(end.rounds[2].candy, 1, "round 2 was correct but not golden");
+  assert.equal(end.rounds[3].candy, 2, "round 3 was correct inside its own twenty seconds");
+
+  // A round nobody answered is still described — as a miss, with no answer of
+  // the student's own attached.
+  const quiet = settleAttempt({
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers: {}, answerTimes: {}, settledThrough: -1
+  });
+  assert.equal(quiet.rounds.length, 4, "an unanswered round still closes");
+  assert.ok(quiet.rounds.every((r) => r.answered === false && r.correct === false && r.candy === 0),
+    "nothing answered earns nothing");
+}
+
 console.log("verify-quiz-race passed");

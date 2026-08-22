@@ -181,10 +181,22 @@ export function classQuizPodium(input: { class_session_id: string }) {
 export interface RaceRacer {
   racer_name: string;
   racer_emoji: string;
-  position: number;
-  answered: number;
+  /** Height on the climb — correctness plus speed. Never a grade. */
+  candy: number;
+  /** Size on the climb — cumulative, so a racer never shrinks. */
+  correct_count: number;
   finished: boolean;
   finish_place: number | null;
+}
+
+/** The room's round window, server-decided. The screen counts down against
+ *  these deadlines rather than a clock of its own — the phones read the same
+ *  window out of course-pulse, and the two repos deploy independently. */
+export interface RaceRound {
+  index: number;
+  phase: "answering" | "break" | "done";
+  answer_ends_at: string;
+  break_ends_at: string;
 }
 
 export interface RaceCheer {
@@ -204,7 +216,12 @@ export interface RaceStatus {
   started: number;
   submitted: number;
   closed_reason: "time" | "everyone" | null;
-  pinata: { name: string; hits: number; total: number; percent: number; burst: boolean };
+  round: RaceRound | null;
+  /** How many students got the round that just closed right — the flash beat. */
+  round_correct: number;
+  /** Damage is correct answers, not answers given. `correct` and `total` are
+   *  the room's, not one student's. */
+  pinata: { name: string; correct: number; total: number; percent: number; burst: boolean };
   racers: RaceRacer[];
   cheers: RaceCheer[];
   cheers_total: number;
