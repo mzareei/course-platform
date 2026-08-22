@@ -2069,6 +2069,13 @@ export const strings = {
   "quiz.earnedCandy": ["+{candy} 🍬", "+{candy} 🍬"],
   "quiz.lookUp": ["👀 Look up at the screen!", "👀 ¡Mira la pantalla!"],
   "quiz.quizOver": ["That was the last round", "Esa fue la última ronda"],
+  // The room's schedule has not reached this phone — in practice, a frontend
+  // deployed ahead of course-pulse. A legible wait beats a frozen question.
+  "quiz.waitingForRoom": ["Waiting for the room", "Esperando al salón"],
+  "quiz.waitingForRoomBody": [
+    "Your class's clock has not reached this phone yet. Hold on — nothing you have answered is lost.",
+    "El reloj de tu clase todavía no llega a este teléfono. Espera — no se pierde nada de lo que ya respondiste."
+  ],
 
   "pinata.cardTitle": ["🪅 Piñata: {percent}% cracked", "🪅 Piñata: {percent}% quebrada"],
   "pinata.burst": ["¡SE ROMPIÓ! 🪅💥", "¡SE ROMPIÓ! 🪅💥"],

@@ -27,6 +27,14 @@ import { clockText } from "./clock";
 import { remainingMs, isBreak } from "./rounds";
 import { PinataCard } from "./PinataCard";
 
+// How long to wait before re-sending a tap that never left the phone, and how
+// many times. NOT a quiz duration — the quiz's own timings are the server's and
+// arrive as absolute timestamps. This is the gap between two attempts at one
+// HTTP request, and the only thing that bounds it is the round's own deadline,
+// which the server sent.
+const PING_RETRY_GAP_MS = 400;
+const PING_RETRY_LIMIT = 2;
+
 export function QuizPlayer({
   activityInstanceId,
   quizClosed,
@@ -73,6 +81,10 @@ export function QuizPlayer({
   // not, so a student who taps thirty seconds into round three lands in round
   // three with whatever is left of it.
   const [joined, setJoined] = useState(false);
+  // The first round this phone was actually showing. A student who taps "Let's
+  // go" halfway through the quiz has not played the rounds behind them, and the
+  // break must not hand them a verdict on a question that was never on screen.
+  const joinedAtRound = useRef(0);
   const [instanceEndsAt, setInstanceEndsAt] = useState<number | null>(null);
   const startedAt = useRef(Date.now());
   const questionRef = useRef<HTMLHeadingElement | null>(null);
@@ -183,8 +195,12 @@ export function QuizPlayer({
     } catch (e) {
       setError(apiErrorText(e, "quiz.submitFailed"));
       submitting.current = false;
-      // The submit did not land; make sure the recovery copy has everything,
-      // in case this phone never gets another chance.
+      // The submit did not land; leave the server's stored copy complete so a
+      // retry or a resume has everything. This is NOT a recovery for a tap
+      // whose own ping was dropped: by the time a submit fails, that round has
+      // closed, and `answeredInWindow` judges an answer by when the server
+      // FIRST saw it. An answer the server never saw in time cannot be
+      // back-dated — which is why the tap itself retries, below.
       ping(stateRef.current.index, { map: finalAnswers });
     } finally {
       setBusy(false);
@@ -195,22 +211,49 @@ export function QuizPlayer({
   // student chose, which is both what a kicked or reloaded phone resumes from
   // AND what the grade is computed against. Pass `map` when state has not
   // caught up yet (an option was tapped microseconds ago).
-  function ping(position: number, opts?: { map?: Record<string, string>; clockStart?: boolean }) {
+  //
+  // `retryWhileOpen` is for the tap and the tap only. Since the grade is
+  // computed from the server's record of what it was pinged, a fetch that fell
+  // off classroom wifi is a question silently marked wrong, and no later ping
+  // can repair it: `answeredInWindow` judges an answer by when the server FIRST
+  // saw it, so a re-send after the round shut is not an answer any more. A
+  // round-change or splash ping earns no mark and is not worth a retry.
+  //
+  // The retry is bounded by the round's OWN deadline, which is a timestamp the
+  // server sent — the phone still owns no rule about how long a round lasts.
+  function ping(
+    position: number,
+    opts?: { map?: Record<string, string>; clockStart?: boolean; retryWhileOpen?: boolean }
+  ) {
     if (!attemptId) return;
-    const answers = opts?.map ?? stateRef.current.answers;
-    reportProgress({
-      attempt_id: attemptId,
-      position,
-      answered: Object.keys(answers).length,
-      answers,
-      ...(opts?.clockStart ? { clock_start: true } : {})
-    }).catch(() => {
-      /* fire-and-forget: a dropped ping must never interrupt a student */
-    });
+    const send = (attemptsLeft: number, answers: Record<string, string>) => {
+      reportProgress({
+        attempt_id: attemptId,
+        position,
+        answered: Object.keys(answers).length,
+        answers,
+        ...(opts?.clockStart ? { clock_start: true } : {})
+      }).catch(() => {
+        // Fire-and-forget past this point: a dropped ping must never interrupt
+        // a student, and a retry that also fails is simply over.
+        if (attemptsLeft <= 0) return;
+        if (remainingMs(round?.answer_ends_at, Date.now()) <= 0) return;
+        setTimeout(() => {
+          // Re-read the answer map on the way back out rather than re-sending
+          // the captured one: the student may have changed their mind in the
+          // meantime, and a stale retry must never overwrite a newer choice.
+          send(attemptsLeft - 1, stateRef.current.answers);
+        }, PING_RETRY_GAP_MS);
+      });
+    };
+    send(opts?.retryWhileOpen ? PING_RETRY_LIMIT : 0, opts?.map ?? stateRef.current.answers);
   }
 
   function onLetsGo() {
     setJoined(true);
+    // Joining during a break means the round on screen has already closed: the
+    // first one this student can play is the next one.
+    joinedAtRound.current = stateRef.current.index + (isBreak(round) ? 1 : 0);
     // The tap registers this phone rather than starting anything: the server
     // stamps clock_t0 on the first ping it sees, and that stamp is what puts
     // this racer on the room's screen. The room's schedule has been running
@@ -378,9 +421,27 @@ export function QuizPlayer({
   // beat of a break carries no `last_result`, and that is a WAIT, not an
   // absence. Falling through to the question here would flash it back onto the
   // screen and snatch it away again three seconds later.
+  //
+  // Two more things have to line up before a verdict is shown, and either one
+  // missing means the same calm wait:
+  //
+  //   - the round has to be one this phone was actually SHOWING. The server
+  //     settles every closed round for every attempt, answered or not, so a
+  //     student who taps "Let's go" during round four's break would otherwise
+  //     be told they got round four wrong when it was never on their screen.
+  //     Not the same test as "did they answer": a student who watched the
+  //     question and ran out of time has earned the reveal, and that is the
+  //     teaching moment the break exists for.
+  //   - the correct option has to be findable in this student's own deal, or
+  //     the sentence renders as "The answer was: " with nothing after it.
   if (isBreak(round)) {
     const revealed = myRace?.last_result ?? null;
-    if (!revealed) {
+    const revealedIndex = revealed ? questions.findIndex((q) => q.id === revealed.question_id) : -1;
+    const correctOption = revealed
+      ? questions[revealedIndex]?.options.find((o) => o.id === revealed.correct_option_id)
+      : undefined;
+    const played = revealedIndex >= joinedAtRound.current;
+    if (!revealed || !played || !correctOption) {
       return (
         <div class="stack quiz-reveal">
           <p class="eyebrow">{t("quiz.roundOver")}</p>
@@ -389,16 +450,13 @@ export function QuizPlayer({
         </div>
       );
     }
-    const correctOption = questions
-      .find((q) => q.id === revealed.question_id)?.options
-      .find((o) => o.id === revealed.correct_option_id);
     return (
       <div class="stack quiz-reveal">
         <p class="eyebrow">{t("quiz.roundOver")}</p>
         <p class="quiz-reveal-mark">{revealed.correct ? "✅" : "❌"}</p>
         <p class="quiz-reveal-answer">
           {t("quiz.correctAnswerWas", {
-            answer: (lang.value === "es" && correctOption?.option_text_es) || correctOption?.option_text || ""
+            answer: (lang.value === "es" && correctOption.option_text_es) || correctOption.option_text
           })}
         </p>
         {revealed.candy > 0 ? <p class="hint">{t("quiz.earnedCandy", { candy: revealed.candy })}</p> : null}
@@ -418,11 +476,25 @@ export function QuizPlayer({
     );
   }
 
-  // Null only for a backend deployed without the room schedule, or for the
-  // instant a poll failed on a phone that has not seen a round yet. There is no
-  // countdown to draw then — the phone will not invent one — and the instance
-  // deadline above is what finishes the attempt.
-  const remaining = round ? Math.ceil(remainingMs(round.answer_ends_at, now) / 1000) : null;
+  // No round at all. In practice that means one thing: this frontend deployed
+  // ahead of course-pulse, which is routine here because the frontend ships on
+  // push and the edge functions are deployed by hand. Without the room's
+  // schedule nothing can move this phone forward — there is no Next button and
+  // no clock of its own to invent one — so a student left on question one would
+  // sit on a question that LOOKS answerable and quietly score zero on nine of
+  // ten. A legible wait is recoverable; a frozen question is not. The instance
+  // deadline still submits whatever is stored.
+  if (!round) {
+    return (
+      <div class="stack quiz-reveal">
+        <p class="eyebrow">{t("quiz.waitingForRoom")}</p>
+        <p class="quiz-reveal-mark" aria-hidden="true">…</p>
+        <p class="hint">{t("quiz.waitingForRoomBody")}</p>
+      </div>
+    );
+  }
+
+  const remaining = Math.ceil(remainingMs(round.answer_ends_at, now) / 1000);
   const current = questions[index];
   const answered = Object.keys(answers).length;
   const difficultyLabel = t(`quiz.difficulty.${current.difficulty}` as "quiz.difficulty.easy");
@@ -433,11 +505,9 @@ export function QuizPlayer({
         <p class="eyebrow">{t("quiz.questionN", { n: index + 1, total: questions.length })}</p>
         <div class="row" style="gap: 0.4rem;">
           <span class="pill hidden">{difficultyLabel}</span>
-          {remaining !== null ? (
-            <span class={`pill ${remaining > 5 ? "live" : "warn"}`}>
-              {remaining > 0 ? t("run.timeLeft", { seconds: remaining }) : t("quiz.timeUpAdvancing")}
-            </span>
-          ) : null}
+          <span class={`pill ${remaining > 5 ? "live" : "warn"}`}>
+            {remaining > 0 ? t("run.timeLeft", { seconds: remaining }) : t("quiz.timeUpAdvancing")}
+          </span>
           {instanceEndsAt !== null ? (
             <span class="pill hidden">
               {t("quiz.totalLeft", { time: clockText(Math.max(0, instanceEndsAt - now)) })}
@@ -461,8 +531,9 @@ export function QuizPlayer({
               // The ping goes out on the tap, not on some later advance, and it
               // is never gated on the countdown this phone happens to be
               // showing: a tap in the last half-second is a real answer, and
-              // whether it arrives in time is the server's call, not ours.
-              ping(stateRef.current.index, { map: next });
+              // whether it arrives in time is the server's call, not ours. This
+              // is the one ping worth retrying — it is what earns the mark.
+              ping(stateRef.current.index, { map: next, retryWhileOpen: true });
             }}
           >
             {(lang.value === "es" && option.option_text_es) || option.option_text}

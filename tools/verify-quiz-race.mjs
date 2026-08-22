@@ -870,9 +870,17 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // answer it just read. So "break with no result" is a WAIT. Falling through
   // to the question there would flash it back onto the screen and snatch it
   // away three seconds later.
+  // Two hops rather than one wide one, so the bound stays meaningful as the
+  // gates grow: the break branch reaches the guard, and the guard returns the
+  // calm beat. Nothing renders the question in between.
   assert.match(
     player,
-    /if \(isBreak\(round\)\)[\s\S]{0,600}?quiz\.checkingAnswer/,
+    /if \(isBreak\(round\)\)[\s\S]{0,500}?if \(!revealed/,
+    "the break branch decides before it renders anything"
+  );
+  assert.match(
+    player,
+    /if \(!revealed[^)]*\) \{[\s\S]{0,300}?quiz\.checkingAnswer/,
     "a break with no result yet holds a calm beat instead of flashing the question back"
   );
 
@@ -883,6 +891,85 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 
   const live = readFileSync(frontend("src/screens/student/Live.tsx"), "utf8");
   assert.match(live, /round=\{view\?\.quiz\.round/, "Live hands the room's round to the player");
+}
+
+// ------------------------------------------- the four ways the phone can lie
+// Every one of these was a real hole found reviewing the room clock, and every
+// one of them is silent — nothing on the student's screen would say so.
+{
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+
+  // 1. A tap's ping IS the answer now: the server grades from its own record of
+  // what it was pinged, and `answeredInWindow` judges by when it FIRST saw one.
+  // A fetch that fell off classroom wifi is therefore a question marked wrong
+  // that nothing later can repair — not the submit's re-ping, and not the next
+  // round's. So the tap retries, bounded by the round's own server-sent
+  // deadline, and NOTHING ELSE does: a round-change or splash ping earns no
+  // mark and must not cost a second request.
+  assert.match(
+    player,
+    /ping\(stateRef\.current\.index, \{ map: next, retryWhileOpen: true \}\)/,
+    "the option tap asks for the retry"
+  );
+  assert.equal(
+    (player.match(/retryWhileOpen: true/g) || []).length,
+    1,
+    "only the tap retries — a round-change or splash ping is not what earns a mark"
+  );
+  assert.match(
+    player,
+    /if \(attemptsLeft <= 0\) return;\s*\n\s*if \(remainingMs\(round\?\.answer_ends_at, Date\.now\(\)\) <= 0\) return;/,
+    "the retry is bounded twice: a count, and the round's own deadline from the server"
+  );
+  assert.match(
+    player,
+    /send\(attemptsLeft - 1, stateRef\.current\.answers\)/,
+    "a retry re-reads the answer map — a stale resend must never overwrite a newer choice"
+  );
+  // Small on purpose. Twenty-six phones re-sending a failed tap is the moment
+  // the classroom wifi is already struggling; one or two more requests is help,
+  // a queue of them is the problem.
+  assert.match(player, /const PING_RETRY_LIMIT = [12];/, "the retry stays at one or two attempts");
+
+  // 2. With no round the phone cannot advance at all: there is no Next button
+  // and no clock of its own. Routine trigger — this frontend deploys on push
+  // and course-pulse is deployed by hand — so a student would sit on question
+  // one, which LOOKS answerable, and score zero on nine of ten in silence.
+  assert.match(
+    player,
+    /if \(!round\)[\s\S]{0,300}?quiz\.waitingForRoom/,
+    "no room schedule renders a legible wait, never a frozen question one"
+  );
+
+  // 3. The server settles every closed round for every attempt, answered or
+  // not. Without a gate, tapping "Let's go" during round four's break opens on
+  // "❌ The answer was: …" for a question that was never on this phone.
+  assert.match(player, /joinedAtRound/, "the phone remembers the first round it was showing");
+  assert.match(
+    player,
+    /const played = revealedIndex >= joinedAtRound\.current/,
+    "the reveal is gated on the round having been on screen"
+  );
+  // Deliberately NOT gated on having answered: a student who watched the
+  // question and ran out of time has earned the reveal — that is the teaching
+  // moment the break exists for, and the spec asks for ❌ plus the answer.
+  assert.doesNotMatch(
+    player,
+    /answers\[revealed\.question_id\]/,
+    "a timed-out student still gets their reveal"
+  );
+
+  // 4. An unresolvable correct option rendered "The answer was: " and stopped.
+  assert.match(
+    player,
+    /if \(!revealed \|\| !played \|\| !correctOption\)/,
+    "all three reveal gates fall back to the same calm wait"
+  );
+
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  for (const key of ["quiz.waitingForRoom", "quiz.waitingForRoomBody"]) {
+    assert.ok(strings.includes(`"${key}"`), `${key} is in the dictionary`);
+  }
 }
 
 console.log("verify-quiz-race passed");
