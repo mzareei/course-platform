@@ -16,14 +16,19 @@
 // that day was that nothing moved — hence the idle bob, which is not
 // decoration but the reason the screen is worth looking at between rounds.
 import { useEffect, useRef, useState } from "preact/hooks";
-import { classQuizRace, type RaceStatus, type PodiumEntry } from "../../api/quiz";
+import { classQuizRace, type RaceRacer, type RaceStatus, type PodiumEntry } from "../../api/quiz";
 import { clockText } from "../quiz/clock";
 import { remainingMs } from "../quiz/rounds";
 import { raceEvents, chantLine, BURST_LINE, type RaceSnap } from "../quiz/commentary";
 import {
   BASE_EMOJI_PX, bobDelayMs, heightFor, laneCountFor, laneKeys, laneRoster,
-  lanePercent, roundCountIsSettled, sizeFor, topThree
+  lanePercent, roundCountIsSettled, sizeFor, topThree, topThreeKeys
 } from "./subida";
+import {
+  CLIMB_HOLD_MS, JOLT_MS, RING_MS, RISE_MS, SPOTLIGHT_AT_MS, SPOTLIGHT_MS,
+  floatsFor, ringingLanes, spotlightFor,
+  type FloatInput, type FloatSpec, type LaneRacer, type Spotlight
+} from "./floats";
 import { t, lang } from "../../i18n";
 
 const POLL_MS = 2000;
@@ -31,6 +36,27 @@ const LINE_MS = 4000;   // each event line holds at least this long
 const CHANT_MS = 8000;  // idle time before a chant fills the silence
 const QUEUE_CAP = 6;    // a mass finish must never build a multi-minute backlog
 const MEDALS = ["🥇", "🥈", "🥉"];
+/** How far a floating label clears the top of its own emoji. */
+const FLOAT_GAP_PX = 9;
+
+/** The payload read as LANES rather than as rows.
+ *
+ *  Every beat below goes through this. course-class-quiz selects the attempts
+ *  with no ORDER BY while settleRoom rewrites those same rows every round, so
+ *  row 3 is not the racer row 3 was two seconds ago — and a label resolved
+ *  against row order lands on the wrong animal. */
+function laneSnapshot(racers: RaceRacer[]): LaneRacer[] {
+  return laneKeys(racers).map((laneKey, index) => ({ laneKey, racer: racers[index] }));
+}
+
+/** What the spotlight card says the standout just earned. The biggest badge
+ *  wins: a streak, then a promotion, then a fast answer, then the candy. */
+function spotlightEarned(spot: Spotlight): string {
+  if (spot.streak) return t("subida.spotStreak", { n: spot.streak });
+  if (spot.promoted) return t("subida.spotTop3");
+  if (spot.fastest) return t("subida.spotFastest");
+  return t("subida.spotCandy", { count: spot.gained });
+}
 
 function toSnap(race: RaceStatus): RaceSnap {
   return {
@@ -62,7 +88,24 @@ export function ClassroomPinataLayer({
   // so a late starter takes the next free lane instead of shoving the field.
   const [roster, setRoster] = useState<string[]>([]);
   const [now, setNow] = useState(Date.now());
+  // The break's three beats: the flash (a green ring on everyone who got it
+  // right), the climb (a transition-delay the whole field shares), and the
+  // spotlight. Plus the text that rises out of each animal.
+  const [floats, setFloats] = useState<FloatSpec[]>([]);
+  const [hits, setHits] = useState<string[]>([]);
+  const [climbing, setClimbing] = useState(false);
+  const [jolt, setJolt] = useState(false);
+  const [spotlight, setSpotlight] = useState<Spotlight | null>(null);
   const prevSnap = useRef<RaceSnap | null>(null);
+  // The roster the poll has handed out, mirrored out of state: the poll closure
+  // is built once per instance, so reading the state variable would give it the
+  // roster as it stood at mount.
+  const rosterRef = useRef<string[]>([]);
+  // What the field looked like when the LAST round's beat ran — not simply the
+  // previous poll. Diffing whole rounds is what makes the flash show a round's
+  // full gain however the polls happen to fall either side of the settle.
+  const beatBaseline = useRef<{ lanes: LaneRacer[]; top3: string[] } | null>(null);
+  const beatRound = useRef(-1);
   const queue = useRef<string[]>([]);
   const lastLineAt = useRef(0);
   const lastChantTarget = useRef<string | null>(null);
@@ -83,12 +126,95 @@ export function ClassroomPinataLayer({
     // A different instance is a different set of lanes. Carrying the old
     // roster over would leave the new quiz's racers starting at lane 27.
     setRoster([]);
+    rosterRef.current = [];
+    beatBaseline.current = null;
+    beatRound.current = -1;
+    setFloats([]);
+    setHits([]);
+    setSpotlight(null);
+    setClimbing(false);
+    setJolt(false);
     let cancelled = false;
     let id: ReturnType<typeof setInterval> | undefined;
     const freeze = () => {
       frozen.current = true;
       if (id !== undefined) clearInterval(id);
     };
+
+    const beatTimers: Array<ReturnType<typeof setTimeout>> = [];
+    const later = (ms: number, run: () => void) => { beatTimers.push(setTimeout(run, ms)); };
+    const stopBeats = () => {
+      for (const timer of beatTimers) clearTimeout(timer);
+      beatTimers.length = 0;
+    };
+
+    // Lanes are handed out once and kept; this grows the roster and hands the
+    // caller the version this payload produced, which the beats need before the
+    // next render.
+    const growRoster = (racers: RaceRacer[]) => {
+      const next = laneRoster(rosterRef.current, racers);
+      rosterRef.current = next;
+      setRoster(next);
+      return next;
+    };
+
+    // The ten-second break, choreographed. Runs once per round.
+    const runBeats = (res: RaceStatus, lanes: string[]) => {
+      const round = res.round;
+      const baseline = beatBaseline.current;
+      if (!round || !baseline || round.index === beatRound.current) return;
+      // NOT on the poll where the phase flips to break. closedRoundIndex keeps
+      // reporting the PREVIOUS round until the answer grace shuts, so a beat
+      // fired the instant the break opens would flash a round that has not been
+      // settled yet — twenty-six animals ringing for nothing. Same gate the
+      // round count already waits on, for the same reason.
+      if (!roundCountIsSettled(round, Date.now())) return;
+      beatRound.current = round.index;
+
+      const next = laneSnapshot(res.racers);
+      const top3 = topThreeKeys(res.racers);
+      const input: FloatInput = {
+        prev: baseline.lanes,
+        next,
+        prevTop3: baseline.top3,
+        nextTop3: top3,
+        roster: lanes,
+        round: round.index
+      };
+      beatBaseline.current = { lanes: next, top3 };
+
+      const specs = floatsFor(input);
+      const ringing = ringingLanes(input.prev, input.next);
+      const spot = spotlightFor(input);
+      // This round supersedes the last one outright, so nothing from the
+      // previous break can still be on screen behind this one.
+      stopBeats();
+
+      // Beat 1, now: everyone whose correct count rose rings green at once and
+      // the piñata takes the round's whole damage in one jolt. Everyone else is
+      // left UNTOUCHED — never dimmed, never marked. Marking the misses is a
+      // callout, and this screen never points at a struggling student.
+      setHits(ringing);
+      setFloats(specs);
+      setClimbing(true);
+      if (!reducedMotion && !res.pinata.burst && ringing.length) setJolt(true);
+      later(RING_MS, () => setHits([]));
+      later(JOLT_MS, () => setJolt(false));
+
+      // Beat 2 is the transition-delay `climbing` puts on the field: the racers
+      // hold their old height while the ring reads, then all climb together.
+      // Released only once that climb has finished, not when it starts.
+      later(CLIMB_HOLD_MS, () => setClimbing(false));
+
+      // Beat 3. No card for a round nobody won.
+      if (spot) {
+        later(SPOTLIGHT_AT_MS, () => setSpotlight(spot));
+        later(SPOTLIGHT_AT_MS + SPOTLIGHT_MS, () => setSpotlight(null));
+      }
+      const lastLabel = specs.reduce((max, spec) => Math.max(max, spec.delayMs), 0);
+      later(lastLabel + RISE_MS + 200, () => setFloats([]));
+    };
+
     const tick = () => {
       if (frozen.current) return;
       classQuizRace(instanceId)
@@ -103,7 +229,11 @@ export function ClassroomPinataLayer({
           // ago. Reopening after Escape hits this same path.
           if (prevSnap.current === null) {
             prevSnap.current = snap;
-            setRoster((prev) => laneRoster(prev, res.racers));
+            growRoster(res.racers);
+            // The beats need a whole round to diff against and this payload is
+            // the only thing there has ever been, so it becomes the baseline and
+            // celebrates nothing — the same ruling as the announcer's above.
+            beatBaseline.current = { lanes: laneSnapshot(res.racers), top3: topThreeKeys(res.racers) };
             setRace(res);
             if (res.state === "closed") freeze();
             return;
@@ -134,7 +264,10 @@ export function ClassroomPinataLayer({
             setTimeout(() => setRaining(false), 3000);
           }
           prevSnap.current = snap;
-          setRoster((prev) => laneRoster(prev, res.racers));
+          // The beats and the new state land in one render on purpose: the
+          // climb's transition-delay has to be on the element in the same commit
+          // that moves it, or the field jumps instead of holding.
+          runBeats(res, growRoster(res.racers));
           setRace(res);
           if (res.state === "closed") freeze();
         })
@@ -142,7 +275,7 @@ export function ClassroomPinataLayer({
     };
     tick();
     id = setInterval(tick, POLL_MS);
-    return () => { cancelled = true; clearInterval(id); };
+    return () => { cancelled = true; clearInterval(id); stopBeats(); };
   }, [instanceId]);
 
   // The one commentary line: queued events first, chants to fill silence.
@@ -181,6 +314,7 @@ export function ClassroomPinataLayer({
     return racer ? [{ key, index, racer }] : [];
   });
   const lanes = laneCountFor(roster.length, race?.present ?? 0);
+  const hitSet = new Set(hits);
   const round = race?.round ?? null;
   const closed = race?.state === "closed";
   const percent = race?.pinata.percent ?? 0;
@@ -217,7 +351,7 @@ export function ClassroomPinataLayer({
         </div>
 
         <div class="subida-pinata">
-          <div class={`pinata-figure${burst ? " burst" : ""}`} aria-hidden="true">🪅</div>
+          <div class={`pinata-figure${burst ? " burst" : ""}${jolt ? " jolt" : ""}`} aria-hidden="true">🪅</div>
           <div class="pinata-bar"><i style={`width:${percent}%`} /></div>
           <p class="pinata-name">
             {burst
@@ -252,7 +386,7 @@ export function ClassroomPinataLayer({
           from its height, so the leader at 100% draws entirely above the
           field's top edge and would otherwise land on the piñata's head. */}
       <div class="subida-sky">
-        <div class="subida-field">
+        <div class={`subida-field${climbing ? " climbing" : ""}`}>
           {field.map(({ key, index }) => (
             <span class="subida-rope" key={`rope:${key}`} aria-hidden="true"
               style={`left:${lanePercent(index, lanes)}%`} />
@@ -261,7 +395,7 @@ export function ClassroomPinataLayer({
             // Height is candy, size is correct answers, and size only ever
             // grows. Bigger racers sit in front so a leader is never hidden
             // behind a neighbour that has answered less.
-            <span class="subida-racer" key={key} aria-hidden="true"
+            <span class={`subida-racer${hitSet.has(key) ? " hit" : ""}`} key={key} aria-hidden="true"
               style={
                 `left:${lanePercent(index, lanes)}%;`
                 + `bottom:${heightFor(racer.candy, race?.question_count)}%;`
@@ -272,8 +406,35 @@ export function ClassroomPinataLayer({
               {racer.racer_emoji}
             </span>
           ))}
-          {/* Task 10 fills this with the text that rises out of an animal. */}
-          <div class="subida-floats" aria-hidden="true" />
+          {/* The text that rises out of an animal, resolved by LANE KEY — a
+              payload index would attach a "+2" to whichever racer happened to be
+              row 0 on this poll. Anchored at the racer's height plus its own
+              emoji size plus a gap, because size grows with correct answers and
+              a fixed offset puts a leader's label behind its own animal. The
+              height is the one it is climbing TO, so the climb can never
+              overtake its label, and `liftPx` stacks a second label clear of the
+              first rather than through it. The outer div carries the drift and
+              the inner span carries the rotation, or the two transforms fight. */}
+          <div class="subida-floats" aria-hidden="true">
+            {floats.map((float) => {
+              const racer = byKey.get(float.laneKey);
+              const laneIndex = roster.indexOf(float.laneKey);
+              if (!racer || laneIndex < 0) return null;
+              return (
+                <div class={`subida-float ${float.vertical ? "vertical" : "flat"}`} key={float.key}
+                  style={
+                    `left:${lanePercent(laneIndex, lanes)}%;`
+                    + `bottom:calc(${heightFor(racer.candy, race?.question_count)}%`
+                    + ` + ${Math.round(BASE_EMOJI_PX * sizeFor(racer.correct_count))
+                            + FLOAT_GAP_PX + float.liftPx}px);`
+                    + `color:${float.color};`
+                    + `--float-delay:${float.delayMs}ms`
+                  }>
+                  <span>{float.text}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -304,6 +465,17 @@ export function ClassroomPinataLayer({
           </div>
         ))}
       </aside>
+
+      {/* Beat 3: one standout, over the rail. Only ever someone who earned
+          something this round — a round nobody won gets no card. */}
+      {spotlight ? (
+        <aside class="subida-spot">
+          <p class="subida-spot-title">{t("subida.spotlight")}</p>
+          <div class="subida-spot-emoji" aria-hidden="true">{spotlight.racer.racer_emoji}</div>
+          <p class="subida-spot-name">{spotlight.racer.racer_name}</p>
+          <p class="subida-spot-earned">{spotlightEarned(spotlight)}</p>
+        </aside>
+      ) : null}
 
       {raining ? (
         <div class="pinata-rain" aria-hidden="true">

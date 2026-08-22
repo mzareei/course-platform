@@ -154,15 +154,28 @@ export function laneCountFor(racerCount: number, present: number): number {
  *  than the bare name so that two attempts both showing as "🎒 Mochila" still
  *  have a deterministic order instead of leaving it to the untrusted payload. */
 export function topThree(racers: RaceRacer[]): RaceRacer[] {
+  return ranked(racers).slice(0, 3).map((entry) => entry.racer);
+}
+
+/** The same three, as LANE KEYS.
+ *
+ *  Task 10 needs the rail's answer in the field's own currency: 🚀 al top 3 has to
+ *  mean "entered the three the room can see", so both readings come out of one
+ *  sort rather than two that could drift apart. */
+export function topThreeKeys(racers: RaceRacer[]): string[] {
+  return ranked(racers).slice(0, 3).map((entry) => entry.key);
+}
+
+/** The one sort behind both, so the rail and the field can never rank the room
+ *  differently. Never touches the caller's array. */
+function ranked(racers: RaceRacer[]): Array<{ racer: RaceRacer; key: string }> {
   const keys = laneKeys(racers);
   return racers
     .map((racer, index) => ({ racer, key: keys[index] }))
     .sort((a, b) =>
       (b.racer.candy - a.racer.candy)
       || (b.racer.correct_count - a.racer.correct_count)
-      || a.key.localeCompare(b.key))
-    .slice(0, 3)
-    .map((entry) => entry.racer);
+      || a.key.localeCompare(b.key));
 }
 
 /** Does `round_correct` describe the round the HUD is naming?

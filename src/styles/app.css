@@ -1331,6 +1331,10 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
      label must slide together or, for those milliseconds, a name is under the
      wrong animal — so all three read this, and nothing hardcodes it. */
   --subida-slide: 640ms;
+  /* Beat 2. Between the flash and the climb the field holds still, so the room
+     reads the green rings before twenty-six animals start moving. The value is
+     CLIMB_AT_MS in floats.ts and the verifier asserts the two agree. */
+  --subida-climb: 620ms;
 }
 /* La Subida — the climb toward the piñata, on the room's screen.
    Replaces the column track: with the room clock every student is on the same
@@ -1363,9 +1367,52 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   background: rgba(255, 255, 255, 0.055); transition: left var(--subida-slide) ease; }
 .subida-racer { position: absolute; line-height: 1; transform: translate(-50%, 0);
   transition: bottom var(--subida-slide) cubic-bezier(.34, 1.3, .64, 1),
-    left var(--subida-slide) ease, font-size 460ms ease;
+    left var(--subida-slide) ease, font-size 460ms ease, filter 180ms ease;
   animation: subida-bob 3.2s ease-in-out infinite; }
-.subida-floats { position: absolute; inset: 0; pointer-events: none; }
+/* Beat 1, then beat 2. The delays are listed in the same order as the
+   transition above: the climb and the growth wait out the flash, the sideways
+   slide never does (a lane that moves is a newcomer arriving, which has nothing
+   to do with the break) and neither does the ring. */
+.subida-field.climbing .subida-racer {
+  transition-delay: var(--subida-climb), 0ms, var(--subida-climb), 0ms; }
+/* The flash. Only ever ADDED to the racers who got it right; the rest of the
+   field is left exactly as it was. Nothing here ever dims a racer — marking the
+   room's misses is a callout, and this screen does not point at anyone. */
+.subida-racer.hit { filter: drop-shadow(0 0 8px #4ade80) drop-shadow(0 0 3px #4ade80); }
+
+/* The floating text. The wrapper is a zero-height anchor that drifts upward and
+   the label itself is the span inside it, which is where the rotation lives —
+   one element cannot carry both transforms. The container sits above every
+   animal on purpose: a racer carries z-index 10 plus its correct answers, so a
+   label left on auto would be drawn behind a taller neighbour. Still under the
+   rail and the spotlight card. The base opacity of 0 is what keeps a staggered
+   label invisible until its own delay elapses, since the animation fills
+   FORWARDS only. */
+.subida-floats { position: absolute; inset: 0; z-index: 30; pointer-events: none; overflow: visible; }
+.subida-float { position: absolute; height: 0; opacity: 0;
+  animation: subida-float-rise 2600ms linear var(--float-delay, 0ms) forwards; }
+.subida-float span { position: absolute; bottom: 0; left: 0; font-weight: 800; white-space: nowrap;
+  line-height: 1; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95); }
+/* Numbers read flat. Phrases are rotated, because twenty-six lanes sit about
+   nineteen pixels apart and a horizontal "🔥 3 seguidas" covers three or four
+   neighbouring ropes — the room would read it as the wrong animal's. Both grow
+   UPWARD from the anchor, so neither can fall back across its own emoji. */
+.subida-float.flat span { font-size: 0.75rem; transform: translateX(-50%); }
+.subida-float.vertical span { font-size: 0.6rem; writing-mode: vertical-rl;
+  transform: rotate(180deg); margin-left: -0.3rem; }
+/* Constant speed for 1500ms, then the fade over the remaining 1100ms. The 57.69%
+   stop is HOLD_MS / RISE_MS and its -34.6px sits on the straight line, so the
+   drift does not change pace when the fade begins. The verifier recomputes both
+   from floats.ts rather than trusting this comment. */
+@keyframes subida-float-rise {
+  0% { opacity: 1; transform: translateY(0); }
+  57.69% { opacity: 1; transform: translateY(-34.6px); }
+  100% { opacity: 0; transform: translateY(-60px); }
+}
+@keyframes subida-float-still {
+  0%, 57.69% { opacity: 1; }
+  100% { opacity: 0; }
+}
 /* The idle loop. Each lane carries its own negative animation-delay from the
    markup: twenty-six animals breathing in unison read as one object, and a
    still screen between rounds was half the 2026-08-21 complaint. The keyframes
@@ -1391,8 +1438,28 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .subida-rail-name { font-size: 0.6rem; line-height: 1.15; flex: 1; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; }
 .subida-rail-candy { font-size: 0.62rem; color: #ffd166; font-weight: 700; }
+/* Beat 3: the standout's card, over the rail's own footprint for a few seconds.
+   Never a rank and never a total — just what one racer did in the round the
+   room has just watched. */
+.subida-spot { position: absolute; right: 0.75rem; top: 6.5rem; width: 142px; z-index: 50;
+  background: #1b2338; border: 1px solid #ffd166; border-radius: 12px;
+  padding: 0.6rem 0.55rem; text-align: center; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); }
+.subida-spot-title { margin: 0 0 0.25rem; font-size: 0.55rem; color: #ffd166;
+  letter-spacing: 0.08em; text-transform: uppercase; }
+.subida-spot-emoji { font-size: 2.4rem; line-height: 1.1; }
+.subida-spot-name { margin: 0.15rem 0 0.1rem; font-size: 0.7rem; font-weight: 700; }
+.subida-spot-earned { margin: 0; font-size: 0.58rem; color: #aab3c5; line-height: 1.25; }
 .pinata-figure { font-size: 3.4rem; transform: rotate(-10deg); }
 .pinata-figure.burst { transform: none; filter: drop-shadow(0 0 20px rgba(255, 209, 102, 0.7)); }
+/* One jolt a round, on the flash beat: the piñata takes the whole round's
+   damage at once instead of creeping up two percent every few seconds. */
+.pinata-figure.jolt { animation: pinata-jolt 600ms ease; }
+@keyframes pinata-jolt {
+  0%, 100% { transform: rotate(-10deg); }
+  22% { transform: rotate(-24deg) translateY(5px); }
+  48% { transform: rotate(3deg) translateY(-4px); }
+  74% { transform: rotate(-15deg); }
+}
 .pinata-name { color: #ffd166; font-size: 0.9rem; margin: 0; }
 .pinata-casi { font-weight: 700; margin: 0; }
 .pinata-line { min-height: 1.4em; margin: 0; color: #ffd166; font-size: 1.15rem; text-align: center; }
@@ -1403,5 +1470,11 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   .pinata-rain { display: none; }
   .subida-racer { animation: none; transition: none; }
   .subida-rope, .subida-lane-name { transition: none; }
+  /* No drift, no ring, no shake. The label still appears and still fades, so
+     the round is still readable — it just does not move. */
+  .subida-float { animation-name: subida-float-still; }
+  .subida-racer.hit { filter: none; }
+  .pinata-figure.jolt { animation: none; }
+  .subida-spot { box-shadow: none; }
 }
 .pinata-actions { display: flex; justify-content: center; gap: 0.8rem; }

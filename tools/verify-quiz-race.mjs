@@ -402,6 +402,268 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
     "and the sideways slide on the rope and its label with it");
 }
 
+// ------------------------------------------------- the three beats and the floating text
+// The ten-second break is the only moment a class of twenty-six all look up at
+// once, and it was the emptiest thing on the screen. These are the numbers and
+// the rules that make it land, and the two rules that keep it kind:
+// numbers read flat while phrases are rotated (a horizontal phrase covers three
+// or four neighbouring ropes and would appear to belong to the wrong animal),
+// and nothing negative ever floats.
+{
+  const {
+    RISE_MS, RISE_PX, HOLD_MS, FADE_MS, STAGGER_MS, WAVE_MS, PHRASE_STEP_MS,
+    NUMBER_CLEAR_PX, PHRASE_SPAN_PX,
+    FLASH_AT_MS, CLIMB_AT_MS, CLIMB_HOLD_MS, SPOTLIGHT_AT_MS, RING_MS, SPOTLIGHT_MS,
+    floatsFor, ringingLanes, spotlightFor
+  } = await import(frontend("src/features/live/floats.ts").href);
+  const { SETTLE_MARGIN_MS } = await import(frontend("src/features/live/subida.ts").href);
+  const { BREAK_SECONDS } = await import(backend("_shared/rounds.ts").href);
+  const { BANNED_WORDS } = await import(frontend("src/features/quiz/commentary.ts").href);
+
+  assert.ok(RISE_MS >= 2000, "labels drift slowly enough to read from the back of a room");
+  assert.ok(HOLD_MS + FADE_MS < 10_000, "a label is gone before the next round starts");
+  assert.equal(HOLD_MS + FADE_MS, RISE_MS,
+    "the fade must finish exactly when the drift does, or a label either freezes mid-air or vanishes still moving");
+  assert.ok(FLASH_AT_MS < CLIMB_AT_MS && CLIMB_AT_MS < SPOTLIGHT_AT_MS, "flash, then climb, then spotlight");
+
+  const racer = (name, candy, correct) => ({
+    racer_name: name, racer_emoji: "🐢", candy, correct_count: correct, finished: false, finish_place: null
+  });
+  const lane = (name, candy, correct) => ({ laneKey: name, racer: racer(name, candy, correct) });
+  const roster = ["Tortuga Veloz", "Jaguar Ninja", "Rana Zen"];
+
+  const prev = [lane("Tortuga Veloz", 2, 2), lane("Jaguar Ninja", 4, 3), lane("Rana Zen", 0, 0)];
+  const next = [lane("Tortuga Veloz", 4, 3), lane("Jaguar Ninja", 4, 3), lane("Rana Zen", 0, 0)];
+  const round = {
+    prev, next, prevTop3: ["Jaguar Ninja"], nextTop3: ["Tortuga Veloz", "Jaguar Ninja"], roster, round: 3
+  };
+  const specs = floatsFor(round);
+
+  const gained = specs.filter((s) => s.text === "+2");
+  assert.equal(gained.length, 1, "only the racer who earned candy gets a number");
+  assert.equal(gained[0].vertical, false, "candy numbers read flat");
+  assert.equal(gained[0].laneKey, "Tortuga Veloz", "the number belongs to the racer who earned it");
+
+  const streak = specs.find((s) => s.text.includes("seguidas"));
+  assert.ok(streak, "a streak reaching three is called out");
+  assert.equal(streak.vertical, true, "phrases are set vertically so they stay in their lane");
+  assert.equal(streak.laneKey, "Tortuga Veloz", "on the lane that reached it");
+  assert.ok(streak.text.includes("3"), "and it says which streak");
+
+  const promoted = specs.find((s) => s.text.includes("top 3"));
+  assert.ok(promoted, "entering the top three is called out");
+  assert.equal(promoted.vertical, true, "and it is a phrase, so it is vertical");
+  assert.equal(promoted.laneKey, "Tortuga Veloz", "on the lane that entered it");
+
+  const bolt = specs.filter((s) => s.text.includes("rápido"));
+  assert.equal(bolt.length, 1, "the bolt names one racer a round, never two");
+  assert.equal(bolt[0].vertical, true, "and it is a phrase too");
+
+  // The orientation rule, over every label the module can produce.
+  for (const spec of specs) {
+    assert.equal(spec.vertical, !/^\+\d+$/.test(spec.text),
+      `"${spec.text}" must be ${/^\+\d+$/.test(spec.text) ? "flat" : "vertical"} — nineteen pixels of lane is all it has`);
+  }
+  assert.equal(new Set(specs.map((s) => s.key)).size, specs.length,
+    "two labels sharing a key would let Preact reuse one DOM node for both");
+
+  // Nothing negative, ever. The announcer's list is the one list.
+  const words = specs.map((s) => s.text.toLowerCase()).join(" ");
+  for (const banned of BANNED_WORDS) {
+    assert.ok(!words.includes(banned), `no label may say "${banned}"`);
+  }
+  // A racer who earned nothing is silent, not marked.
+  assert.equal(specs.filter((s) => s.laneKey === "Rana Zen").length, 0, "a racer who missed gets no label at all");
+  // Falling out of the top three is never announced.
+  const demoted = floatsFor({
+    prev, next: prev, prevTop3: ["Tortuga Veloz", "Jaguar Ninja"], nextTop3: ["Jaguar Ninja"], roster, round: 4
+  });
+  assert.equal(demoted.length, 0, "dropping out of the top three produces no label");
+
+  // ---- The carry-forward from Task 9: an index into race.racers is NOT a lane.
+  // course-class-quiz selects the attempts with no ORDER BY while settleRoom
+  // rewrites those same rows every round, so the same racers arrive in a
+  // different order on the next poll. A float resolved against payload order
+  // lands on whichever animal happened to be row 0.
+  const shuffled = floatsFor({
+    ...round,
+    prev: [prev[1], prev[2], prev[0]],
+    next: [next[2], next[0], next[1]]
+  });
+  const shape = (list) => list.map((s) => `${s.laneKey}|${s.text}|${s.vertical}|${s.delayMs}|${s.liftPx}`).sort();
+  assert.deepEqual(shape(shuffled), shape(specs),
+    "the same round produces the same labels on the same animals whatever order the payload arrives in");
+
+  // ---- The flash beat rings the earners and NOBODY else.
+  assert.deepEqual(ringingLanes(prev, next), ["Tortuga Veloz"], "the ring follows the correct-answer count");
+  assert.deepEqual(ringingLanes(prev, prev), [],
+    "a round nobody won rings nobody — it never rings the rest of the room instead");
+  assert.deepEqual(ringingLanes([prev[2], prev[0], prev[1]], [next[1], next[2], next[0]]), ["Tortuga Veloz"],
+    "and it is resolved by lane, so a reordered payload cannot ring the wrong animal");
+
+  // ---- The spotlight.
+  assert.equal(spotlightFor({ ...round, next: prev }), null, "a round nobody earned has no standout");
+  const spot = spotlightFor(round);
+  assert.equal(spot.laneKey, "Tortuga Veloz", "the standout is the racer whose round was biggest");
+  assert.equal(spot.gained, 2, "and the card knows what they just earned");
+  const tiedRoster = ["Abeja Sagaz", "Buho Astuto", "Coyote Listo"];
+  const tiedPrev = tiedRoster.map((name) => lane(name, 0, 0));
+  const tiedNext = tiedRoster.map((name) => lane(name, 2, 1));
+  const tie = (p, n) => spotlightFor({ prev: p, next: n, prevTop3: [], nextTop3: tiedRoster, roster: tiedRoster, round: 1 });
+  assert.equal(
+    tie(tiedPrev, tiedNext).laneKey,
+    tie([tiedPrev[2], tiedPrev[0], tiedPrev[1]], [tiedNext[1], tiedNext[2], tiedNext[0]]).laneKey,
+    "three racers with an identical round resolve to the same standout whatever order they arrive in"
+  );
+
+  // ---- A full class, all three phrases, worst case: the wave crosses the
+  // screen and every label is gone before the break ends. The beat cannot start
+  // before the round settles, and the poll that notices it may be a whole
+  // period late, so both are in the budget.
+  const bigRoster = Array.from({ length: 26 }, (_, i) => `Racer ${String(i).padStart(2, "0")}`);
+  const bigPrev = bigRoster.map((name) => lane(name, 4, 2));
+  const bigNext = bigRoster.map((name) => lane(name, 6, 3));
+  const big = floatsFor({
+    prev: bigPrev, next: bigNext, prevTop3: [], nextTop3: bigRoster.slice(0, 3), roster: bigRoster, round: 9
+  });
+  assert.equal(big.filter((s) => !s.vertical).length, 26, "every earner gets a number");
+  assert.equal(big.filter((s) => s.text.includes("seguidas")).length, 26, "and every third correct answer says so");
+  assert.equal(big.filter((s) => s.text.includes("rápido")).length, 1, "and exactly one bolt, however many went golden");
+
+  const layerSource = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  const pollMs = Number((layerSource.match(/const POLL_MS = (\d+)/) || [])[1]);
+  assert.ok(pollMs > 0, "the poll period is still declared in the layer");
+  const lastLabel = Math.max(...big.map((s) => s.delayMs));
+  assert.ok(
+    SETTLE_MARGIN_MS + pollMs + lastLabel + RISE_MS < BREAK_SECONDS * 1000,
+    `the last label of a full class (${SETTLE_MARGIN_MS + pollMs + lastLabel + RISE_MS}ms) must be gone before the break ends (${BREAK_SECONDS * 1000}ms) — one round's text must never survive into the next round's flash`
+  );
+
+  const numbers = big.filter((s) => !s.vertical);
+  assert.ok(numbers[0].delayMs < numbers[numbers.length - 1].delayMs,
+    "twenty-six numbers landing together read as a wall; staggered they read as a wave");
+  for (let i = 1; i < numbers.length; i++) {
+    assert.ok(numbers[i].delayMs >= numbers[i - 1].delayMs, "and the wave crosses the screen in lane order");
+    assert.ok(numbers[i].delayMs - numbers[i - 1].delayMs <= STAGGER_MS,
+      "a big round compresses the step rather than running the wave past the break");
+  }
+  assert.ok(WAVE_MS > 0 && PHRASE_STEP_MS > 0, "the wave and the gap between one racer's phrases are both declared");
+  const small = floatsFor({
+    prev: tiedPrev, next: tiedNext, prevTop3: [], nextTop3: [], roster: tiedRoster, round: 2
+  }).filter((s) => !s.vertical);
+  assert.equal(small[1].delayMs - small[0].delayMs, STAGGER_MS, "a small round staggers at the full step");
+
+  // A phrase must never overtake its own racer's number, and two labels in one
+  // lane must never land on top of each other — nineteen pixels has room for one.
+  const perLane = new Map();
+  for (const spec of big) perLane.set(spec.laneKey, [...(perLane.get(spec.laneKey) || []), spec]);
+  for (const [laneKey, list] of perLane) {
+    const number = list.find((s) => !s.vertical);
+    for (const phrase of list.filter((s) => s.vertical)) {
+      assert.ok(phrase.delayMs > number.delayMs, `${laneKey}'s phrase lands after its own number, never before it`);
+    }
+    assert.equal(new Set(list.map((s) => s.delayMs)).size, list.length, `${laneKey}'s labels never land on top of each other`);
+  }
+
+  // Two labels on one rope are stacked, not drawn through each other. A vertical
+  // phrase is about eighty pixels TALL, and by the time it lands the flat number
+  // it shares the lane with has drifted barely twenty.
+  const stacked = floatsFor({
+    ...round,
+    prev: [lane("Tortuga Veloz", 2, 2)],
+    next: [lane("Tortuga Veloz", 4, 3)],
+    prevTop3: [],
+    nextTop3: ["Tortuga Veloz"],
+    roster: ["Tortuga Veloz"]
+  });
+  assert.equal(stacked.filter((s) => !s.vertical)[0].liftPx, 0, "the number takes the anchor itself");
+  const phrases = stacked.filter((s) => s.vertical).sort((a, b) => a.delayMs - b.delayMs);
+  assert.equal(phrases.length, 3, "one round can earn a streak, a bolt and a promotion at once");
+  assert.ok(phrases[0].liftPx >= NUMBER_CLEAR_PX,
+    "the first phrase starts clear of the number, or the two are drawn through each other");
+  const lostToDelay = (PHRASE_STEP_MS * RISE_PX) / RISE_MS;
+  for (let i = 1; i < phrases.length; i++) {
+    assert.ok(
+      phrases[i].liftPx - phrases[i - 1].liftPx >= PHRASE_SPAN_PX,
+      "each further phrase starts clear of the one below it"
+    );
+    assert.ok(
+      PHRASE_SPAN_PX - lostToDelay > 78,
+      "and the head start the earlier phrase gains in flight must not eat that clearance"
+    );
+  }
+
+  // ---- The rendering: lanes, anchors, orientation, and nothing that dims.
+  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
+  const layer = layerSource;
+  assert.match(layer, /floatsFor\(/, "the layer builds its labels from the pure module");
+  assert.match(layer, /ringingLanes\(/, "and its flash set from the same place");
+  assert.match(layer, /spotlightFor\(/, "and its standout");
+  assert.doesNotMatch(layer, /racerIndex/,
+    "a float is resolved by lane key, never by an index into a payload that has no ORDER BY");
+  assert.match(layer, /BASE_EMOJI_PX \* sizeFor\(/,
+    "a label clears its OWN emoji — a fixed offset puts a leader's label behind the animal that earned it");
+  assert.match(layer, /float\.liftPx/, "and a second label on the same rope is stacked above the first");
+  assert.match(layer, /subida-float/, "the labels render");
+  assert.match(layer, /subida-spot/, "and the spotlight card does");
+  assert.doesNotMatch(css, /\.subida-racer\.[\w-]+\s*\{[^}]*opacity/,
+    "no racer is ever dimmed — dimming the room's misses reads as a callout, and this screen never points at a struggling student");
+
+  const wrapper = css.match(/\.subida-float \{[^}]*\}/);
+  assert.ok(wrapper, "the drifting wrapper has a rule");
+  assert.ok(!/writing-mode|rotate\(/.test(wrapper[0]),
+    "the wrapper carries the drift only — the rotation belongs on the inner span or the two transforms fight");
+  const flat = css.match(/\.subida-float\.flat span \{[^}]*\}/);
+  const vertical = css.match(/\.subida-float\.vertical span \{[^}]*\}/);
+  assert.ok(flat && !/writing-mode/.test(flat[0]), "numbers read flat");
+  assert.ok(vertical && /writing-mode:\s*vertical-rl/.test(vertical[0]),
+    "phrases are rotated so they stay inside their own lane");
+
+  // The stylesheet and the module must agree on every number they share.
+  const floatAnimation = css.match(/\.subida-float \{[\s\S]*?animation:\s*subida-float-rise\s+(\d+)ms/);
+  assert.ok(floatAnimation && Number(floatAnimation[1]) === RISE_MS, "the drift's duration is RISE_MS");
+  const rise = css.match(/@keyframes subida-float-rise \{([\s\S]*?)\n\}/);
+  assert.ok(rise, "the drift has one keyframe set");
+  const holdStop = rise[1].match(/([\d.]+)%\s*\{\s*opacity:\s*1;\s*transform:\s*translateY\(-([\d.]+)px\)/);
+  assert.ok(holdStop, "with an explicit stop where the fade begins");
+  assert.ok(Math.abs(Number(holdStop[1]) - (HOLD_MS / RISE_MS) * 100) < 0.5,
+    "the fade must begin where HOLD_MS says it does");
+  assert.ok(Math.abs(Number(holdStop[2]) - RISE_PX * (HOLD_MS / RISE_MS)) < 1,
+    "and the label must be exactly that far up at that stop, or the drift is not constant speed");
+  const riseEnd = rise[1].match(/100%\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(-([\d.]+)px\)/);
+  assert.ok(riseEnd && Number(riseEnd[1]) === RISE_PX, "and the whole drift is RISE_PX");
+
+  const climbToken = css.match(/--subida-climb:\s*(\d+)ms/);
+  assert.ok(climbToken && Number(climbToken[1]) === CLIMB_AT_MS,
+    "the climb beat's delay is declared once and TypeScript and the stylesheet agree on it");
+  const slide = css.match(/--subida-slide:\s*(\d+)ms/);
+  assert.ok(slide && CLIMB_HOLD_MS >= CLIMB_AT_MS + Number(slide[1]),
+    "the climb's transition-delay must stay applied until the climb it delays has finished");
+  assert.ok(RING_MS > 0 && SPOTLIGHT_MS > 0, "the ring and the card both have a life");
+  assert.ok(SPOTLIGHT_AT_MS + SPOTLIGHT_MS < BREAK_SECONDS * 1000,
+    "the card is gone before the next round's question is on the phones");
+
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
+  assert.ok(reducedBlocks.some((b) => /\.subida-float\s*\{[^}]*animation-name:\s*subida-float-still/.test(b)),
+    "reduced motion drops the drift: the label appears in place and fades");
+  assert.ok(reducedBlocks.some((b) => /\.subida-racer\.hit\s*\{[^}]*filter:\s*none/.test(b)), "and drops the ring");
+  assert.ok(reducedBlocks.some((b) => /\.pinata-figure\.jolt\s*\{[^}]*animation:\s*none/.test(b)), "and the shake");
+  const still = css.match(/@keyframes subida-float-still \{([\s\S]*?)\n\}/);
+  assert.ok(still && !/transform/.test(still[1]), "the reduced-motion label never moves at all");
+
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  for (const key of ["subida.spotlight", "subida.spotStreak", "subida.spotTop3", "subida.spotFastest", "subida.spotCandy"]) {
+    assert.ok(strings.includes(`"${key}"`), `${key} is in the dictionary`);
+  }
+  // The four labels themselves are deliberately Spanish in both languages and
+  // live in floats.ts, not the dictionary — the same ruling commentary.ts
+  // records for the chants, and for the same reason: this verifier imports the
+  // module and executes it in Node, where the app's i18n does not exist.
+  const floatsSource = readFileSync(frontend("src/features/live/floats.ts"), "utf8");
+  assert.doesNotMatch(floatsSource, /from "\.\.\/\.\.\/i18n"/, "floats.ts must import cleanly in Node");
+  assert.doesNotMatch(floatsSource, /^import \{/m, "and carry no runtime import at all — Node cannot resolve one from a .ts file");
+}
+
 // ------------------------------------------------- fair shuffle
 {
   const { shuffle } = await import(backend("_shared/shuffle.ts").href);
