@@ -166,6 +166,38 @@ export function topThreeKeys(racers: RaceRacer[]): string[] {
   return ranked(racers).slice(0, 3).map((entry) => entry.key);
 }
 
+/** The racer podium the finale ends on: the top three BY CANDY, and only the
+ *  racers who actually have some.
+ *
+ *  The filter is the whole ruling. A room can close with nothing on the board —
+ *  a class that never picked up its phones, or a quiz the professor closed
+ *  early — and then all three steps are zero, all three are tied, and the gold
+ *  falls to whoever is alphabetically first. "🏆 X se llevó la piñata!" printed
+ *  over a candy count of 0 is a label the room can disprove by reading the
+ *  number under it, and it names a student for nothing. That room's true ending
+ *  is the field it can still see, the piñata's own percent and ¡Casi!.
+ *
+ *  The same filter is what keeps a racer who joined and never answered off a
+ *  step: they are on zero, so they can never stand ahead of someone who did.
+ *
+ *  Ranks through `topThree`, so the podium and the rail cannot disagree, and
+ *  the tiebreak runs all the way down to the lane key — a podium that ranked
+ *  off the payload's row order could crown a different racer on the last poll
+ *  before the freeze than on the one before it, in front of the whole class. */
+export function racerPodium(racers: RaceRacer[]): RaceRacer[] {
+  return topThree(racers).filter((racer) => Math.max(0, Math.floor(Number(racer.candy) || 0)) > 0);
+}
+
+/** Which rank stands where, left to right: second, first, third.
+ *
+ *  Filtered to the steps there are. Two phones is how this feature gets tested
+ *  and a class of two is a real class, so the podium draws what it has rather
+ *  than padding itself out to three. */
+export function podiumOrder(count: number): number[] {
+  const steps = Math.max(0, Math.floor(Number(count) || 0));
+  return [1, 0, 2].filter((rank) => rank < steps);
+}
+
 /** The one sort behind both, so the rail and the field can never rank the room
  *  differently. Never touches the caller's array. */
 function ranked(racers: RaceRacer[]): Array<{ racer: RaceRacer; key: string }> {

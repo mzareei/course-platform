@@ -1724,4 +1724,197 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.doesNotMatch(strings, /"quiz\.next":/, "the orphaned quiz.next string was removed");
 }
 
+// ------------------------------------------------- the finale and the racer podium
+// Ten rounds of a room climbing toward a piñata, and then it stops. This is the
+// part that decides whether the class remembers the quiz a week later. Two
+// rules carry it. The pop belongs to the ROOM, racers on zero included — a
+// finale that celebrated only the leaders would undo the care every other beat
+// on this screen takes. And nothing on the podium may claim more than the
+// payload can back, which is what decides a room that earned no candy at all.
+{
+  const {
+    POP_MS, POP_STAGGER_MS, POP_WAVE_MS, PODIUM_AT_MS, PODIUM_FADE_MS,
+    RAIN_MS, RAIN_FALL_MS, popDelayMs, finaleCandies
+  } = await import(frontend("src/features/live/floats.ts").href);
+  const { MAX_LANES, racerPodium, podiumOrder, topThree } =
+    await import(frontend("src/features/live/subida.ts").href);
+
+  // ---- Beat 1: everyone pops, including the racers still on zero. The input
+  // is the ROSTER and nothing else — there is no candy count in it, so there is
+  // no way for this to reach only the racers who scored.
+  const roomRoster = Array.from({ length: 26 }, (_, i) => `Racer ${String(i).padStart(2, "0")}`);
+  const candies = finaleCandies(roomRoster);
+  assert.equal(candies.length, roomRoster.length, "every animal in the room pops, not just the ones who scored");
+  assert.deepEqual(candies.map((c) => c.laneKey), roomRoster, "and each 🍬 belongs to its own lane");
+  assert.ok(candies.every((c) => c.text === "🍬"), "the label is the candy itself");
+  assert.ok(candies.every((c) => !c.vertical), "flat, like every other number on this screen");
+  assert.ok(candies.every((c) => c.big), "and drawn at the finale's size, not a round's");
+  assert.equal(new Set(candies.map((c) => c.key)).size, candies.length,
+    "two labels sharing a key would let Preact reuse one DOM node for both");
+  assert.equal(candies[0].delayMs, 0, "the wave starts at the close");
+  for (let i = 1; i < candies.length; i++) {
+    assert.ok(candies[i].delayMs > candies[i - 1].delayMs, "and crosses the screen in lane order");
+    assert.ok(candies[i].delayMs - candies[i - 1].delayMs <= POP_STAGGER_MS, "at no more than one lane's step");
+  }
+  assert.equal(finaleCandies([]).length, 0, "a room with nobody in it pops nobody");
+  assert.equal(finaleCandies(["Solo"]).length, 1, "and a room of one still pops");
+
+  // The wave has to be OVER before the field starts to fade, or the last
+  // animals of a big room pop into a screen that is already leaving. Sixty
+  // lanes at the full step run two seconds past it, so a big room compresses
+  // the step the way the round's own wave does rather than dropping anyone.
+  for (const lanes of [1, 2, 3, 26, MAX_LANES, 120]) {
+    const wave = finaleCandies(Array.from({ length: lanes }, (_, i) => `L${i}`));
+    const last = wave.reduce((max, c) => Math.max(max, c.delayMs), 0);
+    assert.ok(last + POP_MS <= PODIUM_AT_MS,
+      `the last of ${lanes} animals finishes popping (${last + POP_MS}ms) before the field fades at ${PODIUM_AT_MS}ms`);
+  }
+  assert.equal(POP_WAVE_MS, PODIUM_AT_MS - POP_MS, "which is the window the step is compressed into");
+  assert.equal(popDelayMs(3, 26), 3 * POP_STAGGER_MS, "a class-sized room still pops at the full step");
+  assert.equal(popDelayMs(0, 0), 0, "and a nonsense lane count still produces a delay");
+
+  // ---- Beat 3: the podium. Ranked by candy through the rail's own sort, so
+  // the two can never rank the room differently.
+  const racer = (name, candy, correct) => ({
+    racer_name: name, racer_emoji: "🐢", candy, correct_count: correct, finished: false, finish_place: null
+  });
+  const names = (list) => list.map((r) => r.racer_name);
+  const room = [racer("Rana Zen", 1, 1), racer("Jaguar Ninja", 9, 5), racer("Tortuga Veloz", 4, 4), racer("Oso Genial", 9, 3)];
+  assert.deepEqual(names(racerPodium(room)), names(topThree(room)),
+    "the podium and the rail rank the room through one sort");
+  assert.deepEqual(names(racerPodium(room)), ["Jaguar Ninja", "Oso Genial", "Tortuga Veloz"],
+    "candy first, then correct answers");
+  assert.deepEqual(names(room), ["Rana Zen", "Jaguar Ninja", "Tortuga Veloz", "Oso Genial"],
+    "and it never re-sorts the caller's field");
+
+  // Payload order is untrusted: course-class-quiz selects the attempts with no
+  // ORDER BY while settleRoom rewrites those rows every round. A podium that
+  // ranked off row order could crown a different racer on the last poll before
+  // the freeze than on the one before it, in front of the whole class.
+  assert.deepEqual(names(racerPodium([room[2], room[3], room[0], room[1]])), names(racerPodium(room)),
+    "the same room ranks the same whatever order the payload arrives in");
+  const tied = [racer("Buho Astuto", 6, 3), racer("Abeja Sagaz", 6, 3), racer("Coyote Listo", 6, 3)];
+  assert.deepEqual(names(racerPodium(tied)), names(racerPodium([tied[2], tied[0], tied[1]])),
+    "and three racers with an identical quiz resolve to the same three steps");
+
+  // ---- The room that earned nothing: a class that never picked up its phones,
+  // or a quiz the professor closed early. Three steps of zero are all tied, so
+  // the gold would fall to whoever is alphabetically first — and
+  // "🏆 X se llevó la piñata!" printed directly above a candy count of 0 is a
+  // label the room can disprove by reading the number under it. No candy, no
+  // podium: that room's true ending is the field, the percent and ¡Casi!.
+  const silent = [racer("Rana Zen", 0, 0), racer("Jaguar Ninja", 0, 0), racer("Oso Genial", 0, 0)];
+  assert.equal(racerPodium(silent).length, 0, "a room that earned nothing crowns nobody");
+  assert.equal(racerPodium([]).length, 0, "and neither does an empty one");
+
+  // ---- Fewer than three racers. Two phones is how this gets tested, and a
+  // class of two is a real class.
+  assert.equal(racerPodium(room.slice(0, 2)).length, 2, "a room of two fills the steps it has");
+  assert.equal(racerPodium([racer("Solo", 3, 2)]).length, 1, "and a room of one still has a winner");
+  // The same filter is what keeps a racer who joined and never answered off a
+  // step: they are on zero, so they can never stand ahead of someone who did.
+  const oneAnswered = [racer("Nunca Contestó", 0, 0), racer("Ardilla Turbo", 2, 1), racer("Tampoco Contestó", 0, 0)];
+  assert.deepEqual(names(racerPodium(oneAnswered)), ["Ardilla Turbo"],
+    "a racer who never answered never stands on the podium");
+
+  // Left to right: second, first, third — and only the steps there are.
+  assert.deepEqual(podiumOrder(3), [1, 0, 2], "the winner stands in the middle");
+  assert.deepEqual(podiumOrder(2), [1, 0], "a pair keeps the winner on the right of it");
+  assert.deepEqual(podiumOrder(1), [0], "one racer stands alone");
+  assert.deepEqual(podiumOrder(0), [], "and no racers, no steps");
+  assert.deepEqual(podiumOrder(9), [1, 0, 2], "never more than three steps");
+
+  // ---- The layer.
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  assert.match(layer, /subida-podium/, "the finale ends on a racer podium");
+  assert.match(layer, /everyonePops|subida-pop/, "every animal pops at the close");
+  assert.match(layer, /podium\.showToClass/, "the score podium is still one button away");
+  assert.match(layer, /racerPodium\(/, "the steps are ranked by the pure module, never in the markup");
+  assert.match(layer, /finaleCandies\(/, "and the 🍬 come from it too");
+  assert.doesNotMatch(layer, /student_identifier|profile_id/, "nothing on this screen maps a racer to a student");
+  // The class goes on with ONE flag. Conditioning it on what a racer scored is
+  // the one thing this beat must not do.
+  assert.match(layer, /\$\{popping \? " subida-pop" : ""\}/,
+    "the pop reaches every animal on one flag — it can never be conditioned on a racer's candy");
+
+  // The finale runs AFTER the freeze and never polls. Stopping the poll on the
+  // first closed payload was bought by an earlier incident; a finale that kept
+  // the interval alive would undo it.
+  const finaleStart = layer.indexOf("const runFinale =");
+  const finaleEnd = layer.indexOf("const tick =");
+  assert.ok(finaleStart > -1 && finaleEnd > finaleStart, "the finale is a function of its own");
+  const finaleBody = layer.slice(finaleStart, finaleEnd);
+  assert.doesNotMatch(finaleBody, /classQuizRace|setInterval/, "the finale never polls — it runs after the freeze");
+  assert.equal((layer.match(/if \(frozen\.current\) runFinale\(/g) || []).length, 2,
+    "and on both closed paths — the poll that closes the quiz, and reopening a closed one after Escape");
+  assert.match(finaleBody, /if \(finaleDone\) return;/,
+    "once, even with two polls in flight as the quiz closes");
+  // The last round's beat is superseded outright: a pending setFloats([]) from
+  // round 10 would otherwise wipe the finale's candy a second after it lands.
+  assert.match(finaleBody, /stopBeats\(\)/, "the finale cancels whatever the last beat still had in flight");
+
+  // Reduced motion loses the wave and the rain. It never loses the ending.
+  const reducedGate = finaleBody.slice(
+    finaleBody.indexOf("if (!reducedMotion) {"),
+    finaleBody.indexOf("// The podium is the ending"));
+  assert.ok(reducedGate.length > 0, "the reduced-motion gate is where the comment says it is");
+  assert.match(reducedGate, /setRaining|setPopping/, "the rain and the pop are what it drops");
+  assert.doesNotMatch(reducedGate, /setPodiumUp/, "the three steps are not — the podium still appears");
+
+  // ---- The stylesheet. Every number shared with TypeScript is asserted here
+  // rather than restated in a comment on either side.
+  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
+  const pop = css.match(/\.subida-pop \{[^}]*animation:\s*subida-pop\s+(\d+)ms/);
+  assert.ok(pop && Number(pop[1]) === POP_MS, "the pop's duration is POP_MS");
+  const popFrames = css.match(/@keyframes subida-pop \{([\s\S]*?)\n\}/);
+  assert.ok(popFrames && /scale\(1\.5\)/.test(popFrames[1]), "and it scales up and back");
+  assert.ok(popFrames && /translate\(-50%/.test(popFrames[1]),
+    "keeping the racer's own centring, or every animal jumps half its width sideways as it pops");
+  const fall = css.match(/\.pinata-rain span \{[^}]*animation:\s*pinata-fall\s+([\d.]+)s/);
+  assert.ok(fall && Math.round(parseFloat(fall[1]) * 1000) === RAIN_FALL_MS, "the fall's duration is RAIN_FALL_MS");
+  assert.ok(RAIN_MS > RAIN_FALL_MS, "and the finale's rain has room to stagger its pieces across the window");
+  assert.match(layer, /later\(RAIN_MS, \(\) => setRaining\(null\)\)/, "which it holds open for");
+  // Every candy emoji is a surrogate pair, so split("") cuts each one in half
+  // and the rain draws twenty broken glyphs instead of ten candies. That is
+  // what the burst's rain has been doing since it shipped, and the finale is
+  // the moment a room is actually looking at it.
+  assert.doesNotMatch(layer, /🍬[^"]*"\.split\(""\)/, "the rain never splits an emoji down the middle");
+  assert.match(layer, /Array\.from\(BURST_CANDY\)/, "the burst's pieces are whole candies");
+  assert.match(layer, /Array\.from\(FINALE_CANDY\)/, "and so are the finale's");
+  // The burst's rain and the finale's are the same element. The burst's own
+  // timeout is not a beat timer, so stopBeats() cannot cancel it, and the
+  // piñata can burst on the very round the quiz closes on — a bare
+  // setRaining(null) there would switch the finale's rain off a second in.
+  assert.match(layer, /setRaining\(\(kind\) => \(kind === "burst" \? null : kind\)\)/,
+    "the burst's timer only ever ends the burst's own rain");
+  const fade = css.match(/--subida-podium-fade:\s*(\d+)ms/);
+  assert.ok(fade && Number(fade[1]) === PODIUM_FADE_MS, "the field's fade is declared once and both sides agree");
+  for (const selector of ["subida-sky", "subida-lanes", "subida-rail"]) {
+    const rule = css.match(new RegExp(`\\.${selector} \\{[\\s\\S]*?\\}`));
+    assert.ok(rule && /opacity var\(--subida-podium-fade\)/.test(rule[0]),
+      `.${selector} leaves on the shared fade`);
+  }
+  assert.match(css, /\.classroom-pinata-layer\.podium-up[\s\S]{0,240}opacity:\s*0/,
+    "the ropes, the ground, the lane names and the rail all go together");
+  // They go together for a reason. Nothing may fade ONE racer — dimming a racer
+  // is the callout this screen has never made, and the finale is not where it
+  // starts.
+  assert.doesNotMatch(css, /\.subida-racer\.[\w-]+\s*\{[^}]*opacity/, "no racer is ever dimmed on its own");
+  assert.match(css, /\.subida-podium \{[^}]*pointer-events:\s*none/,
+    "the podium never swallows the two buttons under it");
+  assert.match(css, /@keyframes subida-podium-rise/, "the steps rise rather than appearing");
+
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
+  assert.ok(reducedBlocks.some((b) => /\.subida-pop\s*\{[^}]*animation:\s*none/.test(b)), "reduced motion drops the pop");
+  assert.ok(reducedBlocks.some((b) => /\.subida-podium-step\s*\{[^}]*animation:\s*none/.test(b)),
+    "and the steps arrive without rising");
+
+  // ---- The strings.
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.match(strings, /subida\.wonThePinata/, "the winner line exists in both languages");
+  assert.match(strings, /subida\.podiumTitle/, "and so does the podium's title");
+  assert.match(layer, /subida\.wonThePinata/, "the layer says who took the piñata");
+  assert.match(layer, /subida\.podiumTitle/, "over the racer podium's own title");
+}
+
 console.log("verify-quiz-race passed");

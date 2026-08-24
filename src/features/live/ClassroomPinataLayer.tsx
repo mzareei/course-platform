@@ -22,11 +22,12 @@ import { remainingMs } from "../quiz/rounds";
 import { raceEvents, chantLine, BURST_LINE, type RaceSnap } from "../quiz/commentary";
 import {
   BASE_EMOJI_PX, bobDelayMs, heightFor, laneCountFor, laneKeys, laneRoster,
-  lanePercent, roundCountIsSettled, sizeFor, topThree, topThreeKeys
+  lanePercent, podiumOrder, racerPodium, roundCountIsSettled, sizeFor, topThree, topThreeKeys
 } from "./subida";
 import {
-  CLIMB_HOLD_MS, JOLT_MS, RING_MS, RISE_MS, SPOTLIGHT_AT_MS, SPOTLIGHT_MS,
-  floatsFor, ringingLanes, spotlightFor,
+  CLIMB_HOLD_MS, JOLT_MS, PODIUM_AT_MS, RAIN_FALL_MS, RAIN_MS, RING_MS, RISE_MS,
+  SPOTLIGHT_AT_MS, SPOTLIGHT_MS,
+  finaleCandies, floatsFor, popDelayMs, ringingLanes, spotlightFor,
   type FloatInput, type FloatSpec, type LaneRacer, type Spotlight
 } from "./floats";
 import { t, lang } from "../../i18n";
@@ -38,6 +39,38 @@ const QUEUE_CAP = 6;    // a mass finish must never build a multi-minute backlog
 const MEDALS = ["🥇", "🥈", "🥉"];
 /** How far a floating label clears the top of its own emoji. */
 const FLOAT_GAP_PX = 9;
+/** Rank 0, 1, 2 — the winner's step is the tall gold one. */
+const STEP_CLASS = ["first", "second", "third"];
+/** How far apart the steps rise, in the order they stand: second, first, third. */
+const PODIUM_STEP_MS = 180;
+
+/** The candy that falls, as pieces.
+ *
+ *  Array.from, never split(""): every one of these emoji is a surrogate pair,
+ *  so split("") cuts each of them in half and the rain draws twenty broken
+ *  glyphs instead of ten candies. That is what the burst has been doing.
+ *
+ *  Two rains. The burst's is one quick pass the moment the piñata goes. The
+ *  finale's is denser and launched across the whole window, because a room
+ *  watching the ending for four seconds reads a drizzle of ten as the screen
+ *  giving up. The last piece goes out with exactly one fall left in the window,
+ *  and the 37.3% step scatters consecutive pieces right across the screen so it
+ *  reads as rain rather than as a wave crossing it. */
+const BURST_CANDY = "🍬🍭🍬🍫🍬🍭🍬🍭🍫🍬";
+const FINALE_CANDY = "🍬🍭🍬🍫🍭🍬🍫🍬🍭🍬🍫🍭🍬🍭🍫🍬🍭🍬🍫🍬🍭🍫🍬🍭";
+
+function rainFor(kind: "burst" | "finale") {
+  if (kind === "burst") {
+    return Array.from(BURST_CANDY).map((candy, index) => ({
+      candy, left: (index * 9.7) % 100, delayMs: (index % 5) * 120
+    }));
+  }
+  const pieces = Array.from(FINALE_CANDY);
+  const step = (RAIN_MS - RAIN_FALL_MS) / Math.max(1, pieces.length - 1);
+  return pieces.map((candy, index) => ({
+    candy, left: Math.round(((index * 37.3) % 100) * 10) / 10, delayMs: Math.round(index * step)
+  }));
+}
 
 /** The payload read as LANES rather than as rows.
  *
@@ -83,7 +116,7 @@ export function ClassroomPinataLayer({
   const layerRef = useRef<HTMLElement | null>(null);
   const [race, setRace] = useState<RaceStatus | null>(null);
   const [line, setLine] = useState<string>("");
-  const [raining, setRaining] = useState(false);
+  const [raining, setRaining] = useState<"burst" | "finale" | null>(null);
   // Which lane belongs to whom, for the life of this layer. Grown in the poll
   // so a late starter takes the next free lane instead of shoving the field.
   const [roster, setRoster] = useState<string[]>([]);
@@ -96,6 +129,10 @@ export function ClassroomPinataLayer({
   const [climbing, setClimbing] = useState(false);
   const [jolt, setJolt] = useState(false);
   const [spotlight, setSpotlight] = useState<Spotlight | null>(null);
+  // The finale, after the freeze: the pop that reaches every animal, then the
+  // racer podium in the field's place.
+  const [popping, setPopping] = useState(false);
+  const [podiumUp, setPodiumUp] = useState(false);
   const prevSnap = useRef<RaceSnap | null>(null);
   // The roster the poll has handed out, mirrored out of state: the poll closure
   // is built once per instance, so reading the state variable would give it the
@@ -134,6 +171,8 @@ export function ClassroomPinataLayer({
     setSpotlight(null);
     setClimbing(false);
     setJolt(false);
+    setPopping(false);
+    setPodiumUp(false);
     let cancelled = false;
     let id: ReturnType<typeof setInterval> | undefined;
     const freeze = () => {
@@ -160,6 +199,11 @@ export function ClassroomPinataLayer({
 
     // The ten-second break, choreographed. Runs once per round.
     const runBeats = (res: RaceStatus, lanes: string[]) => {
+      // The finale supersedes the last round's beat. When the payload that
+      // settles round 10 is also the payload that closes the quiz, the room
+      // should be watching the ending, not a "+2" the finale is about to wipe
+      // off the screen a frame later.
+      if (frozen.current) return;
       const round = res.round;
       const baseline = beatBaseline.current;
       if (!round || !baseline || round.index === beatRound.current) return;
@@ -220,6 +264,54 @@ export function ClassroomPinataLayer({
       later(lastLabel + RISE_MS + 200, () => setFloats([]));
     };
 
+    // The finale, once the quiz is closed. Everyone pops, candy falls for about
+    // four seconds, and at PODIUM_AT_MS the field leaves and the racer podium
+    // comes up in its place.
+    //
+    // Runs AFTER freeze() and never goes back to the network. Stopping the poll
+    // on the first closed payload was bought by an earlier incident, and a
+    // finale with a timer that polled would quietly undo it.
+    let finaleDone = false;
+    const runFinale = (lanes: string[]) => {
+      // Once. Two polls can be in flight as the quiz closes — the immediate
+      // tick and the interval's next one — and a finale restarted a second in
+      // would drop the podium back to the field in front of the room.
+      if (finaleDone) return;
+      finaleDone = true;
+
+      // Whatever the last round's beat still had in flight is superseded
+      // outright. Its pending setFloats([]) would otherwise wipe the finale's
+      // candy a second after it landed, and a card naming one racer is not what
+      // the room should be reading while the whole room is popping.
+      stopBeats();
+      setHits([]);
+      setSpotlight(null);
+      setClimbing(false);
+      setJolt(false);
+      setFloats([]);
+
+      if (!reducedMotion) {
+        // Beats 1 and 2, together: the pop crosses the field as a wave while
+        // the candy falls. Every racer pops, the ones on zero included —
+        // finaleCandies is handed the roster and no candy counts at all, so
+        // there is nothing else it could do.
+        const candies = finaleCandies(lanes);
+        setPopping(true);
+        setFloats(candies);
+        setRaining("finale");
+        const lastCandy = candies.reduce((max, spec) => Math.max(max, spec.delayMs), 0);
+        later(RAIN_MS, () => setRaining(null));
+        // Back to the idle bob once the wave is through, which matters for the
+        // room that ends with no podium: the field stays on screen there.
+        later(PODIUM_AT_MS, () => setPopping(false));
+        later(lastCandy + RISE_MS + 200, () => setFloats([]));
+      }
+
+      // The podium is the ending, not the animation: reduced motion loses the
+      // wave and the rain above, never the three steps.
+      later(PODIUM_AT_MS, () => setPodiumUp(true));
+    };
+
     const tick = () => {
       if (frozen.current) return;
       classQuizRace(instanceId)
@@ -234,7 +326,7 @@ export function ClassroomPinataLayer({
           // ago. Reopening after Escape hits this same path.
           if (prevSnap.current === null) {
             prevSnap.current = snap;
-            growRoster(res.racers);
+            const lanes = growRoster(res.racers);
             // The beats need a whole round to diff against and this payload is
             // the only thing there has ever been, so it becomes the baseline and
             // celebrates nothing — the same ruling as the announcer's above.
@@ -250,6 +342,10 @@ export function ClassroomPinataLayer({
             };
             setRace(res);
             if (res.state === "closed") freeze();
+            // Reopening a quiz that already closed lands here, and it has to
+            // land on the podium: the field alone, frozen, with no ending, is
+            // the screen this whole task exists to prevent.
+            if (frozen.current) runFinale(lanes);
             return;
           }
 
@@ -274,8 +370,13 @@ export function ClassroomPinataLayer({
           }
 
           if (!prevSnap.current?.burst && snap.burst && !reducedMotion) {
-            setRaining(true);
-            setTimeout(() => setRaining(false), 3000);
+            setRaining("burst");
+            // Only ever ends its OWN rain. This timer is not one of the beat
+            // timers, so stopBeats() cannot cancel it — and the piñata can burst
+            // on the same round the quiz closes on, which would leave a stray
+            // three-second timeout to switch the finale's rain off one second
+            // into it.
+            setTimeout(() => setRaining((kind) => (kind === "burst" ? null : kind)), 3000);
           }
           prevSnap.current = snap;
           const lanes = growRoster(res.racers);
@@ -290,6 +391,7 @@ export function ClassroomPinataLayer({
           setRace(res);
           if (res.state === "closed") freeze();
           runBeats(res, lanes);
+          if (frozen.current) runFinale(lanes);
         })
         .catch(() => { /* one missed poll is invisible; the next one catches up */ });
     };
@@ -352,8 +454,31 @@ export function ClassroomPinataLayer({
     ? (round.phase === "break" ? round.break_ends_at : round.answer_ends_at)
     : race?.ends_at ?? null;
 
+  // The racer podium: ranked by CANDY, under the secret names, and only the
+  // racers who have some — a room that earned nothing crowns nobody, and its
+  // ending is the field it can still see plus the piñata's own percent.
+  //
+  // Not the score podium. ClassroomPodiumLayer ranks by quiz score under the
+  // real names of the students who opted to show them, it is still one button
+  // away in the footer, and the two may well list different students.
+  const steps = racerPodium(field.map((entry) => entry.racer));
+  const podiumShowing = podiumUp && steps.length > 0;
+
+  // The 🏆 line, off the same three the podium draws — one ranking on this
+  // screen, never two that could name different racers. Clearing the queue is
+  // what stops a leftover "¡Casi!" from the closing poll taking the line back
+  // four seconds later; the chant is already frozen out.
+  useEffect(() => {
+    if (!podiumShowing) return;
+    queue.current = [];
+    setLine(t("subida.wonThePinata", { name: steps[0].racer_name }));
+    lastLineAt.current = Date.now();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [podiumShowing]);
+
   return (
-    <section ref={layerRef} class="classroom-pinata-layer" data-testid="classroom-pinata-layer" aria-live="off" tabindex={-1}>
+    <section ref={layerRef} class={`classroom-pinata-layer${podiumShowing ? " podium-up" : ""}`}
+      data-testid="classroom-pinata-layer" aria-live="off" tabindex={-1}>
       <header class="subida-top">
         <div class="subida-hud">
           {/* The round and the clock, nothing else. How hard a question is
@@ -415,13 +540,16 @@ export function ClassroomPinataLayer({
             // Height is candy, size is correct answers, and size only ever
             // grows. Bigger racers sit in front so a leader is never hidden
             // behind a neighbour that has answered less.
-            <span class={`subida-racer${hitSet.has(key) ? " hit" : ""}`} key={key} aria-hidden="true"
+            <span class={`subida-racer${hitSet.has(key) ? " hit" : ""}${popping ? " subida-pop" : ""}`} key={key} aria-hidden="true"
               style={
                 `left:${lanePercent(index, lanes)}%;`
                 + `bottom:${heightFor(racer.candy, race?.question_count)}%;`
                 + `font-size:${Math.round(BASE_EMOJI_PX * sizeFor(racer.correct_count))}px;`
                 + `z-index:${10 + Math.max(0, racer.correct_count || 0)};`
-                + `animation-delay:${bobDelayMs(index)}ms`
+                // The pop replaces the bob outright, so the delay has to switch
+                // with it: a lane's negative bob offset left on the pop would
+                // start it already half over.
+                + `animation-delay:${popping ? popDelayMs(index, roster.length) : bobDelayMs(index)}ms`
               }>
               {racer.racer_emoji}
             </span>
@@ -441,7 +569,7 @@ export function ClassroomPinataLayer({
               const laneIndex = roster.indexOf(float.laneKey);
               if (!racer || laneIndex < 0) return null;
               return (
-                <div class={`subida-float ${float.vertical ? "vertical" : "flat"}`} key={float.key}
+                <div class={`subida-float ${float.vertical ? "vertical" : "flat"}${float.big ? " big" : ""}`} key={float.key}
                   style={
                     `left:${lanePercent(laneIndex, lanes)}%;`
                     + `bottom:calc(${heightFor(racer.candy, race?.question_count)}%`
@@ -497,10 +625,33 @@ export function ClassroomPinataLayer({
         </aside>
       ) : null}
 
+      {/* The ending. Second, first, third — the order they stand in and the
+          order they rise, so the wave reads left to right. Each step shows what
+          this screen has shown all quiz: an emoji, a secret name and a candy
+          count. Nothing here maps a racer to a student. */}
+      {podiumShowing ? (
+        <div class="subida-podium">
+          <p class="subida-podium-title">{t("subida.podiumTitle")}</p>
+          <div class="subida-podium-steps">
+            {podiumOrder(steps.length).map((rank, place) => (
+              // Keyed by rank for the rail's reason: two attempts still showing
+              // as "🎒 Mochila" would collide on a name.
+              <div class={`subida-podium-step ${STEP_CLASS[rank]}`} key={`step:${rank}`}
+                style={`animation-delay:${place * PODIUM_STEP_MS}ms`}>
+                <span class="subida-podium-emoji" aria-hidden="true">{steps[rank].racer_emoji}</span>
+                <p class="subida-podium-name">{steps[rank].racer_name}</p>
+                <p class="subida-podium-candy">🍬 {steps[rank].candy}</p>
+                <div class="subida-podium-block" aria-hidden="true">{MEDALS[rank]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {raining ? (
         <div class="pinata-rain" aria-hidden="true">
-          {"🍬🍭🍬🍫🍬🍭🍬🍭🍫🍬".split("").map((candy, index) => (
-            <span key={index} style={`left:${(index * 9.7) % 100}%; animation-delay:${(index % 5) * 120}ms`}>{candy}</span>
+          {rainFor(raining).map((piece, index) => (
+            <span key={index} style={`left:${piece.left}%; animation-delay:${piece.delayMs}ms`}>{piece.candy}</span>
           ))}
         </div>
       ) : null}

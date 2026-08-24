@@ -87,6 +87,30 @@ export const SPOTLIGHT_MS = 5000;
 /** The piñata's single jolt. It takes the round's whole damage at once. */
 export const JOLT_MS = 600;
 
+/** The finale, measured from the poll that first reports the quiz closed.
+ *
+ *  Beat 1 is the pop: every animal in the room, the ones still on zero
+ *  included, scales up and back with a 🍬 over its head. It is the ROOM's
+ *  burst, not the leaders' — a finale that celebrated only the top three would
+ *  undo the rule every other beat on this screen keeps.
+ *  Beat 2 is the rain. Beat 3, at PODIUM_AT_MS, is the racer podium. */
+export const POP_MS = 260;
+export const POP_STAGGER_MS = 38;
+export const PODIUM_AT_MS = 1500;
+/** How long the field, the ground and the rail take to leave. */
+export const PODIUM_FADE_MS = 700;
+/** The window the pop wave has to fit inside. It must be OVER before the field
+ *  starts to fade, or the last animals of a big room pop into a screen that is
+ *  already leaving: sixty lanes at the full step run two seconds past it. Same
+ *  ruling as WAVE_MS above — compress the step, never drop a racer from it. */
+export const POP_WAVE_MS = PODIUM_AT_MS - POP_MS;
+/** About four seconds of candy. RAIN_FALL_MS is how long one piece takes to
+ *  cross the screen — the CSS `pinata-fall` duration, which the verifier
+ *  asserts against this — so the pieces are launched across the difference and
+ *  the last one still lands inside the window. */
+export const RAIN_MS = 4000;
+export const RAIN_FALL_MS = 2600;
+
 /** The candy an answer inside the round's golden window is worth. Mirrors
  *  CANDY_GOLDEN in the backend's _shared/rounds.ts; subida.ts holds the same
  *  number as CANDY_PER_QUESTION and the verifier asserts both against it. */
@@ -118,6 +142,10 @@ export interface FloatSpec {
   /** Pixels above the anchor (the racer's height plus its own emoji size) that
    *  this label starts from, so two labels on one rope never overlap. */
   liftPx: number;
+  /** Drawn at the finale's size rather than a round's. A 0.75rem candy over a
+   *  leader's 48px emoji reads as a speck, and the close is the one moment the
+   *  room is looking at the whole screen at once. */
+  big?: boolean;
 }
 
 export interface FloatInput {
@@ -351,4 +379,36 @@ export function spotlightFor(input: FloatInput): Spotlight | null {
     promoted: best.promoted,
     fastest: best.fastest
   };
+}
+
+/** How long after the close the lane at `index` pops.
+ *
+ *  Compressed to fit POP_WAVE_MS once a room is big enough that the full step
+ *  would not, so the wave still ends before the field fades however many lanes
+ *  were handed out. */
+export function popDelayMs(index: number, total: number): number {
+  const lanes = Math.max(1, Math.floor(Number(total) || 0));
+  const lane = Math.max(0, Math.floor(Number(index) || 0));
+  const step = lanes <= 1 ? POP_STAGGER_MS : Math.min(POP_STAGGER_MS, POP_WAVE_MS / (lanes - 1));
+  return Math.round(lane * step);
+}
+
+/** A 🍬 over every animal in the room, in lane order.
+ *
+ *  Takes the ROSTER and nothing else. There is no candy count in the input, so
+ *  there is no way for this to reach only the racers who scored — which is the
+ *  point. Every other beat on this screen is careful never to mark a racer who
+ *  missed; the close is where that care matters most, so the burst goes to the
+ *  whole room or it means nothing. */
+export function finaleCandies(roster: string[]): FloatSpec[] {
+  return roster.map((laneKey, index) => ({
+    key: `pop:${laneKey}`,
+    laneKey,
+    text: "🍬",
+    color: CANDY_COLOR,
+    vertical: false,
+    delayMs: popDelayMs(index, roster.length),
+    liftPx: 0,
+    big: true
+  }));
 }

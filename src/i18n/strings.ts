@@ -2108,6 +2108,8 @@ export const strings = {
   "subida.spotTop3": ["Climbed into the top three", "Se metió al top 3"],
   "subida.spotFastest": ["Answered in under 20 seconds", "Contestó en menos de 20 segundos"],
   "subida.spotCandy": ["Picked up {count} candy", "Se llevó {count} dulces"],
+  "subida.podiumTitle": ["The climb", "La subida"],
+  "subida.wonThePinata": ["🏆 {name} took the piñata!", "🏆 ¡{name} se llevó la piñata!"],
 
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],
