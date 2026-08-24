@@ -30,9 +30,13 @@ import {
   finaleCandies, floatsFor, popDelayMs, ringingLanes, spotlightFor,
   type FloatInput, type FloatSpec, type LaneRacer, type Spotlight
 } from "./floats";
+import * as sound from "./sound";
 import { t, lang } from "../../i18n";
 
 const POLL_MS = 2000;
+/** When the tick becomes the hurry. The last ten seconds of the answering
+ *  window, as the design's "accelerating over the last ten" asks for. */
+const HURRY_MS = 10000;
 const LINE_MS = 4000;   // each event line holds at least this long
 const CHANT_MS = 8000;  // idle time before a chant fills the silence
 const QUEUE_CAP = 6;    // a mass finish must never build a multi-minute backlog
@@ -133,6 +137,10 @@ export function ClassroomPinataLayer({
   // racer podium in the field's place.
   const [popping, setPopping] = useState(false);
   const [podiumUp, setPodiumUp] = useState(false);
+  // The sound controls, mirrored out of the mixer so the button re-renders.
+  // The mixer owns the truth and the localStorage; this is only what to draw.
+  const [muted, setMuted] = useState(() => sound.isMuted());
+  const [volume, setVolume] = useState(() => sound.volumeLevel());
   const prevSnap = useRef<RaceSnap | null>(null);
   // The roster the poll has handed out, mirrored out of state: the poll closure
   // is built once per instance, so reading the state variable would give it the
@@ -147,7 +155,20 @@ export function ClassroomPinataLayer({
   const lastLineAt = useRef(0);
   const lastChantTarget = useRef<string | null>(null);
   const frozen = useRef(false);
+  // The last round this screen stung, and the last round it actually watched
+  // the room answer. Both are what keep the sting to exactly one per round —
+  // see the ticking bed below.
+  const stungRound = useRef(-1);
+  const answeredRound = useRef(-1);
   const reducedMotion = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Autoplay. Browsers drop everything scheduled before a user gesture, and the
+  // professor's click on Start the quiz is the gesture this screen is built
+  // around — EndOfClass unlocks the context inside that click handler. This is
+  // the fallback for the other way the layer opens: Run Class reloaded with a
+  // quiz already running, where nobody has clicked anything. It costs nothing
+  // when the context is already open, and the mute button unlocks too.
+  useEffect(() => { sound.unlock(); }, []);
 
   useEffect(() => {
     layerRef.current?.focus();
@@ -290,12 +311,23 @@ export function ClassroomPinataLayer({
       setJolt(false);
       setFloats([]);
 
+      // The wave, once, for both channels. Every racer pops, the ones on zero
+      // included — finaleCandies is handed the roster and no candy counts at
+      // all, so there is nothing else it could do.
+      const candies = finaleCandies(lanes);
+
+      // The same wave out loud, on the same delays. Deliberately OUTSIDE the
+      // reduced-motion gate below: sound is a separate axis from motion, and a
+      // professor who turned motion off is exactly the person who may be
+      // leaning on the audio. Scheduled through `later` rather than on the
+      // audio clock so that Escape during the finale takes the pending pops
+      // with it — the effect's cleanup calls stopBeats(), and a room that has
+      // just closed this screen should not go on hearing it.
+      for (const candy of candies) later(candy.delayMs, () => sound.cue("pop"));
+
       if (!reducedMotion) {
         // Beats 1 and 2, together: the pop crosses the field as a wave while
-        // the candy falls. Every racer pops, the ones on zero included —
-        // finaleCandies is handed the roster and no candy counts at all, so
-        // there is nothing else it could do.
-        const candies = finaleCandies(lanes);
+        // the candy falls.
         setPopping(true);
         setFloats(candies);
         setRaining("finale");
@@ -369,14 +401,22 @@ export function ClassroomPinataLayer({
             queue.current = queue.current.slice(-QUEUE_CAP);
           }
 
-          if (!prevSnap.current?.burst && snap.burst && !reducedMotion) {
-            setRaining("burst");
-            // Only ever ends its OWN rain. This timer is not one of the beat
-            // timers, so stopBeats() cannot cancel it — and the piñata can burst
-            // on the same round the quiz closes on, which would leave a stray
-            // three-second timeout to switch the finale's rain off one second
-            // into it.
-            setTimeout(() => setRaining((kind) => (kind === "burst" ? null : kind)), 3000);
+          if (!prevSnap.current?.burst && snap.burst) {
+            // The jingle first, and outside the reduced-motion gate the rain is
+            // inside: motion and sound are separate axes, and a room that has
+            // asked for less movement has not asked for less noise. Once only —
+            // prevSnap advances below, so the next poll no longer sees a
+            // transition here.
+            sound.cue("burst");
+            if (!reducedMotion) {
+              setRaining("burst");
+              // Only ever ends its OWN rain. This timer is not one of the beat
+              // timers, so stopBeats() cannot cancel it — and the piñata can
+              // burst on the same round the quiz closes on, which would leave a
+              // stray three-second timeout to switch the finale's rain off one
+              // second into it.
+              setTimeout(() => setRaining((kind) => (kind === "burst" ? null : kind)), 3000);
+            }
           }
           prevSnap.current = snap;
           const lanes = growRoster(res.racers);
@@ -454,6 +494,53 @@ export function ClassroomPinataLayer({
     ? (round.phase === "break" ? round.break_ends_at : round.answer_ends_at)
     : race?.ends_at ?? null;
 
+  // The ticking bed, and the sting that ends it.
+  //
+  // Driven by the same one-second clock the countdown above is drawn from, and
+  // that is the point: the sting lands on the exact frame the room watches the
+  // clock reach 0:00. The other candidate signal was the payload's own phase
+  // flipping to "break", which the poll reports up to two seconds late — and a
+  // sting two seconds after a round shut is not a cue, it is a noise. The
+  // beats deliberately wait for roundCountIsSettled for the opposite reason
+  // (a count is worth nothing until it is final), but this is not a number,
+  // it is an alarm, and an alarm has to be on time.
+  //
+  // `stungRound` is what keeps it to one sting a round: the clock goes on
+  // ticking through the whole ten-second break, so without it the close would
+  // fire ten times and the room would learn to ignore it. `answeredRound` is
+  // the other half — a layer that mounted mid-break never watched that round's
+  // window run out, so it does not get to announce its ending.
+  useEffect(() => {
+    // Dead for good at the freeze. This clock outlives the quiz — it also feeds
+    // the chant and the podium's own timing — so a bed gated on the phase alone
+    // would tick on through the finale, through the podium, and for as long
+    // afterwards as the professor leaves the screen up.
+    if (frozen.current || !round) return;
+    if (round.phase === "answering") answeredRound.current = round.index;
+    const left = remainingMs(round.answer_ends_at, now);
+    if (left > 0) {
+      // The payload's phase is up to one poll stale, so the local clock has the
+      // last word on the other side: a round whose answering window has run out
+      // gets no more ticks even while the last payload still calls it open.
+      if (round.phase === "answering") {
+        if (left <= HURRY_MS) sound.cue("hurry");
+        else sound.cue("tick");
+      }
+      return;
+    }
+    // A payload that omits answer_ends_at reads as a SPENT clock — rounds.ts
+    // rules that deliberately, so a stale deployment shows 0:00 rather than
+    // NaN. A spent clock at the start of a round would sting the room once a
+    // round for ten rounds that had not closed anything, so the sting needs a
+    // deadline it can actually read. The ticks above do not: they simply stop.
+    if (!Number.isFinite(Date.parse(String(round.answer_ends_at || "")))) return;
+    if (answeredRound.current === round.index && stungRound.current !== round.index) {
+      stungRound.current = round.index;
+      sound.cue("close");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now]);
+
   // The racer podium: ranked by CANDY, under the secret names, and only the
   // racers who have some — a room that earned nothing crowns nobody, and its
   // ending is the field it can still see plus the piñata's own percent.
@@ -468,13 +555,23 @@ export function ClassroomPinataLayer({
   // screen, never two that could name different racers. Clearing the queue is
   // what stops a leftover "¡Casi!" from the closing poll taking the line back
   // four seconds later; the chant is already frozen out.
+  //
+  // Gated on `podiumUp`, NOT on `podiumShowing`. A room where nobody earned
+  // candy deliberately raises no podium — racerPodium filters a racer on zero
+  // away rather than crowning one — and this effect used to return early there,
+  // so nothing wrote a line after the freeze and the one room that most needs
+  // an ending sat under a stale mid-quiz chant until someone pressed Escape.
+  // It gets a neutral close instead, claiming nothing beyond the percent the
+  // screen already prints two inches above it.
   useEffect(() => {
-    if (!podiumShowing) return;
+    if (!podiumUp) return;
     queue.current = [];
-    setLine(t("subida.wonThePinata", { name: steps[0].racer_name }));
+    setLine(steps.length
+      ? t("subida.wonThePinata", { name: steps[0].racer_name })
+      : t("subida.noCandyClose", { percent }));
     lastLineAt.current = Date.now();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [podiumShowing]);
+  }, [podiumUp]);
 
   return (
     <section ref={layerRef} class={`classroom-pinata-layer${podiumShowing ? " podium-up" : ""}`}
@@ -650,8 +747,15 @@ export function ClassroomPinataLayer({
 
       {raining ? (
         <div class="pinata-rain" aria-hidden="true">
+          {/* Keyed by the RAIN as well as the index. The burst mounts ten spans
+              and the finale twenty-four; the piñata can burst on one poll and
+              the quiz close on the next, two seconds into a 2.6-second fall,
+              and a bare index has Preact reuse spans 0-9 in mid-air — the
+              finale then opens with fourteen candies instead of twenty-four and
+              several of them jump sideways. The compound key remounts the lot. */}
           {rainFor(raining).map((piece, index) => (
-            <span key={index} style={`left:${piece.left}%; animation-delay:${piece.delayMs}ms`}>{piece.candy}</span>
+            <span key={`${raining}:${index}`}
+              style={`left:${piece.left}%; animation-delay:${piece.delayMs}ms`}>{piece.candy}</span>
           ))}
         </div>
       ) : null}
@@ -659,6 +763,32 @@ export function ClassroomPinataLayer({
       <p class="pinata-line">{line}</p>
 
       <footer class="pinata-actions">
+        {/* The mute and the volume are visible on purpose. Sound on this screen
+            is new and it is loud by design, so a professor who needs the room
+            quiet — an exam next door, a class being recorded — has to be able
+            to see the switch rather than hunt for a shortcut. The choice is
+            remembered on this machine, so it survives a reload of Run Class. */}
+        <div class="subida-sound">
+          <button class="btn" type="button"
+            onClick={() => {
+              const next = !muted;
+              sound.setMuted(next);
+              setMuted(next);
+              // This press is itself a user gesture, which is the only reason
+              // unlock() is here: a reloaded Run Class whose context never got
+              // one wakes up the first time the professor touches this button.
+              if (!next) sound.unlock();
+            }}>
+            {muted ? t("subida.unmute") : t("subida.mute")}
+          </button>
+          <input class="subida-volume" type="range" min="0" max="100" step="5"
+            value={Math.round(volume * 100)} aria-label={t("subida.volume")}
+            onInput={(event) => {
+              const next = Number((event.currentTarget as HTMLInputElement).value) / 100;
+              sound.setVolume(next);
+              setVolume(next);
+            }} />
+        </div>
         {closed ? (
           <button class="btn primary" type="button" disabled={!podium.length} onClick={onShowPodium}>
             {t("podium.showToClass")}

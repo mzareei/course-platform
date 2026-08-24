@@ -1547,4 +1547,9 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   .subida-pop { animation: none; }
   .subida-podium-step { animation: none; }
 }
-.pinata-actions { display: flex; justify-content: center; gap: 0.8rem; }
+.pinata-actions { display: flex; justify-content: center; align-items: center; gap: 0.8rem; }
+/* The sound controls, beside the two buttons. Visible rather than tucked behind
+   a shortcut: sound on this screen is new and loud by design, and a professor
+   who needs the room quiet has to be able to see the switch. */
+.subida-sound { display: flex; align-items: center; gap: 0.5rem; }
+.subida-volume { width: 7rem; accent-color: #ffd166; cursor: pointer; }

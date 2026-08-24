@@ -1917,4 +1917,418 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(layer, /subida\.podiumTitle/, "over the racer podium's own title");
 }
 
+// ------------------------------------------------- sound
+//
+// The 2026-08-19 spec said "No sound. Ever. It is a classroom." That rule is
+// reversed here, and the class that reversed it is the point: the end-of-class
+// quiz ran with a real group and every student kept their head down on a phone
+// for all ten rounds. Ten rounds of visual choreography reach nobody who is not
+// looking. Sound is the only channel that reaches a student whose eyes are
+// down, and `close` — the sting at the instant a round shuts — is the cue that
+// lifts twenty-six heads at once. Everything else here is texture around it.
+{
+  const sound = readFileSync(frontend("src/features/live/sound.ts"), "utf8");
+  assert.match(sound, /AudioContext/, "sound is synthesized in the browser");
+  assert.doesNotMatch(sound, /\.mp3|\.wav|\.ogg/,
+    "no audio files — Kahoot's music is licensed and cannot be used");
+  assert.match(sound, /localStorage/, "the mute choice survives a reload");
+  // Nothing here may throw into the render path. This layer is the only
+  // teaching display in the room, and a screen that white-screens for a missing
+  // oscillator is far worse than a silent one — so the whole Web Audio API
+  // being absent is a guarded case, not merely a constructor that fails.
+  assert.match(sound, /typeof window/,
+    "a browser with no Web Audio at all is a guarded case, not a ReferenceError");
+  assert.ok((sound.match(/catch/g) || []).length >= 3,
+    "storage, construction and scheduling each fail quietly");
+  // One master gain for every voice, so mute silences a sting that is ALREADY
+  // ringing rather than only the next cue.
+  assert.match(sound, /master/, "every voice runs through one master gain");
+
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  assert.match(layer, /sound\.cue\("close"\)/, "the round close has a sting — the cue that lifts 26 heads");
+  assert.match(layer, /sound\.cue\("burst"\)/, "the burst has a jingle");
+  assert.match(layer, /sound\.cue\("tick"\)/, "the answering phase has a bed under it");
+  assert.match(layer, /sound\.cue\("hurry"\)/, "which goes higher and faster over the last ten seconds");
+  assert.match(layer, /sound\.cue\("pop"\)/, "and every animal in the finale pops out loud");
+  assert.match(layer, /subida\.mute/, "the layer has a visible mute");
+  assert.match(layer, /subida\.volume/, "and a volume a big room can be set for");
+  assert.match(layer, /sound\.unlock\(\)/,
+    "the layer unlocks on mount too — a reloaded Run Class never saw the start click");
+
+  // The phones. This is why the mixer lives in the live feature and not in the
+  // quiz: twenty-six phones ticking out of step with the room's screen would be
+  // unusable, so the student's player never imports it at all.
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.doesNotMatch(player, /sound\./, "phones stay silent — all sound is on the room's screen");
+
+  // Autoplay. Browsers drop everything scheduled before a user gesture, and the
+  // professor's click on Start the quiz is the only gesture this screen gets.
+  const endOfClass = readFileSync(frontend("src/screens/instructor/EndOfClass.tsx"), "utf8");
+  const startBody = endOfClass.slice(
+    endOfClass.indexOf("async function onStart()"),
+    endOfClass.indexOf("async function onClose()"));
+  assert.ok(startBody.length > 0, "onStart is where it has always been");
+  assert.match(startBody, /sound\.unlock\(\)/,
+    "the click on Start the quiz is the gesture that unlocks the context for the session");
+
+  // Sound is a SEPARATE AXIS from motion. A professor who turned motion off is
+  // exactly the person who may be leaning on the audio, so no cue sits inside a
+  // reduced-motion gate.
+  const finaleBody = layer.slice(layer.indexOf("const runFinale ="), layer.indexOf("const tick ="));
+  const reducedGate = finaleBody.slice(
+    finaleBody.indexOf("if (!reducedMotion) {"),
+    finaleBody.indexOf("// The podium is the ending"));
+  assert.ok(reducedGate.length > 0, "the finale's reduced-motion gate is where the comment says it is");
+  assert.doesNotMatch(reducedGate, /sound\.cue/, "the pop wave still sounds when motion is off");
+  assert.match(finaleBody, /finaleCandies\(lanes\)/,
+    "and it rides the wave that already exists rather than scheduling a second one");
+  // Searched FORWARD from the burst, because `prevSnap.current = snap` also
+  // appears in the first-payload baseline above it — a bare indexOf finds that
+  // one and slices an empty string that matches nothing and proves nothing.
+  const burstAt = layer.indexOf("if (!prevSnap.current?.burst");
+  const burstBlock = layer.slice(burstAt, layer.indexOf("prevSnap.current = snap;", burstAt));
+  assert.ok(burstBlock.length > 0, "the burst transition is where the comment says it is");
+  assert.match(burstBlock, /sound\.cue\("burst"\)[\s\S]*if \(!reducedMotion\)/,
+    "the burst's jingle sits outside the reduced-motion gate the rain sits inside");
+
+  // The bed. The one-second clock that drives it runs for the whole life of the
+  // layer — it also feeds the chant and the countdown — so a tick gated on the
+  // phase alone would go on ticking through the finale, the podium and for as
+  // long afterwards as the screen stays up.
+  const bed = layer.slice(layer.indexOf("// The ticking bed"), layer.indexOf("// The racer podium"));
+  assert.ok(bed.length > 0, "the ticking bed is where the comment says it is");
+  // Pinned to the EXPRESSIONS, not to the names. A first cut of this section
+  // asserted a bare /stungRound/ and the guard could be deleted outright while
+  // the comment above it still satisfied the match.
+  assert.match(bed, /if \(frozen\.current \|\| !round\) return;/, "the bed stops for good at the freeze");
+  // Scoped to the branch that fires the ticks, because the phase is also read a
+  // few lines above it: matched against the whole bed, this passes even with
+  // the tick's own gate deleted and the bed ticking straight through the break.
+  const whileAnswering = bed.slice(bed.indexOf("if (left > 0) {"), bed.indexOf("if (answeredRound.current"));
+  assert.ok(whileAnswering.length > 0, "the bed's answering branch is where the comment says it is");
+  assert.match(whileAnswering, /round\.phase === "answering"/,
+    "the tick only runs while the room is answering, never through the break");
+  assert.match(whileAnswering, /left <= HURRY_MS/, "and turns into the hurry over the last ten seconds");
+  // One sting per round, however the polls fall. The clock ticks every second
+  // for the whole ten-second break, and a sting the room hears ten times in a
+  // row is a sting the room learns to ignore.
+  assert.match(bed, /stungRound\.current !== round\.index/, "the sting fires at most once for a round");
+  assert.match(bed, /stungRound\.current = round\.index/, "and remembers that it did");
+  // A layer that opened mid-break never watched that round's window run out, so
+  // it does not get to announce the ending of it.
+  assert.match(bed, /answeredRound\.current === round\.index/,
+    "and never stings a round it did not watch the room answer");
+  // remainingMs reads a missing deadline as a SPENT clock, on purpose — a stale
+  // deployment must show 0:00 rather than NaN. Left alone, that puts the sting
+  // at the START of every round on such a payload, ten times a quiz.
+  assert.match(bed, /Number\.isFinite\(Date\.parse\(String\(round\.answer_ends_at \|\| ""\)\)\)/,
+    "and never on a deadline it could not read");
+}
+
+// ------------------------------------------------- two carried-forward fixes
+{
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+
+  // 1. The rain's spans were keyed by index alone. The burst mounts ten and the
+  //    finale twenty-four; the piñata can burst on one poll and the quiz close
+  //    on the next — two seconds into a 2.6-second fall — and Preact then reuses
+  //    spans 0-9 mid-flight, so the finale opens with fourteen candies instead
+  //    of twenty-four and several of them jump sideways.
+  assert.match(layer, /key=\{`\$\{raining\}:\$\{index\}`\}/,
+    "the two rains never share DOM nodes — the switch remounts every span");
+
+  // 2. The room that earned nothing had no ending. There is deliberately no
+  //    podium when nobody has candy (racerPodium filters a racer on zero away
+  //    rather than crowning one), and the 🏆 effect returned early there — so
+  //    nothing wrote a line after the freeze and the one room that most needs
+  //    an ending sat under a stale mid-quiz chant until someone pressed Escape.
+  const closing = layer.slice(
+    layer.indexOf("// The 🏆 line"),
+    layer.indexOf("return (", layer.indexOf("// The 🏆 line")));
+  assert.ok(closing.length > 0, "the closing line's effect is where the comment says it is");
+  assert.match(closing, /if \(!podiumUp\) return;/,
+    "it runs on the finale, not on a podium that a zero-candy room will never raise");
+  assert.match(closing, /subida\.wonThePinata/, "the room that has a winner still names it");
+  assert.match(closing, /subida\.noCandyClose/, "and the room that has none still gets an ending");
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.match(strings, /subida\.noCandyClose/, "in both languages");
+  assert.match(strings, /subida\.mute/, "and so do the sound controls");
+  assert.match(strings, /subida\.unmute/, "both ways round");
+  assert.match(strings, /subida\.volume/, "with the volume labelled for a screen reader");
+}
+
+// ------------------------------------------------- the mixer, executed
+//
+// Grep proves a cue is wired. Only running the module proves the cue is
+// HARMLESS — and harmless is the whole contract here, because Run Class is the
+// only teaching display in the room and a ReferenceError out of a tick would
+// take the screen down in front of the class. There is no browser in Node, so
+// the three environments the mixer has to survive are built by hand: no Web
+// Audio at all, a context that never got its gesture, and a working one.
+{
+  const soundUrl = frontend("src/features/live/sound.ts").href;
+  const CUES = ["tick", "hurry", "close", "burst", "pop"];
+
+  /** A localStorage that lives and dies in this process. */
+  const fakeStorage = (seed = {}) => {
+    const map = new Map(Object.entries(seed));
+    return {
+      map,
+      getItem: (key) => (map.has(key) ? map.get(key) : null),
+      setItem: (key, value) => { map.set(key, String(value)); },
+      removeItem: (key) => { map.delete(key); }
+    };
+  };
+
+  /** An AudioContext that records what it was asked to play instead of playing
+   *  it. Every node the mixer touches is here and nothing else is. */
+  const fakeAudio = (state) => {
+    const ctx = {
+      state,
+      currentTime: 0,
+      destination: {},
+      gains: [],
+      scheduled: [],
+      resume() { ctx.state = "running"; return Promise.resolve(); },
+      createGain() {
+        const node = {
+          gain: {
+            value: 0,
+            ramps: [],
+            setValueAtTime(value, at) { node.gain.ramps.push([value, at]); node.gain.value = value; },
+            exponentialRampToValueAtTime(value, at) { node.gain.ramps.push([value, at]); },
+            setTargetAtTime(value, at) { node.gain.ramps.push([value, at]); node.gain.value = value; },
+            cancelScheduledValues() {}
+          },
+          connect() {}
+        };
+        ctx.gains.push(node);
+        return node;
+      },
+      createOscillator() {
+        const osc = {
+          type: "",
+          hz: [],
+          started: null,
+          stopped: null,
+          frequency: {
+            setValueAtTime(value) { osc.hz.push(value); },
+            exponentialRampToValueAtTime(value) { osc.hz.push(value); }
+          },
+          connect() {},
+          start(at) { osc.started = at; },
+          stop(at) { osc.stopped = at; }
+        };
+        ctx.scheduled.push(osc);
+        return osc;
+      }
+    };
+    return ctx;
+  };
+
+  // ---- 1. A browser with no Web Audio at all. Not a context that fails to
+  // build — the API simply is not there, which is why the module reads the
+  // constructor off `window` rather than as a bare identifier: a bare
+  // `AudioContext` where none exists is a ReferenceError, and that one would be
+  // thrown straight out of the layer's first render.
+  globalThis.window = {};
+  globalThis.localStorage = fakeStorage();
+  const bare = await import(`${soundUrl}?case=no-web-audio`);
+  bare.unlock();
+  for (const name of CUES) bare.cue(name);
+  bare.setMuted(true);
+  bare.setMuted(false);
+  bare.setVolume(0.4);
+  assert.equal(bare.isMuted(), false, "with no Web Audio the mixer still answers the layer's questions");
+  assert.equal(bare.volumeLevel(), 0.4, "and still remembers the level, rather than throwing at a slider");
+
+  // ---- 2. A context that exists but never got its user gesture. Scheduling
+  // into a suspended context does not fail, it QUEUES — so a quiz whose start
+  // click never reached the mixer would empty a whole round of stored ticks the
+  // instant anything resumed it, over the top of whatever was happening then.
+  globalThis.localStorage = fakeStorage();
+  const asleep = fakeAudio("suspended");
+  asleep.resume = () => Promise.resolve(); // a browser holding out for a gesture
+  globalThis.window = { AudioContext: function () { return asleep; } };
+  const locked = await import(`${soundUrl}?case=locked`);
+  locked.unlock();
+  for (const name of CUES) locked.cue(name);
+  assert.equal(asleep.scheduled.length, 0,
+    "not one cue is scheduled into a context that is still waiting for its gesture");
+
+  // ---- 3. A working room.
+  const store = fakeStorage();
+  globalThis.localStorage = store;
+  const audio = fakeAudio("suspended");
+  globalThis.window = { AudioContext: function () { return audio; } };
+  const mixer = await import(`${soundUrl}?case=live`);
+
+  // The defaults. Unmuted, because a screen that comes up silent for no visible
+  // reason reads as broken; and at a real level, because `Number(null)` is 0
+  // and a volume read without a null check would have parked the slider at the
+  // far left on every first load.
+  assert.equal(mixer.isMuted(), false, "the room starts unmuted");
+  assert.equal(mixer.volumeLevel(), 0.7, "at a level, not at zero");
+
+  mixer.unlock();
+  assert.equal(audio.state, "running", "the gesture resumes the context");
+  assert.equal(audio.gains.length, 1, "one master gain, built once");
+  mixer.unlock();
+  assert.equal(audio.gains.length, 1, "and only once, however many gestures follow");
+
+  // Every cue is a finite, audible, self-cleaning envelope.
+  for (const name of CUES) {
+    audio.scheduled.length = 0;
+    mixer.cue(name);
+    assert.ok(audio.scheduled.length > 0, `${name} actually schedules something`);
+    for (const osc of audio.scheduled) {
+      // An oscillator left running is a node that is never collected, and this
+      // screen fires a cue about once a second for ten rounds.
+      assert.ok(osc.started !== null && osc.stopped !== null, `${name}: every oscillator is stopped`);
+      assert.ok(osc.stopped > osc.started, `${name}: and stopped after it starts`);
+      for (const hz of osc.hz) {
+        assert.ok(Number.isFinite(hz) && hz > 20 && hz < 20000, `${name}: ${hz} Hz is inside hearing`);
+      }
+    }
+  }
+
+  // ---- Level. Nobody running this can hear it, so the envelopes get measured
+  // instead. Every note in a cue is summed at the destination: a cue whose
+  // notes add up past 1.0 distorts, and the room hears it through a ceiling
+  // projector speaker, which is exactly where distortion is worst.
+  //
+  // The peaks are NOT summed directly — that is far too pessimistic. Two notes
+  // whose windows overlap by ten milliseconds have both envelopes near zero
+  // there, so the ramps the mixer scheduled are replayed and evaluated.
+  const envelopeAt = (ramps, at) => {
+    if (!ramps.length || at < ramps[0][1]) return 0;
+    let prev = ramps[0];
+    for (const ramp of ramps.slice(1)) {
+      if (at <= ramp[1]) {
+        const width = ramp[1] - prev[1];
+        if (width <= 0) return ramp[0];
+        // exponentialRampToValueAtTime interpolates geometrically.
+        return prev[0] * Math.pow(ramp[0] / prev[0], (at - prev[1]) / width);
+      }
+      prev = ramp;
+    }
+    return 0;
+  };
+  // One note's gain node is created immediately after its oscillator, so the
+  // two lists line up once the master gain at index 0 is stepped over.
+  const notesOf = (name) => {
+    audio.gains.length = 1;
+    audio.scheduled.length = 0;
+    mixer.cue(name);
+    return audio.gains.slice(1).map((node) => node.gain.ramps);
+  };
+  const loudest = (notes, shifts) => {
+    const end = Math.max(...notes.map((ramps) => ramps[ramps.length - 1][1])) + Math.max(...shifts);
+    let peak = 0;
+    for (let at = 0; at <= end; at += 0.001) {
+      let sum = 0;
+      for (const shift of shifts) for (const ramps of notes) sum += envelopeAt(ramps, at - shift);
+      peak = Math.max(peak, sum);
+    }
+    return peak;
+  };
+
+  const level = {};
+  for (const name of CUES) {
+    level[name] = loudest(notesOf(name), [0]);
+    assert.ok(level[name] > 0.05, `${name} is loud enough to be heard at all (${level[name].toFixed(2)})`);
+    assert.ok(level[name] <= 1, `${name} peaks at ${level[name].toFixed(2)} — over 1.0 and a cheap speaker distorts`);
+  }
+  // The cue that matters is the cue that carries. Nothing else on this screen
+  // may be louder than the sting at the round close.
+  for (const name of CUES) {
+    if (name === "close") continue;
+    assert.ok(level.close > level[name],
+      `the sting (${level.close.toFixed(2)}) is louder than ${name} (${level[name].toFixed(2)})`);
+  }
+  // The finale's worst case: sixty lanes compress popDelayMs to about a
+  // twenty-millisecond step, so each pop lands on top of the one before it.
+  // That wave is scheduled by the layer as one cue per animal, so the overlap
+  // has to be summed ACROSS cues rather than inside one.
+  const wave = Array.from({ length: 60 }, (unused, lane) => lane * 0.021);
+  const wavePeak = loudest(notesOf("pop"), wave);
+  assert.ok(wavePeak <= 1, `sixty animals popping at once still fits in the mix (${wavePeak.toFixed(2)})`);
+
+  const span = (name) => {
+    audio.scheduled.length = 0;
+    mixer.cue(name);
+    return {
+      voices: audio.scheduled.length,
+      hz: audio.scheduled[0].hz[0],
+      length: Math.max(...audio.scheduled.map((o) => o.stopped))
+              - Math.min(...audio.scheduled.map((o) => o.started))
+    };
+  };
+  const tick = span("tick");
+  const hurry = span("hurry");
+  const close = span("close");
+  // Faster AND higher, and faster is built into the cue rather than into a
+  // second timer: the layer already runs a one-second clock for the countdown,
+  // and a second interval would drift out of step with the number the room is
+  // reading off the screen.
+  assert.ok(hurry.voices > tick.voices, "the last ten seconds tick faster than the forty");
+  assert.ok(hurry.hz > tick.hz, "and higher");
+  // The sting has to still be sounding while twenty-six heads come up.
+  assert.ok(close.length > tick.length * 4, "the sting rings; the tick does not");
+
+  // Mute is IMMEDIATE, not next-cue. One master gain is what makes that true:
+  // a sting already ringing when the professor reaches for the button is cut
+  // with it, rather than the room going on hearing what was just silenced.
+  const master = audio.gains[0];
+  mixer.setMuted(true);
+  // Defaulted rather than indexed blind: a mute that never touched the gain
+  // leaves this list empty, and the failure should read as the missing ramp it
+  // is, not as a TypeError three lines deep in the harness.
+  const muteRamp = master.gain.ramps[master.gain.ramps.length - 1] || [];
+  assert.equal(muteRamp[0], 0, "muting takes the master gain to zero there and then");
+  audio.scheduled.length = 0;
+  for (const name of CUES) mixer.cue(name);
+  assert.equal(audio.scheduled.length, 0, "and nothing new is scheduled while muted");
+  assert.equal(store.map.get("cp.subida-muted"), "on", "the choice is written down");
+  mixer.setMuted(false);
+  assert.equal(mixer.isMuted(), false, "and comes back");
+
+  mixer.setVolume(0.25);
+  assert.equal(mixer.volumeLevel(), 0.25, "the level is the professor's");
+  assert.equal(Number(store.map.get("cp.subida-volume")), 0.25, "and it is written down too");
+  mixer.setVolume(9);
+  assert.equal(mixer.volumeLevel(), 1, "a level out of range is clamped, never trusted");
+  mixer.setVolume(Number.NaN);
+  assert.equal(mixer.volumeLevel(), 0.7, "and nonsense falls back to the default, not to silence");
+
+  // ---- 4. The reload. A professor who muted last class comes back muted, and
+  // at the level they left — which is the entire reason any of this is stored.
+  globalThis.localStorage = fakeStorage({ "cp.subida-muted": "on", "cp.subida-volume": "0.35" });
+  globalThis.window = { AudioContext: function () { return fakeAudio("running"); } };
+  const reloaded = await import(`${soundUrl}?case=reload`);
+  assert.equal(reloaded.isMuted(), true, "the mute survives a reload");
+  assert.equal(reloaded.volumeLevel(), 0.35, "and so does the level");
+
+  // ---- 5. Storage that throws on every call — Safari in private browsing.
+  // Neither the read at import nor the write on a toggle may take the screen
+  // down with it.
+  globalThis.localStorage = {
+    getItem() { throw new Error("storage denied"); },
+    setItem() { throw new Error("storage denied"); }
+  };
+  globalThis.window = { AudioContext: function () { return fakeAudio("running"); } };
+  const priv = await import(`${soundUrl}?case=private`);
+  assert.equal(priv.isMuted(), false, "storage that throws still reads as unmuted");
+  assert.equal(priv.volumeLevel(), 0.7, "at the default level");
+  priv.unlock();
+  priv.setMuted(true);
+  priv.setVolume(0.5);
+  priv.setMuted(false);
+  for (const name of CUES) priv.cue(name);
+  assert.equal(priv.volumeLevel(), 0.5, "and the choice still holds for this class, unwritten");
+
+  delete globalThis.window;
+  delete globalThis.localStorage;
+}
+
 console.log("verify-quiz-race passed");

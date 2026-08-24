@@ -2110,6 +2110,16 @@ export const strings = {
   "subida.spotCandy": ["Picked up {count} candy", "Se llevó {count} dulces"],
   "subida.podiumTitle": ["The climb", "La subida"],
   "subida.wonThePinata": ["🏆 {name} took the piñata!", "🏆 ¡{name} se llevó la piñata!"],
+  // The ending for a room that earned no candy: no podium is raised there, so
+  // this is the only closing line it gets. It claims nothing beyond the percent
+  // the screen is already showing.
+  "subida.noCandyClose": [
+    "🏁 That's the quiz — the piñata finished at {percent}%.",
+    "🏁 Se acabó el quiz — la piñata quedó en {percent}%."
+  ],
+  "subida.mute": ["Mute", "Silenciar"],
+  "subida.unmute": ["Unmute", "Activar sonido"],
+  "subida.volume": ["Room volume", "Volumen del salón"],
 
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],
