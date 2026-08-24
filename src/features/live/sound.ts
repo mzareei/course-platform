@@ -108,10 +108,16 @@ export function unlock(): void {
     }
     // A context built without a gesture comes up suspended and stays there.
     // resume() does nothing when it is already running, so calling it on every
-    // gesture costs nothing and is what eventually catches the reload case.
+    // gesture costs nothing and is what eventually catches the reload case. It
+    // is also what brings the room back after a browser suspends a backgrounded
+    // tab, which Safari always does and Chrome does for a hidden tab.
     if (ctx.state !== "running") {
       ctx.resume().catch(() => { /* still no gesture; the next one may land */ });
     }
+    // Restores the level silence() took away at the last layer's unmount. The
+    // room's screen is the only caller, and it always unlocks on mount, so this
+    // is where a silenced mixer comes back rather than a flag the cues check.
+    applyLevel();
   } catch {
     // No Web Audio, or a browser that refused to build a context. Every cue
     // below then falls through to nothing.
@@ -164,6 +170,24 @@ function applyLevel(): void {
     master.gain.setTargetAtTime(target, ctx.currentTime, FADE_S);
   } catch {
     master.gain.value = target;
+  }
+}
+
+/** Cut everything that is already sounding.
+ *
+ *  Called when the room's screen closes. The layer can cancel the timers it has
+ *  not fired yet, but a cue already handed to the audio clock is beyond any
+ *  timer — a `close` runs 780 ms and a `burst` 775 ms, and either would ring on
+ *  into a room whose screen the professor just shut. The master gain is the one
+ *  thing that reaches a note already in flight. `unlock()` puts the level back,
+ *  which is why the layer's mount is the other half of this pair. */
+export function silence(): void {
+  if (!ctx || !master) return;
+  try {
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setTargetAtTime(0, ctx.currentTime, FADE_S);
+  } catch {
+    master.gain.value = 0;
   }
 }
 
@@ -242,12 +266,19 @@ const VOICES: Record<CueName, Voice> = {
 
   // The piñata. A four-note major arpeggio climbing an octave, the last note
   // ringing on — the shape a room already reads as "something was won".
+  //
+  // Held at 0.30 rather than the 0.34 it started at because this cue is the one
+  // that can land ON TOP of the sting: the piñata bursts on the settle, which
+  // happens inside the break, so the poll that reports it can arrive while the
+  // 780 ms close is still ringing. At 0.34 the two summed just past 1.0 at full
+  // volume, which is where a cheap projector speaker starts to distort. The
+  // verifier scans every alignment of the pair rather than trusting this note.
   burst: (audio, out, start) => {
     const arpeggio = [523.25, 659.25, 783.99, 1046.5];
     arpeggio.forEach((freq, index) => {
       const last = index === arpeggio.length - 1;
       play(audio, out, start, {
-        type: "triangle", from: freq, at: index * 0.085, ms: last ? 520 : 200, peak: 0.34
+        type: "triangle", from: freq, at: index * 0.085, ms: last ? 520 : 200, peak: 0.3
       });
     });
   },

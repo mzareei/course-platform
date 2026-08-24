@@ -11,6 +11,38 @@ const fn = (name) => backendPath(`supabase/functions/${name}`);
 const backend = (name) => backendUrl(`supabase/functions/${name}`);
 const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 
+/** The text between two anchors, both of which must exist and be in order.
+ *
+ *  slice() with a tail anchor it cannot find returns everything-but-one-character
+ *  rather than nothing, so a `length > 0` guard passes happily on a slice that
+ *  has silently swallowed the rest of the file — and then every assertion under
+ *  it is quietly testing the wrong text. */
+const between = (source, head, tail, what) => {
+  const from = source.indexOf(head);
+  const to = from < 0 ? -1 : source.indexOf(tail, from);
+  assert.ok(from > -1 && to > from, `${what} is where the comment says it is`);
+  return source.slice(from, to);
+};
+
+/** The whole of the first block that opens with `head`, matched by brace depth.
+ *
+ *  A regex cannot prove NESTING, only order of appearance — which is how an
+ *  earlier cut of the sound section passed with a gate emptied out and the two
+ *  calls it was meant to guard left sitting underneath it. */
+const blockAfter = (source, head) => {
+  const at = source.indexOf(head);
+  if (at < 0) return "";
+  let depth = 0;
+  for (let index = at + head.length - 1; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(at, index + 1);
+    }
+  }
+  return "";
+};
+
 // ------------------------------------------------- exit ticket: 40 words
 {
   const migration = readFileSync(backendPath("supabase/migrations/0055_reflection_min_words_40.sql"), "utf8");
@@ -1954,6 +1986,32 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(layer, /subida\.volume/, "and a volume a big room can be set for");
   assert.match(layer, /sound\.unlock\(\)/,
     "the layer unlocks on mount too — a reloaded Run Class never saw the start click");
+  // A mount is NOT a gesture, so the context it builds stays suspended and
+  // every cue is dropped. Three things reach it after that, and the layer needs
+  // all three: a return to the tab (Safari suspends a backgrounded context and
+  // Chrome suspends a hidden one), any click, and any key.
+  assert.match(layer, /addEventListener\("visibilitychange"/,
+    "a professor who switched to the deck and back does not lose the sound for the rest of the quiz");
+  assert.match(layer, /addEventListener\("pointerdown", wake\)/,
+    "and any click on a reloaded Run Class is the gesture that wakes it");
+  // The mute button is a gesture too — but the default is UNMUTED, so an unlock
+  // conditioned on the unmute branch does nothing on the first press and the
+  // reloaded screen needed two presses before any sound worked.
+  const muteHandler = blockAfter(layer, "onClick={() => {");
+  assert.ok(muteHandler.length > 0, "the mute handler is where the markup says it is");
+  assert.match(muteHandler, /^\s*sound\.unlock\(\);$/m,
+    "the mute button unlocks on every press, not only on the way back to unmuted");
+  assert.doesNotMatch(muteHandler, /if \([^\n]*\) sound\.unlock\(\)/,
+    "and never behind a condition");
+  const volumeHandler = blockAfter(layer, "onInput={(event) => {");
+  assert.ok(volumeHandler.length > 0, "the volume handler is where the markup says it is");
+  assert.match(volumeHandler, /sound\.unlock\(\);/,
+    "moving the slider is a gesture too — it is what a professor reaches for when the room cannot hear");
+  // Nothing already handed to the audio clock may ring into a closed screen.
+  // stopBeats() reaches the pops still pending; only the master gain reaches a
+  // close or a burst that is already sounding, and either runs about 780 ms.
+  assert.match(sound, /export function silence/, "the mixer can cut what is already in flight");
+  assert.match(layer, /sound\.silence\(\)/, "and the layer does it on the way out");
 
   // The phones. This is why the mixer lives in the live feature and not in the
   // quiz: twenty-six phones ticking out of step with the room's screen would be
@@ -1964,30 +2022,38 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // Autoplay. Browsers drop everything scheduled before a user gesture, and the
   // professor's click on Start the quiz is the only gesture this screen gets.
   const endOfClass = readFileSync(frontend("src/screens/instructor/EndOfClass.tsx"), "utf8");
-  const startBody = endOfClass.slice(
-    endOfClass.indexOf("async function onStart()"),
-    endOfClass.indexOf("async function onClose()"));
-  assert.ok(startBody.length > 0, "onStart is where it has always been");
-  assert.match(startBody, /sound\.unlock\(\)/,
-    "the click on Start the quiz is the gesture that unlocks the context for the session");
+  const startBody = between(endOfClass, "async function onStart()", "async function onClose()", "onStart");
+  // BEFORE the first await, which is the whole property. After one, the call is
+  // no longer inside the click's own task and Safari refuses to unlock there —
+  // and a bare match on the whole body passes with the call moved below it.
+  // Comments stripped first. The comment above the call explains why it sits
+  // before the await and so contains the word — which put the harness's idea of
+  // "the first await" inside a comment, above the very call it was checking.
+  const startCode = startBody.replace(/\/\/[^\n]*/g, "");
+  const beforeAwait = startCode.slice(0, startCode.indexOf("await "));
+  assert.ok(beforeAwait.length > 0, "onStart still awaits something");
+  assert.match(beforeAwait, /sound\.unlock\(\)/,
+    "the click on Start the quiz unlocks the context before it awaits anything");
 
   // Sound is a SEPARATE AXIS from motion. A professor who turned motion off is
   // exactly the person who may be leaning on the audio, so no cue sits inside a
   // reduced-motion gate.
-  const finaleBody = layer.slice(layer.indexOf("const runFinale ="), layer.indexOf("const tick ="));
-  const reducedGate = finaleBody.slice(
-    finaleBody.indexOf("if (!reducedMotion) {"),
-    finaleBody.indexOf("// The podium is the ending"));
-  assert.ok(reducedGate.length > 0, "the finale's reduced-motion gate is where the comment says it is");
+  const finaleBody = between(layer, "const runFinale =", "const tick =", "the finale");
+  const reducedGate = between(finaleBody, "if (!reducedMotion) {", "// The podium is the ending",
+    "the finale's reduced-motion gate");
   assert.doesNotMatch(reducedGate, /sound\.cue/, "the pop wave still sounds when motion is off");
-  assert.match(finaleBody, /finaleCandies\(lanes\)/,
-    "and it rides the wave that already exists rather than scheduling a second one");
-  // Searched FORWARD from the burst, because `prevSnap.current = snap` also
-  // appears in the first-payload baseline above it — a bare indexOf finds that
-  // one and slices an empty string that matches nothing and proves nothing.
-  const burstAt = layer.indexOf("if (!prevSnap.current?.burst");
-  const burstBlock = layer.slice(burstAt, layer.indexOf("prevSnap.current = snap;", burstAt));
-  assert.ok(burstBlock.length > 0, "the burst transition is where the comment says it is");
+  // Not merely "finaleCandies is called". A parallel `later(index * 50, …)`
+  // alongside an untouched visual call would satisfy that and drift straight
+  // out of step with the animals it is supposed to be popping.
+  assert.equal((finaleBody.match(/finaleCandies\(/g) || []).length, 1, "one wave, computed once");
+  assert.match(finaleBody, /for \(const candy of candies\) later\(candy\.delayMs, \(\) => sound\.cue\("pop"\)\);/,
+    "and the pop rides ITS delays, not a schedule of its own");
+  assert.match(reducedGate, /setFloats\(candies\)/, "the picture rides the same list");
+  // `between` searches FORWARD for the tail, which matters here: the anchor
+  // `prevSnap.current = snap` also appears in the first-payload baseline ABOVE
+  // the burst, and a bare indexOf finds that one and slices nothing.
+  const burstBlock = between(layer, "if (!prevSnap.current?.burst", "prevSnap.current = snap;",
+    "the burst transition");
   assert.match(burstBlock, /sound\.cue\("burst"\)[\s\S]*if \(!reducedMotion\)/,
     "the burst's jingle sits outside the reduced-motion gate the rain sits inside");
 
@@ -1995,8 +2061,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // layer — it also feeds the chant and the countdown — so a tick gated on the
   // phase alone would go on ticking through the finale, the podium and for as
   // long afterwards as the screen stays up.
-  const bed = layer.slice(layer.indexOf("// The ticking bed"), layer.indexOf("// The racer podium"));
-  assert.ok(bed.length > 0, "the ticking bed is where the comment says it is");
+  const bed = between(layer, "// The ticking bed", "// The racer podium", "the ticking bed");
   // Pinned to the EXPRESSIONS, not to the names. A first cut of this section
   // asserted a bare /stungRound/ and the guard could be deleted outright while
   // the comment above it still satisfied the match.
@@ -2004,11 +2069,18 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // Scoped to the branch that fires the ticks, because the phase is also read a
   // few lines above it: matched against the whole bed, this passes even with
   // the tick's own gate deleted and the bed ticking straight through the break.
-  const whileAnswering = bed.slice(bed.indexOf("if (left > 0) {"), bed.indexOf("if (answeredRound.current"));
-  assert.ok(whileAnswering.length > 0, "the bed's answering branch is where the comment says it is");
-  assert.match(whileAnswering, /round\.phase === "answering"/,
-    "the tick only runs while the room is answering, never through the break");
-  assert.match(whileAnswering, /left <= HURRY_MS/, "and turns into the hurry over the last ten seconds");
+  const whileAnswering = between(bed, "if (left > 0) {", "if (answeredRound.current",
+    "the bed's answering branch");
+  // Matched by BRACE DEPTH, not by order of appearance. A regex cannot prove
+  // nesting: "the phase check comes before the cues" passes just as happily
+  // with an empty phase check left sitting above two cues that escaped it.
+  const answeringGate = blockAfter(whileAnswering, 'if (round.phase === "answering") {');
+  assert.ok(answeringGate.length > 0, "the phase gate is where the comment says it is");
+  assert.match(answeringGate, /sound\.cue\("hurry"\)/, "the hurry is inside the phase gate");
+  assert.match(answeringGate, /sound\.cue\("tick"\)/, "and so is the tick");
+  assert.match(answeringGate, /left <= HURRY_MS/, "which one depends on the last ten seconds");
+  assert.equal((whileAnswering.match(/sound\.cue\(/g) || []).length, 2,
+    "and there is no third cue in this branch that could escape the gate");
   // One sting per round, however the polls fall. The clock ticks every second
   // for the whole ten-second break, and a sting the room hears ten times in a
   // row is a sting the room learns to ignore.
@@ -2042,10 +2114,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   //    rather than crowning one), and the 🏆 effect returned early there — so
   //    nothing wrote a line after the freeze and the one room that most needs
   //    an ending sat under a stale mid-quiz chant until someone pressed Escape.
-  const closing = layer.slice(
-    layer.indexOf("// The 🏆 line"),
-    layer.indexOf("return (", layer.indexOf("// The 🏆 line")));
-  assert.ok(closing.length > 0, "the closing line's effect is where the comment says it is");
+  const closing = between(layer, "// The 🏆 line", "return (", "the closing line's effect");
   assert.match(closing, /if \(!podiumUp\) return;/,
     "it runs on the finale, not on a podium that a zero-candy room will never raise");
   assert.match(closing, /subida\.wonThePinata/, "the room that has a winner still names it");
@@ -2200,17 +2269,19 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // The peaks are NOT summed directly — that is far too pessimistic. Two notes
   // whose windows overlap by ten milliseconds have both envelopes near zero
   // there, so the ramps the mixer scheduled are replayed and evaluated.
+  // Indexed rather than sliced: the concurrent scan below evaluates this a few
+  // million times, and an allocation per call turns a check into a wait.
   const envelopeAt = (ramps, at) => {
     if (!ramps.length || at < ramps[0][1]) return 0;
-    let prev = ramps[0];
-    for (const ramp of ramps.slice(1)) {
+    for (let index = 1; index < ramps.length; index += 1) {
+      const prev = ramps[index - 1];
+      const ramp = ramps[index];
       if (at <= ramp[1]) {
         const width = ramp[1] - prev[1];
         if (width <= 0) return ramp[0];
         // exponentialRampToValueAtTime interpolates geometrically.
         return prev[0] * Math.pow(ramp[0] / prev[0], (at - prev[1]) / width);
       }
-      prev = ramp;
     }
     return 0;
   };
@@ -2222,12 +2293,17 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
     mixer.cue(name);
     return audio.gains.slice(1).map((node) => node.gain.ramps);
   };
-  const loudest = (notes, shifts) => {
-    const end = Math.max(...notes.map((ramps) => ramps[ramps.length - 1][1])) + Math.max(...shifts);
+  /** The loudest instant across a set of [cue, offsets] groups, which is what
+   *  the destination actually sums. Cues on this screen DO overlap. */
+  const loudest = (groups) => {
+    const end = Math.max(...groups.map(([notes, shifts]) =>
+      Math.max(...notes.map((ramps) => ramps[ramps.length - 1][1])) + Math.max(...shifts)));
     let peak = 0;
     for (let at = 0; at <= end; at += 0.001) {
       let sum = 0;
-      for (const shift of shifts) for (const ramps of notes) sum += envelopeAt(ramps, at - shift);
+      for (const [notes, shifts] of groups) {
+        for (const shift of shifts) for (const ramps of notes) sum += envelopeAt(ramps, at - shift);
+      }
       peak = Math.max(peak, sum);
     }
     return peak;
@@ -2235,7 +2311,7 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 
   const level = {};
   for (const name of CUES) {
-    level[name] = loudest(notesOf(name), [0]);
+    level[name] = loudest([[notesOf(name), [0]]]);
     assert.ok(level[name] > 0.05, `${name} is loud enough to be heard at all (${level[name].toFixed(2)})`);
     assert.ok(level[name] <= 1, `${name} peaks at ${level[name].toFixed(2)} — over 1.0 and a cheap speaker distorts`);
   }
@@ -2251,8 +2327,24 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   // That wave is scheduled by the layer as one cue per animal, so the overlap
   // has to be summed ACROSS cues rather than inside one.
   const wave = Array.from({ length: 60 }, (unused, lane) => lane * 0.021);
-  const wavePeak = loudest(notesOf("pop"), wave);
+  const wavePeak = loudest([[notesOf("pop"), wave]]);
   assert.ok(wavePeak <= 1, `sixty animals popping at once still fits in the mix (${wavePeak.toFixed(2)})`);
+
+  // The two loud cues can be SOUNDING TOGETHER, so measuring each alone and
+  // calling the total safe proves nothing. The piñata bursts on the settle,
+  // which happens inside the break, so the poll that reports it can arrive
+  // while the 780 ms sting is still ringing. Every alignment of the pair is
+  // scanned rather than the one that happens to be convenient.
+  const closeNotes = notesOf("close");
+  const burstNotes = notesOf("burst");
+  let together = 0;
+  for (let offset = 0; offset <= 0.8; offset += 0.005) {
+    together = Math.max(together, loudest([[closeNotes, [0]], [burstNotes, [offset]]]));
+  }
+  assert.ok(together <= 1,
+    `a burst landing on top of the sting still fits in the mix (${together.toFixed(2)})`);
+  assert.ok(together > level.close,
+    "and the scan really does find an alignment where the two overlap");
 
   const span = (name) => {
     audio.scheduled.length = 0;
@@ -2300,6 +2392,19 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(mixer.volumeLevel(), 1, "a level out of range is clamped, never trusted");
   mixer.setVolume(Number.NaN);
   assert.equal(mixer.volumeLevel(), 0.7, "and nonsense falls back to the default, not to silence");
+
+  // silence(), for the screen the professor just closed. The layer can cancel
+  // the pops it has not fired yet, but a close already handed to the audio
+  // clock runs 780 ms and no timer can reach it.
+  mixer.setVolume(0.6);
+  const beforeSilence = master.gain.ramps.length;
+  mixer.silence();
+  assert.ok(master.gain.ramps.length > beforeSilence, "silence() reaches the master gain");
+  assert.equal(master.gain.ramps[master.gain.ramps.length - 1][0], 0, "and takes it to zero");
+  audio.scheduled.length = 0;
+  mixer.unlock();
+  assert.equal(master.gain.ramps[master.gain.ramps.length - 1][0], 0.6,
+    "and the next mount puts the level back — a silenced mixer must not open the next quiz silent");
 
   // ---- 4. The reload. A professor who muted last class comes back muted, and
   // at the level they left — which is the entire reason any of this is stored.

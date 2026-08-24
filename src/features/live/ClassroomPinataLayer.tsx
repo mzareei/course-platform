@@ -162,13 +162,44 @@ export function ClassroomPinataLayer({
   const answeredRound = useRef(-1);
   const reducedMotion = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Autoplay. Browsers drop everything scheduled before a user gesture, and the
-  // professor's click on Start the quiz is the gesture this screen is built
-  // around — EndOfClass unlocks the context inside that click handler. This is
-  // the fallback for the other way the layer opens: Run Class reloaded with a
-  // quiz already running, where nobody has clicked anything. It costs nothing
-  // when the context is already open, and the mute button unlocks too.
-  useEffect(() => { sound.unlock(); }, []);
+  // Keeping the room's audio awake, which is three separate problems.
+  //
+  // 1. AUTOPLAY. Browsers drop everything scheduled before a user gesture, and
+  //    the professor's click on Start the quiz is the gesture this screen is
+  //    built around — EndOfClass unlocks the context inside that handler. The
+  //    call here is the fallback for the other way the layer opens: Run Class
+  //    reloaded with a quiz already running, where nobody clicked anything.
+  //    That mount is NOT a gesture, so resume() is refused and the context
+  //    stays suspended, which is why 3 below exists.
+  // 2. SUSPENSION. Safari suspends the context when the tab backgrounds, and
+  //    Chrome does for a hidden tab with no active source. A professor who
+  //    switches to the lecture deck and back would otherwise get silence for
+  //    the rest of the quiz with nothing on screen to explain it — the exact
+  //    failure this whole task exists to prevent. Coming back into view is not
+  //    a gesture, but a context that was unlocked once resumes without one.
+  // 3. THE RELOADED SCREEN. Any click or key anywhere is a gesture, so the
+  //    professor's first interaction of any kind — the mute button, Escape,
+  //    a stray click on the projector's screen — is the one that wakes it.
+  //    unlock() is cheap and idempotent, so these fire for the layer's life
+  //    rather than trying to guess when the context finally came up.
+  useEffect(() => {
+    sound.unlock();
+    const wake = () => { sound.unlock(); };
+    const onVisible = () => { if (!document.hidden) sound.unlock(); };
+    document.addEventListener("visibilitychange", onVisible);
+    document.addEventListener("pointerdown", wake);
+    document.addEventListener("keydown", wake);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("pointerdown", wake);
+      document.removeEventListener("keydown", wake);
+      // Nothing already handed to the audio clock may ring on into a screen the
+      // professor has just closed. stopBeats() cancels the pops still pending,
+      // but a close or a burst already scheduled is up to 780 ms long and no
+      // timer can reach it — only the master gain can.
+      sound.silence();
+    };
+  }, []);
 
   useEffect(() => {
     layerRef.current?.focus();
@@ -771,19 +802,24 @@ export function ClassroomPinataLayer({
         <div class="subida-sound">
           <button class="btn" type="button"
             onClick={() => {
+              // Unconditionally, not only on the way back to unmuted. The
+              // default is UNMUTED, so a conditional unlock does nothing on the
+              // first press and a reloaded Run Class needed two presses of this
+              // button before any sound worked. Unlocking while muted is
+              // harmless: the master gain is already at zero.
+              sound.unlock();
               const next = !muted;
               sound.setMuted(next);
               setMuted(next);
-              // This press is itself a user gesture, which is the only reason
-              // unlock() is here: a reloaded Run Class whose context never got
-              // one wakes up the first time the professor touches this button.
-              if (!next) sound.unlock();
             }}>
             {muted ? t("subida.unmute") : t("subida.mute")}
           </button>
           <input class="subida-volume" type="range" min="0" max="100" step="5"
             value={Math.round(volume * 100)} aria-label={t("subida.volume")}
             onInput={(event) => {
+              // Moving the slider is a gesture too, and it is the one a
+              // professor reaches for when the room says it cannot hear.
+              sound.unlock();
               const next = Number((event.currentTarget as HTMLInputElement).value) / 100;
               sound.setVolume(next);
               setVolume(next);
