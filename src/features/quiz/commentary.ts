@@ -99,6 +99,29 @@ export function raceEvents(prev: RaceSnap | null, curr: RaceSnap, lang: Lang): s
   return lines;
 }
 
+/** How the room reads out the round that just closed: "🍬 19 de 26 le pegaron a
+ *  la piñata".
+ *
+ *  `correct` is the server's `round_correct` — students who got the closed
+ *  round right — and `total` is how many started the quiz. It names only the
+ *  hits. The subtraction is right there for anyone who wants it, but nineteen
+ *  is what the room hears, and the seven who missed have already been told
+ *  privately on their own phone during the break. Saying the miss count out
+ *  loud would put a number on the room's screen that belongs to those seven
+ *  and nobody else — the same "cheer, never shame" rule the chants follow, and
+ *  the reason the verifier sweeps this line for banned words too.
+ *
+ *  The screen's HUD already prints this fact through `t("subida.roundGotIt")`,
+ *  so this line has no caller yet — it is the announcer's wording of the same
+ *  number, kept here so the announcer feed can carry it without a second
+ *  template turning up somewhere else. Keep the two sayings consistent if
+ *  either is reworded. */
+export function roundHitLine(correct: number, total: number, lang: Lang): string {
+  return lang === "es"
+    ? `🍬 ${correct} de ${total} le pegaron a la piñata`
+    : `🍬 ${correct} of ${total} hit the piñata`;
+}
+
 /** A cheer for the back of the pack: a racer from the bottom third of the
  *  climb by candy (started, not finished), never the same one twice in a row.
  *  Spanish in both languages — that is the joke. */

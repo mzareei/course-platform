@@ -6,6 +6,208 @@ the UI is silently wrong.**
 
 ---
 
+## 94. The frontend deploys itself; the edge functions do not
+
+**A standing trap on this repo pair, and the reason `feat/la-subida` is built
+but not pushed.**
+
+Cloudflare Pages rebuilds `course-platform` on every `git push`. Supabase edge
+functions in `mzareei.github.io` deploy only when a person runs `npx supabase
+functions deploy <name>`, one function at a time, by hand. So the two halves of
+a feature are never released together unless someone makes them be, and the
+default — push the frontend, deploy the backend later — is the wrong order.
+
+Push-first is the expensive direction. A new bundle reading a field the
+deployed function does not send gets `undefined`, and in a live classroom that
+is a room-wide freeze in front of thirty students, with no rollback faster than
+a redeploy. Deploy-first degrades quietly instead: an old bundle ignores fields
+it does not know about.
+
+**Rule:** database, then functions, then frontend. Write that order into the
+status entry for the change, naming the migration and each function by name, and
+check — don't assume — that old-bundle-with-new-backend really is harmless. When
+a change spans both repos, "done" means *deployed, in that order*, not
+*committed*. Related: pitfall #79, an edge function bundles `_shared` at deploy
+time, so a fixed shared file ages every importer you don't redeploy.
+
+---
+
+## 93. Shipping the explanation with the question hands out the answer key
+
+**Found 2026-08-21 in review, before it reached a class.**
+
+The post-quiz review list needs each question's `explanation`. The obvious
+implementation adds `explanation, explanation_es` to the columns `start_attempt`
+already selects and attaches them to every question. It works. The review list
+renders perfectly.
+
+It also hands every student all ten explanations **before question 1**. An
+explanation states which option is correct and why, so anyone with dev tools
+open — or just reading the network tab — has the answer key at the moment the
+quiz starts. This is the same leak the options select has always been careful
+to avoid: it deliberately never selects `is_correct`.
+
+**Fix:** explanations travel with the **grade**, never with the questions.
+`gradeResponses` selects them after grading and returns them beside the
+`correct` map, `submit_attempt` forwards them, and the player merges them into
+its question list post-grade. `start_attempt`'s payload and the frozen
+`questions_json` carry no explanation column at all — asserted in both
+directions, so neither re-adding the column nor dropping the post-grade wiring
+passes.
+
+**Rule:** every field added to a pre-answer payload is a field the student can
+read before answering. Ask of any new column: does this, alone or next to what
+is already there, narrow down the correct option? Explanation text, per-option
+feedback, points-by-option, and "why this is wrong" hints all fail that test.
+
+---
+
+## 92. A query with no `ORDER BY` has no order, so payload index is not identity
+
+**Found 2026-08-21 while building the room screen's per-racer animations.**
+
+Postgres returns rows in whatever order it happens to find them, and it is free
+to return a different one for the same query a second later — especially on a
+table being rewritten. `course-class-quiz`'s `race` action selects the room's
+attempts with **no `ORDER BY`**, and `settleRoom` rewrites those same rows at
+every round boundary. So the racers arrive in a different array order from one
+poll to the next, for no reason visible from the frontend.
+
+Anything keyed, staggered, positioned or animated by **payload index** then
+attaches to the wrong racer: a "+2" earned by the sloth floats over the jaguar,
+and the field reshuffles its lanes mid-climb. It is invisible in a two-student
+test and unmissable in a room of twenty-six.
+
+**Fix, frontend:** lane identity is resolved once from `racer_name` — assigned
+at join, never changed — and passed into every module that needs it, so no
+module re-derives it and none can disagree about who is who. The verifier runs
+the same round twice with the payload shuffled and asserts the two results are
+identical down to each label's delay.
+
+**Fix, backend — still open:** the missing `ORDER BY` is a real defect worth
+fixing on its own.
+
+**Rule:** never let a UI derive identity from array position unless the query
+that built the array sorts on something stable. Here the browser never queries a
+table, so "the query" is always inside somebody else's edge function — read its
+actual `select(...)` before trusting the order of anything it returns.
+
+---
+
+## 91. A verifier slice guarded only by `length > 0` proves nothing
+
+**Found 2026-08-24 during a mutation run, in the verifier itself.**
+
+Several sections of `verify-quiz-race.mjs` assert against a *slice* of a source
+file — one function's body, the inside of one gate — cut between two anchor
+comments and guarded with `assert.ok(slice.length > 0)`. That guard is
+worthless. `indexOf` returns `-1` for an anchor it cannot find, and
+`source.slice(from, -1)` returns **everything but the last character**, not an
+empty string. Renaming or deleting a tail anchor therefore repoints a dozen
+assertions at the whole rest of the file — where the strings they search for
+very probably still occur — and the verifier stays green while testing nothing.
+The same shape had already bitten from the other end: an anchor string that also
+appeared *above* the block being cut, so `indexOf` found the wrong occurrence
+first and sliced an empty string that matched nothing and proved nothing.
+
+**Fix:** one helper at the top of the file that asserts both anchors exist and
+are in order, and searches forward from the head:
+
+```js
+const between = (source, head, tail, what) => {
+  const from = source.indexOf(head);
+  const to = from < 0 ? -1 : source.indexOf(tail, from);
+  assert.ok(from > -1 && to > from, `${what} is where the comment says it is`);
+  return source.slice(from, to);
+};
+```
+
+The same file's `blockAfter()` exists for the sibling trap: a regex can prove
+order of appearance but never **nesting**, which is how an earlier cut of the
+sound section passed with its gate emptied out and the two calls it was meant to
+guard left sitting underneath it. Brace-depth matching is the answer there.
+
+**Rule:** a verifier that slices text needs a test for its own slice, and "did I
+get any text back" is not it. Mutate an anchor and confirm the section actually
+goes red.
+
+---
+
+## 90. A migration number that is already taken is not untidy, it is a migration that never runs
+
+**Found 2026-08-21.** The plan named `0057_quiz_la_subida.sql`. `0057` had been
+claimed hours earlier by `0057_quiz_attempt_resume.sql`, the same-day
+kick-resume hotfix.
+
+`supabase db push` records applied migrations **by version prefix**. Pushing a
+second `0057` against a project where the first is already applied gets it
+treated as already applied and skipped. The push reports success. The columns —
+`candy`, `correct_count`, `round_answer_times`, `settled_through` — never exist,
+and every function that selects them starts failing against a database that
+looks perfectly healthy.
+
+**Fix:** `ls supabase/migrations/ | tail` before naming the file, and renumber
+immediately rather than "sort it out at push time". The file shipped as
+`0058_quiz_la_subida.sql`, with the reason written into its header comment so
+nobody renumbers it back.
+
+**Rule:** a plan written on Monday can name a number that a Tuesday hotfix has
+taken. The plan is a suggestion; the migrations directory is the authority.
+
+---
+
+## 89. A pure module the verifier executes must not contain a single runtime import
+
+**Found 2026-08-21 building `src/features/live/floats.ts`.**
+
+`tools/verify-quiz-race.mjs` imports the pure frontend modules and *runs* them
+in Node rather than grepping their text — that is what makes them tests rather
+than assertions about strings. But Node cannot resolve a relative extensionless
+specifier out of a `.ts` file: `import { x } from "../../api/quiz"` throws
+`ERR_MODULE_NOT_FOUND` under Node while Vite and `tsc` both resolve it happily.
+So the app builds, the app runs, and the only thing that breaks is the verifier
+— with an error naming a module path rather than the rule that was broken.
+
+`import type` is fine; it is erased before Node ever sees it. A **value** import
+is not. `floats.ts` therefore receives lane identity as a parameter instead of
+importing anything to derive it, which is the better design anyway, and the
+verifier asserts the file contains no runtime import at all.
+
+**Rule:** if a module is in the executed set, keep it type-import-only and pin
+that with an assertion. Otherwise the next person to add one convenient import
+turns a real test into a red build for a reason the error message does not
+explain.
+
+---
+
+## 88. `"🍬🍭".split("")` splits surrogate pairs, so ten candies rain as twenty broken glyphs
+
+**Found 2026-08-24 while reusing the burst's candy rain for the finale.**
+
+The piñata burst's rain was written as
+`"🍬🍭🍬🍫🍬🍭🍬🍭🍫🍬".split("").map(…)`, which reads as "ten candies."
+`String.prototype.split("")` splits by UTF-16 **code units**, and every one of
+those emoji is a surrogate pair:
+
+```
+$ node -e 'console.log("🍬🍭".split("").length, Array.from("🍬🍭").length)'
+4 2
+```
+
+So the rain drew twenty lone surrogates — twenty tofu boxes — on the projector,
+in front of the class, for as long as it shipped. Nothing threw and nothing
+warned: the array had a length, the map ran, the elements rendered. They just
+were not characters.
+
+**Fix:** `Array.from(str)` or `[...str]`, both of which iterate code points.
+
+**Rule:** this applies to every per-character operation on text you did not
+prove is ASCII — reversing, truncating to N characters, or using `.length` as a
+count of what a person sees. In this codebase the UI strings are bilingual and
+full of emoji, so `split("")` is essentially never right.
+
+---
+
 ## 87. A permission bypass makes every group-scoped screen lie, silently
 
 **Reported 2026-08-18: "I select Group 501 and I see all four of my lectures."**

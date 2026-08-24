@@ -214,6 +214,23 @@ const blockAfter = (source, head) => {
   for (const line of events) {
     for (const word of c.BANNED_WORDS) assert.ok(!line.toLowerCase().includes(word), `banned word in event: ${line}`);
   }
+
+  // The round's hit count. The room reads it out loud between questions, so it
+  // states only how many DID hit — never how many missed. The screen's HUD
+  // prints the same fact through t("subida.roundGotIt"); this is the
+  // announcer's wording of it, and both must stay on the cheering side.
+  assert.equal(c.roundHitLine(19, 26, "es"), "🍬 19 de 26 le pegaron a la piñata", "the round's hit count reads plainly");
+  assert.equal(c.roundHitLine(19, 26, "en"), "🍬 19 of 26 hit the piñata", "and in English");
+
+  // Ten thousand generated lines, no banned word anywhere. 0 of 26 and 26 of 26
+  // are both in the sweep: the two ends are where a "nobody" or an "everyone but"
+  // phrasing would be tempting, and both are exactly where it must not appear.
+  const hitLines = [];
+  for (let s = 0; s < 10_000; s++) hitLines.push(c.roundHitLine(s % 27, 26, s % 2 ? "es" : "en"));
+  const joinedHits = hitLines.join(" ").toLowerCase();
+  for (const banned of c.BANNED_WORDS) {
+    assert.ok(!joinedHits.includes(banned), `no generated line may contain "${banned}"`);
+  }
 }
 
 // ------------------------------------------------- the room's screen

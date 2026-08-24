@@ -1,6 +1,162 @@
 # Status
 
-**Last updated:** 2026-08-20
+**Last updated:** 2026-08-24
+
+### The end-of-class quiz is one room clock now, and the screen is La Subida (2026-08-24)
+
+**Built on `feat/la-subida` in both repos. Nothing is deployed, and no database
+command has been run.** Read "Deploy shape" at the end of this section before
+pushing anything — the frontend deploys itself on `git push` and the edge
+functions do not, so pushing first freezes the room (pitfall #94).
+
+The quiz ran with a real class on 2026-08-20. Separately from the kick-and-
+reload incident recorded in the entry below, it failed *as a room activity*, for
+one reason: every phone ran its own countdown from the moment its student tapped
+"Let's go". No two students were ever on the same question, nobody had a spare
+second to look up, and the room's screen played to an audience of one. Twelve
+tasks replaced that with a clock the whole room shares, a ten-second break where
+each phone reveals its own answer, and a screen the class can watch during it.
+
+**The room clock replaces the carry-over budget.** `_shared/rounds.ts` (backend)
+is now the only schedule in the system. The activity instance's `started_at`
+anchors it: round *k* takes answers for **40 s** from `started_at + k × 50 s`,
+then the room breaks for **10 s**. The per-phone carry-over budget is deleted —
+`src/features/quiz/budget.ts` is gone, and with it the 60-second per-question
+ceiling described in the 2026-08-20 entry below. That entry is now history, not
+current behaviour. Its frontend replacement, `src/features/quiz/rounds.ts`,
+holds **no duration at all**: it only turns the server's absolute timestamps
+into a countdown, because a duration stored in both repos drifts the moment one
+of them ships without the other.
+
+**Ten questions, dealt 4 easy / 3 medium / 3 hard, shuffled fairly.**
+`_shared/shuffle.ts` holds Fisher-Yates and `dealQuestions`, used for both the
+question deal and the option order. The old `values.sort(() => Math.random() -
+0.5)` was never a shuffle: the comparator is inconsistent, the result is
+measurably biased, and a student who noticed "the correct answer is rarely
+first" was reading a real signal.
+
+**Grading counts every question dealt, and speed no longer moves a grade.** The
+phone now submits all ten questions, answered or not, so a question left blank
+grades as wrong instead of dropping out of the denominator.
+`maxSpeedBonusPercent` went **5 → 0** in `course-activity-attempt`: under one
+room clock every student gets the same forty seconds, so "fast" stopped saying
+anything about the student that belongs in a grade. It is kept as a zero rather
+than deleted, so the score payload's shape is unchanged for its callers.
+
+**Candy is the race, and only the race.** A correct answer pays 1 candy, a
+correct answer inside the first **20 s** pays 2. That is the one place speed
+still counts, it never reaches the gradebook, and it is the number the climb is
+drawn from.
+
+**The piñata cracks on correctness, and bursts at 70%.** `_shared/pinata.ts`
+takes `correct` where it used to take `hits`. The old formula counted every
+answer given, so the piñata burst whether or not the class knew anything. The
+threshold came down **85 → 70** to keep a real class within reach of a number
+that now has to be earned.
+
+**La Subida — the room's screen.** `ClassroomPinataLayer.tsx`, rebuilt on
+`src/features/live/subida.ts` and `floats.ts`. One rope per student, assigned
+once and never changed. **Height on the rope is candy; size is cumulative
+correct answers**, so nothing on this screen ever shrinks — a small animal has
+answered less, it is not a student being pointed at. The top three keep a
+permanent rail. Difficulty is never shown. Each break is choreographed in three
+beats — flash the lanes that scored, then everyone climbs together, then one
+spotlight — with labels that float up and fade (numbers flat, phrases vertical,
+nothing negative ever floats). At the close every animal pops, candy rains, the
+racer podium runs, and **Show the winners** still opens the score podium after
+it.
+
+**Sound.** `src/features/live/sound.ts` — synthesized with the Web Audio API,
+never an audio file, because Kahoot's music is licensed and a tick that
+accelerates is a few dozen lines with no licensing question attached. Five
+cues; the one that matters is `close`, the two-note sting at the instant a round
+shuts, because ten rounds of visual choreography reach nobody whose head is down
+on a phone. Mute and volume persist in `localStorage` (`cp.subida-muted`,
+`cp.subida-volume`) and survive a reload. Every export is a no-op when muted,
+un-gestured, or unsupported: Run Class is the only teaching display in the room,
+and a screen that white-screens over a missing oscillator is far worse than a
+silent one.
+
+**The post-quiz review.** Under the exit ticket, each student now sees their ten
+questions with the correct option and its explanation. The explanations arrive
+**with the grade**, never with the questions — see pitfall #93.
+
+---
+
+#### Three things that will look like regressions and are not
+
+**1. Class averages will drop, and that is the change working.** The
+denominator moved from *questions answered* to *questions dealt*. A student who
+answered six of ten and got five right used to be graded on correctness of 83%
+(five of the six they touched); the same performance now grades 50%. Nothing
+miscounted — the professor's rule is that a question
+you did not answer is a question you got wrong, and the room clock is what makes
+that rule fair, because every student is given every question at the same second
+whether or not they use it. Do not "fix" a low average by restoring the old
+denominator without deciding to reverse that rule first.
+
+**2. Grading no longer trusts the phone's submit payload.** The break reveals
+the correct answer to the phone *mid-quiz*, so anything the phone sends
+afterwards could have been written with the answer key in hand — a phone-trusted
+grade was fully forgeable. The mark is now computed from the server's own record
+of what was pinged (`round_answer_times`, stamped server-side on the first
+answer it sees, first-answer-wins), and each answer only counts if its stamp
+falls inside that round's window. The client's payload is still stored and still
+compared, but as an audit trail, not as an authority.
+
+Two constants in `_shared/rounds.ts` are **one decision and must be read
+together**: `ANSWER_GRACE_MS = 2000` is how long past the countdown the server
+still accepts an answer (a tap at 39.5 s whose ping crosses classroom wifi in
+700 ms is network luck, not a wrong answer), and `REVEAL_DELAY_MS = 3000` is how
+long the phone must wait before it may be shown the correct option.
+**`REVEAL_DELAY_MS` must stay strictly greater than `ANSWER_GRACE_MS`.** The
+grace is only safe because an answer accepted inside it provably predates any
+reveal; invert the two and a scripted client can read the answer and ping it
+back while the window is still open, which is exactly the forgery this rebuild
+closed. `verify-quiz-race` asserts the relation — but if you are changing either
+number, change them as a pair.
+
+**3. A student who opens the quiz and never answers scores 0% and is kept off
+the ranking.** Both halves are deliberate. The grade is a real 0% because every
+dealt question is submitted and counted (see item 1). The ranking excludes them
+because `_shared/quiz-rank.ts` has always held that *"a student who opened the
+quiz and abandoned it is not ranked last — they are not ranked at all,"* and the
+"of 24" a student reads should be the number of people who actually finished.
+Before this branch, an abandoned attempt simply never reached a submitted
+status, so filtering on status was enough; now it does reach one, so "finished"
+takes two conditions — a submitted/late status **and** `progress_answered > 0`.
+Only the ranking is affected. The gradebook still sees the honest 0%.
+
+---
+
+#### Deploy shape — nothing here is live yet
+
+Order matters, and it is the reverse of the usual instinct:
+
+1. `npx supabase db push` — migration **0058** (`0058_quiz_la_subida.sql`) adds
+   `candy`, `correct_count`, `round_answer_times`, `settled_through` to
+   `student_attempts`. It is numbered 0058 rather than 0057 because 0057 was
+   taken the same day by the kick-resume hotfix; see pitfall #90 for why that
+   matters more than tidiness.
+2. `npx supabase functions deploy course-activity-attempt`, then
+   `course-class-quiz`, then `course-pulse`. All three read the new columns, and
+   all three bundle `_shared/` at deploy time, so a shared file fixed but not
+   redeployed ages every importer that stayed behind (pitfall #79).
+3. **Only then** push the frontend. Cloudflare Pages builds on push, and the new
+   bundle reads `race.round_correct`, `question_count`, `quiz.round` and
+   `my_race.last_result` — a room served by the old functions has no clock to
+   obey (pitfall #94).
+
+**Not yet done:** the live run-through. It belongs in an **empty group — 501 or
+502, never 402, which holds about twenty-six real students. Check People
+first.** Start a class, check two phones in, start the quiz, and confirm: both
+phones show the same question index at the same second; the countdown matches
+the screen; at 40 s both flip to the reveal while the screen flashes, climbs and
+spotlights; an answer inside 20 s earns 2 candy and a later one earns 1; a
+missed round counts wrong in the grade; the mute button silences the sting and
+survives a reload; at the close every animal pops, candy rains, the racer podium
+appears, and **Show the winners** still opens the score podium; and the review
+list with explanations appears under the exit ticket.
 
 ### The end-of-class quiz now survives kicks, reloads, and sign-outs (2026-08-20)
 
