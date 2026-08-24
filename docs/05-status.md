@@ -162,7 +162,7 @@ list with explanations appears under the exit ticket.
 
 In today's 10:46 class, three students were thrown out of the quiz mid-attempt
 and restarted from question 1; one (A01641342, 11 of 12 answered) never got
-back in and has no responses stored. Full anatomy in pitfall #87. The victims
+back in and has no responses stored. Full anatomy in pitfall #95. The victims
 were identified by the player-elapsed fingerprint (the phone's own timer
 resets on remount, so a restarted attempt shows player-elapsed ≪ wall time):
 A01639197, A01647334, A01640019 restarted and re-answered all 12; A01641342

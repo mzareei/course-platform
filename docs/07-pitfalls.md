@@ -4,6 +4,17 @@ Every entry here already cost real time, and several shipped broken behaviour to
 the professor. They share a shape: **the code looks right, nothing errors, and
 the UI is silently wrong.**
 
+> **Known issue — the numbering is not unique.** Entries `#57` through `#76`
+> each appear **twice** in this file: once in the run near the top, and again in
+> an older run further down. Cite by *title* rather than by number if you can,
+> and search for all matches when you follow a numbered reference. The
+> duplicated `#87` was resolved on 2026-08-24 — the later entry (the quiz
+> attempt that lived only in component state) became **#95**, because the
+> 2026-08-20 status entry cites it. The rest was left alone deliberately:
+> renumbering twenty shared entries breaks every existing citation and invites a
+> merge conflict for no benefit. New entries continue from the highest number in
+> use.
+
 ---
 
 ## 94. The frontend deploys itself; the edge functions do not
@@ -2772,7 +2783,7 @@ accounts, TAs, a student who transferred groups mid-term) the pick is a coin
 flip. `course-portfolio-entry` still uses `sections[0]`, but nothing it accepts
 is section-owned, so it is fine as long as that stays true.
 
-## 87. A quiz attempt that lives only in component state dies with the component
+## 95. A quiz attempt that lives only in component state dies with the component
 
 **Reported by the professor 2026-08-20: "the system basically kicked out three
 students from their session, and they had to refresh the end of the class quiz
