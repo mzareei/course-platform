@@ -155,6 +155,23 @@ const blockAfter = (source, head) => {
   const card = readFileSync(frontend("src/features/quiz/PinataCard.tsx"), "utf8");
   assert.match(card, /pinata\.cheerButton/, "the card has the cheer button");
   assert.match(card, /cheerRacer\(/, "the button calls the cheer action");
+
+  // course-pulse ships my_race.candy and my_race.correct_count to every phone
+  // every three seconds; until this they were rendered nowhere in src/, and the
+  // only candy a student ever saw was one line during a break. The spec's Files
+  // table puts them on this card. It is the done card and nothing else — the
+  // percentage above it is the grade, and candy must never read as one.
+  assert.match(card, /race\.candy/, "the done card shows the student their candy");
+  assert.match(card, /race\.correct_count/, "and how many they got right");
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.ok(strings.includes('"pinata.yourTally"'), "the tally line is in the dictionary");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.equal(
+    (player.match(/<PinataCard/g) || []).length, 2,
+    "the card renders on the two done cards — the graded result and the resumed attempt — and nowhere a quiz is still running"
+  );
+
   const live = readFileSync(frontend("src/screens/student/Live.tsx"), "utf8");
   assert.match(live, /myRace=\{/, "Live hands my_race to the player");
 }
@@ -857,7 +874,7 @@ const blockAfter = (source, head) => {
   const {
     ANSWER_SECONDS, BREAK_SECONDS, ROUND_SECONDS, GOLDEN_SECONDS,
     ANSWER_GRACE_MS, REVEAL_DELAY_MS,
-    CANDY_CORRECT, CANDY_GOLDEN, windowFor, roundAt, candyFor, totalSecondsFor
+    CANDY_CORRECT, CANDY_GOLDEN, windowFor, roundAt, candyFor, totalSecondsFor, revealDue
   } = await import(backend("_shared/rounds.ts").href);
 
   // THE INVARIANT. The grace keeps taking answers for two seconds after the
@@ -888,6 +905,37 @@ const blockAfter = (source, head) => {
   // The student is told forty seconds and the phase flips at forty seconds:
   // the grace covers flight time, it is not extra time to think.
   assert.equal(roundAt(T0, T0 + 40_000, 10).phase, "break", "the grace does not extend the countdown the room sees");
+
+  // THE INVARIANT, RUN. `revealDue` is the ordered pair as arithmetic, and it
+  // lives here rather than in course-pulse precisely so this can execute it:
+  // course-pulse imports Deno and a database client, so the predicate used to
+  // be checked by matching the substring "REVEAL_DELAY_MS" in its text — which
+  // `answerEnd + REVEAL_DELAY_MS - 3000` and `answerEnd - REVEAL_DELAY_MS` both
+  // pass, and both invert. The same treatment answeredInWindow already gets.
+  const revealRound = roundAt(T0, T0 + 45_000, 10);
+  assert.equal(revealRound.phase, "break", "the probe below is set during a break");
+  assert.equal(
+    revealDue(revealRound, revealRound.answerEnd + REVEAL_DELAY_MS - 1), false,
+    "one millisecond before the delay expires the correct option is still withheld"
+  );
+  assert.equal(
+    revealDue(revealRound, revealRound.answerEnd + REVEAL_DELAY_MS), true,
+    "and it is published the instant the delay expires"
+  );
+  // The grace is only safe if it shuts before the reveal opens. Probed at the
+  // exact instant the last acceptable answer can land.
+  assert.equal(
+    revealDue(revealRound, revealRound.answersCloseAt), false,
+    "an answer accepted at the very end of the grace still predates the reveal"
+  );
+  assert.equal(
+    revealDue(roundAt(T0, T0 + 20_000, 10), T0 + 20_000 + REVEAL_DELAY_MS * 10), false,
+    "a round still taking answers never reveals, however long the phone waits"
+  );
+  assert.equal(
+    revealDue(roundAt(T0, T0 + 500_000, 10), T0 + 500_000), false,
+    "and a finished quiz reveals through the review list, not through the break"
+  );
 
   const fifth = windowFor(T0, 4, 10);
   assert.equal(fifth.answerStart, T0 + 200_000, "round 4 starts at 200s");
@@ -1038,6 +1086,31 @@ const blockAfter = (source, head) => {
   // "= 0.5") cannot sail past a bare `= 0` prefix match.
   assert.match(attempt, /maxSpeedBonusPercent = 0;/, "speed no longer moves a grade");
 
+  // CANDY IS THE RACE AND NEVER THE GRADE. The property holds today —
+  // gradeResponses reads points and options, syncGradebookScore reads the three
+  // score fields — and it is the one most likely to be undone by a well-meaning
+  // edit ("give candy as extra credit"), which is why the spec asked for a
+  // static guard rail rather than trusting the comment beside the constant.
+  //
+  // Comments are stripped first: this must catch `candy` being READ, not a
+  // future line of prose explaining why it isn't.
+  const code = (source) => source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  const gradingPaths = {
+    gradeResponses: between(attempt, "async function gradeResponses(", "function normalizeResponseJson(", "gradeResponses"),
+    syncGradebookScore: between(attempt, "async function syncGradebookScore(", "async function loadActivityInstance(", "syncGradebookScore"),
+    calculateSpeedBonus: between(attempt, "function calculateSpeedBonus(", "function calculateFinalScore(", "calculateSpeedBonus"),
+    calculateFinalScore: between(attempt, "function calculateFinalScore(", "function round1(", "calculateFinalScore")
+  };
+  for (const [name, body] of Object.entries(gradingPaths)) {
+    assert.doesNotMatch(code(body), /candy/i, `${name} must not read candy — score_raw, score_percent and score_final are correctness only`);
+  }
+  // The gradebook payload specifically: neither the race's candy nor its
+  // correct count may reach a posted score.
+  assert.doesNotMatch(code(gradingPaths.syncGradebookScore), /correct_count/,
+    "the gradebook payload carries no race column either");
+
   const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
   // Not a match on the exact old predicate — any .filter( chained straight
   // onto this map would silently drop dealt-but-unanswered questions again,
@@ -1062,6 +1135,26 @@ const blockAfter = (source, head) => {
   assert.match(classQuiz, /roundAt\(/, "the race reports the room's round window");
   assert.doesNotMatch(classQuiz, /progress_position/, "racers are no longer placed by question position");
 
+  // The room's screen polls every two seconds. `needDetailFor` is settle-room's
+  // heavy read — every frozen deal, ten questions of prompt and four options in
+  // two languages, plus a question_options fan-out — and it is seeded into
+  // `wanted` BEFORE the behind-check that exists to keep that read off a poll
+  // with nothing to settle. Naming all twenty-six attempts unconditionally
+  // therefore ran it thirty times a minute on the one surface that must not
+  // stutter in front of the room.
+  //
+  // Only `round_correct` needs it, and the screen withholds that number for the
+  // whole answering phase (roundCountIsSettled). So: not while answering.
+  // Populated for the break and for `done`, and NOT narrower — dropping it
+  // during the break would blank the flash beat on the second poll of the same
+  // break, once every attempt is already settled and `results` comes back empty.
+  const needDetail = classQuiz.match(/needDetailFor:.*\n/);
+  assert.ok(needDetail, "the race says which attempts it needs per-round detail for");
+  assert.match(needDetail[0], /phase !== "answering"/,
+    "the whole room's frozen deals are not re-read while the room is answering");
+  assert.match(needDetail[0], /rows\.map\(/,
+    "but every racer's detail is still asked for once a round has closed");
+
   const pulse = readFileSync(fn("course-pulse/index.ts"), "utf8");
   assert.match(pulse, /settleRoom\(/, "the phone poll settles closed rounds too");
   assert.match(pulse, /last_result/, "the phone poll carries the reveal for the closed round");
@@ -1071,11 +1164,24 @@ const blockAfter = (source, head) => {
   assert.match(room, /settleAttempt\(/, "the shared room settle runs the shared per-round rule");
 
   // The reveal has two gates and needs both: the break, and the delay that
-  // pays for the answer grace.
-  const reveal = pulse.match(/const revealDue =[^;]+;[\s\S]*?const revealed =[\s\S]*?;/);
+  // pays for the answer grace. Both now live in `revealDue` in _shared/rounds.ts
+  // and are RUN by this verifier (see the room-clock section) rather than
+  // matched as text here.
+  //
+  // Text-matching them here was the hole. course-pulse cannot be imported by a
+  // Node verifier — Deno, a database client — so the arithmetic could only ever
+  // be checked by a substring, and `answerEnd + REVEAL_DELAY_MS - 3000` and
+  // `answerEnd - REVEAL_DELAY_MS` both contain `REVEAL_DELAY_MS`. Either
+  // inverts the ordered pair the whole grading rebuild rests on, silently. So
+  // what is asserted here is only that course-pulse still DELEGATES: it calls
+  // the shared predicate and spells no reveal arithmetic of its own.
+  const reveal = pulse.match(/const breakRound =[^;]+;[\s\S]*?const revealed =[\s\S]*?;/);
   assert.ok(reveal, "course-pulse computes the reveal in one place");
-  assert.match(reveal[0], /phase === "break"|breakRound/, "the reveal is gated on the break");
-  assert.match(reveal[0], /REVEAL_DELAY_MS/, "the reveal waits out the answer grace");
+  assert.match(reveal[0], /revealDue\(/, "the reveal is decided by the shared predicate");
+  assert.match(pulse, /import \{[^}]*revealDue[^}]*\} from "\.\.\/_shared\/rounds\.ts"/,
+    "and course-pulse imports it from the pure module the verifier can run");
+  assert.doesNotMatch(reveal[0], /REVEAL_DELAY_MS/,
+    "course-pulse must not re-spell the delay arithmetic a verifier cannot execute");
 
   // One piñata, two doors. The screen used to sum freshly settled counts while
   // a phone summed everyone else's stored column — same formula, different
@@ -1556,11 +1662,33 @@ const blockAfter = (source, head) => {
   // retry once `error` is set. A failed submit there reads as a screen that is
   // simply thinking. One helper carries the error for all three so a fourth
   // card cannot quietly drop it again.
+  const holding = blockAfter(player, "function holdingCard(");
+  assert.ok(holding, "the quiet cards all go through one helper");
   assert.match(
-    player,
-    /function holdingCard\([\s\S]{0,400}?error\s*\n?\s*\? <p class="error-text" role="alert">\{error\}<\/p>/,
+    holding,
+    /<p class="error-text" role="alert">\{error\}<\/p>/,
     "the holding card surfaces a submit error, with the alert role the question view has"
   );
+
+  // 5b. And the error brings a button. There is no Submit button any more, so
+  // this card is the student's only control. Three effects submit: the `done`
+  // phase and the instance deadline both refuse to run once `error` is set, and
+  // the close fires exactly once on the false→true edge of `quizClosed`. Two
+  // failed submits therefore stranded the student here for good — no grade,
+  // reportFinished() never called (it waits on `result || resumed`), the player
+  // mounted forever, and nothing server-side to grade an unsubmitted attempt.
+  // Their answers survive in progress_answers and are recoverable only by hand.
+  assert.match(holding, /t\("app\.tryAgain"\)/, "a failed submit offers the student a retry");
+  assert.match(
+    holding,
+    /onClick=\{\(\) => void submitNow\(stateRef\.current\.answers\)\}/,
+    "and the retry runs the same submit path the effects use, on the current answers"
+  );
+  assert.ok(
+    holding.indexOf("error-text") < holding.indexOf("app.tryAgain"),
+    "the button sits under the error it answers, not above it"
+  );
+
   for (const key of ["quiz.roundOver", "quiz.waitingForRoom", "quiz.quizOver"]) {
     assert.match(
       player,
@@ -1618,22 +1746,62 @@ const blockAfter = (source, head) => {
     /explanations:\s*explanationsByQuestion/,
     "gradeResponses returns a question id -> explanation map"
   );
-  assert.match(
-    attempt,
-    /explanations:\s*graded\.explanations/,
-    "submit_attempt forwards the explanations map to the client"
-  );
-
   // The correct-option map has to trace back to the server's OWN grading, not
   // to the client's submit payload — the entire point of server-side grading
   // is that a scripted phone cannot hand itself a perfect score, and a
   // `correct` map built from `input.responses` would hand it the answer key
   // just as easily.
-  assert.match(
+  //
+  // AND IT MUST NOT LEAVE WHILE THE ROOM IS STILL ANSWERING. These two fields
+  // are the whole key for all ten dealt questions, and submit_attempt is a
+  // public action: a phone holding its own attempt id and bearer token could
+  // call it at t=5s with `responses: []`, score zero, lock its own attempt, and
+  // walk away with the key. The pool is shared across the room, so those ten
+  // overlap heavily with every classmate's deal — one student trading their own
+  // mark for the room's. "After the attempt closed" was true of the ATTEMPT and
+  // false of the ROOM; `roomOver` is what makes it true of the room.
+  const submit = between(
     attempt,
-    /correct:\s*graded\.correct/,
-    "submit_attempt returns the server's own correct-option map, spelled the way the client expects it"
+    "async function submitAttempt(",
+    "async function setNameReveal(",
+    "submitAttempt"
   );
+  const gate = submit.match(/const roomOver =[\s\S]*?;\n/);
+  assert.ok(gate, "submit_attempt decides whether the ROOM is past its questions");
+  // Three clauses, none of them redundant. A partial gate reads as closed and
+  // is not.
+  assert.match(gate[0], /!clock/, "a standalone activity has no rounds and keeps its old behaviour");
+  assert.match(gate[0], /instance\.state\) === "closed"/, "a hand-closed quiz still returns its review list");
+  assert.match(gate[0], /roundAt\([\s\S]*?\)\.phase === "done"/, "and the normal path is every round having run");
+
+  // Every reader of either field, gated — checked by counting them rather than
+  // by matching one spelling, because a second ungated `graded.correct` further
+  // down would sail past a `match` on the gated one.
+  for (const field of ["correct", "explanations"]) {
+    const uses = [...attempt.matchAll(new RegExp(`graded\\.${field}\\b`, "g"))];
+    assert.equal(uses.length, 1, `graded.${field} leaves course-activity-attempt through exactly one expression`);
+    assert.match(
+      attempt.slice(Math.max(0, uses[0].index - 40), uses[0].index + 60),
+      new RegExp(`${field}: roomOver \\? graded\\.${field} : \\{\\}`),
+      `and that expression withholds ${field} until the room is over`
+    );
+  }
+  // `...graded` anywhere in a response would carry both fields past the gate
+  // without ever naming them. (`...gradedBase` is the composition above and is
+  // deliberately not matched.)
+  assert.doesNotMatch(attempt, /\.\.\.graded\b/, "the grading result is never spread wholesale into a response");
+
+  // The gate's arithmetic clause, run rather than read.
+  {
+    const { roundAt } = await import(backend("_shared/rounds.ts").href);
+    const T0 = 1_700_000_000_000;
+    assert.notEqual(roundAt(T0, T0 + 5_000, 10).phase, "done",
+      "five seconds into a ten-round quiz the room is nowhere near over");
+    assert.notEqual(roundAt(T0, T0 + 495_000, 10).phase, "done",
+      "nor during the last round's break");
+    assert.equal(roundAt(T0, T0 + 500_000, 10).phase, "done",
+      "and it is over once every round has run");
+  }
   // Resolved for every question this attempt was DEALT, not just the ones it
   // answered — a skipped question still has a right answer worth reviewing,
   // and the old query only ever looked up options the student had selected.

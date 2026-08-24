@@ -2085,6 +2085,7 @@ export const strings = {
   "pinata.cardTitle": ["🪅 Piñata: {percent}% cracked", "🪅 Piñata: {percent}% quebrada"],
   "pinata.burst": ["¡SE ROMPIÓ! 🪅💥", "¡SE ROMPIÓ! 🪅💥"],
   "pinata.gotCandy": ["🍬 You grabbed a candy", "🍬 Agarraste un dulce"],
+  "pinata.yourTally": ["🍬 {candy} candy · ✅ {correct} right", "🍬 {candy} dulces · ✅ {correct} correctas"],
   "pinata.yourRacer": ["You were {emoji} {name} — #{place} across the line", "Fuiste {emoji} {name} — #{place} en llegar"],
   "pinata.yourRacerNoPlace": ["You were {emoji} {name}", "Fuiste {emoji} {name}"],
   "pinata.cheerButton": ["📣 Cheer someone on!", "📣 ¡Échale porra!"],

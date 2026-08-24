@@ -413,14 +413,40 @@ export function QuizPlayer({
   // function, never mounted as a component: a component declared inside a
   // render gets a new identity every pass and remounts its whole subtree —
   // the bug LiveShell in Live.tsx carries a comment about.
+  //
+  // The error brings a button with it, because there is no Submit button any
+  // more and without one this card is a dead end. Three effects can submit —
+  // the `done` phase, the instance deadline, and the close — and the first two
+  // refuse to run once `error` is set while the third fires exactly once, on
+  // the false→true edge of `quizClosed`. So two failed submits used to leave
+  // the student here for good: no control, no grade, `reportFinished()` never
+  // called (it waits on `result || resumed`), the player mounted forever, and
+  // nothing server-side to grade an unsubmitted attempt. Their answers survive
+  // in progress_answers, recoverable only by hand.
+  //
+  // Same affordance the load-failure path above already offers, and it needs no
+  // guard of its own: submitNow clears `error` and latches `submitting`, so the
+  // button is only ever on screen when a retry is exactly what is wanted.
   function holdingCard(eyebrow: string, body: string) {
     return (
       <div class="stack quiz-reveal">
         <p class="eyebrow">{eyebrow}</p>
         <p class="quiz-reveal-mark" aria-hidden="true">…</p>
-        {error
-          ? <p class="error-text" role="alert">{error}</p>
-          : <p class="hint">{body}</p>}
+        {error ? (
+          <>
+            <p class="error-text" role="alert">{error}</p>
+            <button
+              class="btn primary"
+              type="button"
+              disabled={busy}
+              onClick={() => void submitNow(stateRef.current.answers)}
+            >
+              {t("app.tryAgain")}
+            </button>
+          </>
+        ) : (
+          <p class="hint">{body}</p>
+        )}
       </div>
     );
   }

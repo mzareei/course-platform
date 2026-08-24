@@ -66,6 +66,18 @@ nothing negative ever floats). At the close every animal pops, candy rains, the
 racer podium runs, and **Show the winners** still opens the score podium after
 it.
 
+**Two of the spec's three new commentary lines are deliberately not in the
+announcer.** The spec's Commentary section asks for new event lines covering the
+per-round hit count, golden candies and lead changes; `raceEvents` carries none
+of the three, and that is the decision, not an omission. A golden candy floats
+off the animal that earned it (`floats.ts`, `GOLDEN_COLOR`) and a lead change is
+the 🚀 float plus the permanent top-three rail, because both are attached to the
+racer they describe — the announcer is one line at the bottom of the screen that
+names someone the room then has to go and find, which is the slower read for the
+thing that is already visible. (The per-round hit count has its own recorded
+decision: it went to the HUD beside the round label, and `roundHitLine` was
+removed on 2026-08-24.)
+
 **Sound.** `src/features/live/sound.ts` — synthesized with the Web Audio API,
 never an audio file, because Kahoot's music is licensed and a tick that
 accelerates is a few dozen lines with no licensing question attached. Five
