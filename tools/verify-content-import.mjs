@@ -228,9 +228,21 @@ assert.match(
   content, /function deckTitleFromHtml/,
   "a deck with no bank must name itself from its own <title>"
 );
+// A deck with no <title> either. Refusing the upload over the item's NAME sent
+// the professor back to edit the HTML for something the library can derive —
+// the file name, or the slug they already had to type. import.deck.titleMissing
+// went with it.
+assert.match(
+  content, /deckFileName\?\.replace\(.*\)\s*\n?\s*\|\| slug\.trim\(\)/s,
+  "a deck with no title of its own must fall back to the file name and then the slug, not be refused"
+);
+assert.doesNotMatch(
+  content, /import\.deck\.titleMissing/,
+  "a missing title must no longer refuse the upload"
+);
 for (const key of [
-  "commitAlone", "aloneHint", "titleMissing", "chooseFirst", "savedWithQuestions",
-  "linksOutTo", "linksOutExplain"
+  "commitAlone", "aloneHint", "chooseFirst", "savedWithQuestions",
+  "linksOutTo", "linksOutExplain", "noticeHeading"
 ]) {
   assert.match(
     strings, new RegExp(`"import\\.deck\\.${key}"`),

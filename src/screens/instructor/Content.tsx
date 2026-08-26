@@ -583,14 +583,15 @@ function ImportPanel() {
       setError(t("import.slugRequired"));
       return;
     }
-    // With no bank to borrow a title from, the deck names itself. Its <title>
-    // is the same element the server's own validator insists on, so a deck
-    // that passes validation always has one to give.
-    const deckTitle = hasBank ? bank!.title : deckTitleFromHtml(deckHtml);
-    if (hasDeck && !deckTitle) {
-      setError(t("import.deck.titleMissing"));
-      return;
-    }
+    // With no bank to borrow a title from, the deck names itself, and if it
+    // has no <title> the file name does. A missing title used to refuse the
+    // upload here — the professor was sent back to edit the HTML over a name
+    // the library could have derived. The slug is the last resort and is
+    // already required non-empty above, so there is always something to send:
+    // the endpoint rejects an empty title, and it must never see one.
+    const deckTitle = (hasBank ? bank!.title : deckTitleFromHtml(deckHtml))
+      || deckFileName?.replace(/\.[^.]+$/, "").trim()
+      || slug.trim();
     setBusy(true);
     setError(null);
     try {
@@ -799,6 +800,9 @@ function ImportPanel() {
 function ImportResultSummary(
   { result, hasDeck, hasBank }: { result: ImportResult; hasDeck: boolean; hasBank: boolean }
 ) {
+  const notices = result.deck.notices ?? [];
+  const deckHostNotices = notices.filter((notice) => Boolean(notice.host));
+  const deckOtherNotices = notices.filter((notice) => !notice.host);
   return (
     <div class="card stack">
       {/* The server seeds both halves {ok:false} and only overwrites the one it
@@ -823,17 +827,33 @@ function ImportResultSummary(
               ))}
             </ul>
           ) : null}
-          {/* Where the deck points outward. Reported after a successful
-              import, never as a reason to refuse one. */}
-          {result.deck.ok && result.deck.notices?.length ? (
+          {/* Everything the validator found that is not a reason to refuse the
+              upload. Split by shape, not by kind: a host is a place the deck
+              points, and reads as a bare hostname under its own heading. The
+              rest — a blank image, a missing title — has nothing to list, so
+              it needs its own sentence to mean anything. Both are reported
+              after a successful import, never as a reason to refuse one. */}
+          {result.deck.ok && deckHostNotices.length ? (
             <>
               <p class="hint">{t("import.deck.linksOutTo")}</p>
               <ul>
-                {result.deck.notices.map((notice, index) => (
-                  <li class="hint" key={index}>{notice.host || notice.reference}</li>
+                {deckHostNotices.map((notice, index) => (
+                  <li class="hint" key={index}>{notice.host}</li>
                 ))}
               </ul>
               <p class="hint">{t("import.deck.linksOutExplain")}</p>
+            </>
+          ) : null}
+          {result.deck.ok && deckOtherNotices.length ? (
+            <>
+              <p class="hint">{t("import.deck.noticeHeading")}</p>
+              <ul>
+                {deckOtherNotices.map((notice, index) => (
+                  <li class="hint" key={index}>
+                    {t(DECK_PROBLEM_KEYS[notice.kind], { detail: notice.reference ?? "" })}
+                  </li>
+                ))}
+              </ul>
             </>
           ) : null}
         </>

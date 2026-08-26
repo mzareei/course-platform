@@ -2204,10 +2204,16 @@ export const strings = {
   "import.problem.optionCount": ["Needs exactly four options — found {detail}", "Se requieren exactamente cuatro opciones — hay {detail}"],
   "import.problem.correctCount": ["Needs exactly one correct answer — found {detail}", "Se requiere exactamente una respuesta correcta — hay {detail}"],
   "import.problem.missingSpanish": ["Spanish text is missing", "Falta el texto en español"],
-  "import.deck.relative": ["The deck refers to a file that will not exist once uploaded: {detail}", "La presentación usa un archivo que no existirá al subirla: {detail}"],
+  "import.deck.relative": [
+    "Something on a slide points at a separate file that is not inside the deck, so it will come out blank: {detail}",
+    "Algo en una diapositiva apunta a un archivo aparte que no está dentro de la presentación, así que saldrá en blanco: {detail}"
+  ],
   "import.deck.forbiddenHost": ["The deck links to the public site: {detail}", "La presentación enlaza al sitio público: {detail}"],
   "import.deck.undeclaredHost": ["The deck links to an unexpected site: {detail}", "La presentación enlaza a un sitio inesperado: {detail}"],
-  "import.deck.noTitle": ["The deck has no title", "La presentación no tiene título"],
+  "import.deck.noTitle": [
+    "The deck has no <title> line of its own, so it was named automatically.",
+    "La presentación no tiene su propia línea <title>, así que se le puso nombre automáticamente."
+  ],
 
   // -------------------------------------------------- import · orchestration
   "import.draftRestored": [
@@ -2237,6 +2243,10 @@ export const strings = {
     "You do not have to fill this in — a deck that links out will upload either way. Listing a site here just stops it being mentioned afterwards. Separate hostnames with a comma or a new line — e.g. example.com",
     "No es obligatorio llenar esto — una presentación que enlaza a otros sitios se subirá de todas formas. Poner un sitio aquí solo evita que se te mencione después. Separa los dominios con una coma o un salto de línea — por ejemplo example.com"
   ],
+  "import.deck.noticeHeading": [
+    "It uploaded. Worth a look before class:",
+    "Se subió. Vale la pena revisarlo antes de la clase:"
+  ],
   "import.deck.linksOutTo": [
     "This deck links out to:",
     "Esta presentación enlaza a:"
@@ -2257,10 +2267,6 @@ export const strings = {
   "import.deck.savedWithQuestions": [
     "This deck will be saved together with the questions — use Save to the course at the bottom of the page. You do not need a separate button for it.",
     "Esta presentación se guardará junto con las preguntas — usa Guardar en el curso al final de la página. No necesitas un botón aparte para ella."
-  ],
-  "import.deck.titleMissing": [
-    "This deck has no title, so there is nothing to name it in the library. Add a <title> line to the HTML and choose the file again.",
-    "Esta presentación no tiene título, así que no hay cómo nombrarla en la biblioteca. Agrega una línea <title> al HTML y elige el archivo de nuevo."
   ],
   "import.deck.success": ["Lecture deck imported.", "Presentación importada."],
   "import.deck.failed": ["The lecture deck could not be imported.", "No se pudo importar la presentación."],
