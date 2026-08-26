@@ -578,6 +578,24 @@ export function RunClass({ sessionId }: { sessionId?: string }) {
     });
   }, [bridge.deckReady, checkpointState.type]);
 
+  // The countdown pill lives in the cockpit, and the professor teaching from
+  // fullscreen cannot see it — so he has no way to know when the room's minute
+  // is up short of leaving the deck. Hand the deadline to the deck instead and
+  // let it show the clock over its own slides.
+  useEffect(() => {
+    if (!bridge.deckReady) return;
+    bridge.send({
+      version: 1,
+      type: "question.timer",
+      endsAt:
+        checkpointState.type === "open" ? checkpointState.round.ends_at : null
+    });
+  }, [
+    bridge.deckReady,
+    checkpointState.type,
+    checkpointState.type === "open" ? checkpointState.round.round_id : null
+  ]);
+
   // A question nobody reveals leaves every phone saying "recorded" and never
   // "you were right". The professor is in fullscreen and cannot click, so the
   // cockpit ends the question itself: the clock ran out, the room has all

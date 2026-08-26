@@ -1,6 +1,26 @@
 # Status
 
-**Last updated:** 2026-08-20
+**Last updated:** 2026-08-26
+
+### The deck shows the room's countdown (2026-08-26)
+
+Asking a question puts a one-minute clock on the cockpit — which the professor
+cannot see, because he teaches from inside browser fullscreen and the cockpit
+is behind the slides. He was guessing when to advance, or dropping out of
+fullscreen to look.
+
+The countdown now rides along with the deck. `RunClass` sends the open round's
+`ends_at` over the deck bridge as `question.timer` (`null` when no question is
+open), and the reporter injected by `functions/content.ts` paints a small
+clock in the deck's top-right corner: `M:SS`, red under ten seconds, gone the
+moment the question is revealed. It re-parents itself into
+`document.fullscreenElement` on every `fullscreenchange`, because fullscreen
+renders only that element's own subtree — an overlay left on `body` would be
+invisible, which is the whole trap this works around.
+
+Installed above the deck-engine gate in the injected script, so decks running
+the full engine get the clock too. The projector never sends `question.timer`,
+so nothing changed on the audience screen.
 
 ### The end-of-class quiz now survives kicks, reloads, and sign-outs (2026-08-20)
 

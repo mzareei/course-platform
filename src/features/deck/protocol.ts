@@ -48,6 +48,14 @@ export type ParentToDeckMessage =
    * their answers are driven by the checkpoint messages above.
    */
   | { version: 1; type: "answer.lock"; locked: boolean }
+  /**
+   * The deadline of the question that is open on student phones, so the deck
+   * can paint a small clock the professor can read without leaving fullscreen.
+   * `null` clears it. Consumed by the injected reporter (functions/content.ts);
+   * a deck running the full engine takes it too, because fullscreen hides the
+   * cockpit's countdown from that deck just as thoroughly.
+   */
+  | { version: 1; type: "question.timer"; endsAt: string | null }
   // This command intentionally has no protocol version so it matches the
   // presentation-state wire contract shared by controller and projector.
   | {

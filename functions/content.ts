@@ -46,10 +46,101 @@ const ANSWER_LOCK_STYLE = `<style>
 const SLIDE_REPORTER = `<script>(function () {
   if (parent === window) return;
   if (window.__deckSlideReporter) return;
+  window.__deckSlideReporter = 1;
+
+  // ------------------------------------------------------- the room's clock
+  // The professor teaches from inside browser fullscreen, where the cockpit's
+  // countdown pill is behind the slides. He cannot tell when the room's minute
+  // is up without dropping out of the deck, so he either guesses or quits
+  // fullscreen mid-question. This paints a small clock in the corner of the
+  // deck document, which is the one surface fullscreen cannot cover.
+  //
+  // Driven entirely by the cockpit: no deadline, no box. It appears when a
+  // question opens and leaves when the question does, so a deck presented
+  // outside a live class looks exactly as it always has.
+  //
+  // Installed above the engine gate below on purpose: a deck carrying the full
+  // engine hides the cockpit behind fullscreen in precisely the same way.
+  var clockBox = null;
+  var clockDeadline = 0;
+  var clockTicker = 0;
+
+  function clockElement() {
+    if (clockBox) return clockBox;
+    if (!document.body) return null;
+    clockBox = document.createElement('div');
+    clockBox.setAttribute('data-course-question-clock', '1');
+    clockBox.setAttribute('role', 'timer');
+    clockBox.style.cssText = 'position:fixed;top:18px;right:18px;z-index:2147483647;'
+      + 'display:none;margin:0;padding:8px 14px;border-radius:12px;'
+      + 'border:1px solid rgba(255,255,255,0.30);background:rgba(15,17,21,0.86);'
+      + 'color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;'
+      + 'font-size:30px;line-height:1;font-weight:700;letter-spacing:0.04em;'
+      + 'font-variant-numeric:tabular-nums;pointer-events:none;'
+      + 'box-shadow:0 8px 24px rgba(0,0,0,0.45)';
+    document.body.appendChild(clockBox);
+    return clockBox;
+  }
+
+  // Fullscreen paints the fullscreen element's own subtree and nothing else, so
+  // the box has to move in with whatever the deck put on screen. The document
+  // element is not a real parent for a rendered child; body is.
+  function clockHost() {
+    var full = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!full || full === document.documentElement) return document.body;
+    return full;
+  }
+
+  function placeClock() {
+    var element = clockElement();
+    if (!element) return;
+    var target = clockHost();
+    if (target && element.parentNode !== target) target.appendChild(element);
+  }
+
+  function clockText(remaining) {
+    var total = Math.max(0, Math.round(remaining / 1000));
+    return Math.floor(total / 60) + ':' + ('0' + (total % 60)).slice(-2);
+  }
+
+  function paintClock() {
+    var element = clockElement();
+    if (!element) return;
+    if (!clockDeadline) {
+      element.style.display = 'none';
+      return;
+    }
+    var remaining = clockDeadline - Date.now();
+    placeClock();
+    element.textContent = clockText(remaining);
+    // The last ten seconds are the ones he is actually waiting for.
+    element.style.background = remaining <= 10000
+      ? 'rgba(168,32,32,0.92)'
+      : 'rgba(15,17,21,0.86)';
+    element.style.display = 'block';
+  }
+
+  function setClockDeadline(value) {
+    var parsed = typeof value === 'string' ? Date.parse(value) : Number.NaN;
+    clockDeadline = isFinite(parsed) ? parsed : 0;
+    clearInterval(clockTicker);
+    if (clockDeadline) clockTicker = setInterval(paintClock, 250);
+    paintClock();
+  }
+
+  addEventListener('message', function (event) {
+    if (event.origin !== location.origin || event.source !== parent) return;
+    var data = event.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type !== 'question.timer' || data.version !== 1) return;
+    setClockDeadline(data.endsAt);
+  });
+  addEventListener('fullscreenchange', placeClock);
+  addEventListener('webkitfullscreenchange', placeClock);
+
   // The real engine reports its own position, including teaching-slide numbers
   // and checkpoints. Never compete with it.
   if (document.querySelector('script[data-course-deck-engine]')) return;
-  window.__deckSlideReporter = 1;
 
   // The cockpit owns this: locked while a question is open on student phones,
   // released the moment it is revealed. Absent any instruction the deck behaves
