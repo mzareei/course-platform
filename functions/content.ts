@@ -71,7 +71,12 @@ const SLIDE_REPORTER = `<script>(function () {
     clockBox = document.createElement('div');
     clockBox.setAttribute('data-course-question-clock', '1');
     clockBox.setAttribute('role', 'timer');
-    clockBox.style.cssText = 'position:fixed;top:18px;right:18px;z-index:2147483647;'
+    // Below the deck's own controls, never on top of them: deck-style.css puts
+    // .controls at top:16 right:16 with 40px buttons and hides it for nothing,
+    // fullscreen included — so the first version of this box sat exactly over the
+    // professor's language, theme, help and fullscreen buttons. No backticks in
+    // here: this whole script is a template literal, and one would end it.
+    clockBox.style.cssText = 'position:fixed;top:72px;right:16px;z-index:2147483647;'
       + 'display:none;margin:0;padding:8px 14px;border-radius:12px;'
       + 'border:1px solid rgba(255,255,255,0.30);background:rgba(15,17,21,0.86);'
       + 'color:#ffffff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;'
