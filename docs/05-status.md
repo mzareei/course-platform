@@ -2,6 +2,36 @@
 
 **Last updated:** 2026-08-26
 
+### A half-deployed feature cost a class, and the class was graded 100 (2026-08-26)
+
+**Group 401, session `ec291907`.** Live questions never reached a phone, the
+end-of-class quiz could not be submitted, and the race screen sat frozen showing
+nothing. One cause for all three: on **2026-08-24 at 19:20** the three La Subida
+edge functions — `course-activity-attempt`, `course-class-quiz`, `course-pulse`
+— were deployed from `feat/la-subida` while the frontend stayed on `main`. The
+server spoke the new contract and every phone spoke the old one. `my_race` had
+been rewritten from `progress_answered` to `candy`/`correct_count`, so the
+piñata read fields that no longer existed and rendered nothing.
+
+This is pitfall #94 happening exactly as written, in the direction that pitfall
+called safe. See the correction there.
+
+**Remedy, same day, the professor's decision: 100 for the whole class.** All 26
+students with an attendance row got a `class_grade_overrides` row at 100 with
+the calculated grade snapshotted, an `audit_log` `set_grade_override` entry, and
+one `postClassGradesQuietly` for the group — the same three writes
+`recordOverride` performs, run through the same imported helpers. The 27th
+roster row, the professor's own "Mahdi Testing" account, was absent and was
+deliberately left alone. Verified by re-reading the grading table: 26 rows at
+override 100, reported 100.
+
+**Then both halves shipped together**, in the order under "Deploy shape" below:
+migration 0058 was already applied, the three functions went out from
+`feat/la-subida`, and only then did the merged frontend push. Production bundle
+`index-BoRKhpEQ.js` is byte-identical to the locally built tree that passed all
+48 verifiers against that same backend.
+
+
 ### The deck shows the room's countdown (2026-08-26)
 
 Asking a question puts a one-minute clock on the cockpit — which the professor

@@ -31,8 +31,22 @@ default — push the frontend, deploy the backend later — is the wrong order.
 Push-first is the expensive direction. A new bundle reading a field the
 deployed function does not send gets `undefined`, and in a live classroom that
 is a room-wide freeze in front of thirty students, with no rollback faster than
-a redeploy. Deploy-first degrades quietly instead: an old bundle ignores fields
-it does not know about.
+a redeploy.
+
+**Deploy-first is not automatically the safe one, and 2026-08-26 proved it.**
+This entry used to end "deploy-first degrades quietly instead: an old bundle
+ignores fields it does not know about". That is only true when the new function
+*adds* fields. La Subida *renamed* them — `my_race.progress_answered` became
+`candy` and `correct_count` — and an old bundle does not ignore a field that
+vanished, it renders nothing. The three functions went out on 2026-08-24 and the
+frontend did not; the 2026-08-26 lecture lost its live questions, its quiz
+submissions and its race screen, and the class had to be graded 100.
+
+So the check the rule already demanded is the whole rule: **before deploying a
+function ahead of its frontend, diff the payload and confirm nothing the live
+bundle reads was renamed or removed.** Added fields are safe. Renamed and
+removed fields are an outage, and for those the two halves must go out inside
+the same minute, out of class hours.
 
 **Rule:** database, then functions, then frontend. Write that order into the
 status entry for the change, naming the migration and each function by name, and
