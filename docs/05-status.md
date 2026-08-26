@@ -2,6 +2,31 @@
 
 **Last updated:** 2026-08-26
 
+### Deck link checks became advisory, and everything pending shipped (2026-08-26)
+
+The outbound-link validator regexed the raw deck end to end, so a security
+lecture showing escaped `<img src=x onerror=...>`, a highlighted code sample
+carrying `href=<span ...>`, and a firewall table tagging rows
+`data-action="allow"` were all read as references and refused the upload. It now
+reads the deck as a document: attributes of real tags matched by whole name,
+plus the CSS the page applies. Comments and inline script bodies are skipped;
+markup inside an attribute value is scanned, because the bilingual decks keep
+translated elements in `data-es`. Blocking is down to `forbidden_host` alone —
+the link to the ungated public copy from pitfall #57. Everything else is a
+notice, which matches the rule that only a student-access risk may refuse a
+deck.
+
+**Shipped in pitfall #94 order:** `_shared/deck-validation.ts` committed, then
+`course-content-import` redeployed (its only importer — pitfall #79), then the
+frontend push. No migration.
+
+**Also swept:** every other branch in both repos was already contained in
+`main`. The one exception, `feat/task-4-class-question-plan-board`, is 4 ahead
+and 240 behind and is *superseded, not pending* — `main`'s
+`ClassQuestionPlanBoard.tsx` is 761 lines against that branch's 606, so merging
+it would regress the board. Left unmerged deliberately.
+
+
 ### A half-deployed feature cost a class, and the class was graded 100 (2026-08-26)
 
 **Group 401, session `ec291907`.** Live questions never reached a phone, the
