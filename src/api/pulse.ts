@@ -67,7 +67,17 @@ export interface QuizRank {
   name_revealed: boolean;
 }
 
-/** The finished student's own window into the piñata race. */
+/** The room's round window, server-decided, so a reloaded phone rejoins the
+ *  room's round instead of starting a countdown of its own. */
+export interface PulseQuizRound {
+  index: number;
+  phase: "answering" | "break" | "done";
+  answer_ends_at: string;
+  break_ends_at: string;
+  question_count: number;
+}
+
+/** This student's own window into the piñata race. */
 export interface MyRace {
   racer_name: string;
   racer_emoji: string;
@@ -75,6 +85,30 @@ export interface MyRace {
   finish_place: number | null;
   pinata: { percent: number; burst: boolean };
   swinging: number;
+  /** Height on the climb — correctness plus speed. Never a grade. */
+  candy: number;
+  /** Size on the climb — cumulative, so a racer never shrinks. */
+  correct_count: number;
+  /**
+   * The reveal for the round that just closed. Null in two different cases,
+   * and the phone has to tell them apart:
+   *
+   * - while the room is answering, because the correct answer must never reach
+   *   a phone that could still use it;
+   * - for the FIRST THREE SECONDS of the break, because an answer is still
+   *   accepted for a couple of seconds past the countdown and the reveal is
+   *   held back until that window has provably shut.
+   *
+   * So a `break` round with no `last_result` is a WAIT, not a verdict. Falling
+   * back to the question there flashes it onto the screen for three seconds
+   * and then snatches it away.
+   */
+  last_result: {
+    question_id: string;
+    correct: boolean;
+    correct_option_id: string;
+    candy: number;
+  } | null;
 }
 
 export interface StudentPulseView {
@@ -102,9 +136,12 @@ export interface StudentPulseView {
     state: string | null;
     ends_at?: string | null;
     question_count?: number | null;
+    /** Which round the room is on and when its windows close. */
+    round?: PulseQuizRound | null;
     /** Null while the quiz runs, and for a student who never submitted. */
     my_rank?: QuizRank | null;
-    /** The race card for a finished student's phone; null once the quiz closes. */
+    /** Every phone's race card while the quiz is open — candy, count and the
+     *  break's reveal; null once the quiz closes. */
     my_race?: MyRace | null;
   };
   reflection: {

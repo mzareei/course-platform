@@ -65,6 +65,12 @@ export function PinataCard({ race, attemptId }: { race: MyRace; attemptId: strin
         {race.pinata.burst ? t("pinata.burst") : t("pinata.cardTitle", { percent: race.pinata.percent })}
       </p>
       <div class="pinata-bar"><i style={`width:${race.pinata.percent}%`} /></div>
+      {/* The student's own climb, from the server's settled columns. Candy is
+          the race and never the grade — the percentage above this card is the
+          grade — so the two numbers sit here, on the done card, rather than
+          anywhere a student could read them as a mark. Before this they were
+          shipped to every phone every three seconds and rendered nowhere. */}
+      <p>{t("pinata.yourTally", { candy: race.candy, correct: race.correct_count })}</p>
       {race.finished ? <p>{t("pinata.gotCandy")}</p> : null}
       {race.racer_name ? (
         <p>

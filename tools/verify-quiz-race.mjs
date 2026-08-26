@@ -1,4 +1,4 @@
-// The piñata race, the carry-over timer, and the 40-word exit ticket.
+// The piñata race, the room clock, and the 40-word exit ticket.
 // Pure modules are imported and executed; wiring is grepped. Sections are
 // appended task by task — see docs/superpowers/plans/2026-08-19-end-of-class-quiz-pinata-race.md.
 import assert from "node:assert/strict";
@@ -10,6 +10,38 @@ if (skipWithoutBackend("verify-quiz-race")) process.exit(0);
 const fn = (name) => backendPath(`supabase/functions/${name}`);
 const backend = (name) => backendUrl(`supabase/functions/${name}`);
 const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
+
+/** The text between two anchors, both of which must exist and be in order.
+ *
+ *  slice() with a tail anchor it cannot find returns everything-but-one-character
+ *  rather than nothing, so a `length > 0` guard passes happily on a slice that
+ *  has silently swallowed the rest of the file — and then every assertion under
+ *  it is quietly testing the wrong text. */
+const between = (source, head, tail, what) => {
+  const from = source.indexOf(head);
+  const to = from < 0 ? -1 : source.indexOf(tail, from);
+  assert.ok(from > -1 && to > from, `${what} is where the comment says it is`);
+  return source.slice(from, to);
+};
+
+/** The whole of the first block that opens with `head`, matched by brace depth.
+ *
+ *  A regex cannot prove NESTING, only order of appearance — which is how an
+ *  earlier cut of the sound section passed with a gate emptied out and the two
+ *  calls it was meant to guard left sitting underneath it. */
+const blockAfter = (source, head) => {
+  const at = source.indexOf(head);
+  if (at < 0) return "";
+  let depth = 0;
+  for (let index = at + head.length - 1; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(at, index + 1);
+    }
+  }
+  return "";
+};
 
 // ------------------------------------------------- exit ticket: 40 words
 {
@@ -52,19 +84,21 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
 // ------------------------------------------------- piñata maths
 {
   const { BURST_PERCENT, pinataState } = await import(backend("_shared/pinata.ts").href);
-  assert.equal(BURST_PERCENT, 85, "the piñata bursts at 85%");
-  assert.equal(pinataState({ hits: 0, started: 0, questionCount: 12 }).percent, 0, "nobody started → 0%");
-  assert.equal(pinataState({ hits: 156, started: 26, questionCount: 12 }).percent, 50, "156 of 312 → 50%");
-  assert.equal(pinataState({ hits: 500, started: 26, questionCount: 12 }).percent, 100, "clamped to 100");
-  assert.equal(pinataState({ hits: 266, started: 26, questionCount: 12 }).burst, true, "85% bursts");
-  assert.equal(pinataState({ hits: 262, started: 26, questionCount: 12 }).burst, false, "84% does not");
+  assert.equal(BURST_PERCENT, 70, "the piñata bursts at 70% of answers correct");
+
+  assert.equal(pinataState({ correct: 0, started: 0, questionCount: 10 }).percent, 0, "nobody started → 0%");
+  assert.equal(pinataState({ correct: 130, started: 26, questionCount: 10 }).percent, 50, "130 of 260 → 50%");
+  assert.equal(pinataState({ correct: 500, started: 26, questionCount: 10 }).percent, 100, "clamped to 100");
+  assert.equal(pinataState({ correct: 182, started: 26, questionCount: 10 }).burst, true, "70% bursts");
+  assert.equal(pinataState({ correct: 179, started: 26, questionCount: 10 }).burst, false, "68% does not");
+  assert.equal(pinataState({ correct: 130, started: 26, questionCount: 10 }).total, 260, "the denominator is started × questions");
   assert.equal(
-    pinataState({ hits: 100, started: 26, questionCount: 12, closedReason: "everyone" }).burst,
+    pinataState({ correct: 10, started: 26, questionCount: 10, closedReason: "everyone" }).burst,
     true,
     "a room where everyone finished broke it, whatever the percent"
   );
   assert.equal(
-    pinataState({ hits: 262, started: 26, questionCount: 12, closedReason: "time" }).burst,
+    pinataState({ correct: 179, started: 26, questionCount: 10, closedReason: "time" }).burst,
     false,
     "closing by time does not burst below the threshold"
   );
@@ -116,54 +150,28 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.match(pulse, /from "\.\.\/_shared\/pinata\.ts"/, "the phone and the room share one piñata formula");
 }
 
-// ------------------------------------------------- the carry-over budget
-{
-  const { deadlines, positionAt, rebase, MAX_QUESTION_SECONDS } = await import(frontend("src/features/quiz/budget.ts").href);
-  const t0 = 1_000_000;
-  const secs = [30, 30, 45, 30];
-  // 30/30/45/30: cumulative deadlines, so saved time visibly rolls forward.
-  const dl = deadlines(secs, t0);
-  assert.deepEqual(dl, [t0 + 30_000, t0 + 60_000, t0 + 105_000, t0 + 135_000], "deadlines are cumulative");
-  // Answering Q1 at 25s leaves 35s on Q2 — the spec's example.
-  assert.equal(dl[1] - (t0 + 25_000), 35_000, "25s on Q1 leaves 35s for Q2");
-  assert.equal(positionAt(dl, t0 + 5_000), 0, "before the first deadline you are on Q1");
-  assert.equal(positionAt(dl, t0 + 30_000), 1, "at the deadline you have moved on");
-  // A phone asleep through three deadlines lands on the right question in one call.
-  assert.equal(positionAt(dl, t0 + 110_000), 3, "skip-forward over missed questions");
-  assert.equal(positionAt(dl, t0 + 999_000), 3, "clamped to the final question");
-
-  // The ceiling. Saved seconds roll forward, but no question is ever worth
-  // more than sixty — the professor's rule, executed rather than trusted.
-  assert.equal(MAX_QUESTION_SECONDS, 60, "the per-question ceiling is sixty seconds");
-  // A small saving rebases to the very schedule the cumulative clock already
-  // had: 25s on Q1 leaves the standing deadlines untouched.
-  assert.deepEqual(rebase(dl, secs, 0, t0 + 25_000), dl, "an under-cap carry keeps the cumulative schedule");
-  // An instant answer banks all 30: Q2 is worth exactly 60 — the top, allowed.
-  const afterQ1 = rebase(dl, secs, 0, t0);
-  assert.equal(afterQ1[1], t0 + 60_000, "30 banked on 30 base sits exactly at the top");
-  // Instantly again: 60 banked onto a 45s question would be 105 — capped at 60.
-  const afterQ2 = rebase(afterQ1, secs, 1, t0);
-  assert.equal(afterQ2[2], t0 + 60_000, "the cap holds: never more than 60 on one question");
-  assert.equal(afterQ2[3], t0 + 90_000, "questions behind the capped one line up on their base");
-  // The last question has nowhere to carry to.
-  assert.deepEqual(rebase(dl, secs, 3, t0 + 5_000), dl, "no next question, no rebase");
-}
-
-// ------------------------------------------------- the player
-{
-  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
-  assert.match(player, /from "\.\/budget"/, "the player uses the shared budget module");
-  assert.match(player, /rebase\(/, "an early answer rebases the schedule, so the sixty-second cap can bite");
-  assert.match(player, /reportProgress\(/, "the player pings progress");
-  assert.match(player, /quiz\.letsGo/, "the splash has a Let's go button");
-  assert.ok(!/setQuestionDeadline/.test(player), "the per-question deadline state is gone — the budget rules");
-}
-
 // ------------------------------------------------- the phone's done card
 {
   const card = readFileSync(frontend("src/features/quiz/PinataCard.tsx"), "utf8");
   assert.match(card, /pinata\.cheerButton/, "the card has the cheer button");
   assert.match(card, /cheerRacer\(/, "the button calls the cheer action");
+
+  // course-pulse ships my_race.candy and my_race.correct_count to every phone
+  // every three seconds; until this they were rendered nowhere in src/, and the
+  // only candy a student ever saw was one line during a break. The spec's Files
+  // table puts them on this card. It is the done card and nothing else — the
+  // percentage above it is the grade, and candy must never read as one.
+  assert.match(card, /race\.candy/, "the done card shows the student their candy");
+  assert.match(card, /race\.correct_count/, "and how many they got right");
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.ok(strings.includes('"pinata.yourTally"'), "the tally line is in the dictionary");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.equal(
+    (player.match(/<PinataCard/g) || []).length, 2,
+    "the card renders on the two done cards — the graded result and the resumed attempt — and nowhere a quiz is still running"
+  );
+
   const live = readFileSync(frontend("src/screens/student/Live.tsx"), "utf8");
   assert.match(live, /myRace=\{/, "Live hands my_race to the player");
 }
@@ -176,8 +184,12 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   assert.equal(c.SONG_75, "🎶 …porque si lo pierdes…");
   assert.equal(c.BURST_LINE, "🎶 …¡pierdes el camino! — ¡SE ROMPIÓ! 🪅💥");
 
-  const racer = (name, emoji, position, finished = false, place = null) =>
-    ({ racer_name: name, racer_emoji: emoji, position, answered: position, finished, finish_place: place });
+  // The third argument was `position` until the track became La Subida. Every
+  // student is on the same question in the same round now, so the announcer
+  // reads height on the climb instead: candy, with the correct answers that
+  // earned it. The bottom third of the pack is still the bottom third.
+  const racer = (name, emoji, candy, finished = false, place = null) =>
+    ({ racer_name: name, racer_emoji: emoji, candy, correct_count: Math.ceil(candy / 2), finished, finish_place: place });
   const snap = (percent, racers, extra = {}) =>
     ({ percent, burst: false, closed_reason: null, state: "live", racers, cheers: [], ...extra });
 
@@ -232,6 +244,2364 @@ const frontend = (rel) => new URL(`../${rel}`, import.meta.url);
   const endOfClass = readFileSync(frontend("src/screens/instructor/EndOfClass.tsx"), "utf8");
   assert.match(endOfClass, /ClassroomPinataLayer/, "End of Class mounts the layer");
   assert.match(endOfClass, /setShowingPinata\(true\)/, "the layer opens on start/adopt");
+}
+
+// ------------------------------------------------- the climb
+{
+  const {
+    CANDY_PER_QUESTION, FALLBACK_MAX_CANDY, MAX_SIZE, MAX_LANES, BOB_MS,
+    BASE_EMOJI_PX, SETTLE_MARGIN_MS, ceilingFor, sizeFor, heightFor, lanePercent,
+    laneKeys, laneRoster, laneCountFor, topThree, bobDelayMs, roundCountIsSettled
+  } = await import(frontend("src/features/live/subida.ts").href);
+
+  // The ceiling is the SERVER's question quota, never a constant of ours. The
+  // plan's brief said MAX_CANDY = 20; Task 6 had just finished cleaning up a
+  // frontend default of 12 questions against a dealt 10, and a hardcoded 20
+  // here would pin every racer at the top of the rope the day the professor
+  // changes the quota. The per-question ceiling still has to agree with the
+  // backend that hands out the candy, so both sides are executed here.
+  const { CANDY_GOLDEN } = await import(backend("_shared/rounds.ts").href);
+  assert.equal(CANDY_PER_QUESTION, CANDY_GOLDEN, "the climb's ceiling uses the server's best-case candy");
+  assert.equal(FALLBACK_MAX_CANDY, 20, "a payload with no question count falls back to the ten-question deal");
+  assert.equal(ceilingFor(10), 20, "ten questions at two candy each");
+  assert.equal(ceilingFor(12), 24, "a twelve-question quota raises the ceiling with it");
+  assert.equal(ceilingFor(null), FALLBACK_MAX_CANDY, "a stale payload still draws a climb");
+  assert.equal(ceilingFor(0), FALLBACK_MAX_CANDY, "so does an instance that reports no questions");
+
+  assert.equal(MAX_SIZE, 3, "nobody grows past three times base");
+  assert.equal(sizeFor(0), 1, "a racer starts at base size");
+  assert.equal(Math.round(sizeFor(5) * 100) / 100, 2, "five correct is double size");
+  assert.equal(sizeFor(10), 3, "ten correct is triple size");
+  assert.equal(sizeFor(50), 3, "size is capped, never unbounded");
+  assert.ok(sizeFor(3) > sizeFor(2), "size only ever grows with correct answers");
+  assert.equal(sizeFor(-4), 1, "a nonsense count never shrinks a racer below base");
+
+  assert.equal(heightFor(0, 10), 0, "no candy is the ground");
+  assert.equal(heightFor(20, 10), 100, "the ceiling is the piñata");
+  assert.equal(heightFor(10, 10), 50, "half the candy is half the rope");
+  assert.equal(heightFor(999, 10), 100, "height is clamped");
+  assert.equal(heightFor(20, null), 100, "with no question count the ten-question rope is the fallback");
+  // The drift the ruling exists to prevent.
+  assert.ok(heightFor(20, 12), "a twelve-question class still climbs");
+  assert.ok(heightFor(20, 12) < 100, "a bigger quota is a longer rope, not a full one");
+  assert.equal(heightFor(24, 12), 100, "and its own ceiling is still the piñata");
+
+  // Lanes. Twenty-six racers is the class that broke the old column track, and
+  // a fixed 3.78% step runs off the right-hand edge at thirty — the roster
+  // decides the spacing.
+  for (const total of [1, 2, 7, 26, 40]) {
+    for (let i = 0; i < total; i++) {
+      const left = lanePercent(i, total);
+      assert.ok(left >= 0 && left <= 100, `lane ${i} of ${total} stays inside the field (${left}%)`);
+      if (i > 0) assert.ok(left > lanePercent(i - 1, total), "lanes keep the field's order");
+    }
+  }
+
+  const racer = (name, candy, correct) => ({
+    racer_name: name, racer_emoji: "🐢", candy, correct_count: correct, finished: false, finish_place: null
+  });
+  const field = [racer("Rana Zen", 1, 1), racer("Jaguar Ninja", 9, 5), racer("Tortuga Veloz", 4, 4), racer("Oso Genial", 9, 3)];
+  const names = (list) => list.map((r) => r.racer_name);
+  const asDealt = names(field);
+
+  // The rail sorts; the field never does. `.sort()` on race.racers would
+  // reorder every lane on screen.
+  const top = topThree(field);
+  assert.deepEqual(names(field), asDealt, "the rail must never re-sort the field");
+  assert.deepEqual(names(top), ["Jaguar Ninja", "Oso Genial", "Tortuga Veloz"], "top three by candy, then by correct answers");
+  assert.equal(topThree([]).length, 0, "an empty room has no rail rows");
+  assert.equal(topThree(field.slice(0, 2)).length, 2, "a class of two fills what it can");
+
+  // The idle bob is the fix for "nothing moved": twenty-six animals breathing
+  // in unison read as one object, so every lane gets its own phase.
+  const delays = new Set(Array.from({ length: 26 }, (_, i) => bobDelayMs(i)));
+  assert.equal(delays.size, 26, "no two racers in a full class bob together");
+  for (const delay of delays) assert.ok(delay <= 0 && delay > -BOB_MS, "a phase offset is a negative slice of one cycle");
+
+  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  assert.doesNotMatch(layer, /pinata-col-label/, "the column track is gone");
+  assert.doesNotMatch(layer, /difficulty/, "difficulty never appears on the room's screen");
+  assert.doesNotMatch(layer, /student_identifier|profile_id/, "nothing on this screen maps a racer to a student");
+  assert.match(layer, /subida-rope/, "every racer has a rope");
+  assert.match(layer, /subida-rail/, "the top three are always on screen");
+  assert.match(layer, /subida-lane-name/, "and every rope is labelled at the ground");
+  assert.match(layer, /laneRoster\(/, "lanes are handed out once and kept, not recomputed from the payload");
+  assert.match(layer, /laneCountFor\(/, "and the field's width is pinned by the room, not by who has started");
+  assert.match(layer, /roundCountIsSettled\(/, "the round count is withheld until it belongs to the round on screen");
+  assert.doesNotMatch(layer, /key=\{racer\.racer_name\}/,
+    "nothing keys on a bare racer name — two unassigned attempts both read \"🎒 Mochila\"");
+  assert.match(layer, /heightFor\([^)]*question_count/, "the rope's ceiling comes from the server's question count");
+  assert.ok((layer.match(/lanePercent\(/g) || []).length >= 3,
+    "rope, animal and ground label all take their lane from one function so they cannot drift apart");
+
+  assert.match(css, /@keyframes subida-bob/, "the idle bob exists at all");
+  assert.doesNotMatch(css, /\.pinata-track|\.pinata-col\b/, "the column track's styles are gone with it");
+
+  // ---- Finding 1: the count must never sit under the wrong round number.
+  // course-class-quiz derives round_correct from closedRoundIndex, which keeps
+  // reporting the PREVIOUS round until the answering window has closed for good
+  // — including through the first two seconds of the break, while the grace is
+  // still open. Sweeping a whole ten-round quiz against both repos is the only
+  // way to prove the screen never prints one round's count under another's.
+  const { roundAt, ANSWER_GRACE_MS, BREAK_SECONDS } = await import(backend("_shared/rounds.ts").href);
+  const { closedRoundIndex } = await import(backend("_shared/settle.ts").href);
+  assert.ok(SETTLE_MARGIN_MS >= ANSWER_GRACE_MS,
+    "the screen must wait out at least the server's answer grace");
+  assert.ok(SETTLE_MARGIN_MS < BREAK_SECONDS * 1000,
+    "and still inside the break, or the count would never appear at all");
+
+  const T0 = 1_700_000_000_000;
+  let everSettled = false;
+  for (let ms = 0; ms <= 505_000; ms += 250) {
+    const at = T0 + ms;
+    const live = roundAt(T0, at, 10);
+    const view = {
+      index: live.index,
+      phase: live.phase,
+      answer_ends_at: new Date(live.answerEnd).toISOString(),
+      break_ends_at: new Date(live.breakEnd).toISOString()
+    };
+    if (roundCountIsSettled(view, at)) {
+      everSettled = true;
+      assert.equal(closedRoundIndex(live, at), live.index,
+        `at +${ms}ms the count shown must belong to the round the HUD names`);
+    }
+  }
+  assert.ok(everSettled, "the count does appear during the break, it is not withheld forever");
+  // Round 1's answering phase is the case a room misreads as nobody getting it.
+  const roundOne = roundAt(T0, T0 + 5_000, 10);
+  assert.equal(roundOne.index, 0);
+  assert.equal(
+    roundCountIsSettled({ index: 0, phase: roundOne.phase, answer_ends_at: new Date(roundOne.answerEnd).toISOString(), break_ends_at: new Date(roundOne.breakEnd).toISOString() }, T0 + 5_000),
+    false, "round 1 never prints a flat zero while the room is still answering");
+  assert.equal(roundCountIsSettled(null, T0), false, "no round, no count");
+  assert.equal(roundCountIsSettled({ index: 2, phase: "break", answer_ends_at: "half past four", break_ends_at: "" }, T0),
+    false, "an unparseable deadline withholds the number rather than guessing");
+
+  // ---- Finding 2: a late starter must not shove the field sideways.
+  const named = (name) => racer(name, 0, 0);
+  const early = laneRoster([], [named("Tortuga Veloz"), named("Jaguar Ninja")]);
+  const later = laneRoster(early, [named("Jaguar Ninja"), named("Ardilla Turbo"), named("Tortuga Veloz")]);
+  assert.deepEqual(later.slice(0, early.length), early,
+    "a racer already on the climb keeps the lane it was handed");
+  assert.equal(later[later.length - 1], "Ardilla Turbo",
+    "the newcomer takes the next free lane, not an alphabetical slot in the middle");
+  assert.equal(laneRoster(early, [named("Jaguar Ninja"), named("Tortuga Veloz")]), early,
+    "a poll with nothing new returns the roster unchanged");
+  // Payload order is untrusted; the roster it produces must not depend on it.
+  assert.deepEqual(laneRoster([], [named("Rana Zen"), named("Abeja Sagaz")]),
+    laneRoster([], [named("Abeja Sagaz"), named("Rana Zen")]),
+    "the same first payload hands out the same lanes whatever order it arrives in");
+
+  // The geometry, not just the ordering: with the room holding the field open,
+  // an existing racer's lane percentage is identical before and after.
+  const room = 26;
+  for (let i = 0; i < early.length; i++) {
+    assert.equal(
+      lanePercent(i, laneCountFor(early.length, room)),
+      lanePercent(i, laneCountFor(later.length, room)),
+      "growing the racer array must not move a lane that is already on screen");
+  }
+  assert.equal(laneCountFor(3, 26), 26, "the room's size holds the field open before everyone has started");
+  assert.equal(laneCountFor(30, 26), 30, "but never fewer lanes than there are racers standing in them");
+  assert.equal(laneCountFor(0, 0), 1, "an empty room still has a field");
+  assert.equal(laneCountFor(4, 5000), MAX_LANES, "a nonsense present cannot shrink the ropes to threads");
+  assert.equal(laneCountFor(80, 5000), 80, "and the cap never squeezes out a real racer");
+
+  // ---- Finding 3: two attempts with no racer name yet both read "🎒 Mochila".
+  const twins = [racer("🎒 Mochila", 0, 0), racer("Jaguar Ninja", 3, 2), racer("🎒 Mochila", 5, 3)];
+  assert.equal(new Set(laneKeys(twins)).size, 3, "two unnamed attempts get two lane keys, not one");
+  assert.equal(new Set(laneRoster([], twins)).size, 3, "and two lanes on the field");
+  assert.equal(topThree(twins).length, 3, "the rail still ranks all three");
+  assert.deepEqual(names(twins), ["🎒 Mochila", "Jaguar Ninja", "🎒 Mochila"], "and the payload is left alone");
+
+  // ---- Finding 4: numbers duplicated between TypeScript and the stylesheet.
+  const bob = css.match(/animation:\s*subida-bob\s+([\d.]+)s/);
+  assert.ok(bob, "the bob's duration is declared once in the stylesheet");
+  assert.equal(Math.round(parseFloat(bob[1]) * 1000), BOB_MS,
+    "BOB_MS must equal the CSS cycle, or the phase offsets stop covering one breath");
+  const reserve = css.match(/\.subida-sky\s*\{[^}]*padding-top:\s*(\d+)px/);
+  assert.ok(reserve, "the sky reserves room above the field");
+  assert.ok(Number(reserve[1]) >= BASE_EMOJI_PX * MAX_SIZE,
+    `the reserve (${reserve && reserve[1]}px) must cover the tallest racer (${BASE_EMOJI_PX * MAX_SIZE}px) or the leader clips the piñata`);
+  // The withheld count leaves a hole; the hole has to be exactly one line tall
+  // or the two counts below it move every time the round turns over.
+  const countsRule = css.match(/\.subida-counts p \{[^}]*\}/);
+  assert.ok(countsRule, "the counts have a rule of their own");
+  const lineBox = countsRule[0].match(/line-height:\s*([\d.]+)/);
+  const reserved = countsRule[0].match(/min-height:\s*([\d.]+)em/);
+  assert.ok(lineBox && reserved, "and both an explicit line box and a reserve");
+  assert.equal(reserved[1], lineBox[1],
+    "the blank round-count slot must reserve exactly one line, or the counts below it shift every round");
+
+  // Rope, animal and label slide on one shared token, so a name is never under
+  // the wrong animal for the length of a transition.
+  assert.match(css, /--subida-slide:\s*\d+ms/, "the sideways slide has one duration");
+  for (const selector of ["subida-racer", "subida-rope", "subida-lane-name"]) {
+    const rule = css.match(new RegExp(`\\.${selector} \\{[\\s\\S]*?\\}`));
+    assert.ok(rule && /left var\(--subida-slide\)/.test(rule[0]),
+      `.${selector} must slide on the shared duration`);
+  }
+
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
+  assert.ok(reducedBlocks.some((b) => /\.subida-racer\s*\{[^}]*animation:\s*none/.test(b)), "reduced motion stops the bob");
+  assert.ok(reducedBlocks.some((b) => /\.subida-racer\s*\{[^}]*transition:\s*none/.test(b)), "and stops the climb tween");
+  assert.ok(reducedBlocks.some((b) => /\.subida-rope,\s*\.subida-lane-name\s*\{[^}]*transition:\s*none/.test(b)),
+    "and the sideways slide on the rope and its label with it");
+}
+
+// ------------------------------------------------- the three beats and the floating text
+// The ten-second break is the only moment a class of twenty-six all look up at
+// once, and it was the emptiest thing on the screen. These are the numbers and
+// the rules that make it land, and the two rules that keep it kind:
+// numbers read flat while phrases are rotated (a horizontal phrase covers three
+// or four neighbouring ropes and would appear to belong to the wrong animal),
+// and nothing negative ever floats.
+{
+  const {
+    RISE_MS, RISE_PX, HOLD_MS, FADE_MS, STAGGER_MS, WAVE_MS, PHRASE_STEP_MS,
+    NUMBER_CLEAR_PX, PHRASE_SPAN_PX, PHRASE_HEIGHT_PX, NUMBER_HEIGHT_PX,
+    FLASH_AT_MS, CLIMB_AT_MS, CLIMB_HOLD_MS, SPOTLIGHT_AT_MS, RING_MS, SPOTLIGHT_MS,
+    floatsFor, ringingLanes, spotlightFor
+  } = await import(frontend("src/features/live/floats.ts").href);
+  const { SETTLE_MARGIN_MS } = await import(frontend("src/features/live/subida.ts").href);
+  const { BREAK_SECONDS } = await import(backend("_shared/rounds.ts").href);
+  const { BANNED_WORDS } = await import(frontend("src/features/quiz/commentary.ts").href);
+
+  assert.ok(RISE_MS >= 2000, "labels drift slowly enough to read from the back of a room");
+  assert.ok(HOLD_MS + FADE_MS < 10_000, "a label is gone before the next round starts");
+  assert.equal(HOLD_MS + FADE_MS, RISE_MS,
+    "the fade must finish exactly when the drift does, or a label either freezes mid-air or vanishes still moving");
+  assert.ok(FLASH_AT_MS < CLIMB_AT_MS && CLIMB_AT_MS < SPOTLIGHT_AT_MS, "flash, then climb, then spotlight");
+
+  const racer = (name, candy, correct) => ({
+    racer_name: name, racer_emoji: "🐢", candy, correct_count: correct, finished: false, finish_place: null
+  });
+  const lane = (name, candy, correct) => ({ laneKey: name, racer: racer(name, candy, correct) });
+  const roster = ["Tortuga Veloz", "Jaguar Ninja", "Rana Zen"];
+
+  const prev = [lane("Tortuga Veloz", 2, 2), lane("Jaguar Ninja", 4, 3), lane("Rana Zen", 0, 0)];
+  const next = [lane("Tortuga Veloz", 4, 3), lane("Jaguar Ninja", 4, 3), lane("Rana Zen", 0, 0)];
+  const round = {
+    prev, next, prevTop3: ["Jaguar Ninja"], nextTop3: ["Tortuga Veloz", "Jaguar Ninja"],
+    roster, round: 3, roundsCovered: 1
+  };
+  const specs = floatsFor(round);
+
+  const gained = specs.filter((s) => s.text === "+2");
+  assert.equal(gained.length, 1, "only the racer who earned candy gets a number");
+  assert.equal(gained[0].vertical, false, "candy numbers read flat");
+  assert.equal(gained[0].laneKey, "Tortuga Veloz", "the number belongs to the racer who earned it");
+
+  // No label may claim more than the payload knows. correct_count is a running
+  // TOTAL that never decreases — this repo says so twice — so "{n} seguidas"
+  // told a student who got Q1, Q3 and Q4 that they had three in a row, which
+  // they personally knew was false. It counts what it can count.
+  assert.ok(!specs.some((s) => s.text.includes("seguidas")),
+    "no label may claim consecutive answers off a cumulative counter");
+  assert.ok(!specs.some((s) => s.text.includes("rápido")),
+    "and none may name one student of twenty-six the fastest on a payload with no answer times");
+  const streak = specs.find((s) => s.text.includes("aciertos"));
+  assert.ok(streak, "every third correct answer is still called out");
+  assert.equal(streak.vertical, true, "phrases are set vertically so they stay in their lane");
+  assert.equal(streak.laneKey, "Tortuga Veloz", "on the lane that reached it");
+  assert.ok(streak.text.includes("3"), "and it says which streak");
+
+  const promoted = specs.find((s) => s.text.includes("top 3"));
+  assert.ok(promoted, "entering the top three is called out");
+  assert.equal(promoted.vertical, true, "and it is a phrase, so it is vertical");
+  assert.equal(promoted.laneKey, "Tortuga Veloz", "on the lane that entered it");
+
+  const bolt = specs.filter((s) => s.text.includes("20 s"));
+  assert.equal(bolt.length, 1, "the bolt names one racer a round, never two");
+  assert.equal(bolt[0].vertical, true, "and it is a phrase too");
+  assert.ok(/bajo 20 s/.test(bolt[0].text),
+    "and it says only what two candy proves: the answer landed inside the golden window");
+
+  // The orientation rule, over every label the module can produce.
+  for (const spec of specs) {
+    assert.equal(spec.vertical, !/^\+\d+$/.test(spec.text),
+      `"${spec.text}" must be ${/^\+\d+$/.test(spec.text) ? "flat" : "vertical"} — nineteen pixels of lane is all it has`);
+  }
+  assert.equal(new Set(specs.map((s) => s.key)).size, specs.length,
+    "two labels sharing a key would let Preact reuse one DOM node for both");
+
+  // Nothing negative, ever. The announcer's list is the one list.
+  const words = specs.map((s) => s.text.toLowerCase()).join(" ");
+  for (const banned of BANNED_WORDS) {
+    assert.ok(!words.includes(banned), `no label may say "${banned}"`);
+  }
+  // A racer who earned nothing is silent, not marked.
+  assert.equal(specs.filter((s) => s.laneKey === "Rana Zen").length, 0, "a racer who missed gets no label at all");
+  // Falling out of the top three is never announced.
+  const demoted = floatsFor({
+    prev, next: prev, prevTop3: ["Tortuga Veloz", "Jaguar Ninja"], nextTop3: ["Jaguar Ninja"],
+    roster, round: 4, roundsCovered: 1
+  });
+  assert.equal(demoted.length, 0, "dropping out of the top three produces no label");
+
+  // Nor does climbing INTO it without earning anything. Round 1 in a room where
+  // nobody has answered is the case: every candy count is zero, topThreeKeys
+  // falls through to lane-key order, and a promotion by attrition would hand a
+  // rocket to a racer who did nothing. A racer who gained nothing gets no spec.
+  const attrition = floatsFor({
+    prev, next: prev, prevTop3: ["Jaguar Ninja"], nextTop3: ["Rana Zen", "Jaguar Ninja"],
+    roster, round: 4, roundsCovered: 1
+  });
+  assert.equal(attrition.length, 0, "a racer who earned nothing is never promoted on screen");
+
+  // ---- The carry-forward from Task 9: an index into race.racers is NOT a lane.
+  // course-class-quiz selects the attempts with no ORDER BY while settleRoom
+  // rewrites those same rows every round, so the same racers arrive in a
+  // different order on the next poll. A float resolved against payload order
+  // lands on whichever animal happened to be row 0.
+  const shuffled = floatsFor({
+    ...round,
+    prev: [prev[1], prev[2], prev[0]],
+    next: [next[2], next[0], next[1]]
+  });
+  const shape = (list) => list.map((s) => `${s.laneKey}|${s.text}|${s.vertical}|${s.delayMs}|${s.liftPx}`).sort();
+  assert.deepEqual(shape(shuffled), shape(specs),
+    "the same round produces the same labels on the same animals whatever order the payload arrives in");
+
+  // ---- The flash beat rings the earners and NOBODY else.
+  assert.deepEqual(ringingLanes(prev, next), ["Tortuga Veloz"], "the ring follows the correct-answer count");
+  assert.deepEqual(ringingLanes(prev, prev), [],
+    "a round nobody won rings nobody — it never rings the rest of the room instead");
+  assert.deepEqual(ringingLanes([prev[2], prev[0], prev[1]], [next[1], next[2], next[0]]), ["Tortuga Veloz"],
+    "and it is resolved by lane, so a reordered payload cannot ring the wrong animal");
+
+  // ---- The spotlight.
+  assert.equal(spotlightFor({ ...round, next: prev }), null, "a round nobody earned has no standout");
+  const spot = spotlightFor(round);
+  assert.equal(spot.laneKey, "Tortuga Veloz", "the standout is the racer whose round was biggest");
+  assert.equal(spot.gained, 2, "and the card knows what they just earned");
+  const tiedRoster = ["Abeja Sagaz", "Buho Astuto", "Coyote Listo"];
+  const tiedPrev = tiedRoster.map((name) => lane(name, 0, 0));
+  const tiedNext = tiedRoster.map((name) => lane(name, 2, 1));
+  const tie = (p, n) => spotlightFor({
+    prev: p, next: n, prevTop3: [], nextTop3: tiedRoster, roster: tiedRoster, round: 1, roundsCovered: 1
+  });
+  assert.equal(
+    tie(tiedPrev, tiedNext).laneKey,
+    tie([tiedPrev[2], tiedPrev[0], tiedPrev[1]], [tiedNext[1], tiedNext[2], tiedNext[0]]).laneKey,
+    "three racers with an identical round resolve to the same standout whatever order they arrive in"
+  );
+
+  // ---- A full class, all three phrases, worst case: the wave crosses the
+  // screen and every label is gone before the break ends. The beat cannot start
+  // before the round settles, and the poll that notices it may be a whole
+  // period late, so both are in the budget.
+  const bigRoster = Array.from({ length: 26 }, (_, i) => `Racer ${String(i).padStart(2, "0")}`);
+  const bigPrev = bigRoster.map((name) => lane(name, 4, 2));
+  const bigNext = bigRoster.map((name) => lane(name, 6, 3));
+  const big = floatsFor({
+    prev: bigPrev, next: bigNext, prevTop3: [], nextTop3: bigRoster.slice(0, 3),
+    roster: bigRoster, round: 9, roundsCovered: 1
+  });
+  assert.equal(big.filter((s) => !s.vertical).length, 26, "every earner gets a number");
+  assert.equal(big.filter((s) => s.text.includes("aciertos")).length, 26, "and every third correct answer says so");
+  assert.equal(big.filter((s) => s.text.includes("20 s")).length, 1, "and exactly one bolt, however many went golden");
+
+  const layerSource = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  const pollMs = Number((layerSource.match(/const POLL_MS = (\d+)/) || [])[1]);
+  assert.ok(pollMs > 0, "the poll period is still declared in the layer");
+  const lastLabel = Math.max(...big.map((s) => s.delayMs));
+  assert.ok(
+    SETTLE_MARGIN_MS + pollMs + lastLabel + RISE_MS < BREAK_SECONDS * 1000,
+    `the last label of a full class (${SETTLE_MARGIN_MS + pollMs + lastLabel + RISE_MS}ms) must be gone before the break ends (${BREAK_SECONDS * 1000}ms) — one round's text must never survive into the next round's flash`
+  );
+
+  const numbers = big.filter((s) => !s.vertical);
+  assert.ok(numbers[0].delayMs < numbers[numbers.length - 1].delayMs,
+    "twenty-six numbers landing together read as a wall; staggered they read as a wave");
+  for (let i = 1; i < numbers.length; i++) {
+    assert.ok(numbers[i].delayMs >= numbers[i - 1].delayMs, "and the wave crosses the screen in lane order");
+    assert.ok(numbers[i].delayMs - numbers[i - 1].delayMs <= STAGGER_MS,
+      "a big round compresses the step rather than running the wave past the break");
+  }
+  assert.ok(WAVE_MS > 0 && PHRASE_STEP_MS > 0, "the wave and the gap between one racer's phrases are both declared");
+  const small = floatsFor({
+    prev: tiedPrev, next: tiedNext, prevTop3: [], nextTop3: [], roster: tiedRoster, round: 2, roundsCovered: 1
+  }).filter((s) => !s.vertical);
+  assert.equal(small[1].delayMs - small[0].delayMs, STAGGER_MS, "a small round staggers at the full step");
+
+  // A phrase must never overtake its own racer's number, and two labels in one
+  // lane must never land on top of each other — nineteen pixels has room for one.
+  const perLane = new Map();
+  for (const spec of big) perLane.set(spec.laneKey, [...(perLane.get(spec.laneKey) || []), spec]);
+  for (const [laneKey, list] of perLane) {
+    const number = list.find((s) => !s.vertical);
+    for (const phrase of list.filter((s) => s.vertical)) {
+      assert.ok(phrase.delayMs > number.delayMs, `${laneKey}'s phrase lands after its own number, never before it`);
+    }
+    assert.equal(new Set(list.map((s) => s.delayMs)).size, list.length, `${laneKey}'s labels never land on top of each other`);
+  }
+
+  // Two labels on one rope are stacked, not drawn through each other. A vertical
+  // phrase is about eighty pixels TALL, and by the time it lands the flat number
+  // it shares the lane with has drifted barely twenty.
+  const stacked = floatsFor({
+    ...round,
+    prev: [lane("Tortuga Veloz", 2, 2)],
+    next: [lane("Tortuga Veloz", 4, 3)],
+    prevTop3: [],
+    nextTop3: ["Tortuga Veloz"],
+    roster: ["Tortuga Veloz"]
+  });
+  const stackedNumber = stacked.filter((s) => !s.vertical)[0];
+  assert.equal(stackedNumber.liftPx, 0, "the number takes the anchor itself");
+  const phrases = stacked.filter((s) => s.vertical).sort((a, b) => a.delayMs - b.delayMs);
+  assert.equal(phrases.length, 3, "one round can earn a streak, a bolt and a promotion at once");
+
+  // Clearance is a property of the geometry, not a threshold to restate: two
+  // labels on one rope drift at the same speed, so the only thing that eats the
+  // gap between them is the head start the lower one has by the time the upper
+  // one spawns. Both label heights come out of the module so this cannot drift.
+  const driftPerMs = RISE_PX / RISE_MS;
+  assert.ok(
+    phrases[0].liftPx >= (phrases[0].delayMs - stackedNumber.delayMs) * driftPerMs + NUMBER_HEIGHT_PX,
+    "the first phrase must start above where the number has already drifted to, or the two are drawn through each other"
+  );
+  for (let i = 1; i < phrases.length; i++) {
+    assert.ok(
+      phrases[i].liftPx - phrases[i - 1].liftPx
+        >= (phrases[i].delayMs - phrases[i - 1].delayMs) * driftPerMs + PHRASE_HEIGHT_PX,
+      "and each further phrase must clear the whole height of the one below it, head start included"
+    );
+  }
+  assert.ok(PHRASE_SPAN_PX >= PHRASE_STEP_MS * driftPerMs + PHRASE_HEIGHT_PX,
+    "the declared span is what makes that hold for any two consecutive phrases");
+
+  // ---- A skipped beat corrupts three labels at once, so the inferences that
+  // depend on one round having passed are given up rather than guessed. Four
+  // consecutive failed polls across a settled window is all it takes: two
+  // ordinary correct answers then sum to two candy and read as one fast one, and
+  // a correct count stepping 2 → 4 steps straight over the milestone at 3.
+  const skippedRoster = ["Ardilla Turbo"];
+  const skipped = floatsFor({
+    prev: [lane("Ardilla Turbo", 4, 1)],
+    next: [lane("Ardilla Turbo", 6, 3)],
+    prevTop3: [], nextTop3: [], roster: skippedRoster, round: 6, roundsCovered: 2
+  });
+  assert.equal(skipped.length, 1, "two rounds of gain is still one number, and nothing else");
+  assert.equal(skipped[0].text, "+2", "the candy really did rise by two");
+  assert.ok(!skipped.some((s) => s.text.includes("20 s")),
+    "but two ordinary correct answers are not one fast one");
+  assert.ok(!skipped.some((s) => s.text.includes("aciertos")),
+    "and a count that stepped over three never reached three");
+  const goldColour = big.find((s) => !s.vertical).color;
+  assert.notEqual(skipped[0].color, goldColour, "nor is it coloured as a golden answer");
+  // Even a clean single answer loses the bolt when the diff spans rounds — it is
+  // a per-round claim and the beat can no longer say which round it belongs to.
+  const spanned = floatsFor({
+    prev: [lane("Ardilla Turbo", 4, 1)],
+    next: [lane("Ardilla Turbo", 6, 2)],
+    prevTop3: [], nextTop3: [], roster: skippedRoster, round: 6, roundsCovered: 2
+  });
+  assert.ok(!spanned.some((s) => s.text.includes("20 s")), "a per-round superlative needs one round");
+  assert.equal(spotlightFor({
+    prev: [lane("Ardilla Turbo", 4, 1)],
+    next: [lane("Ardilla Turbo", 6, 2)],
+    prevTop3: [], nextTop3: [], roster: skippedRoster, round: 6, roundsCovered: 2
+  }).fastest, false, "and the card does not claim it either");
+
+  // ---- The rendering: lanes, anchors, orientation, and nothing that dims.
+  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
+  const layer = layerSource;
+  assert.match(layer, /floatsFor\(/, "the layer builds its labels from the pure module");
+  assert.match(layer, /ringingLanes\(/, "and its flash set from the same place");
+  assert.match(layer, /spotlightFor\(/, "and its standout");
+  assert.doesNotMatch(layer, /racerIndex/,
+    "a float is resolved by lane key, never by an index into a payload that has no ORDER BY");
+  assert.match(layer, /BASE_EMOJI_PX \* sizeFor\(/,
+    "a label clears its OWN emoji — a fixed offset puts a leader's label behind the animal that earned it");
+  assert.match(layer, /float\.liftPx/, "and a second label on the same rope is stacked above the first");
+  // The poll swallows everything — that catch was bought for network failures.
+  // A throw out of the beats must not take the field's own update with it, so
+  // setRace and the freeze both land BEFORE runBeats is ever called.
+  assert.ok(
+    layer.indexOf("setRace(res);\n          if (res.state === \"closed\") freeze();\n          runBeats(") > -1,
+    "the frame and the freeze are committed before the beats can throw"
+  );
+  assert.match(layer, /roundsCovered: Math\.max\(1, round\.index - baseline\.round\)/,
+    "and the baseline carries the round it covers, so a skipped beat knows it skipped one");
+  assert.match(layer, /subida-float/, "the labels render");
+  assert.match(layer, /subida-spot/, "and the spotlight card does");
+  assert.doesNotMatch(css, /\.subida-racer\.[\w-]+\s*\{[^}]*opacity/,
+    "no racer is ever dimmed — dimming the room's misses reads as a callout, and this screen never points at a struggling student");
+
+  const wrapper = css.match(/\.subida-float \{[^}]*\}/);
+  assert.ok(wrapper, "the drifting wrapper has a rule");
+  assert.ok(!/writing-mode|rotate\(/.test(wrapper[0]),
+    "the wrapper carries the drift only — the rotation belongs on the inner span or the two transforms fight");
+  const flat = css.match(/\.subida-float\.flat span \{[^}]*\}/);
+  const vertical = css.match(/\.subida-float\.vertical span \{[^}]*\}/);
+  assert.ok(flat && !/writing-mode/.test(flat[0]), "numbers read flat");
+  assert.ok(vertical && /writing-mode:\s*vertical-rl/.test(vertical[0]),
+    "phrases are rotated so they stay inside their own lane");
+
+  // The stylesheet and the module must agree on every number they share.
+  const floatAnimation = css.match(/\.subida-float \{[\s\S]*?animation:\s*subida-float-rise\s+(\d+)ms/);
+  assert.ok(floatAnimation && Number(floatAnimation[1]) === RISE_MS, "the drift's duration is RISE_MS");
+  const rise = css.match(/@keyframes subida-float-rise \{([\s\S]*?)\n\}/);
+  assert.ok(rise, "the drift has one keyframe set");
+  const holdStop = rise[1].match(/([\d.]+)%\s*\{\s*opacity:\s*1;\s*transform:\s*translateY\(-([\d.]+)px\)/);
+  assert.ok(holdStop, "with an explicit stop where the fade begins");
+  assert.ok(Math.abs(Number(holdStop[1]) - (HOLD_MS / RISE_MS) * 100) < 0.5,
+    "the fade must begin where HOLD_MS says it does");
+  assert.ok(Math.abs(Number(holdStop[2]) - RISE_PX * (HOLD_MS / RISE_MS)) < 1,
+    "and the label must be exactly that far up at that stop, or the drift is not constant speed");
+  const riseEnd = rise[1].match(/100%\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(-([\d.]+)px\)/);
+  assert.ok(riseEnd && Number(riseEnd[1]) === RISE_PX, "and the whole drift is RISE_PX");
+
+  const climbToken = css.match(/--subida-climb:\s*(\d+)ms/);
+  assert.ok(climbToken && Number(climbToken[1]) === CLIMB_AT_MS,
+    "the climb beat's delay is declared once and TypeScript and the stylesheet agree on it");
+  const slide = css.match(/--subida-slide:\s*(\d+)ms/);
+  assert.ok(slide && CLIMB_HOLD_MS >= CLIMB_AT_MS + Number(slide[1]),
+    "the climb's transition-delay must stay applied until the climb it delays has finished");
+  assert.ok(RING_MS > 0 && SPOTLIGHT_MS > 0, "the ring and the card both have a life");
+  assert.ok(SPOTLIGHT_AT_MS + SPOTLIGHT_MS < BREAK_SECONDS * 1000,
+    "the card is gone before the next round's question is on the phones");
+
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
+  assert.ok(reducedBlocks.some((b) => /\.subida-float\s*\{[^}]*animation-name:\s*subida-float-still/.test(b)),
+    "reduced motion drops the drift: the label appears in place and fades");
+  assert.ok(reducedBlocks.some((b) => /\.subida-racer\.hit\s*\{[^}]*filter:\s*none/.test(b)), "and drops the ring");
+  assert.ok(reducedBlocks.some((b) => /\.pinata-figure\.jolt\s*\{[^}]*animation:\s*none/.test(b)), "and the shake");
+  const still = css.match(/@keyframes subida-float-still \{([\s\S]*?)\n\}/);
+  assert.ok(still && !/transform/.test(still[1]), "the reduced-motion label never moves at all");
+
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  for (const key of ["subida.spotlight", "subida.spotStreak", "subida.spotTop3", "subida.spotFastest", "subida.spotCandy"]) {
+    assert.ok(strings.includes(`"${key}"`), `${key} is in the dictionary`);
+  }
+  // The four labels themselves are deliberately Spanish in both languages and
+  // live in floats.ts, not the dictionary — the same ruling commentary.ts
+  // records for the chants, and for the same reason: this verifier imports the
+  // module and executes it in Node, where the app's i18n does not exist.
+  const floatsSource = readFileSync(frontend("src/features/live/floats.ts"), "utf8");
+  assert.doesNotMatch(floatsSource, /from "\.\.\/\.\.\/i18n"/, "floats.ts must import cleanly in Node");
+  assert.doesNotMatch(floatsSource, /^import (?!type )/m,
+    "and carry no runtime import at all — default and namespace imports included, since Node cannot resolve any of them from a .ts file");
+}
+
+// ------------------------------------------------- fair shuffle
+{
+  const { shuffle } = await import(backend("_shared/shuffle.ts").href);
+
+  // A biased shuffle leaves element 0 near the front far more often than 1/4.
+  // Over 40k trials on 4 items, each position should hold ~10000 (±5%).
+  const counts = [0, 0, 0, 0];
+  for (let i = 0; i < 40000; i++) {
+    const out = shuffle(["a", "b", "c", "d"]);
+    counts[out.indexOf("a")] += 1;
+  }
+  for (const c of counts) {
+    assert.ok(Math.abs(c - 10000) < 500, `fair shuffle: position count ${c} is within 5% of 10000`);
+  }
+
+  // The old approach must actually fail that bar — otherwise the test proves nothing.
+  const biased = [0, 0, 0, 0];
+  for (let i = 0; i < 40000; i++) {
+    const out = ["a", "b", "c", "d"].sort(() => Math.random() - 0.5);
+    biased[out.indexOf("a")] += 1;
+  }
+  assert.ok(
+    biased.some((c) => Math.abs(c - 10000) >= 500),
+    "the sort-based shuffle is biased; if this passes the test is not measuring bias"
+  );
+
+  assert.deepEqual(shuffle([]).length, 0, "empty input is safe");
+  const source = [1, 2, 3, 4, 5];
+  const copy = shuffle(source);
+  assert.equal(copy.length, 5, "length is preserved");
+  assert.deepEqual([...copy].sort(), [1, 2, 3, 4, 5], "membership is preserved");
+  assert.deepEqual(source, [1, 2, 3, 4, 5], "the input array is not mutated");
+}
+
+// ------------------------------------------------- the 4/3/3 deal
+{
+  const { dealQuestions, QUOTA } = await import(backend("_shared/shuffle.ts").href);
+  assert.deepEqual(QUOTA, { easy: 4, medium: 3, hard: 3 }, "the mix is 4 easy, 3 medium, 3 hard");
+
+  const pool = [];
+  for (let i = 0; i < 12; i++) pool.push({ id: `e${i}`, difficulty: "easy" });
+  for (let i = 0; i < 12; i++) pool.push({ id: `m${i}`, difficulty: "medium" });
+  for (let i = 0; i < 12; i++) pool.push({ id: `h${i}`, difficulty: "hard" });
+
+  const dealt = dealQuestions(pool, QUOTA);
+  assert.equal(dealt.length, 10, "ten questions are dealt");
+  const byTier = (t) => dealt.filter((q) => q.difficulty === t).length;
+  assert.equal(byTier("easy"), 4, "four easy");
+  assert.equal(byTier("medium"), 3, "three medium");
+  assert.equal(byTier("hard"), 3, "three hard");
+  assert.equal(new Set(dealt.map((q) => q.id)).size, 10, "no question is dealt twice");
+
+  // Order is shuffled, not easy-then-medium-then-hard. Over 40 deals the
+  // difficulty sequence must not be constant.
+  const sequences = new Set();
+  for (let i = 0; i < 40; i++) sequences.add(dealQuestions(pool, QUOTA).map((q) => q.difficulty).join(","));
+  assert.ok(sequences.size > 5, "two students do not meet the same difficulty order");
+
+  // A short tier backfills rather than serving fewer than ten.
+  const shortPool = [
+    ...pool.filter((q) => q.difficulty === "easy"),
+    ...pool.filter((q) => q.difficulty === "medium"),
+    { id: "h0", difficulty: "hard" }
+  ];
+  const backfilled = dealQuestions(shortPool, QUOTA);
+  assert.equal(backfilled.length, 10, "a short hard tier still yields ten questions");
+  assert.equal(backfilled.filter((q) => q.difficulty === "hard").length, 1, "it uses the one hard question available");
+
+  // A pool smaller than the quota yields the whole pool, not a crash.
+  assert.equal(dealQuestions([{ id: "x", difficulty: "easy" }], QUOTA).length, 1, "a tiny pool yields what exists");
+}
+
+// ------------------------------------------------- the deal is wired in
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /dealQuestions\(pool, QUOTA\)/, "the deal uses the 4/3/3 quota");
+  assert.match(attempt, /shuffle\(optionsByQuestion\.get/, "options use the fair shuffle");
+  assert.doesNotMatch(attempt, /maybeShuffle/, "the biased shuffle is gone");
+  assert.doesNotMatch(attempt, /function selectQuestions/, "round-robin selection is gone");
+}
+
+// ------------------------------------------------- the room clock
+{
+  const {
+    ANSWER_SECONDS, BREAK_SECONDS, ROUND_SECONDS, GOLDEN_SECONDS,
+    ANSWER_GRACE_MS, REVEAL_DELAY_MS,
+    CANDY_CORRECT, CANDY_GOLDEN, windowFor, roundAt, candyFor, totalSecondsFor, revealDue
+  } = await import(backend("_shared/rounds.ts").href);
+
+  // THE INVARIANT. The grace keeps taking answers for two seconds after the
+  // countdown ends; the reveal is held back for three. Invert the two and a
+  // scripted client could read its round's correct option and ping it back
+  // while the window was still open — the forgery the whole grading path was
+  // rebuilt to close. This assertion is the guard rail, not the comment beside
+  // the constants.
+  assert.ok(
+    REVEAL_DELAY_MS > ANSWER_GRACE_MS,
+    `the reveal must land strictly after the grace closes (grace ${ANSWER_GRACE_MS}ms, reveal ${REVEAL_DELAY_MS}ms)`
+  );
+  assert.ok(ANSWER_GRACE_MS > 0, "there is a grace at all");
+  assert.ok(REVEAL_DELAY_MS < BREAK_SECONDS * 1000, "the reveal still lands inside the break");
+
+  assert.equal(ANSWER_SECONDS, 40, "forty seconds to answer");
+  assert.equal(BREAK_SECONDS, 10, "ten seconds of break");
+  assert.equal(ROUND_SECONDS, 50, "a round is fifty seconds");
+  assert.equal(GOLDEN_SECONDS, 20, "a golden candy needs an answer inside twenty seconds");
+
+  const T0 = 1_700_000_000_000;
+
+  const first = windowFor(T0, 0, 10);
+  assert.equal(first.answerStart, T0, "round 0 answers from the anchor");
+  assert.equal(first.answerEnd, T0 + 40_000, "round 0's countdown ends at 40s");
+  assert.equal(first.answersCloseAt, T0 + 40_000 + ANSWER_GRACE_MS, "and the last ping for it is accepted a grace later");
+  assert.equal(first.breakEnd, T0 + 50_000, "round 0 ends at 50s");
+  // The student is told forty seconds and the phase flips at forty seconds:
+  // the grace covers flight time, it is not extra time to think.
+  assert.equal(roundAt(T0, T0 + 40_000, 10).phase, "break", "the grace does not extend the countdown the room sees");
+
+  // THE INVARIANT, RUN. `revealDue` is the ordered pair as arithmetic, and it
+  // lives here rather than in course-pulse precisely so this can execute it:
+  // course-pulse imports Deno and a database client, so the predicate used to
+  // be checked by matching the substring "REVEAL_DELAY_MS" in its text — which
+  // `answerEnd + REVEAL_DELAY_MS - 3000` and `answerEnd - REVEAL_DELAY_MS` both
+  // pass, and both invert. The same treatment answeredInWindow already gets.
+  const revealRound = roundAt(T0, T0 + 45_000, 10);
+  assert.equal(revealRound.phase, "break", "the probe below is set during a break");
+  assert.equal(
+    revealDue(revealRound, revealRound.answerEnd + REVEAL_DELAY_MS - 1), false,
+    "one millisecond before the delay expires the correct option is still withheld"
+  );
+  assert.equal(
+    revealDue(revealRound, revealRound.answerEnd + REVEAL_DELAY_MS), true,
+    "and it is published the instant the delay expires"
+  );
+  // The grace is only safe if it shuts before the reveal opens. Probed at the
+  // exact instant the last acceptable answer can land.
+  assert.equal(
+    revealDue(revealRound, revealRound.answersCloseAt), false,
+    "an answer accepted at the very end of the grace still predates the reveal"
+  );
+  assert.equal(
+    revealDue(roundAt(T0, T0 + 20_000, 10), T0 + 20_000 + REVEAL_DELAY_MS * 10), false,
+    "a round still taking answers never reveals, however long the phone waits"
+  );
+  assert.equal(
+    revealDue(roundAt(T0, T0 + 500_000, 10), T0 + 500_000), false,
+    "and a finished quiz reveals through the review list, not through the break"
+  );
+
+  const fifth = windowFor(T0, 4, 10);
+  assert.equal(fifth.answerStart, T0 + 200_000, "round 4 starts at 200s");
+  assert.equal(fifth.answerEnd, T0 + 240_000, "round 4 stops taking answers at 240s");
+
+  assert.equal(roundAt(T0, T0, 10).index, 0, "at the anchor we are in round 0");
+  assert.equal(roundAt(T0, T0, 10).phase, "answering", "and we are answering");
+  assert.equal(roundAt(T0, T0 + 39_999, 10).phase, "answering", "still answering at 39.999s");
+  assert.equal(roundAt(T0, T0 + 40_000, 10).phase, "break", "the break starts at 40s");
+  assert.equal(roundAt(T0, T0 + 49_999, 10).phase, "break", "and runs to 49.999s");
+  assert.equal(roundAt(T0, T0 + 50_000, 10).index, 1, "round 1 starts at 50s");
+  assert.equal(roundAt(T0, T0 + 50_000, 10).phase, "answering", "answering again");
+
+  // A late joiner lands on the live round, not at the start.
+  const late = roundAt(T0, T0 + 265_000, 10);
+  assert.equal(late.index, 5, "arriving at 4:25 lands in round 5");
+  assert.equal(late.phase, "answering", "with answering still open");
+
+  // Past the end.
+  assert.equal(roundAt(T0, T0 + 500_000, 10).phase, "done", "the quiz is done after ten rounds");
+  assert.equal(roundAt(T0, T0 + 499_999, 10).phase, "break", "the last break runs to the final millisecond");
+  // A clock that is behind the anchor must not produce a negative round.
+  assert.equal(roundAt(T0, T0 - 5_000, 10).index, 0, "before the anchor we are in round 0");
+
+  // Candy.
+  assert.equal(CANDY_CORRECT, 1, "a correct answer is one candy");
+  assert.equal(CANDY_GOLDEN, 2, "correct and fast is two");
+  assert.equal(candyFor({ correct: true, msIntoRound: 19_999 }), 2, "inside twenty seconds is golden");
+  assert.equal(candyFor({ correct: true, msIntoRound: 20_000 }), 1, "at twenty seconds it is not");
+  assert.equal(candyFor({ correct: true, msIntoRound: null }), 1, "no timestamp means no golden candy");
+  assert.equal(candyFor({ correct: false, msIntoRound: 500 }), 0, "a fast wrong answer earns nothing");
+  assert.equal(candyFor({ correct: false, msIntoRound: null }), 0, "an unanswered question earns nothing");
+
+  // Whole-quiz sizing: ten rounds of fifty seconds plus the existing cushion.
+  assert.equal(totalSecondsFor(10), 560, "ten rounds is 8:20 plus a 60s cushion");
+  assert.equal(totalSecondsFor(0), 60, "no questions clamps to the floor");
+}
+
+{
+  const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
+  assert.match(classQuiz, /totalSecondsFor\(/, "the instance clock is sized from the round schedule");
+  assert.doesNotMatch(classQuiz, /estimateTotalSeconds\(/, "the old per-question estimate no longer sizes the quiz");
+}
+
+// ------------------------------------------------- settling a closed round
+{
+  const { settleAttempt } = await import(backend("_shared/settle.ts").href);
+  const T0 = 1_700_000_000_000;
+  const questions = [
+    { id: "q0", correctOptionId: "a0" },
+    { id: "q1", correctOptionId: "a1" },
+    { id: "q2", correctOptionId: "a2" },
+    { id: "q3", correctOptionId: "a3" }
+  ];
+
+  // Round 0 correct at 12s (golden). Round 1 wrong. Round 2 correct but at
+  // 25s into its round — past golden, still in time. Round 3 correct at 8s
+  // into ITS round (golden) despite being 158s after the quiz started.
+  //
+  // Round 3 is the point of this fixture: a settleAttempt that measured
+  // "fast" from the quiz's startedAt instead of from the round's own
+  // answerStart would grade q3 as a slow, non-golden answer (158s in) even
+  // though it was in fact answered in the first 8 seconds of its round —
+  // caught only by having a golden answer in a round other than round 0.
+  // Round 2 supplies the matching case for the other direction: a mutant
+  // that pays every correct answer the golden rate would overpay round 2.
+  //
+  // NB: the brief's draft stamped q2 at +5s, which candyFor (correctly)
+  // grades as golden — that draft value contradicted its own "plain 1"
+  // assertion below, so it is corrected here to +25s.
+  const answers = { q0: "a0", q1: "wrong", q2: "a2", q3: "a3" };
+  const answerTimes = {
+    q0: T0 + 12_000,
+    q1: T0 + 50_000 + 30_000,
+    q2: T0 + 100_000 + 25_000,
+    q3: T0 + 150_000 + 8_000
+  };
+
+  // At 130s: rounds 0 and 1 are closed, round 2 is still answering.
+  const mid = settleAttempt({
+    startedAt: T0, now: T0 + 130_000, questionCount: 4, questions, answers, answerTimes, settledThrough: -1
+  });
+  assert.equal(mid.correctCount, 1, "only round 0 was right and only rounds 0-1 are settled");
+  assert.equal(mid.candy, 2, "answered correctly inside twenty seconds is a golden candy");
+  assert.equal(mid.settledThrough, 1, "rounds 0 and 1 are settled");
+
+  // At 210s every round is closed.
+  const end = settleAttempt({
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers, answerTimes, settledThrough: 1
+  });
+  assert.equal(end.correctCount, 3, "rounds 0, 2, and 3 were correct");
+  assert.equal(end.candy, 5, "golden 2 (round 0) + wrong 0 (round 1) + plain 1 (round 2) + golden 2 (round 3)");
+  assert.equal(end.settledThrough, 3, "all four rounds are settled");
+
+  // Idempotent: calling again with the same clock changes nothing.
+  const again = settleAttempt({
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers, answerTimes, settledThrough: 3
+  });
+  assert.deepEqual(again, end, "settling twice is the same as settling once");
+
+  // An answer that arrived after its round closed earns nothing.
+  const late = settleAttempt({
+    startedAt: T0, now: T0 + 160_000, questionCount: 4, questions,
+    answers: { q0: "a0" }, answerTimes: { q0: T0 + 45_000 }, settledThrough: -1
+  });
+  assert.equal(late.correctCount, 0, "an answer stamped after the 40s window does not count");
+  assert.equal(late.candy, 0, "and earns no candy");
+
+  // Nothing answered at all.
+  const nothing = settleAttempt({
+    startedAt: T0, now: T0 + 160_000, questionCount: 4, questions, answers: {}, answerTimes: {}, settledThrough: -1
+  });
+  assert.equal(nothing.correctCount, 0, "no answers, no correctness");
+  assert.equal(nothing.candy, 0, "no answers, no candy");
+}
+
+// ------------------------------------------------- migration 0058
+// NB: the brief named this 0057_quiz_la_subida.sql, but 0057 was already
+// taken by 0057_quiz_attempt_resume.sql (the same-day kick-resume hotfix,
+// see docs/05-status.md "Deploy shape: migration 0057 before the two
+// functions") by the time this task ran. Two files sharing one version
+// number would make `supabase db push` skip the second silently, so this
+// task's migration is 0058 instead.
+{
+  const migration = readFileSync(backendPath("supabase/migrations/0058_quiz_la_subida.sql"), "utf8");
+  for (const needle of [
+    "candy int not null default 0",
+    "correct_count int not null default 0",
+    "round_answer_times jsonb not null default",
+    "settled_through int not null default -1"
+  ]) {
+    assert.ok(migration.includes(needle), `migration 0058 declares ${needle}`);
+  }
+}
+
+// ------------------------------------------------- answer-time stamping
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /round_answer_times/, "report_progress stamps answer times");
+  assert.match(attempt, /mergedAnswerTimes\[questionId\] === undefined/, "the first answer's timestamp is never overwritten");
+  assert.match(attempt, /candy, correct_count, settled_through/, "the attempt row exposes the race columns");
+}
+
+// ------------------------------------------------- grading counts all ten
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  // Anchored on the statement end so a re-introduced fractional bonus (e.g.
+  // "= 0.5") cannot sail past a bare `= 0` prefix match.
+  assert.match(attempt, /maxSpeedBonusPercent = 0;/, "speed no longer moves a grade");
+
+  // CANDY IS THE RACE AND NEVER THE GRADE. The property holds today —
+  // gradeResponses reads points and options, syncGradebookScore reads the three
+  // score fields — and it is the one most likely to be undone by a well-meaning
+  // edit ("give candy as extra credit"), which is why the spec asked for a
+  // static guard rail rather than trusting the comment beside the constant.
+  //
+  // Comments are stripped first: this must catch `candy` being READ, not a
+  // future line of prose explaining why it isn't.
+  const code = (source) => source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  const gradingPaths = {
+    gradeResponses: between(attempt, "async function gradeResponses(", "function normalizeResponseJson(", "gradeResponses"),
+    syncGradebookScore: between(attempt, "async function syncGradebookScore(", "async function loadActivityInstance(", "syncGradebookScore"),
+    calculateSpeedBonus: between(attempt, "function calculateSpeedBonus(", "function calculateFinalScore(", "calculateSpeedBonus"),
+    calculateFinalScore: between(attempt, "function calculateFinalScore(", "function round1(", "calculateFinalScore")
+  };
+  for (const [name, body] of Object.entries(gradingPaths)) {
+    assert.doesNotMatch(code(body), /candy/i, `${name} must not read candy — score_raw, score_percent and score_final are correctness only`);
+  }
+  // The gradebook payload specifically: neither the race's candy nor its
+  // correct count may reach a posted score.
+  assert.doesNotMatch(code(gradingPaths.syncGradebookScore), /correct_count/,
+    "the gradebook payload carries no race column either");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  // Not a match on the exact old predicate — any .filter( chained straight
+  // onto this map would silently drop dealt-but-unanswered questions again,
+  // whatever it filters on (e.g. a re-added `.filter((r) => Boolean(r.selected_option_id))`
+  // would sail past a narrower regex tied to the old predicate's text).
+  assert.doesNotMatch(
+    player,
+    /selected_option_id: finalAnswers\[q\.id\] \|\| ""\s*\}\)\)\s*\.filter\(/,
+    "the player must submit every dealt question — no filter may follow the responses map, whatever it filters on"
+  );
+  assert.match(player, /selected_option_id: finalAnswers\[q\.id\] \|\| ""/, "unanswered questions submit an empty selection");
+}
+
+// ------------------------------------------------- read surfaces
+{
+  const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
+  // Both surfaces settle through the one shared helper, which is what makes the
+  // piñata a single number rather than two computations that have to be trusted
+  // to agree. The chain to the rule itself is asserted below.
+  assert.match(classQuiz, /settleRoom\(/, "the race settles closed rounds before answering");
+  assert.match(classQuiz, /round_correct/, "the race reports how many got the closed round right");
+  assert.match(classQuiz, /roundAt\(/, "the race reports the room's round window");
+  assert.doesNotMatch(classQuiz, /progress_position/, "racers are no longer placed by question position");
+
+  // The room's screen polls every two seconds. `needDetailFor` is settle-room's
+  // heavy read — every frozen deal, ten questions of prompt and four options in
+  // two languages, plus a question_options fan-out — and it is seeded into
+  // `wanted` BEFORE the behind-check that exists to keep that read off a poll
+  // with nothing to settle. Naming all twenty-six attempts unconditionally
+  // therefore ran it thirty times a minute on the one surface that must not
+  // stutter in front of the room.
+  //
+  // Only `round_correct` needs it, and the screen withholds that number for the
+  // whole answering phase (roundCountIsSettled). So: not while answering.
+  // Populated for the break and for `done`, and NOT narrower — dropping it
+  // during the break would blank the flash beat on the second poll of the same
+  // break, once every attempt is already settled and `results` comes back empty.
+  const needDetail = classQuiz.match(/needDetailFor:.*\n/);
+  assert.ok(needDetail, "the race says which attempts it needs per-round detail for");
+  assert.match(needDetail[0], /phase !== "answering"/,
+    "the whole room's frozen deals are not re-read while the room is answering");
+  assert.match(needDetail[0], /rows\.map\(/,
+    "but every racer's detail is still asked for once a round has closed");
+
+  const pulse = readFileSync(fn("course-pulse/index.ts"), "utf8");
+  assert.match(pulse, /settleRoom\(/, "the phone poll settles closed rounds too");
+  assert.match(pulse, /last_result/, "the phone poll carries the reveal for the closed round");
+  assert.match(pulse, /correct_option_id/, "the reveal names the correct option");
+
+  const room = readFileSync(fn("_shared/settle-room.ts"), "utf8");
+  assert.match(room, /settleAttempt\(/, "the shared room settle runs the shared per-round rule");
+
+  // The reveal has two gates and needs both: the break, and the delay that
+  // pays for the answer grace. Both now live in `revealDue` in _shared/rounds.ts
+  // and are RUN by this verifier (see the room-clock section) rather than
+  // matched as text here.
+  //
+  // Text-matching them here was the hole. course-pulse cannot be imported by a
+  // Node verifier — Deno, a database client — so the arithmetic could only ever
+  // be checked by a substring, and `answerEnd + REVEAL_DELAY_MS - 3000` and
+  // `answerEnd - REVEAL_DELAY_MS` both contain `REVEAL_DELAY_MS`. Either
+  // inverts the ordered pair the whole grading rebuild rests on, silently. So
+  // what is asserted here is only that course-pulse still DELEGATES: it calls
+  // the shared predicate and spells no reveal arithmetic of its own.
+  const reveal = pulse.match(/const breakRound =[^;]+;[\s\S]*?const revealed =[\s\S]*?;/);
+  assert.ok(reveal, "course-pulse computes the reveal in one place");
+  assert.match(reveal[0], /revealDue\(/, "the reveal is decided by the shared predicate");
+  assert.match(pulse, /import \{[^}]*revealDue[^}]*\} from "\.\.\/_shared\/rounds\.ts"/,
+    "and course-pulse imports it from the pure module the verifier can run");
+  assert.doesNotMatch(reveal[0], /REVEAL_DELAY_MS/,
+    "course-pulse must not re-spell the delay arithmetic a verifier cannot execute");
+
+  // One piñata, two doors. The screen used to sum freshly settled counts while
+  // a phone summed everyone else's stored column — same formula, different
+  // inputs, and up to eight points apart at the instant a round closed, which
+  // is the one moment the room and a phone are looked at together.
+  const pinataArgs = (source, file) => {
+    const call = source.match(/pinataState\(\{[\s\S]*?\}\)/);
+    assert.ok(call, `${file} calls pinataState`);
+    const text = call[0].replace(/\s+/g, " ");
+    const pick = (key) => {
+      const explicit = text.match(new RegExp(`${key}:\\s*([^,}]+)`));
+      if (explicit) return explicit[1].trim();
+      // Property shorthand: `questionCount,` is the local of that name.
+      return new RegExp(`[{,]\\s*${key}\\s*[,}]`).test(text) ? key : null;
+    };
+    return { correct: pick("correct"), started: pick("started"), questionCount: pick("questionCount") };
+  };
+  const screenArgs = pinataArgs(classQuiz, "course-class-quiz");
+  const phoneArgs = pinataArgs(pulse, "course-pulse");
+  assert.equal(screenArgs.correct, phoneArgs.correct, "both piñata call sites take the numerator from one expression");
+  assert.equal(screenArgs.started, phoneArgs.started, "both take the same denominator population");
+  assert.match(screenArgs.correct, /settled\.correctInRoom/, "the numerator is the shared room settle, not a local sum");
+  for (const [file, args] of [["course-class-quiz", screenArgs], ["course-pulse", phoneArgs]]) {
+    assert.match(args.questionCount, /questionCount$/, `${file} sizes the piñata by the room's question count`);
+  }
+
+  const api = readFileSync(frontend("src/api/quiz.ts"), "utf8");
+  // Read the RaceRacer block itself rather than the whole file: `position` and
+  // `answered` are still the honest signature of reportProgress, and a
+  // file-wide regex for them proves nothing about the racer.
+  const raceRacer = api.match(/export interface RaceRacer \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.ok(raceRacer, "RaceRacer is declared");
+  assert.match(raceRacer, /candy: number/, "RaceRacer carries candy");
+  assert.match(raceRacer, /correct_count: number/, "RaceRacer carries the correct count");
+  assert.doesNotMatch(raceRacer, /position: number|answered: number/, "the old track fields are gone");
+  assert.match(api, /round_correct: number/, "RaceStatus carries the flash beat's count");
+  assert.match(api, /round: RaceRound \| null/, "RaceStatus carries the room's round");
+  // The piñata's damage is correctness now. `hits` was the participation sum,
+  // and leaving the word in the type would let a reader believe it still is.
+  assert.doesNotMatch(api, /hits: number/, "the piñata no longer reports participation hits");
+
+  const pulseApi = readFileSync(frontend("src/api/pulse.ts"), "utf8");
+  assert.match(pulseApi, /export interface PulseQuizRound/, "the phone is typed for the room's round");
+  assert.match(pulseApi, /last_result:/, "MyRace carries the break's reveal");
+}
+
+// ------------------------------------------------- the reveal only ever describes a closed round
+{
+  const { settleAttempt } = await import(backend("_shared/settle.ts").href);
+  const T0 = 1_700_000_000_000;
+  const questions = [
+    { id: "q0", correctOptionId: "a0" },
+    { id: "q1", correctOptionId: "a1" },
+    { id: "q2", correctOptionId: "a2" },
+    { id: "q3", correctOptionId: "a3" }
+  ];
+  const answers = { q0: "a0", q1: "wrong", q2: "a2", q3: "a3" };
+  const answerTimes = {
+    q0: T0 + 12_000,
+    q1: T0 + 50_000 + 30_000,
+    q2: T0 + 100_000 + 25_000,
+    q3: T0 + 150_000 + 8_000
+  };
+
+  // 130s in: rounds 0 and 1 are closed, round 2 is still taking answers. The
+  // phone's reveal is built from this list, so round 2 appearing here would
+  // hand a student the answer to the question they are still answering.
+  const mid = settleAttempt({
+    startedAt: T0, now: T0 + 130_000, questionCount: 4, questions, answers, answerTimes, settledThrough: -1
+  });
+  assert.deepEqual(mid.rounds.map((r) => r.index), [0, 1], "only closed rounds carry per-round detail");
+  assert.ok(
+    mid.rounds.every((r) => r.index <= mid.settledThrough),
+    "no round past the settled cursor is described"
+  );
+  assert.deepEqual(
+    mid.rounds.map((r) => [r.questionId, r.correctOptionId, r.correct, r.candy]),
+    [["q0", "a0", true, 2], ["q1", "a1", false, 0]],
+    "each closed round names its question, its answer key, the verdict and the candy"
+  );
+
+  // The last round closes at 190s; at 210s every round is described.
+  const end = settleAttempt({
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers, answerTimes, settledThrough: 1
+  });
+  assert.deepEqual(end.rounds.map((r) => r.index), [0, 1, 2, 3], "every closed round is described");
+  assert.equal(end.rounds[2].candy, 1, "round 2 was correct but not golden");
+  assert.equal(end.rounds[3].candy, 2, "round 3 was correct inside its own twenty seconds");
+
+  // A round nobody answered is still described — as a miss, with no answer of
+  // the student's own attached.
+  const quiet = settleAttempt({
+    startedAt: T0, now: T0 + 210_000, questionCount: 4, questions, answers: {}, answerTimes: {}, settledThrough: -1
+  });
+  assert.equal(quiet.rounds.length, 4, "an unanswered round still closes");
+  assert.ok(quiet.rounds.every((r) => r.answered === false && r.correct === false && r.candy === 0),
+    "nothing answered earns nothing");
+}
+
+// ------------------------------------------------- one piñata, two doors
+// The room total must not depend on which surface asked for it. Before this,
+// `race` settled every attempt and summed the fresh counts while a phone
+// settled only its own and summed everyone else's stored column: same formula,
+// different inputs, ~8 points apart across a class of thirty at the instant a
+// round closed. This drives the real settleRoom against a stub database.
+{
+  const { settleRoom } = await import(backend("_shared/settle-room.ts").href);
+  const { closedRoundIndex } = await import(backend("_shared/settle.ts").href);
+  const { roundAt } = await import(backend("_shared/rounds.ts").href);
+  const T0 = 1_700_000_000_000;
+  const COUNT = 10;
+
+  // Three students, ten questions each, dealt in their own order.
+  const deal = (offset) => Array.from({ length: COUNT }, (_, k) => ({ id: `q${(k + offset) % COUNT}` }));
+  const optionRows = Array.from({ length: COUNT }, (_, k) => ({ id: `right${k}`, question_id: `q${k}` }));
+  const answersFor = (deck, rightUpTo) => Object.fromEntries(
+    deck.slice(0, rightUpTo).map((q) => [q.id, `right${q.id.slice(1)}`])
+  );
+  const timesFor = (deck, upTo) => Object.fromEntries(
+    deck.slice(0, upTo).map((q, k) => [q.id, T0 + k * 50_000 + 5_000])
+  );
+
+  const makeStore = () => {
+    const decks = [deal(0), deal(3), deal(7)];
+    return decks.map((deck, i) => ({
+      id: `a${i}`,
+      questions_json: deck,
+      progress_answers: answersFor(deck, [10, 6, 0][i]),
+      round_answer_times: timesFor(deck, [10, 6, 0][i]),
+      settled_through: -1,
+      candy: 0,
+      correct_count: 0
+    }));
+  };
+
+  // A stub of the two queries and the one update settleRoom makes.
+  const stubDb = (store) => ({
+    writes: 0,
+    from(table) {
+      const q = { table, ids: null, update: null, eqs: {} };
+      q.select = () => q;
+      q.in = (column, ids) => { q.ids = { column, ids: ids.map(String) }; return q; };
+      q.eq = (column, value) => { q.eqs[column] = value; return q; };
+      q.update = (values) => { q.update_values = values; return q; };
+      q.then = (resolve, reject) => {
+        try {
+          if (q.update_values) {
+            const row = store.find((r) => r.id === q.eqs.id);
+            Object.assign(row, {
+              candy: q.update_values.candy,
+              correct_count: q.update_values.correct_count,
+              settled_through: q.update_values.settled_through
+            });
+            return Promise.resolve(resolve({ error: null }));
+          }
+          if (table === "question_options") return Promise.resolve(resolve({ data: optionRows, error: null }));
+          const rows = store.filter((r) => q.ids.ids.includes(r.id)).map((r) => ({ ...r }));
+          return Promise.resolve(resolve({ data: rows, error: null }));
+        } catch (e) { return Promise.resolve(reject ? reject(e) : Promise.reject(e)); }
+      };
+      return q;
+    }
+  });
+
+  const light = (store) => store.map((r) => ({
+    id: r.id, candy: r.candy, correct_count: r.correct_count, settled_through: r.settled_through
+  }));
+  // 4:25 in: round 5 is still taking answers, so round 4 is the last one shut.
+  const NOW = T0 + 265_000;
+  const closedIndex = closedRoundIndex(roundAt(T0, NOW, COUNT), NOW);
+  assert.equal(closedIndex, 4, "the fixture sits with round 4 closed and round 5 open");
+  const call = async (store, needDetailFor) => settleRoom(stubDb(store), {
+    rows: light(store), needDetailFor, startedAt: T0, now: NOW, questionCount: COUNT, closedIndex
+  });
+
+  // The screen, from cold: it asks for every racer's detail.
+  const cold = makeStore();
+  const screen = await call(cold, cold.map((r) => r.id));
+  assert.ok(screen.correctInRoom > 0, "the fixture has correct answers to count");
+
+  // A phone, from the SAME cold state, asking only for its own detail. It must
+  // still reach the screen's number, because settleRoom catches up every
+  // attempt whose cursor is behind the last closed round.
+  const coldAgain = makeStore();
+  const phoneCold = await call(coldAgain, ["a1"]);
+  assert.equal(phoneCold.correctInRoom, screen.correctInRoom, "a phone reading a cold room matches the screen");
+
+  // A phone reading a room the screen has already settled: nothing is behind,
+  // so it settles only itself and reads the stored counts for the rest.
+  const phoneWarm = await call(cold, ["a1"]);
+  assert.equal(phoneWarm.correctInRoom, screen.correctInRoom, "a phone reading a settled room matches the screen");
+
+  // And the screen again over the warm room, for the third direction.
+  const screenWarm = await call(cold, cold.map((r) => r.id));
+  assert.equal(screenWarm.correctInRoom, screen.correctInRoom, "settling twice does not move the room total");
+
+  // Per-attempt: detail where it was asked for, stored where it was not.
+  assert.ok(phoneWarm.results.has("a1"), "the caller always gets its own detail");
+  assert.equal(phoneWarm.correctFor("a0"), screen.correctFor("a0"), "another racer's count is the same either way");
+  assert.equal(phoneWarm.candyFor("a0"), screen.candyFor("a0"), "and so is their candy");
+
+  // The student who answered nothing earns nothing, and is still counted as a
+  // racer in the room.
+  assert.equal(screen.correctFor("a2"), 0, "no answers, no correctness");
+  assert.equal(screen.candyFor("a2"), 0, "no answers, no candy");
+}
+
+// ------------------------------------------------- the grade is the server's record
+{
+  const { committedAnswers, acceptableAnswers } = await import(backend("_shared/settle.ts").href);
+  const T0 = 1_700_000_000_000;
+  const ids = ["q0", "q1", "q2", "q3"];
+
+  // One case per side of the grace. q0 lands mid-round. q1's ping arrives 1.5s
+  // after its countdown ended — the classroom-wifi case the grace exists for,
+  // and it counts. q2's arrives 2.5s after, past the grace, and does not.
+  // q3 was never answered.
+  const answers = { q0: "a0", q1: "a1", q2: "a2" };
+  const times = {
+    q0: T0 + 10_000,
+    q1: T0 + 90_000 + 1_500,
+    q2: T0 + 140_000 + 2_500
+  };
+  const committed = committedAnswers({ startedAt: T0, questionCount: 4, questionIds: ids, answers, answerTimes: times });
+  assert.deepEqual(
+    committed,
+    [
+      { question_id: "q0", selected_option_id: "a0" },
+      { question_id: "q1", selected_option_id: "a1" },
+      { question_id: "q2", selected_option_id: null },
+      { question_id: "q3", selected_option_id: null }
+    ],
+    "a ping inside the grace counts; one past it does not"
+  );
+  assert.equal(committed.length, 4, "every dealt question is graded, answered or not");
+
+  // The candy reads the same predicate, so the same ping earns on the same
+  // side of the same line — no round where the score says yes and the climb
+  // says no.
+  const { settleAttempt } = await import(backend("_shared/settle.ts").href);
+  const paid = settleAttempt({
+    startedAt: T0, now: T0 + 300_000, questionCount: 4,
+    questions: ids.map((id) => ({ id, correctOptionId: id.replace("q", "a") })),
+    answers, answerTimes: times, settledThrough: -1
+  });
+  assert.equal(paid.correctCount, 2, "the grace-accepted answer earns its correctness too");
+  assert.equal(paid.rounds[1].correct, true, "round 1 was answered inside the grace");
+  assert.equal(paid.rounds[2].correct, false, "round 2 was not");
+
+  // The attack the break's reveal makes possible: during round 1's break, a
+  // crafted ping rewrites round 0's answer to the revealed one. report_progress
+  // pins the timestamp to the first answer, so without the accept rule the
+  // rewrite would be graded — and paid in candy — as an early, correct answer.
+  // Past the grace, so the round really is shut. (Inside the grace a change is
+  // still allowed — and still safe, because the reveal has not been served.)
+  const duringBreak = T0 + 45_000;
+  const rewrite = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: duringBreak, questionIds: ids,
+    stored: { q0: "wrong0" }, incoming: { q0: "a0" }
+  });
+  assert.deepEqual(rewrite, {}, "an answer cannot be changed after its round stopped taking answers");
+
+  // Changing your mind while the round is still open is exactly what a student
+  // is meant to be able to do.
+  const inRound = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: T0 + 30_000, questionIds: ids,
+    stored: { q0: "wrong0" }, incoming: { q0: "a0" }
+  });
+  assert.deepEqual(inRound, { q0: "a0" }, "a change inside the window is accepted");
+
+  // A first answer is always accepted — it arrives with a fresh stamp, which
+  // the window test then judges on its own merits. This is what stops a last
+  // tap being lost to a race between its ping and the submit.
+  const first = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: duringBreak, questionIds: ids,
+    stored: {}, incoming: { q0: "a0", q1: "a1" }
+  });
+  assert.deepEqual(first, { q0: "a0", q1: "a1" }, "a question with no stored answer is always accepted");
+
+  // Re-sending the same answer is not a change and must not be refused.
+  const same = acceptableAnswers({
+    startedAt: T0, questionCount: 4, now: duringBreak, questionIds: ids,
+    stored: { q0: "a0" }, incoming: { q0: "a0" }
+  });
+  assert.deepEqual(same, { q0: "a0" }, "re-sending the stored answer is not a change");
+
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+  assert.match(attempt, /committedAnswers\(/, "submit grades from the server's record");
+  assert.match(attempt, /acceptableAnswers\(/, "report_progress refuses a post-reveal rewrite");
+  assert.match(attempt, /serverResponses \?\? input\.responses/, "the client payload is the fallback only where there is no room clock");
+  assert.match(attempt, /graded_from/, "the audit row records where the score came from");
+}
+
+// ------------------------------------------------- the deal sizes the instance
+{
+  const classQuiz = readFileSync(fn("course-class-quiz/index.ts"), "utf8");
+  assert.match(
+    classQuiz,
+    /defaultQuestionCount = QUOTA\.easy \+ QUOTA\.medium \+ QUOTA\.hard/,
+    "the instance's question count is the quota, not a second hardcoded number"
+  );
+  assert.doesNotMatch(classQuiz, /defaultQuestionCount = 12/, "the 12 is gone");
+  // Twelve rounds for ten questions capped the piñata at 83% and left the last
+  // two rounds' flash beat permanently at zero.
+  assert.doesNotMatch(
+    classQuiz,
+    /Number\(body\.question_count\)/,
+    "a caller cannot size the clock away from the deal"
+  );
+  const api = readFileSync(frontend("src/api/quiz.ts"), "utf8");
+  assert.doesNotMatch(api, /question_count\?: number/, "the dead question_count parameter is gone");
+}
+
+// ------------------------------------------------- the phone obeys the room
+// The quiz ran with a real class on 2026-08-20 and failed for one reason that
+// was never a bug: every phone counted down from the moment its own student
+// tapped "Let's go", so no two students were ever on the same question and
+// nobody ever had a spare second to look up. The room publishes one schedule
+// now, and this block is what keeps the phone from inventing a second one.
+{
+  const { existsSync } = await import("node:fs");
+  assert.ok(
+    !existsSync(new URL("../src/features/quiz/budget.ts", import.meta.url)),
+    "the carry-over budget is deleted"
+  );
+
+  const { remainingMs, isBreak } = await import(frontend("src/features/quiz/rounds.ts").href);
+  const now = 1_000_000;
+  assert.equal(
+    remainingMs(new Date(now + 12_000).toISOString(), now),
+    12_000,
+    "a live deadline reads as the milliseconds still on it"
+  );
+  assert.equal(remainingMs(new Date(now - 5_000).toISOString(), now), 0, "a passed deadline is zero, never negative");
+  assert.equal(remainingMs(null, now), 0, "a stale server that sends no deadline reads as zero, not NaN");
+  assert.equal(remainingMs("half past four", now), 0, "an unparseable deadline reads as zero, not NaN");
+
+  assert.equal(isBreak({ phase: "break" }), true, "the break is the break");
+  assert.equal(isBreak({ phase: "answering" }), false, "answering is not the break");
+  assert.equal(isBreak({ phase: "done" }), false, "a finished quiz is not a break");
+  assert.equal(isBreak(null), false, "no round at all is not a break");
+
+  // The phone renders the server's absolute timestamps and holds no duration of
+  // its own. The two repos deploy independently; a number kept on both sides
+  // drifts the moment one of them ships without the other.
+  const rounds = readFileSync(frontend("src/features/quiz/rounds.ts"), "utf8");
+  assert.doesNotMatch(rounds, /\d+\s*\*\s*1000/, "rounds.ts converts what the server sent — it does not own a duration");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.doesNotMatch(player, /from "\.\/budget"/, "nothing imports the carry-over budget");
+  assert.doesNotMatch(player, /quiz\.next/, "there is no Next button — the room clock advances");
+  assert.doesNotMatch(player, /\d+\s*\*\s*1000|SECONDS/, "no duration constant survives on the phone");
+  assert.match(player, /round\.index/, "the player follows the room's round index");
+  assert.match(player, /last_result/, "the break shows the student their result");
+  assert.match(
+    player,
+    /remainingMs\(round\.answer_ends_at/,
+    "the countdown pill reads the room's deadline, not a clock the phone started"
+  );
+  // The splash survives the room clock — a student still meets their secret
+  // racer name — but it no longer anchors anything.
+  assert.match(player, /quiz\.letsGo/, "the splash still hands the student their racer name");
+  // The grade now comes from the server's record of what was pinged, so the
+  // per-tap ping is no longer cosmetic.
+  assert.match(player, /reportProgress\(/, "every option tap still pings — that ping is what earns the grade");
+
+  // `phase` is "break" for the whole ten seconds, but `last_result` is held
+  // back for the first three: an answer is still accepted two seconds past the
+  // countdown, and a reveal must never reach a phone that could still ping the
+  // answer it just read. So "break with no result" is a WAIT. Falling through
+  // to the question there would flash it back onto the screen and snatch it
+  // away three seconds later.
+  // Two hops rather than one wide one, so the bound stays meaningful as the
+  // gates grow: the break branch reaches the guard, and the guard returns the
+  // calm beat. Nothing renders the question in between.
+  assert.match(
+    player,
+    /if \(isBreak\(round\)\)[\s\S]{0,500}?if \(!revealed/,
+    "the break branch decides before it renders anything"
+  );
+  assert.match(
+    player,
+    /if \(!revealed[^)]*\) \{[\s\S]{0,300}?quiz\.checkingAnswer/,
+    "a break with no result yet holds a calm beat instead of flashing the question back"
+  );
+
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  for (const key of ["quiz.correctAnswerWas", "quiz.earnedCandy", "quiz.lookUp", "quiz.checkingAnswer"]) {
+    assert.ok(strings.includes(`"${key}"`), `${key} is in the dictionary`);
+  }
+
+  const live = readFileSync(frontend("src/screens/student/Live.tsx"), "utf8");
+  assert.match(live, /round=\{view\?\.quiz\.round/, "Live hands the room's round to the player");
+}
+
+// ------------------------------------------- the four ways the phone can lie
+// Every one of these was a real hole found reviewing the room clock, and every
+// one of them is silent — nothing on the student's screen would say so.
+{
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+
+  // 1. A tap's ping IS the answer now: the server grades from its own record of
+  // what it was pinged, and `answeredInWindow` judges by when it FIRST saw one.
+  // A fetch that fell off classroom wifi is therefore a question marked wrong
+  // that nothing later can repair — not the submit's re-ping, and not the next
+  // round's. So the tap retries, bounded by the round's own server-sent
+  // deadline, and NOTHING ELSE does: a round-change or splash ping earns no
+  // mark and must not cost a second request.
+  assert.match(
+    player,
+    /ping\(stateRef\.current\.index, \{ map: next, retryWhileOpen: true \}\)/,
+    "the option tap asks for the retry"
+  );
+  assert.equal(
+    (player.match(/retryWhileOpen: true/g) || []).length,
+    1,
+    "only the tap retries — a round-change or splash ping is not what earns a mark"
+  );
+  assert.match(
+    player,
+    /if \(attemptsLeft <= 0\) return;\s*\n\s*if \(remainingMs\(round\?\.answer_ends_at, Date\.now\(\)\) <= 0\) return;/,
+    "the retry is bounded twice: a count, and the round's own deadline from the server"
+  );
+  assert.match(
+    player,
+    /send\(attemptsLeft - 1, stateRef\.current\.answers\)/,
+    "a retry re-reads the answer map — a stale resend must never overwrite a newer choice"
+  );
+  // Small on purpose. Twenty-six phones re-sending a failed tap is the moment
+  // the classroom wifi is already struggling; one or two more requests is help,
+  // a queue of them is the problem.
+  assert.match(player, /const PING_RETRY_LIMIT = [12];/, "the retry stays at one or two attempts");
+
+  // 2. With no round the phone cannot advance at all: there is no Next button
+  // and no clock of its own. Routine trigger — this frontend deploys on push
+  // and course-pulse is deployed by hand — so a student would sit on question
+  // one, which LOOKS answerable, and score zero on nine of ten in silence.
+  assert.match(
+    player,
+    /if \(!round\)[\s\S]{0,300}?quiz\.waitingForRoom/,
+    "no room schedule renders a legible wait, never a frozen question one"
+  );
+
+  // 3. The server settles every closed round for every attempt, answered or
+  // not. Without a gate, tapping "Let's go" during round four's break opens on
+  // "❌ The answer was: …" for a question that was never on this phone.
+  assert.match(player, /joinedAtRound/, "the phone remembers the first round it was showing");
+  assert.match(
+    player,
+    /const played = revealedIndex >= joinedAtRound\.current/,
+    "the reveal is gated on the round having been on screen"
+  );
+  // Deliberately NOT gated on having answered: a student who watched the
+  // question and ran out of time has earned the reveal — that is the teaching
+  // moment the break exists for, and the spec asks for ❌ plus the answer.
+  assert.doesNotMatch(
+    player,
+    /answers\[revealed\.question_id\]/,
+    "a timed-out student still gets their reveal"
+  );
+
+  // 4. An unresolvable correct option rendered "The answer was: " and stopped.
+  assert.match(
+    player,
+    /if \(!revealed \|\| !played \|\| !correctOption\)/,
+    "all three reveal gates fall back to the same calm wait"
+  );
+
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  for (const key of ["quiz.waitingForRoom", "quiz.waitingForRoomBody"]) {
+    assert.ok(strings.includes(`"${key}"`), `${key} is in the dictionary`);
+  }
+
+  // 5. Every quiet card is an early return that never reaches the question
+  // view's error line, and every one of them can be on screen while a submit is
+  // failing — the room-schedule wait especially, because with no round the
+  // instance-deadline effect is the only submit path left AND it refuses to
+  // retry once `error` is set. A failed submit there reads as a screen that is
+  // simply thinking. One helper carries the error for all three so a fourth
+  // card cannot quietly drop it again.
+  const holding = blockAfter(player, "function holdingCard(");
+  assert.ok(holding, "the quiet cards all go through one helper");
+  assert.match(
+    holding,
+    /<p class="error-text" role="alert">\{error\}<\/p>/,
+    "the holding card surfaces a submit error, with the alert role the question view has"
+  );
+
+  // 5b. And the error brings a button. There is no Submit button any more, so
+  // this card is the student's only control. Three effects submit: the `done`
+  // phase and the instance deadline both refuse to run once `error` is set, and
+  // the close fires exactly once on the false→true edge of `quizClosed`. Two
+  // failed submits therefore stranded the student here for good — no grade,
+  // reportFinished() never called (it waits on `result || resumed`), the player
+  // mounted forever, and nothing server-side to grade an unsubmitted attempt.
+  // Their answers survive in progress_answers and are recoverable only by hand.
+  assert.match(holding, /t\("app\.tryAgain"\)/, "a failed submit offers the student a retry");
+  assert.match(
+    holding,
+    /onClick=\{\(\) => void submitNow\(stateRef\.current\.answers\)\}/,
+    "and the retry runs the same submit path the effects use, on the current answers"
+  );
+  assert.ok(
+    holding.indexOf("error-text") < holding.indexOf("app.tryAgain"),
+    "the button sits under the error it answers, not above it"
+  );
+
+  for (const key of ["quiz.roundOver", "quiz.waitingForRoom", "quiz.quizOver"]) {
+    assert.match(
+      player,
+      new RegExp(`holdingCard\\(t\\("${key}"`),
+      `the ${key} card goes through the shared holding card`
+    );
+  }
+  assert.doesNotMatch(
+    player,
+    /error \|\| t\(/,
+    "an error belongs in error-text with role=alert, not swapped into a muted hint"
+  );
+}
+
+// ------------------------------------------------- the review list after submit
+// Ten seconds is enough to see a ✅ or an ❌; it is nowhere near enough to read
+// an explanation. Every explanation is collected here so a student can read it
+// at leisure while the exit ticket is open — the first time `explanation` /
+// `explanation_es` ever leave the question bank.
+//
+// A first pass of this got the timing wrong: it attached `explanation` /
+// `explanation_es` to start_attempt's own questions payload, which ships them
+// in the FIRST response of the quiz, before question 1 is on screen — the same
+// answer-key leak `is_correct` is deliberately left off the options for. The
+// assertions below pin the fix: explanations exist only from submit_attempt,
+// resolved fresh at grading time, never from the frozen deal start_attempt
+// hands back.
+{
+  const attempt = readFileSync(fn("course-activity-attempt/index.ts"), "utf8");
+
+  // start_attempt's own question loader must never select or attach an
+  // explanation. Matched against the exact original select (no explanation
+  // columns) rather than a `doesNotMatch(/explanation/)` over the whole file,
+  // since gradeResponses legitimately selects explanation elsewhere below.
+  assert.match(
+    attempt,
+    /\.select\("id, prompt, prompt_es, question_type, difficulty, topic_tags, points"\)/,
+    "start_attempt's questions select carries no explanation column"
+  );
+  assert.doesNotMatch(
+    attempt,
+    /explanation: question\.explanation,/,
+    "start_attempt's returned question object attaches no explanation field"
+  );
+
+  // explanation / explanation_es are fetched ONLY inside gradeResponses, which
+  // only ever runs from submit_attempt — after the attempt is graded.
+  assert.match(
+    attempt,
+    /\.select\("id, points, explanation, explanation_es"\)/,
+    "explanations are fetched at grading time, not at start_attempt"
+  );
+  assert.match(
+    attempt,
+    /explanations:\s*explanationsByQuestion/,
+    "gradeResponses returns a question id -> explanation map"
+  );
+  // The correct-option map has to trace back to the server's OWN grading, not
+  // to the client's submit payload — the entire point of server-side grading
+  // is that a scripted phone cannot hand itself a perfect score, and a
+  // `correct` map built from `input.responses` would hand it the answer key
+  // just as easily.
+  //
+  // AND IT MUST NOT LEAVE WHILE THE ROOM IS STILL ANSWERING. These two fields
+  // are the whole key for all ten dealt questions, and submit_attempt is a
+  // public action: a phone holding its own attempt id and bearer token could
+  // call it at t=5s with `responses: []`, score zero, lock its own attempt, and
+  // walk away with the key. The pool is shared across the room, so those ten
+  // overlap heavily with every classmate's deal — one student trading their own
+  // mark for the room's. "After the attempt closed" was true of the ATTEMPT and
+  // false of the ROOM; `roomOver` is what makes it true of the room.
+  const submit = between(
+    attempt,
+    "async function submitAttempt(",
+    "async function setNameReveal(",
+    "submitAttempt"
+  );
+  const gate = submit.match(/const roomOver =[\s\S]*?;\n/);
+  assert.ok(gate, "submit_attempt decides whether the ROOM is past its questions");
+  // Three clauses, none of them redundant. A partial gate reads as closed and
+  // is not.
+  assert.match(gate[0], /!clock/, "a standalone activity has no rounds and keeps its old behaviour");
+  assert.match(gate[0], /instance\.state\) === "closed"/, "a hand-closed quiz still returns its review list");
+  assert.match(gate[0], /roundAt\([\s\S]*?\)\.phase === "done"/, "and the normal path is every round having run");
+
+  // Every reader of either field, gated — checked by counting them rather than
+  // by matching one spelling, because a second ungated `graded.correct` further
+  // down would sail past a `match` on the gated one.
+  for (const field of ["correct", "explanations"]) {
+    const uses = [...attempt.matchAll(new RegExp(`graded\\.${field}\\b`, "g"))];
+    assert.equal(uses.length, 1, `graded.${field} leaves course-activity-attempt through exactly one expression`);
+    assert.match(
+      attempt.slice(Math.max(0, uses[0].index - 40), uses[0].index + 60),
+      new RegExp(`${field}: roomOver \\? graded\\.${field} : \\{\\}`),
+      `and that expression withholds ${field} until the room is over`
+    );
+  }
+  // `...graded` anywhere in a response would carry both fields past the gate
+  // without ever naming them. (`...gradedBase` is the composition above and is
+  // deliberately not matched.)
+  assert.doesNotMatch(attempt, /\.\.\.graded\b/, "the grading result is never spread wholesale into a response");
+
+  // The gate's arithmetic clause, run rather than read.
+  {
+    const { roundAt } = await import(backend("_shared/rounds.ts").href);
+    const T0 = 1_700_000_000_000;
+    assert.notEqual(roundAt(T0, T0 + 5_000, 10).phase, "done",
+      "five seconds into a ten-round quiz the room is nowhere near over");
+    assert.notEqual(roundAt(T0, T0 + 495_000, 10).phase, "done",
+      "nor during the last round's break");
+    assert.equal(roundAt(T0, T0 + 500_000, 10).phase, "done",
+      "and it is over once every round has run");
+  }
+  // Resolved for every question this attempt was DEALT, not just the ones it
+  // answered — a skipped question still has a right answer worth reviewing,
+  // and the old query only ever looked up options the student had selected.
+  assert.match(
+    attempt,
+    /\.in\("question_id", questionIds\)\s*\n\s*\.eq\("is_correct", true\)/,
+    "the correct option is resolved for every dealt question, not only the answered ones"
+  );
+
+  // gradeResponses must not trust `question_id`s from the client on ANY path.
+  // The room-clock path already only ever passes `clock.questionIds` in, so
+  // this closes the gap on the standalone-activity path (no class_session_id,
+  // `roomClockFor` returns null), which used to grade `input.responses`
+  // directly — a crafted payload naming a question outside this attempt's own
+  // deal would get that question's correct option echoed back in `correct`.
+  assert.match(
+    attempt,
+    /async function gradeResponses\(db: Db, responses: Record<string, unknown>\[\], dealtIds: string\[\]\)/,
+    "gradeResponses takes this attempt's own dealt question ids"
+  );
+  assert.match(
+    attempt,
+    /allowed\.has\(response\.question_id\)/,
+    "gradeResponses filters every response to this attempt's own dealt ids"
+  );
+  assert.match(
+    attempt,
+    /gradeResponses\(db, serverResponses \?\? input\.responses, dealtQuestionIds\(attempt\.questions_json\)\)/,
+    "the dealt-id guard applies regardless of whether the room clock is present"
+  );
+
+  const quiz = readFileSync(new URL("../src/api/quiz.ts", import.meta.url), "utf8");
+  assert.match(quiz, /explanation\?:\s*string\s*\|\s*null;/, "QuizQuestion carries the English explanation");
+  assert.match(quiz, /explanation_es\?:\s*string\s*\|\s*null;/, "QuizQuestion carries the Spanish explanation");
+  assert.match(
+    quiz,
+    /correct:\s*Record<string,\s*string>;/,
+    "SubmitAttemptResponse declares the correct-option map the review list needs"
+  );
+  assert.match(
+    quiz,
+    /explanations:\s*Record<string,\s*\{\s*explanation:\s*string\s*\|\s*null;\s*explanation_es:\s*string\s*\|\s*null\s*\}>;/,
+    "SubmitAttemptResponse declares the explanations map the review list needs"
+  );
+
+  const review = readFileSync(new URL("../src/features/quiz/ReviewList.tsx", import.meta.url), "utf8");
+  assert.match(review, /explanation/, "the review shows explanations where the bank has them");
+  // Same bilingual fallback every other field in Player.tsx already follows: a
+  // missing Spanish explanation shows the English one rather than nothing.
+  assert.match(
+    review,
+    /\(es && question\.explanation_es\) \|\| question\.explanation/,
+    "a missing Spanish explanation falls back to English"
+  );
+  assert.match(review, /t\("quiz\.youSkipped"\)/, "a question the student never reached says so, not a blank");
+
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.match(player, /import \{ ReviewList \} from "\.\/ReviewList";/, "Player imports the review list");
+  assert.match(
+    player,
+    /if \(result\) \{[\s\S]{0,1500}?<ReviewList/,
+    "the review renders in the result branch, after the attempt is graded"
+  );
+  // The review must never render anywhere a quiz still in progress could see
+  // it — that would leak the correct option to a student mid-round. It has
+  // exactly one call site: the terminal `result` branch, above the break and
+  // the live question view in this file.
+  assert.equal(
+    (player.match(/<ReviewList/g) || []).length,
+    1,
+    "the review list has exactly one call site — the graded, terminal result branch"
+  );
+  const breakBranch = player.indexOf("if (isBreak(round))");
+  assert.ok(breakBranch > -1, "the break branch is still where past tasks left it");
+  assert.ok(
+    !player.slice(breakBranch).includes("<ReviewList"),
+    "the review list never reaches the break or the live question view — the round could still be running"
+  );
+
+  // Finding 1: `response.correct || {}` defeats the exact guard the "no review
+  // on resume" decision relies on. An edge function that has not been
+  // redeployed yet (this repo's edge functions do not deploy on push; the
+  // frontend does) answers submit_attempt with no `correct` field at all —
+  // `response.correct` is `undefined`, `|| {}` substitutes a truthy empty
+  // object, and a guard that only checked "is correctMap set" would render
+  // every question ❌ regardless of what was chosen.
+  assert.doesNotMatch(
+    player,
+    /setCorrectMap\(response\.correct \|\| \{\}\)/,
+    "an empty correct map must never be substituted in — it has to read as absent"
+  );
+  assert.match(
+    player,
+    /setCorrectMap\(response\.correct \?\? null\)/,
+    "a missing correct map stays null rather than becoming a misleading empty object"
+  );
+  assert.match(
+    player,
+    /correctMap && Object\.keys\(correctMap\)\.length > 0/,
+    "the review only renders once the correct map is both present and non-empty"
+  );
+
+  // Explanations reach the review through a COPY of `questions`, never by
+  // mutating the `questions` state the live question view still reads from.
+  assert.match(
+    player,
+    /explanations\?\.\[q\.id\]\?\.explanation \?\? null/,
+    "explanations are merged onto a per-render copy of the dealt questions"
+  );
+  assert.doesNotMatch(
+    player,
+    /<ReviewList questions=\{questions\}/,
+    "the review must read from the merged copy, not the raw start_attempt questions"
+  );
+
+  // Task 7 left `quiz.next` behind with no reference anywhere in src/ once the
+  // room clock removed the Next button. A dead dictionary entry is a silent
+  // trap for the next rename; this is the one place that would ever catch it.
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.doesNotMatch(strings, /"quiz\.next":/, "the orphaned quiz.next string was removed");
+}
+
+// ------------------------------------------------- the finale and the racer podium
+// Ten rounds of a room climbing toward a piñata, and then it stops. This is the
+// part that decides whether the class remembers the quiz a week later. Two
+// rules carry it. The pop belongs to the ROOM, racers on zero included — a
+// finale that celebrated only the leaders would undo the care every other beat
+// on this screen takes. And nothing on the podium may claim more than the
+// payload can back, which is what decides a room that earned no candy at all.
+{
+  const {
+    POP_MS, POP_STAGGER_MS, POP_WAVE_MS, PODIUM_AT_MS, PODIUM_FADE_MS,
+    RAIN_MS, RAIN_FALL_MS, popDelayMs, finaleCandies
+  } = await import(frontend("src/features/live/floats.ts").href);
+  const { MAX_LANES, racerPodium, podiumOrder, topThree } =
+    await import(frontend("src/features/live/subida.ts").href);
+
+  // ---- Beat 1: everyone pops, including the racers still on zero. The input
+  // is the ROSTER and nothing else — there is no candy count in it, so there is
+  // no way for this to reach only the racers who scored.
+  const roomRoster = Array.from({ length: 26 }, (_, i) => `Racer ${String(i).padStart(2, "0")}`);
+  const candies = finaleCandies(roomRoster);
+  assert.equal(candies.length, roomRoster.length, "every animal in the room pops, not just the ones who scored");
+  assert.deepEqual(candies.map((c) => c.laneKey), roomRoster, "and each 🍬 belongs to its own lane");
+  assert.ok(candies.every((c) => c.text === "🍬"), "the label is the candy itself");
+  assert.ok(candies.every((c) => !c.vertical), "flat, like every other number on this screen");
+  assert.ok(candies.every((c) => c.big), "and drawn at the finale's size, not a round's");
+  assert.equal(new Set(candies.map((c) => c.key)).size, candies.length,
+    "two labels sharing a key would let Preact reuse one DOM node for both");
+  assert.equal(candies[0].delayMs, 0, "the wave starts at the close");
+  for (let i = 1; i < candies.length; i++) {
+    assert.ok(candies[i].delayMs > candies[i - 1].delayMs, "and crosses the screen in lane order");
+    assert.ok(candies[i].delayMs - candies[i - 1].delayMs <= POP_STAGGER_MS, "at no more than one lane's step");
+  }
+  assert.equal(finaleCandies([]).length, 0, "a room with nobody in it pops nobody");
+  assert.equal(finaleCandies(["Solo"]).length, 1, "and a room of one still pops");
+
+  // The wave has to be OVER before the field starts to fade, or the last
+  // animals of a big room pop into a screen that is already leaving. Sixty
+  // lanes at the full step run two seconds past it, so a big room compresses
+  // the step the way the round's own wave does rather than dropping anyone.
+  for (const lanes of [1, 2, 3, 26, MAX_LANES, 120]) {
+    const wave = finaleCandies(Array.from({ length: lanes }, (_, i) => `L${i}`));
+    const last = wave.reduce((max, c) => Math.max(max, c.delayMs), 0);
+    assert.ok(last + POP_MS <= PODIUM_AT_MS,
+      `the last of ${lanes} animals finishes popping (${last + POP_MS}ms) before the field fades at ${PODIUM_AT_MS}ms`);
+  }
+  assert.equal(POP_WAVE_MS, PODIUM_AT_MS - POP_MS, "which is the window the step is compressed into");
+  assert.equal(popDelayMs(3, 26), 3 * POP_STAGGER_MS, "a class-sized room still pops at the full step");
+  assert.equal(popDelayMs(0, 0), 0, "and a nonsense lane count still produces a delay");
+
+  // ---- Beat 3: the podium. Ranked by candy through the rail's own sort, so
+  // the two can never rank the room differently.
+  const racer = (name, candy, correct) => ({
+    racer_name: name, racer_emoji: "🐢", candy, correct_count: correct, finished: false, finish_place: null
+  });
+  const names = (list) => list.map((r) => r.racer_name);
+  const room = [racer("Rana Zen", 1, 1), racer("Jaguar Ninja", 9, 5), racer("Tortuga Veloz", 4, 4), racer("Oso Genial", 9, 3)];
+  assert.deepEqual(names(racerPodium(room)), names(topThree(room)),
+    "the podium and the rail rank the room through one sort");
+  assert.deepEqual(names(racerPodium(room)), ["Jaguar Ninja", "Oso Genial", "Tortuga Veloz"],
+    "candy first, then correct answers");
+  assert.deepEqual(names(room), ["Rana Zen", "Jaguar Ninja", "Tortuga Veloz", "Oso Genial"],
+    "and it never re-sorts the caller's field");
+
+  // Payload order is untrusted: course-class-quiz selects the attempts with no
+  // ORDER BY while settleRoom rewrites those rows every round. A podium that
+  // ranked off row order could crown a different racer on the last poll before
+  // the freeze than on the one before it, in front of the whole class.
+  assert.deepEqual(names(racerPodium([room[2], room[3], room[0], room[1]])), names(racerPodium(room)),
+    "the same room ranks the same whatever order the payload arrives in");
+  const tied = [racer("Buho Astuto", 6, 3), racer("Abeja Sagaz", 6, 3), racer("Coyote Listo", 6, 3)];
+  assert.deepEqual(names(racerPodium(tied)), names(racerPodium([tied[2], tied[0], tied[1]])),
+    "and three racers with an identical quiz resolve to the same three steps");
+
+  // ---- The room that earned nothing: a class that never picked up its phones,
+  // or a quiz the professor closed early. Three steps of zero are all tied, so
+  // the gold would fall to whoever is alphabetically first — and
+  // "🏆 X se llevó la piñata!" printed directly above a candy count of 0 is a
+  // label the room can disprove by reading the number under it. No candy, no
+  // podium: that room's true ending is the field, the percent and ¡Casi!.
+  const silent = [racer("Rana Zen", 0, 0), racer("Jaguar Ninja", 0, 0), racer("Oso Genial", 0, 0)];
+  assert.equal(racerPodium(silent).length, 0, "a room that earned nothing crowns nobody");
+  assert.equal(racerPodium([]).length, 0, "and neither does an empty one");
+
+  // ---- Fewer than three racers. Two phones is how this gets tested, and a
+  // class of two is a real class.
+  assert.equal(racerPodium(room.slice(0, 2)).length, 2, "a room of two fills the steps it has");
+  assert.equal(racerPodium([racer("Solo", 3, 2)]).length, 1, "and a room of one still has a winner");
+  // The same filter is what keeps a racer who joined and never answered off a
+  // step: they are on zero, so they can never stand ahead of someone who did.
+  const oneAnswered = [racer("Nunca Contestó", 0, 0), racer("Ardilla Turbo", 2, 1), racer("Tampoco Contestó", 0, 0)];
+  assert.deepEqual(names(racerPodium(oneAnswered)), ["Ardilla Turbo"],
+    "a racer who never answered never stands on the podium");
+
+  // Left to right: second, first, third — and only the steps there are.
+  assert.deepEqual(podiumOrder(3), [1, 0, 2], "the winner stands in the middle");
+  assert.deepEqual(podiumOrder(2), [1, 0], "a pair keeps the winner on the right of it");
+  assert.deepEqual(podiumOrder(1), [0], "one racer stands alone");
+  assert.deepEqual(podiumOrder(0), [], "and no racers, no steps");
+  assert.deepEqual(podiumOrder(9), [1, 0, 2], "never more than three steps");
+
+  // ---- The layer.
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  assert.match(layer, /subida-podium/, "the finale ends on a racer podium");
+  assert.match(layer, /everyonePops|subida-pop/, "every animal pops at the close");
+  assert.match(layer, /podium\.showToClass/, "the score podium is still one button away");
+  assert.match(layer, /racerPodium\(/, "the steps are ranked by the pure module, never in the markup");
+  assert.match(layer, /finaleCandies\(/, "and the 🍬 come from it too");
+  assert.doesNotMatch(layer, /student_identifier|profile_id/, "nothing on this screen maps a racer to a student");
+  // The class goes on with ONE flag. Conditioning it on what a racer scored is
+  // the one thing this beat must not do.
+  assert.match(layer, /\$\{popping \? " subida-pop" : ""\}/,
+    "the pop reaches every animal on one flag — it can never be conditioned on a racer's candy");
+
+  // The finale runs AFTER the freeze and never polls. Stopping the poll on the
+  // first closed payload was bought by an earlier incident; a finale that kept
+  // the interval alive would undo it.
+  const finaleStart = layer.indexOf("const runFinale =");
+  const finaleEnd = layer.indexOf("const tick =");
+  assert.ok(finaleStart > -1 && finaleEnd > finaleStart, "the finale is a function of its own");
+  const finaleBody = layer.slice(finaleStart, finaleEnd);
+  assert.doesNotMatch(finaleBody, /classQuizRace|setInterval/, "the finale never polls — it runs after the freeze");
+  assert.equal((layer.match(/if \(frozen\.current\) runFinale\(/g) || []).length, 2,
+    "and on both closed paths — the poll that closes the quiz, and reopening a closed one after Escape");
+  assert.match(finaleBody, /if \(finaleDone\) return;/,
+    "once, even with two polls in flight as the quiz closes");
+  // The last round's beat is superseded outright: a pending setFloats([]) from
+  // round 10 would otherwise wipe the finale's candy a second after it lands.
+  assert.match(finaleBody, /stopBeats\(\)/, "the finale cancels whatever the last beat still had in flight");
+
+  // Reduced motion loses the wave and the rain. It never loses the ending.
+  const reducedGate = finaleBody.slice(
+    finaleBody.indexOf("if (!reducedMotion) {"),
+    finaleBody.indexOf("// The podium is the ending"));
+  assert.ok(reducedGate.length > 0, "the reduced-motion gate is where the comment says it is");
+  assert.match(reducedGate, /setRaining|setPopping/, "the rain and the pop are what it drops");
+  assert.doesNotMatch(reducedGate, /setPodiumUp/, "the three steps are not — the podium still appears");
+
+  // ---- The stylesheet. Every number shared with TypeScript is asserted here
+  // rather than restated in a comment on either side.
+  const css = readFileSync(frontend("src/styles/app.css"), "utf8");
+  const pop = css.match(/\.subida-pop \{[^}]*animation:\s*subida-pop\s+(\d+)ms/);
+  assert.ok(pop && Number(pop[1]) === POP_MS, "the pop's duration is POP_MS");
+  const popFrames = css.match(/@keyframes subida-pop \{([\s\S]*?)\n\}/);
+  assert.ok(popFrames && /scale\(1\.5\)/.test(popFrames[1]), "and it scales up and back");
+  assert.ok(popFrames && /translate\(-50%/.test(popFrames[1]),
+    "keeping the racer's own centring, or every animal jumps half its width sideways as it pops");
+  const fall = css.match(/\.pinata-rain span \{[^}]*animation:\s*pinata-fall\s+([\d.]+)s/);
+  assert.ok(fall && Math.round(parseFloat(fall[1]) * 1000) === RAIN_FALL_MS, "the fall's duration is RAIN_FALL_MS");
+  assert.ok(RAIN_MS > RAIN_FALL_MS, "and the finale's rain has room to stagger its pieces across the window");
+  assert.match(layer, /later\(RAIN_MS, \(\) => setRaining\(null\)\)/, "which it holds open for");
+  // Every candy emoji is a surrogate pair, so split("") cuts each one in half
+  // and the rain draws twenty broken glyphs instead of ten candies. That is
+  // what the burst's rain has been doing since it shipped, and the finale is
+  // the moment a room is actually looking at it.
+  assert.doesNotMatch(layer, /🍬[^"]*"\.split\(""\)/, "the rain never splits an emoji down the middle");
+  assert.match(layer, /Array\.from\(BURST_CANDY\)/, "the burst's pieces are whole candies");
+  assert.match(layer, /Array\.from\(FINALE_CANDY\)/, "and so are the finale's");
+  // The burst's rain and the finale's are the same element. The burst's own
+  // timeout is not a beat timer, so stopBeats() cannot cancel it, and the
+  // piñata can burst on the very round the quiz closes on — a bare
+  // setRaining(null) there would switch the finale's rain off a second in.
+  assert.match(layer, /setRaining\(\(kind\) => \(kind === "burst" \? null : kind\)\)/,
+    "the burst's timer only ever ends the burst's own rain");
+  const fade = css.match(/--subida-podium-fade:\s*(\d+)ms/);
+  assert.ok(fade && Number(fade[1]) === PODIUM_FADE_MS, "the field's fade is declared once and both sides agree");
+  for (const selector of ["subida-sky", "subida-lanes", "subida-rail"]) {
+    const rule = css.match(new RegExp(`\\.${selector} \\{[\\s\\S]*?\\}`));
+    assert.ok(rule && /opacity var\(--subida-podium-fade\)/.test(rule[0]),
+      `.${selector} leaves on the shared fade`);
+  }
+  assert.match(css, /\.classroom-pinata-layer\.podium-up[\s\S]{0,240}opacity:\s*0/,
+    "the ropes, the ground, the lane names and the rail all go together");
+  // They go together for a reason. Nothing may fade ONE racer — dimming a racer
+  // is the callout this screen has never made, and the finale is not where it
+  // starts.
+  assert.doesNotMatch(css, /\.subida-racer\.[\w-]+\s*\{[^}]*opacity/, "no racer is ever dimmed on its own");
+  assert.match(css, /\.subida-podium \{[^}]*pointer-events:\s*none/,
+    "the podium never swallows the two buttons under it");
+  assert.match(css, /@keyframes subida-podium-rise/, "the steps rise rather than appearing");
+
+  const reducedBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
+  assert.ok(reducedBlocks.some((b) => /\.subida-pop\s*\{[^}]*animation:\s*none/.test(b)), "reduced motion drops the pop");
+  assert.ok(reducedBlocks.some((b) => /\.subida-podium-step\s*\{[^}]*animation:\s*none/.test(b)),
+    "and the steps arrive without rising");
+
+  // ---- The strings.
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.match(strings, /subida\.wonThePinata/, "the winner line exists in both languages");
+  assert.match(strings, /subida\.podiumTitle/, "and so does the podium's title");
+  assert.match(layer, /subida\.wonThePinata/, "the layer says who took the piñata");
+  assert.match(layer, /subida\.podiumTitle/, "over the racer podium's own title");
+}
+
+// ------------------------------------------------- sound
+//
+// The 2026-08-19 spec said "No sound. Ever. It is a classroom." That rule is
+// reversed here, and the class that reversed it is the point: the end-of-class
+// quiz ran with a real group and every student kept their head down on a phone
+// for all ten rounds. Ten rounds of visual choreography reach nobody who is not
+// looking. Sound is the only channel that reaches a student whose eyes are
+// down, and `close` — the sting at the instant a round shuts — is the cue that
+// lifts twenty-six heads at once. Everything else here is texture around it.
+{
+  const sound = readFileSync(frontend("src/features/live/sound.ts"), "utf8");
+  assert.match(sound, /AudioContext/, "sound is synthesized in the browser");
+  assert.doesNotMatch(sound, /\.mp3|\.wav|\.ogg/,
+    "no audio files — Kahoot's music is licensed and cannot be used");
+  assert.match(sound, /localStorage/, "the mute choice survives a reload");
+  // Nothing here may throw into the render path. This layer is the only
+  // teaching display in the room, and a screen that white-screens for a missing
+  // oscillator is far worse than a silent one — so the whole Web Audio API
+  // being absent is a guarded case, not merely a constructor that fails.
+  assert.match(sound, /typeof window/,
+    "a browser with no Web Audio at all is a guarded case, not a ReferenceError");
+  assert.ok((sound.match(/catch/g) || []).length >= 3,
+    "storage, construction and scheduling each fail quietly");
+  // One master gain for every voice, so mute silences a sting that is ALREADY
+  // ringing rather than only the next cue.
+  assert.match(sound, /master/, "every voice runs through one master gain");
+
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+  assert.match(layer, /sound\.cue\("close"\)/, "the round close has a sting — the cue that lifts 26 heads");
+  assert.match(layer, /sound\.cue\("burst"\)/, "the burst has a jingle");
+  assert.match(layer, /sound\.cue\("tick"\)/, "the answering phase has a bed under it");
+  assert.match(layer, /sound\.cue\("hurry"\)/, "which goes higher and faster over the last ten seconds");
+  assert.match(layer, /sound\.cue\("pop"\)/, "and every animal in the finale pops out loud");
+  assert.match(layer, /subida\.mute/, "the layer has a visible mute");
+  assert.match(layer, /subida\.volume/, "and a volume a big room can be set for");
+  assert.match(layer, /sound\.unlock\(\)/,
+    "the layer unlocks on mount too — a reloaded Run Class never saw the start click");
+  // A mount is NOT a gesture, so the context it builds stays suspended and
+  // every cue is dropped. Three things reach it after that, and the layer needs
+  // all three: a return to the tab (Safari suspends a backgrounded context and
+  // Chrome suspends a hidden one), any click, and any key.
+  assert.match(layer, /addEventListener\("visibilitychange"/,
+    "a professor who switched to the deck and back does not lose the sound for the rest of the quiz");
+  assert.match(layer, /addEventListener\("pointerdown", wake\)/,
+    "and any click on a reloaded Run Class is the gesture that wakes it");
+  // The mute button is a gesture too — but the default is UNMUTED, so an unlock
+  // conditioned on the unmute branch does nothing on the first press and the
+  // reloaded screen needed two presses before any sound worked.
+  const muteHandler = blockAfter(layer, "onClick={() => {");
+  assert.ok(muteHandler.length > 0, "the mute handler is where the markup says it is");
+  assert.match(muteHandler, /^\s*sound\.unlock\(\);$/m,
+    "the mute button unlocks on every press, not only on the way back to unmuted");
+  assert.doesNotMatch(muteHandler, /if \([^\n]*\) sound\.unlock\(\)/,
+    "and never behind a condition");
+  const volumeHandler = blockAfter(layer, "onInput={(event) => {");
+  assert.ok(volumeHandler.length > 0, "the volume handler is where the markup says it is");
+  assert.match(volumeHandler, /sound\.unlock\(\);/,
+    "moving the slider is a gesture too — it is what a professor reaches for when the room cannot hear");
+  // Nothing already handed to the audio clock may ring into a closed screen.
+  // stopBeats() reaches the pops still pending; only the master gain reaches a
+  // close or a burst that is already sounding, and either runs about 780 ms.
+  assert.match(sound, /export function silence/, "the mixer can cut what is already in flight");
+  assert.match(layer, /sound\.silence\(\)/, "and the layer does it on the way out");
+
+  // The phones. This is why the mixer lives in the live feature and not in the
+  // quiz: twenty-six phones ticking out of step with the room's screen would be
+  // unusable, so the student's player never imports it at all.
+  const player = readFileSync(frontend("src/features/quiz/Player.tsx"), "utf8");
+  assert.doesNotMatch(player, /sound\./, "phones stay silent — all sound is on the room's screen");
+
+  // Autoplay. Browsers drop everything scheduled before a user gesture, and the
+  // professor's click on Start the quiz is the only gesture this screen gets.
+  const endOfClass = readFileSync(frontend("src/screens/instructor/EndOfClass.tsx"), "utf8");
+  const startBody = between(endOfClass, "async function onStart()", "async function onClose()", "onStart");
+  // BEFORE the first await, which is the whole property. After one, the call is
+  // no longer inside the click's own task and Safari refuses to unlock there —
+  // and a bare match on the whole body passes with the call moved below it.
+  // Comments stripped first. The comment above the call explains why it sits
+  // before the await and so contains the word — which put the harness's idea of
+  // "the first await" inside a comment, above the very call it was checking.
+  const startCode = startBody.replace(/\/\/[^\n]*/g, "");
+  const beforeAwait = startCode.slice(0, startCode.indexOf("await "));
+  assert.ok(beforeAwait.length > 0, "onStart still awaits something");
+  assert.match(beforeAwait, /sound\.unlock\(\)/,
+    "the click on Start the quiz unlocks the context before it awaits anything");
+
+  // Sound is a SEPARATE AXIS from motion. A professor who turned motion off is
+  // exactly the person who may be leaning on the audio, so no cue sits inside a
+  // reduced-motion gate.
+  const finaleBody = between(layer, "const runFinale =", "const tick =", "the finale");
+  const reducedGate = between(finaleBody, "if (!reducedMotion) {", "// The podium is the ending",
+    "the finale's reduced-motion gate");
+  assert.doesNotMatch(reducedGate, /sound\.cue/, "the pop wave still sounds when motion is off");
+  // Not merely "finaleCandies is called". A parallel `later(index * 50, …)`
+  // alongside an untouched visual call would satisfy that and drift straight
+  // out of step with the animals it is supposed to be popping.
+  assert.equal((finaleBody.match(/finaleCandies\(/g) || []).length, 1, "one wave, computed once");
+  assert.match(finaleBody, /for \(const candy of candies\) later\(candy\.delayMs, \(\) => sound\.cue\("pop"\)\);/,
+    "and the pop rides ITS delays, not a schedule of its own");
+  assert.match(reducedGate, /setFloats\(candies\)/, "the picture rides the same list");
+  // `between` searches FORWARD for the tail, which matters here: the anchor
+  // `prevSnap.current = snap` also appears in the first-payload baseline ABOVE
+  // the burst, and a bare indexOf finds that one and slices nothing.
+  const burstBlock = between(layer, "if (!prevSnap.current?.burst", "prevSnap.current = snap;",
+    "the burst transition");
+  assert.match(burstBlock, /sound\.cue\("burst"\)[\s\S]*if \(!reducedMotion\)/,
+    "the burst's jingle sits outside the reduced-motion gate the rain sits inside");
+
+  // The bed. The one-second clock that drives it runs for the whole life of the
+  // layer — it also feeds the chant and the countdown — so a tick gated on the
+  // phase alone would go on ticking through the finale, the podium and for as
+  // long afterwards as the screen stays up.
+  const bed = between(layer, "// The ticking bed", "// The racer podium", "the ticking bed");
+  // Pinned to the EXPRESSIONS, not to the names. A first cut of this section
+  // asserted a bare /stungRound/ and the guard could be deleted outright while
+  // the comment above it still satisfied the match.
+  assert.match(bed, /if \(frozen\.current \|\| !round\) return;/, "the bed stops for good at the freeze");
+  // Scoped to the branch that fires the ticks, because the phase is also read a
+  // few lines above it: matched against the whole bed, this passes even with
+  // the tick's own gate deleted and the bed ticking straight through the break.
+  const whileAnswering = between(bed, "if (left > 0) {", "if (answeredRound.current",
+    "the bed's answering branch");
+  // Matched by BRACE DEPTH, not by order of appearance. A regex cannot prove
+  // nesting: "the phase check comes before the cues" passes just as happily
+  // with an empty phase check left sitting above two cues that escaped it.
+  const answeringGate = blockAfter(whileAnswering, 'if (round.phase === "answering") {');
+  assert.ok(answeringGate.length > 0, "the phase gate is where the comment says it is");
+  assert.match(answeringGate, /sound\.cue\("hurry"\)/, "the hurry is inside the phase gate");
+  assert.match(answeringGate, /sound\.cue\("tick"\)/, "and so is the tick");
+  assert.match(answeringGate, /left <= HURRY_MS/, "which one depends on the last ten seconds");
+  assert.equal((whileAnswering.match(/sound\.cue\(/g) || []).length, 2,
+    "and there is no third cue in this branch that could escape the gate");
+  // One sting per round, however the polls fall. The clock ticks every second
+  // for the whole ten-second break, and a sting the room hears ten times in a
+  // row is a sting the room learns to ignore.
+  assert.match(bed, /stungRound\.current !== round\.index/, "the sting fires at most once for a round");
+  assert.match(bed, /stungRound\.current = round\.index/, "and remembers that it did");
+  // A layer that opened mid-break never watched that round's window run out, so
+  // it does not get to announce the ending of it.
+  assert.match(bed, /answeredRound\.current === round\.index/,
+    "and never stings a round it did not watch the room answer");
+  // remainingMs reads a missing deadline as a SPENT clock, on purpose — a stale
+  // deployment must show 0:00 rather than NaN. Left alone, that puts the sting
+  // at the START of every round on such a payload, ten times a quiz.
+  assert.match(bed, /Number\.isFinite\(Date\.parse\(String\(round\.answer_ends_at \|\| ""\)\)\)/,
+    "and never on a deadline it could not read");
+}
+
+// ------------------------------------------------- two carried-forward fixes
+{
+  const layer = readFileSync(frontend("src/features/live/ClassroomPinataLayer.tsx"), "utf8");
+
+  // 1. The rain's spans were keyed by index alone. The burst mounts ten and the
+  //    finale twenty-four; the piñata can burst on one poll and the quiz close
+  //    on the next — two seconds into a 2.6-second fall — and Preact then reuses
+  //    spans 0-9 mid-flight, so the finale opens with fourteen candies instead
+  //    of twenty-four and several of them jump sideways.
+  assert.match(layer, /key=\{`\$\{raining\}:\$\{index\}`\}/,
+    "the two rains never share DOM nodes — the switch remounts every span");
+
+  // 2. The room that earned nothing had no ending. There is deliberately no
+  //    podium when nobody has candy (racerPodium filters a racer on zero away
+  //    rather than crowning one), and the 🏆 effect returned early there — so
+  //    nothing wrote a line after the freeze and the one room that most needs
+  //    an ending sat under a stale mid-quiz chant until someone pressed Escape.
+  const closing = between(layer, "// The 🏆 line", "return (", "the closing line's effect");
+  assert.match(closing, /if \(!podiumUp\) return;/,
+    "it runs on the finale, not on a podium that a zero-candy room will never raise");
+  assert.match(closing, /subida\.wonThePinata/, "the room that has a winner still names it");
+  assert.match(closing, /subida\.noCandyClose/, "and the room that has none still gets an ending");
+  const strings = readFileSync(frontend("src/i18n/strings.ts"), "utf8");
+  assert.match(strings, /subida\.noCandyClose/, "in both languages");
+  assert.match(strings, /subida\.mute/, "and so do the sound controls");
+  assert.match(strings, /subida\.unmute/, "both ways round");
+  assert.match(strings, /subida\.volume/, "with the volume labelled for a screen reader");
+}
+
+// ------------------------------------------------- the mixer, executed
+//
+// Grep proves a cue is wired. Only running the module proves the cue is
+// HARMLESS — and harmless is the whole contract here, because Run Class is the
+// only teaching display in the room and a ReferenceError out of a tick would
+// take the screen down in front of the class. There is no browser in Node, so
+// the three environments the mixer has to survive are built by hand: no Web
+// Audio at all, a context that never got its gesture, and a working one.
+{
+  const soundUrl = frontend("src/features/live/sound.ts").href;
+  const CUES = ["tick", "hurry", "close", "burst", "pop"];
+
+  /** A localStorage that lives and dies in this process. */
+  const fakeStorage = (seed = {}) => {
+    const map = new Map(Object.entries(seed));
+    return {
+      map,
+      getItem: (key) => (map.has(key) ? map.get(key) : null),
+      setItem: (key, value) => { map.set(key, String(value)); },
+      removeItem: (key) => { map.delete(key); }
+    };
+  };
+
+  /** An AudioContext that records what it was asked to play instead of playing
+   *  it. Every node the mixer touches is here and nothing else is. */
+  const fakeAudio = (state) => {
+    const ctx = {
+      state,
+      currentTime: 0,
+      destination: {},
+      gains: [],
+      scheduled: [],
+      resume() { ctx.state = "running"; return Promise.resolve(); },
+      createGain() {
+        const node = {
+          gain: {
+            value: 0,
+            ramps: [],
+            setValueAtTime(value, at) { node.gain.ramps.push([value, at]); node.gain.value = value; },
+            exponentialRampToValueAtTime(value, at) { node.gain.ramps.push([value, at]); },
+            setTargetAtTime(value, at) { node.gain.ramps.push([value, at]); node.gain.value = value; },
+            cancelScheduledValues() {}
+          },
+          connect() {}
+        };
+        ctx.gains.push(node);
+        return node;
+      },
+      createOscillator() {
+        const osc = {
+          type: "",
+          hz: [],
+          started: null,
+          stopped: null,
+          frequency: {
+            setValueAtTime(value) { osc.hz.push(value); },
+            exponentialRampToValueAtTime(value) { osc.hz.push(value); }
+          },
+          connect() {},
+          start(at) { osc.started = at; },
+          stop(at) { osc.stopped = at; }
+        };
+        ctx.scheduled.push(osc);
+        return osc;
+      }
+    };
+    return ctx;
+  };
+
+  // ---- 1. A browser with no Web Audio at all. Not a context that fails to
+  // build — the API simply is not there, which is why the module reads the
+  // constructor off `window` rather than as a bare identifier: a bare
+  // `AudioContext` where none exists is a ReferenceError, and that one would be
+  // thrown straight out of the layer's first render.
+  globalThis.window = {};
+  globalThis.localStorage = fakeStorage();
+  const bare = await import(`${soundUrl}?case=no-web-audio`);
+  bare.unlock();
+  for (const name of CUES) bare.cue(name);
+  bare.setMuted(true);
+  bare.setMuted(false);
+  bare.setVolume(0.4);
+  assert.equal(bare.isMuted(), false, "with no Web Audio the mixer still answers the layer's questions");
+  assert.equal(bare.volumeLevel(), 0.4, "and still remembers the level, rather than throwing at a slider");
+
+  // ---- 2. A context that exists but never got its user gesture. Scheduling
+  // into a suspended context does not fail, it QUEUES — so a quiz whose start
+  // click never reached the mixer would empty a whole round of stored ticks the
+  // instant anything resumed it, over the top of whatever was happening then.
+  globalThis.localStorage = fakeStorage();
+  const asleep = fakeAudio("suspended");
+  asleep.resume = () => Promise.resolve(); // a browser holding out for a gesture
+  globalThis.window = { AudioContext: function () { return asleep; } };
+  const locked = await import(`${soundUrl}?case=locked`);
+  locked.unlock();
+  for (const name of CUES) locked.cue(name);
+  assert.equal(asleep.scheduled.length, 0,
+    "not one cue is scheduled into a context that is still waiting for its gesture");
+
+  // ---- 3. A working room.
+  const store = fakeStorage();
+  globalThis.localStorage = store;
+  const audio = fakeAudio("suspended");
+  globalThis.window = { AudioContext: function () { return audio; } };
+  const mixer = await import(`${soundUrl}?case=live`);
+
+  // The defaults. Unmuted, because a screen that comes up silent for no visible
+  // reason reads as broken; and at a real level, because `Number(null)` is 0
+  // and a volume read without a null check would have parked the slider at the
+  // far left on every first load.
+  assert.equal(mixer.isMuted(), false, "the room starts unmuted");
+  assert.equal(mixer.volumeLevel(), 0.7, "at a level, not at zero");
+
+  mixer.unlock();
+  assert.equal(audio.state, "running", "the gesture resumes the context");
+  assert.equal(audio.gains.length, 1, "one master gain, built once");
+  mixer.unlock();
+  assert.equal(audio.gains.length, 1, "and only once, however many gestures follow");
+
+  // Every cue is a finite, audible, self-cleaning envelope.
+  for (const name of CUES) {
+    audio.scheduled.length = 0;
+    mixer.cue(name);
+    assert.ok(audio.scheduled.length > 0, `${name} actually schedules something`);
+    for (const osc of audio.scheduled) {
+      // An oscillator left running is a node that is never collected, and this
+      // screen fires a cue about once a second for ten rounds.
+      assert.ok(osc.started !== null && osc.stopped !== null, `${name}: every oscillator is stopped`);
+      assert.ok(osc.stopped > osc.started, `${name}: and stopped after it starts`);
+      for (const hz of osc.hz) {
+        assert.ok(Number.isFinite(hz) && hz > 20 && hz < 20000, `${name}: ${hz} Hz is inside hearing`);
+      }
+    }
+  }
+
+  // ---- Level. Nobody running this can hear it, so the envelopes get measured
+  // instead. Every note in a cue is summed at the destination: a cue whose
+  // notes add up past 1.0 distorts, and the room hears it through a ceiling
+  // projector speaker, which is exactly where distortion is worst.
+  //
+  // The peaks are NOT summed directly — that is far too pessimistic. Two notes
+  // whose windows overlap by ten milliseconds have both envelopes near zero
+  // there, so the ramps the mixer scheduled are replayed and evaluated.
+  // Indexed rather than sliced: the concurrent scan below evaluates this a few
+  // million times, and an allocation per call turns a check into a wait.
+  const envelopeAt = (ramps, at) => {
+    if (!ramps.length || at < ramps[0][1]) return 0;
+    for (let index = 1; index < ramps.length; index += 1) {
+      const prev = ramps[index - 1];
+      const ramp = ramps[index];
+      if (at <= ramp[1]) {
+        const width = ramp[1] - prev[1];
+        if (width <= 0) return ramp[0];
+        // exponentialRampToValueAtTime interpolates geometrically.
+        return prev[0] * Math.pow(ramp[0] / prev[0], (at - prev[1]) / width);
+      }
+    }
+    return 0;
+  };
+  // One note's gain node is created immediately after its oscillator, so the
+  // two lists line up once the master gain at index 0 is stepped over.
+  const notesOf = (name) => {
+    audio.gains.length = 1;
+    audio.scheduled.length = 0;
+    mixer.cue(name);
+    return audio.gains.slice(1).map((node) => node.gain.ramps);
+  };
+  /** The loudest instant across a set of [cue, offsets] groups, which is what
+   *  the destination actually sums. Cues on this screen DO overlap. */
+  const loudest = (groups) => {
+    const end = Math.max(...groups.map(([notes, shifts]) =>
+      Math.max(...notes.map((ramps) => ramps[ramps.length - 1][1])) + Math.max(...shifts)));
+    let peak = 0;
+    for (let at = 0; at <= end; at += 0.001) {
+      let sum = 0;
+      for (const [notes, shifts] of groups) {
+        for (const shift of shifts) for (const ramps of notes) sum += envelopeAt(ramps, at - shift);
+      }
+      peak = Math.max(peak, sum);
+    }
+    return peak;
+  };
+
+  const level = {};
+  for (const name of CUES) {
+    level[name] = loudest([[notesOf(name), [0]]]);
+    assert.ok(level[name] > 0.05, `${name} is loud enough to be heard at all (${level[name].toFixed(2)})`);
+    assert.ok(level[name] <= 1, `${name} peaks at ${level[name].toFixed(2)} — over 1.0 and a cheap speaker distorts`);
+  }
+  // The cue that matters is the cue that carries. Nothing else on this screen
+  // may be louder than the sting at the round close.
+  for (const name of CUES) {
+    if (name === "close") continue;
+    assert.ok(level.close > level[name],
+      `the sting (${level.close.toFixed(2)}) is louder than ${name} (${level[name].toFixed(2)})`);
+  }
+  // The finale's worst case: sixty lanes compress popDelayMs to about a
+  // twenty-millisecond step, so each pop lands on top of the one before it.
+  // That wave is scheduled by the layer as one cue per animal, so the overlap
+  // has to be summed ACROSS cues rather than inside one.
+  const wave = Array.from({ length: 60 }, (unused, lane) => lane * 0.021);
+  const wavePeak = loudest([[notesOf("pop"), wave]]);
+  assert.ok(wavePeak <= 1, `sixty animals popping at once still fits in the mix (${wavePeak.toFixed(2)})`);
+
+  // The two loud cues can be SOUNDING TOGETHER, so measuring each alone and
+  // calling the total safe proves nothing. The piñata bursts on the settle,
+  // which happens inside the break, so the poll that reports it can arrive
+  // while the 780 ms sting is still ringing. Every alignment of the pair is
+  // scanned rather than the one that happens to be convenient.
+  const closeNotes = notesOf("close");
+  const burstNotes = notesOf("burst");
+  let together = 0;
+  for (let offset = 0; offset <= 0.8; offset += 0.005) {
+    together = Math.max(together, loudest([[closeNotes, [0]], [burstNotes, [offset]]]));
+  }
+  assert.ok(together <= 1,
+    `a burst landing on top of the sting still fits in the mix (${together.toFixed(2)})`);
+  assert.ok(together > level.close,
+    "and the scan really does find an alignment where the two overlap");
+
+  const span = (name) => {
+    audio.scheduled.length = 0;
+    mixer.cue(name);
+    return {
+      voices: audio.scheduled.length,
+      hz: audio.scheduled[0].hz[0],
+      length: Math.max(...audio.scheduled.map((o) => o.stopped))
+              - Math.min(...audio.scheduled.map((o) => o.started))
+    };
+  };
+  const tick = span("tick");
+  const hurry = span("hurry");
+  const close = span("close");
+  // Faster AND higher, and faster is built into the cue rather than into a
+  // second timer: the layer already runs a one-second clock for the countdown,
+  // and a second interval would drift out of step with the number the room is
+  // reading off the screen.
+  assert.ok(hurry.voices > tick.voices, "the last ten seconds tick faster than the forty");
+  assert.ok(hurry.hz > tick.hz, "and higher");
+  // The sting has to still be sounding while twenty-six heads come up.
+  assert.ok(close.length > tick.length * 4, "the sting rings; the tick does not");
+
+  // Mute is IMMEDIATE, not next-cue. One master gain is what makes that true:
+  // a sting already ringing when the professor reaches for the button is cut
+  // with it, rather than the room going on hearing what was just silenced.
+  const master = audio.gains[0];
+  mixer.setMuted(true);
+  // Defaulted rather than indexed blind: a mute that never touched the gain
+  // leaves this list empty, and the failure should read as the missing ramp it
+  // is, not as a TypeError three lines deep in the harness.
+  const muteRamp = master.gain.ramps[master.gain.ramps.length - 1] || [];
+  assert.equal(muteRamp[0], 0, "muting takes the master gain to zero there and then");
+  audio.scheduled.length = 0;
+  for (const name of CUES) mixer.cue(name);
+  assert.equal(audio.scheduled.length, 0, "and nothing new is scheduled while muted");
+  assert.equal(store.map.get("cp.subida-muted"), "on", "the choice is written down");
+  mixer.setMuted(false);
+  assert.equal(mixer.isMuted(), false, "and comes back");
+
+  mixer.setVolume(0.25);
+  assert.equal(mixer.volumeLevel(), 0.25, "the level is the professor's");
+  assert.equal(Number(store.map.get("cp.subida-volume")), 0.25, "and it is written down too");
+  mixer.setVolume(9);
+  assert.equal(mixer.volumeLevel(), 1, "a level out of range is clamped, never trusted");
+  mixer.setVolume(Number.NaN);
+  assert.equal(mixer.volumeLevel(), 0.7, "and nonsense falls back to the default, not to silence");
+
+  // silence(), for the screen the professor just closed. The layer can cancel
+  // the pops it has not fired yet, but a close already handed to the audio
+  // clock runs 780 ms and no timer can reach it.
+  mixer.setVolume(0.6);
+  const beforeSilence = master.gain.ramps.length;
+  mixer.silence();
+  assert.ok(master.gain.ramps.length > beforeSilence, "silence() reaches the master gain");
+  assert.equal(master.gain.ramps[master.gain.ramps.length - 1][0], 0, "and takes it to zero");
+  audio.scheduled.length = 0;
+  mixer.unlock();
+  assert.equal(master.gain.ramps[master.gain.ramps.length - 1][0], 0.6,
+    "and the next mount puts the level back — a silenced mixer must not open the next quiz silent");
+
+  // ---- 4. The reload. A professor who muted last class comes back muted, and
+  // at the level they left — which is the entire reason any of this is stored.
+  globalThis.localStorage = fakeStorage({ "cp.subida-muted": "on", "cp.subida-volume": "0.35" });
+  globalThis.window = { AudioContext: function () { return fakeAudio("running"); } };
+  const reloaded = await import(`${soundUrl}?case=reload`);
+  assert.equal(reloaded.isMuted(), true, "the mute survives a reload");
+  assert.equal(reloaded.volumeLevel(), 0.35, "and so does the level");
+
+  // ---- 5. Storage that throws on every call — Safari in private browsing.
+  // Neither the read at import nor the write on a toggle may take the screen
+  // down with it.
+  globalThis.localStorage = {
+    getItem() { throw new Error("storage denied"); },
+    setItem() { throw new Error("storage denied"); }
+  };
+  globalThis.window = { AudioContext: function () { return fakeAudio("running"); } };
+  const priv = await import(`${soundUrl}?case=private`);
+  assert.equal(priv.isMuted(), false, "storage that throws still reads as unmuted");
+  assert.equal(priv.volumeLevel(), 0.7, "at the default level");
+  priv.unlock();
+  priv.setMuted(true);
+  priv.setVolume(0.5);
+  priv.setMuted(false);
+  for (const name of CUES) priv.cue(name);
+  assert.equal(priv.volumeLevel(), 0.5, "and the choice still holds for this class, unwritten");
+
+  delete globalThis.window;
+  delete globalThis.localStorage;
 }
 
 console.log("verify-quiz-race passed");

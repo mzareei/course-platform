@@ -1546,7 +1546,6 @@ export const strings = {
   "quiz.submitFailed": ["Could not submit the quiz.", "No se pudo enviar el quiz."],
   "quiz.loading": ["Loading the quiz…", "Cargando el quiz…"],
   "quiz.questionN": ["Question {n} of {total}", "Pregunta {n} de {total}"],
-  "quiz.next": ["Next", "Siguiente"],
   "quiz.submit": ["Submit quiz", "Enviar quiz"],
   "quiz.submitting": ["Submitting…", "Enviando…"],
   "quiz.answeredOf": ["{answered} of {total} answered", "{answered} de {total} respondidas"],
@@ -2061,10 +2060,32 @@ export const strings = {
   "quiz.splashEyebrow": ["Today you are", "Hoy eres"],
   "quiz.splashHint": ["Only you know — find yourself on the big screen.", "Solo tú lo sabes — búscate en la pantalla."],
   "quiz.letsGo": ["Let's go!", "¡Vamos!"],
+  // The ten-second break. The phone shows the student their own result and
+  // then points them at the room's screen — the reason the break exists.
+  "quiz.roundOver": ["Round over", "Ronda terminada"],
+  "quiz.checkingAnswer": ["Checking your answer…", "Revisando tu respuesta…"],
+  "quiz.correctAnswerWas": ["The answer was: {answer}", "La respuesta era: {answer}"],
+  "quiz.earnedCandy": ["+{candy} 🍬", "+{candy} 🍬"],
+  "quiz.lookUp": ["👀 Look up at the screen!", "👀 ¡Mira la pantalla!"],
+  "quiz.quizOver": ["That was the last round", "Esa fue la última ronda"],
+  // The room's schedule has not reached this phone — in practice, a frontend
+  // deployed ahead of course-pulse. A legible wait beats a frozen question.
+  "quiz.waitingForRoom": ["Waiting for the room", "Esperando al salón"],
+  "quiz.waitingForRoomBody": [
+    "Your class's clock has not reached this phone yet. Hold on — nothing you have answered is lost.",
+    "El reloj de tu clase todavía no llega a este teléfono. Espera — no se pierde nada de lo que ya respondiste."
+  ],
+  // The post-quiz review: every question read back with its explanation,
+  // while the exit ticket is open. The break only ever had ten seconds for a
+  // mark — this is where the paragraph gets read.
+  "quiz.reviewTitle": ["How it went", "Cómo te fue"],
+  "quiz.youChose": ["You chose: {answer}", "Elegiste: {answer}"],
+  "quiz.youSkipped": ["You did not answer this one.", "Esta no la respondiste."],
 
   "pinata.cardTitle": ["🪅 Piñata: {percent}% cracked", "🪅 Piñata: {percent}% quebrada"],
   "pinata.burst": ["¡SE ROMPIÓ! 🪅💥", "¡SE ROMPIÓ! 🪅💥"],
   "pinata.gotCandy": ["🍬 You grabbed a candy", "🍬 Agarraste un dulce"],
+  "pinata.yourTally": ["🍬 {candy} candy · ✅ {correct} right", "🍬 {candy} dulces · ✅ {correct} correctas"],
   "pinata.yourRacer": ["You were {emoji} {name} — #{place} across the line", "Fuiste {emoji} {name} — #{place} en llegar"],
   "pinata.yourRacerNoPlace": ["You were {emoji} {name}", "Fuiste {emoji} {name}"],
   "pinata.cheerButton": ["📣 Cheer someone on!", "📣 ¡Échale porra!"],
@@ -2073,14 +2094,33 @@ export const strings = {
   "pinata.nobodyLeft": ["Everyone's done — watch the piñata!", "Ya terminaron todos — ¡mira la piñata!"],
   "pinata.layerTitle": ["🪅 Today's piñata: {title}", "🪅 La piñata de hoy: {title}"],
   "pinata.layerTitleNoName": ["🪅 Today's piñata", "🪅 La piñata de hoy"],
-  "pinata.swinging": ["{count} swinging", "{count} dándole"],
-  "pinata.candies": ["{count} got candy 🍬", "{count} con dulce 🍬"],
   "pinata.present": ["{count} present", "{count} presentes"],
   "pinata.blindfolded": ["{count} still blindfolded", "{count} con la venda puesta"],
-  "pinata.start": ["start", "salida"],
-  "pinata.porra": ["La porra ({count})", "La porra ({count})"],
   "pinata.casi": ["¡Casi! {percent}% — next class it falls", "¡Casi! {percent}% — la próxima clase cae"],
   "pinata.show": ["Show the piñata", "Mostrar la piñata"],
+  // ------------------------------------------------------------- La Subida
+  "subida.roundOf": ["Round {n} of {total}", "Ronda {n} de {total}"],
+  "subida.round": ["Round {n}", "Ronda {n}"],
+  "subida.roundGotIt": ["{count} of {total} got it", "{count} de {total} le atinaron"],
+  "subida.candyInRoom": ["{count} candy in the room", "{count} dulces en el salón"],
+  "subida.rail": ["Out in front", "Van arriba"],
+  "subida.spotlight": ["Play of the round", "Jugada de la ronda"],
+  "subida.spotStreak": ["{n} correct so far", "{n} aciertos hasta ahora"],
+  "subida.spotTop3": ["Climbed into the top three", "Se metió al top 3"],
+  "subida.spotFastest": ["Answered in under 20 seconds", "Contestó en menos de 20 segundos"],
+  "subida.spotCandy": ["Picked up {count} candy", "Se llevó {count} dulces"],
+  "subida.podiumTitle": ["The climb", "La subida"],
+  "subida.wonThePinata": ["🏆 {name} took the piñata!", "🏆 ¡{name} se llevó la piñata!"],
+  // The ending for a room that earned no candy: no podium is raised there, so
+  // this is the only closing line it gets. It claims nothing beyond the percent
+  // the screen is already showing.
+  "subida.noCandyClose": [
+    "🏁 That's the quiz — the piñata finished at {percent}%.",
+    "🏁 Se acabó el quiz — la piñata quedó en {percent}%."
+  ],
+  "subida.mute": ["Mute", "Silenciar"],
+  "subida.unmute": ["Unmute", "Activar sonido"],
+  "subida.volume": ["Room volume", "Volumen del salón"],
 
   // ---------------------------------------------------------------- reflection
   "reflection.eyebrow": ["End of class", "Fin de la clase"],

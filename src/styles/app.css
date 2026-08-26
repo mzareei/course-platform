@@ -1267,11 +1267,25 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .quiz-splash { align-items: center; text-align: center; padding: 1.5rem 0; }
 .quiz-splash-racer { font-size: 1.8rem; font-weight: 800; }
 
+/* The break's reveal. Read in about a second and then looked away from: the
+   mark carries it, the option text confirms it, and the last line is the whole
+   point of the ten seconds. */
+.quiz-reveal { align-items: center; text-align: center; padding: 1.25rem 0; }
+.quiz-reveal-mark { font-size: 3rem; line-height: 1; margin: 0; }
+.quiz-reveal-answer { font-size: 1.15rem; font-weight: 650; margin: 0; }
+.quiz-reveal-lookup { font-size: 1.3rem; font-weight: 700; margin: 0.5rem 0 0; }
+
 /* The done-screen race card and its crack bar. */
 .pinata-card { display: grid; gap: 0.5rem; }
 .pinata-card-bar-label { margin: 0; font-weight: 650; }
 .pinata-bar { height: 10px; border-radius: 999px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
 .pinata-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff6ec7, #ffd166, #6ee7ff); transition: width 400ms ease; }
+
+/* The post-quiz review: read at leisure while the exit ticket is open. */
+.quiz-review-item { padding: 0.7rem 0.85rem; }
+.quiz-review-prompt { font-weight: 650; margin: 0.2rem 0; }
+.quiz-review-answer { color: var(--text); font-weight: 600; margin: 0.2rem 0; }
+.quiz-review-why { color: var(--text-muted); font-size: 0.9rem; margin: 0.3rem 0 0; }
 
 /* ---------------------------------------------------------------- generation progress */
 .progress-track {
@@ -1313,35 +1327,229 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 .classroom-pinata-layer {
   position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
   gap: 1rem; padding: 1.5rem 2rem; background: #0f1420; color: #f4f6fb;
+  /* One duration for every sideways move. The rope, the animal and its ground
+     label must slide together or, for those milliseconds, a name is under the
+     wrong animal — so all three read this, and nothing hardcodes it. */
+  --subida-slide: 640ms;
+  /* Beat 2. Between the flash and the climb the field holds still, so the room
+     reads the green rings before twenty-six animals start moving. The value is
+     CLIMB_AT_MS in floats.ts and the verifier asserts the two agree. */
+  --subida-climb: 620ms;
+  /* The finale. One duration for everything that leaves when the podium comes
+     up — the ropes, the ground, the lane names and the rail go together, so no
+     animal is ever the last one still on screen. PODIUM_FADE_MS in floats.ts. */
+  --subida-podium-fade: 700ms;
 }
-.pinata-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
-.pinata-clock { font-size: 3.2rem; font-weight: 800; line-height: 1; margin: 0; }
-.pinata-line { min-height: 1.4em; color: #ffd166; font-size: 1.15rem; margin: 0.4rem 0 0; }
-.pinata-counts { text-align: right; color: #aab3c5; }
-.pinata-counts b { color: #fff; }
-.pinata-main { flex: 1; display: grid; grid-template-columns: 1fr 22%; gap: 1.2rem; min-height: 0; }
-.pinata-track { display: grid; gap: 4px; align-items: end; }
-.pinata-col { display: flex; flex-direction: column-reverse; align-items: center; gap: 3px;
-  min-height: 100%; border-left: 1px dashed rgba(255, 255, 255, 0.12); padding-bottom: 1.4rem; position: relative; }
-.pinata-col-label { position: absolute; bottom: 0; font-size: 0.7rem; color: #6f7a90; }
-.pinata-racer { font-size: 1.5rem; line-height: 1.1; text-align: center; transition: transform 400ms ease; }
-.pinata-racer small { display: block; font-size: 0.55rem; color: #c9d1e0; max-width: 5.5rem;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pinata-side { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; }
-.pinata-figure { font-size: 5rem; transform: rotate(-10deg); }
+/* La Subida — the climb toward the piñata, on the room's screen.
+   Replaces the column track: with the room clock every student is on the same
+   question at the same time, so on 2026-08-21 all twenty-six racers stacked
+   into question 1's column and pushed the layer taller than the display.
+   Height is the whole point of a climb, so that bug cannot recur here. */
+.subida-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.subida-hud { min-width: 10rem; }
+.subida-eyebrow { margin: 0 0 0.25rem; min-height: 1.2em; color: #aab3c5; font-size: 0.85rem;
+  letter-spacing: 0.06em; text-transform: uppercase; }
+.subida-clock { font-size: 3rem; font-weight: 800; line-height: 1; margin: 0; font-variant-numeric: tabular-nums; }
+.subida-pinata { flex: 1; max-width: 24rem; display: flex; flex-direction: column; align-items: center;
+  gap: 0.3rem; text-align: center; }
+.subida-pinata .pinata-bar { width: 100%; }
+.subida-counts { min-width: 10rem; text-align: right; color: #aab3c5; }
+/* An explicit line box, matched by min-height: the round count is blank while
+   the room is answering, and an empty line has to hold exactly the height of
+   a full one or the two lines below it shift every round. */
+.subida-counts p { margin: 0 0 0.15rem; font-size: 0.85rem; line-height: 1.35; min-height: 1.35em; }
+.subida-counts b { color: #fff; }
+
+/* The sky is the reserve above the field. A racer is positioned by its BOTTOM
+   edge, so one at 100% draws entirely above the field — 16px × MAX_SIZE of
+   emoji, rounded up. Without this the leader lands on the piñata's head.
+   The right margin is the top-three rail's lane, kept clear of the ropes so a
+   racer high in the last lane is never hidden behind it. */
+.subida-sky { flex: 1; min-height: 0; display: flex; padding-top: 60px; margin-right: 154px;
+  transition: opacity var(--subida-podium-fade) ease; }
+.subida-field { position: relative; flex: 1; min-height: 0; }
+.subida-rope { position: absolute; bottom: 0; width: 1px; height: 100%;
+  background: rgba(255, 255, 255, 0.055); transition: left var(--subida-slide) ease; }
+.subida-racer { position: absolute; line-height: 1; transform: translate(-50%, 0);
+  transition: bottom var(--subida-slide) cubic-bezier(.34, 1.3, .64, 1),
+    left var(--subida-slide) ease, font-size 460ms ease, filter 180ms ease;
+  animation: subida-bob 3.2s ease-in-out infinite; }
+/* Beat 1, then beat 2. The delays are listed in the same order as the
+   transition above: the climb and the growth wait out the flash, the sideways
+   slide never does (a lane that moves is a newcomer arriving, which has nothing
+   to do with the break) and neither does the ring. */
+.subida-field.climbing .subida-racer {
+  transition-delay: var(--subida-climb), 0ms, var(--subida-climb), 0ms; }
+/* The flash. Only ever ADDED to the racers who got it right; the rest of the
+   field is left exactly as it was. Nothing here ever dims a racer — marking the
+   room's misses is a callout, and this screen does not point at anyone. */
+.subida-racer.hit { filter: drop-shadow(0 0 8px #4ade80) drop-shadow(0 0 3px #4ade80); }
+
+/* The floating text. The wrapper is a zero-height anchor that drifts upward and
+   the label itself is the span inside it, which is where the rotation lives —
+   one element cannot carry both transforms. The container sits above every
+   animal on purpose: a racer carries z-index 10 plus its correct answers, so a
+   label left on auto would be drawn behind a taller neighbour. Still under the
+   rail and the spotlight card. The base opacity of 0 is what keeps a staggered
+   label invisible until its own delay elapses, since the animation fills
+   FORWARDS only. */
+.subida-floats { position: absolute; inset: 0; z-index: 30; pointer-events: none; overflow: visible; }
+.subida-float { position: absolute; height: 0; opacity: 0;
+  animation: subida-float-rise 2600ms linear var(--float-delay, 0ms) forwards; }
+.subida-float span { position: absolute; bottom: 0; left: 0; font-weight: 800; white-space: nowrap;
+  line-height: 1; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95); }
+/* Numbers read flat. Phrases are rotated, because twenty-six lanes sit about
+   nineteen pixels apart and a horizontal "🔥 3 aciertos" covers three or four
+   neighbouring ropes — the room would read it as the wrong animal's. Both grow
+   UPWARD from the anchor, so neither can fall back across its own emoji. */
+.subida-float.flat span { font-size: 0.75rem; transform: translateX(-50%); }
+.subida-float.vertical span { font-size: 0.6rem; writing-mode: vertical-rl;
+  transform: rotate(180deg); margin-left: -0.3rem; }
+/* Constant speed for 1500ms, then the fade over the remaining 1100ms. The 57.69%
+   stop is HOLD_MS / RISE_MS and its -34.6px sits on the straight line, so the
+   drift does not change pace when the fade begins. The verifier recomputes both
+   from floats.ts rather than trusting this comment. */
+@keyframes subida-float-rise {
+  0% { opacity: 1; transform: translateY(0); }
+  57.69% { opacity: 1; transform: translateY(-34.6px); }
+  100% { opacity: 0; transform: translateY(-60px); }
+}
+@keyframes subida-float-still {
+  0%, 57.69% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* The idle loop. Each lane carries its own negative animation-delay from the
+   markup: twenty-six animals breathing in unison read as one object, and a
+   still screen between rounds was half the 2026-08-21 complaint. The keyframes
+   repeat the -50% because an animated transform replaces the base one. */
+@keyframes subida-bob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -6px); }
+}
+/* The ground. A name marks its LANE for the whole quiz and never moves with
+   its animal; rotated because twenty-six of them have no room to lie flat.
+   The strip is tall enough for the longest name a racer can be dealt
+   ("Dinosaurio Invencible"), and clips with an ellipsis rather than spilling. */
+.subida-lanes { position: relative; height: 92px; margin-right: 154px;
+  transition: opacity var(--subida-podium-fade) ease; }
+.subida-lane-name { position: absolute; top: 2px; transform-origin: left top;
+  transform: rotate(90deg) translateY(-50%); font-size: 0.46rem; color: #7a8399;
+  white-space: nowrap; max-width: 86px; overflow: hidden; text-overflow: ellipsis;
+  transition: left var(--subida-slide) ease; }
+.subida-rail { position: absolute; right: 0.75rem; top: 6.5rem; width: 142px; z-index: 40;
+  background: #182034; border-radius: 12px; padding: 0.55rem 0.62rem;
+  transition: opacity var(--subida-podium-fade) ease; }
+.subida-rail-title { margin: 0 0 0.3rem; font-size: 0.62rem; color: #aab3c5;
+  letter-spacing: 0.08em; text-transform: uppercase; }
+.subida-rail-row { display: flex; align-items: center; gap: 0.38rem; padding: 0.18rem 0; }
+.subida-rail-name { font-size: 0.6rem; line-height: 1.15; flex: 1; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.subida-rail-candy { font-size: 0.62rem; color: #ffd166; font-weight: 700; }
+/* Beat 3: the standout's card, over the rail's own footprint for a few seconds.
+   Never a rank and never a total — just what one racer did in the round the
+   room has just watched. */
+.subida-spot { position: absolute; right: 0.75rem; top: 6.5rem; width: 142px; z-index: 50;
+  background: #1b2338; border: 1px solid #ffd166; border-radius: 12px;
+  padding: 0.6rem 0.55rem; text-align: center; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); }
+.subida-spot-title { margin: 0 0 0.25rem; font-size: 0.55rem; color: #ffd166;
+  letter-spacing: 0.08em; text-transform: uppercase; }
+.subida-spot-emoji { font-size: 2.4rem; line-height: 1.1; }
+.subida-spot-name { margin: 0.15rem 0 0.1rem; font-size: 0.7rem; font-weight: 700; }
+.subida-spot-earned { margin: 0; font-size: 0.58rem; color: #aab3c5; line-height: 1.25; }
+
+/* ---- The finale. The quiz is over.
+
+   Beat 1: every animal in the room pops, the ones still on zero included. The
+   class goes on with one flag in the layer and the delay is the lane's own, so
+   it crosses the screen as a wave. It overrides the idle bob outright — the
+   inline animation-delay the markup carries switches to the pop's stagger for
+   the same reason, or a lane's negative bob offset would start its pop
+   half-finished. */
+.subida-pop { animation: subida-pop 260ms cubic-bezier(.2, 1.6, .4, 1); }
+/* The -50% is the racer's own centring, repeated because an animated transform
+   replaces the base one — without it every animal jumps half its width sideways
+   as it pops. Same reason subida-bob repeats it. */
+@keyframes subida-pop {
+  50% { transform: translate(-50%, -14px) scale(1.5); }
+}
+/* The finale's 🍬 is the same label mechanism as a round's +2, at the size the
+   back of a room can read. */
+.subida-float.big span { font-size: 1.5rem; }
+
+/* Beat 3: the field, the ground, the lane names and the rail leave together and
+   the three steps come up in their place. Together is the point — fading one
+   racer and not another is the callout this screen has never made. */
+.classroom-pinata-layer.podium-up .subida-sky,
+.classroom-pinata-layer.podium-up .subida-lanes,
+.classroom-pinata-layer.podium-up .subida-rail { opacity: 0; }
+/* The bottom inset clears the 🏆 line and the two buttons under it, and
+   pointer-events is the second guard on the same thing: Show the winners has to
+   stay clickable with the podium drawn in front of it.
+
+   The title rides ABOVE the steps in the flow rather than pinned to the top of
+   this box. Pinned, it landed on the piñata's head — the header is as tall as
+   its content and there is no fixed offset that clears it. */
+.subida-podium { position: absolute; inset: 5.75rem 0 8rem; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end; gap: 0.9rem; z-index: 45; pointer-events: none; }
+.subida-podium-title { margin: 0; text-align: center;
+  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: #aab3c5; }
+/* Second, first, third — the markup's order is the order they stand in and the
+   order they rise, so the wave reads left to right. Bottoms align, so a name
+   that wraps to two lines stacks upward and never steps the blocks out of
+   line: "Dinosaurio Invencible" is a name a racer can really be dealt, and an
+   ellipsis on the winner's own step is not the way to show it. */
+.subida-podium-steps { display: flex; align-items: flex-end; justify-content: center; gap: 1rem; }
+.subida-podium-step { display: flex; flex-direction: column; align-items: center; gap: 0.38rem; width: 190px;
+  animation: subida-podium-rise 520ms cubic-bezier(.2, .9, .3, 1) both; }
+.subida-podium-emoji { font-size: 3rem; line-height: 1; }
+.subida-podium-name { margin: 0; font-size: 1rem; font-weight: 700; text-align: center; line-height: 1.25; }
+.subida-podium-candy { margin: 0; font-size: 0.85rem; font-weight: 700; color: #ffd166; }
+.subida-podium-block { width: 100%; border-radius: 10px 10px 0 0; display: flex; justify-content: center;
+  align-items: flex-start; padding-top: 0.5rem; font-size: 1.9rem; background: #2b3550; color: #f2f5fc;
+  height: 92px; }
+.subida-podium-step.first .subida-podium-emoji { font-size: 3.8rem; }
+.subida-podium-step.first .subida-podium-block { background: #ffd166; color: #5a4300; height: 124px; }
+.subida-podium-step.third .subida-podium-block { height: 68px; }
+@keyframes subida-podium-rise {
+  from { opacity: 0; transform: translateY(48px); }
+  to { opacity: 1; transform: none; }
+}
+.pinata-figure { font-size: 3.4rem; transform: rotate(-10deg); }
 .pinata-figure.burst { transform: none; filter: drop-shadow(0 0 20px rgba(255, 209, 102, 0.7)); }
-.pinata-side .pinata-bar { width: 100%; }
+/* One jolt a round, on the flash beat: the piñata takes the whole round's
+   damage at once instead of creeping up two percent every few seconds. */
+.pinata-figure.jolt { animation: pinata-jolt 600ms ease; }
+@keyframes pinata-jolt {
+  0%, 100% { transform: rotate(-10deg); }
+  22% { transform: rotate(-24deg) translateY(5px); }
+  48% { transform: rotate(3deg) translateY(-4px); }
+  74% { transform: rotate(-15deg); }
+}
 .pinata-name { color: #ffd166; font-size: 0.9rem; margin: 0; }
 .pinata-casi { font-weight: 700; margin: 0; }
-.pinata-porra { margin-top: auto; background: rgba(255, 255, 255, 0.06); border-radius: 10px;
-  padding: 0.6rem; width: 100%; }
-.pinata-porra p { margin: 0; font-size: 0.85rem; }
-.pinata-porra-row { font-size: 1.3rem; letter-spacing: 0.1em; }
+.pinata-line { min-height: 1.4em; margin: 0; color: #ffd166; font-size: 1.15rem; text-align: center; }
 .pinata-rain { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .pinata-rain span { position: absolute; top: -2rem; font-size: 2rem; animation: pinata-fall 2.6s ease-in forwards; }
 @keyframes pinata-fall { to { transform: translateY(110vh) rotate(300deg); } }
 @media (prefers-reduced-motion: reduce) {
   .pinata-rain { display: none; }
-  .pinata-racer { transition: none; }
+  .subida-racer { animation: none; transition: none; }
+  .subida-rope, .subida-lane-name { transition: none; }
+  /* No drift, no ring, no shake. The label still appears and still fades, so
+     the round is still readable — it just does not move. */
+  .subida-float { animation-name: subida-float-still; }
+  .subida-racer.hit { filter: none; }
+  .pinata-figure.jolt { animation: none; }
+  .subida-spot { box-shadow: none; }
+  /* The finale keeps its ending and loses its wave: no pop, no rain (the layer
+     never starts either), and the steps are simply there rather than rising off
+     the floor. */
+  .subida-pop { animation: none; }
+  .subida-podium-step { animation: none; }
 }
-.pinata-actions { display: flex; justify-content: center; gap: 0.8rem; }
+.pinata-actions { display: flex; justify-content: center; align-items: center; gap: 0.8rem; }
+/* The sound controls, beside the two buttons. Visible rather than tucked behind
+   a shortcut: sound on this screen is new and loud by design, and a professor
+   who needs the room quiet has to be able to see the switch. */
+.subida-sound { display: flex; align-items: center; gap: 0.5rem; }
+.subida-volume { width: 7rem; accent-color: #ffd166; cursor: pointer; }

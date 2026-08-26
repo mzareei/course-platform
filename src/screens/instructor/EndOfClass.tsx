@@ -21,6 +21,7 @@ import { clockText } from "../../features/quiz/clock";
 import { Podium } from "../../features/quiz/Podium";
 import { ClassroomPodiumLayer } from "../../features/live/ClassroomPodiumLayer";
 import { ClassroomPinataLayer } from "../../features/live/ClassroomPinataLayer";
+import * as sound from "../../features/live/sound";
 
 const POLL_MS = 4000;
 
@@ -129,6 +130,12 @@ export function EndOfClass({ sessionId, contentSlug }: { sessionId: string; cont
   }, [sessionId, instanceId]);
 
   async function onStart() {
+    // Autoplay: a browser drops every sound scheduled before a user gesture,
+    // and this click is the only gesture the room's screen ever gets. It runs
+    // BEFORE the first await on purpose — after one, the call is no longer
+    // inside the click's own task and Safari refuses to unlock there, which
+    // would leave the whole quiz silent with nothing on screen to say why.
+    sound.unlock();
     setBusy(true);
     setError(null);
     try {

@@ -22,6 +22,14 @@ export interface QuizQuestion {
    *  constant on both sides drifts silently. */
   seconds: number;
   options: QuizOption[];
+  /** Why the correct option is right. NEVER populated by start_attempt — that
+   *  would ship the answer key before question 1 is even on screen, the same
+   *  leak `is_correct` is deliberately left off these options for. Optional
+   *  here because it only exists once Player.tsx merges submit_attempt's
+   *  `explanations` map onto a copy of this array, after the quiz is graded,
+   *  for the post-quiz review list alone. */
+  explanation?: string | null;
+  explanation_es?: string | null;
 }
 
 export interface QuizAttempt {
@@ -59,6 +67,16 @@ export interface StartAttemptResponse {
 export interface SubmitAttemptResponse {
   attempt: QuizAttempt;
   score: { raw: number; total: number; percent: number; speed_bonus: number; final: number };
+  /** question id -> correct option id, from the server's own grading of this
+   *  submit — never from anything the client sent. This is the answer key,
+   *  so it only ever arrives attached to a response that already closed the
+   *  attempt out. */
+  correct: Record<string, string>;
+  /** question id -> explanation, in both languages. `QuizQuestion.explanation`
+   *  is never populated by start_attempt (a review round found it was shipping
+   *  the answer key at quiz start otherwise) — this is the only place a
+   *  question's explanation ever arrives from. */
+  explanations: Record<string, { explanation: string | null; explanation_es: string | null }>;
 }
 
 export function startQuizAttempt(activityInstanceId: string) {
@@ -78,8 +96,10 @@ export function submitQuizAttempt(input: {
 
 /** Fire-and-forget: "I'm on question `position`, answered `answered`." Moves
  *  this student's racer on the room's screen — and carries the full answer map,
- *  the server-side recovery copy a kicked phone resumes from. `clock_start`
- *  marks the "Let's go" tap that anchors the server clock. Callers swallow
+ *  which is BOTH the recovery copy a kicked phone resumes from and the record
+ *  the server grades from. `clock_start` marks the "Let's go" tap; since the
+ *  room clock replaced the per-phone one it anchors nothing, and the server
+ *  stamps `clock_t0` on the first ping it sees either way. Callers swallow
  *  failures — a dropped ping must never interrupt a student mid-quiz. */
 export function reportProgress(input: {
   attempt_id: string;
@@ -108,8 +128,11 @@ export function cheerRacer(input: { attempt_id: string }) {
 }
 
 // ---------------------------------------------------------------- instructor
-/** The time_limit_seconds includes the professor's one-minute cushion. */
-export function startClassQuiz(input: { class_session_id: string; content_slug: string; question_count?: number; time_limit_seconds?: number }) {
+/** The time_limit_seconds includes the professor's one-minute cushion. There is
+ *  no question_count: the deal is the fixed 4/3/3 quota, and the server sizes
+ *  the instance from it so the clock, the rounds and the piñata's denominator
+ *  cannot disagree with the questions actually dealt. */
+export function startClassQuiz(input: { class_session_id: string; content_slug: string; time_limit_seconds?: number }) {
   return callFn<{ instance_id: string; reused: boolean }>("course-class-quiz", { action: "start", ...input });
 }
 
@@ -181,10 +204,22 @@ export function classQuizPodium(input: { class_session_id: string }) {
 export interface RaceRacer {
   racer_name: string;
   racer_emoji: string;
-  position: number;
-  answered: number;
+  /** Height on the climb — correctness plus speed. Never a grade. */
+  candy: number;
+  /** Size on the climb — cumulative, so a racer never shrinks. */
+  correct_count: number;
   finished: boolean;
   finish_place: number | null;
+}
+
+/** The room's round window, server-decided. The screen counts down against
+ *  these deadlines rather than a clock of its own — the phones read the same
+ *  window out of course-pulse, and the two repos deploy independently. */
+export interface RaceRound {
+  index: number;
+  phase: "answering" | "break" | "done";
+  answer_ends_at: string;
+  break_ends_at: string;
 }
 
 export interface RaceCheer {
@@ -204,7 +239,12 @@ export interface RaceStatus {
   started: number;
   submitted: number;
   closed_reason: "time" | "everyone" | null;
-  pinata: { name: string; hits: number; total: number; percent: number; burst: boolean };
+  round: RaceRound | null;
+  /** How many students got the round that just closed right — the flash beat. */
+  round_correct: number;
+  /** Damage is correct answers, not answers given. `correct` and `total` are
+   *  the room's, not one student's. */
+  pinata: { name: string; correct: number; total: number; percent: number; burst: boolean };
   racers: RaceRacer[];
   cheers: RaceCheer[];
   cheers_total: number;

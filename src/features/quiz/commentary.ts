@@ -13,8 +13,12 @@ export type Lang = "en" | "es";
 export interface RacerView {
   racer_name: string;
   racer_emoji: string;
-  position: number;
-  answered: number;
+  /** Height on the climb: correctness plus speed. Replaced `position` when the
+   *  track became La Subida — every student is on the same question in the same
+   *  round now, so how far along the quiz someone is stopped being a number. */
+  candy: number;
+  /** Size on the climb: cumulative correct answers, so a racer never shrinks. */
+  correct_count: number;
   finished: boolean;
   finish_place: number | null;
 }
@@ -95,8 +99,8 @@ export function raceEvents(prev: RaceSnap | null, curr: RaceSnap, lang: Lang): s
   return lines;
 }
 
-/** A cheer for the back of the pack: a racer from the bottom third by
- *  position (started, not finished), never the same one twice in a row.
+/** A cheer for the back of the pack: a racer from the bottom third of the
+ *  climb by candy (started, not finished), never the same one twice in a row.
  *  Spanish in both languages — that is the joke. */
 export function chantLine(
   curr: RaceSnap,
@@ -105,7 +109,7 @@ export function chantLine(
 ): { line: string; target: string } | null {
   const running = curr.racers
     .filter((racer) => !racer.finished)
-    .sort((a, b) => a.position - b.position);
+    .sort((a, b) => a.candy - b.candy);
   if (!running.length) return null;
 
   const backOfPack = running.slice(0, Math.max(1, Math.ceil(running.length / 3)));
