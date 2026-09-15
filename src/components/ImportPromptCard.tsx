@@ -741,7 +741,7 @@ function PromptStep({
     <div class="card stack">
       <div class="row" style="justify-content: space-between; align-items: flex-start;">
         <div>
-          <h3>{t(titleKey)}</h3>
+          <h4>{t(titleKey)}</h4>
           <p class="hint">{t(ledeKey)}</p>
         </div>
         <button
@@ -797,14 +797,23 @@ function PromptStep({
 }
 
 export function ImportPromptCard() {
+  // One frame around both steps. This half happens in the professor's own AI
+  // chat and Part 2 is the half that happens on the page, so without the frame
+  // the upload fields read as a third prompt step.
   return (
-    <div class="stack">
-      <div class="card stack">
-        <h3>{t("import.prompt.title")}</h3>
+    <section class="card muted stack import-part" aria-labelledby="import-part-ai-eyebrow import-part-ai">
+      <div class="stack" style="gap: 0.4rem;">
+        <div>
+          <p class="eyebrow" id="import-part-ai-eyebrow">{t("import.part1.eyebrow")}</p>
+          <h3 id="import-part-ai" class="import-part-title">{t("import.prompt.title")}</h3>
+        </div>
         <p class="hint">{t("import.prompt.lede")}</p>
-        <p class="hint">{t("import.prompt.howRule")}</p>
         <p class="hint">{t("import.prompt.attach")}</p>
         <p class="hint">{t("import.prompt.validationCaveat")}</p>
+        <details>
+          <summary class="hint">{t("import.prompt.howRuleSummary")}</summary>
+          <p class="hint" style="padding-top: 0.4rem;">{t("import.prompt.howRule")}</p>
+        </details>
       </div>
 
       <PromptStep
@@ -821,6 +830,6 @@ export function ImportPromptCard() {
         saveKey="import.prompt.step2Save"
         body={IMPORT_PROMPT}
       />
-    </div>
+    </section>
   );
 }

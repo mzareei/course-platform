@@ -648,6 +648,7 @@ function ImportPanel() {
     <div class="stack">
       <div>
         <h2>{t("import.title")}</h2>
+        <p class="hint">{t("import.lede")}</p>
       </div>
 
       {draftRestored ? (
@@ -659,140 +660,204 @@ function ImportPanel() {
         </div>
       ) : null}
 
-      {error ? <p class="error-text" role="alert">{error}</p> : null}
+      {/* Colleagues come to this page for different things: one wants only the
+          end-of-class quiz, another presents the whole lecture from here. The
+          page used to read as one fixed path, so this says up front which
+          steps and uploads each use needs. */}
+      <ImportPathGuide />
 
       {/* The prompt comes before the upload because that is the order the work
           happens in: copy it, run it in your own AI, bring the file back. */}
       <ImportPromptCard />
 
-      <div class="card stack">
-        {showRawInputs ? (
-          <>
-            {/* Only offered when there's a previously-loaded, clean bank to
-                cancel back to — a mid-file-selection change of mind should
-                not lose anything either. */}
-            {replacing && bank && bank.ok ? (
-              <div class="row" style="justify-content: flex-end;">
-                <button class="btn quiet" type="button" onClick={() => setReplacing(false)}>
-                  {t("content.close")}
-                </button>
-              </div>
-            ) : null}
-            <label class="field">
-              {t("import.chooseFile")}
-              <input type="file" accept="application/json,.json" onChange={onChooseFile} />
-            </label>
-            <label class="field">
-              {t("import.paste")}
-              <textarea
-                rows={6}
-                value={fileText}
-                onInput={(event) => onPasteInput((event.target as HTMLTextAreaElement).value)}
-              />
-            </label>
-            {bank && !bank.ok && bank.fileProblemKey ? (
-              <p class="error-text" role="alert">
-                {t(bank.fileProblemKey, { detail: bank.fileProblem ?? "" })}
-              </p>
-            ) : null}
-          </>
-        ) : bank ? (
-          // bank.ok is guaranteed here — showRawInputs is true whenever it
-          // isn't — so this is always the "loaded cleanly" summary, never an
-          // error state. Collapsing behind this (instead of leaving a live,
-          // stale textarea sitting there) is what stops a stray click or a
-          // file re-selection from silently discarding every repair made
-          // below in ImportPreview.
-          <>
-            <p class="hint">{t("import.loadedSummary", { count: bank.questions.length })}</p>
-            {questionFileName ? <p class="hint">{questionFileName}</p> : null}
-            <button
-              class="btn quiet"
-              type="button"
-              onClick={() => { setFileText(""); setQuestionFileName(null); setReplacing(true); }}
-            >
-              {t("import.loadDifferentFile")}
-            </button>
-          </>
-        ) : null}
-      </div>
-
-      <div class="card stack">
-        <label class="field">
-          {t("import.slug")}
-          <input
-            type="text"
-            value={slug}
-            onInput={(event) => setSlug((event.target as HTMLInputElement).value)}
-          />
-          <span class="hint">{t("import.slugHint")}</span>
-        </label>
-
+      {/* Part 2 follows Part 1's order: the lecture ID first, because it joins
+          both files into one lecture, then the deck from step 1, then the
+          questions from step 2. The question file input used to sit straight
+          under step 2 with no name of its own, above the deck. */}
+      <section
+        class="card muted stack import-part"
+        aria-labelledby="import-part-upload-eyebrow import-part-upload"
+      >
         <div>
-          <h3>{t("import.deck.sectionTitle")}</h3>
-          <p class="hint">{t("import.noAutoCue")}</p>
+          <p class="eyebrow" id="import-part-upload-eyebrow">{t("import.part2.eyebrow")}</p>
+          <h3 id="import-part-upload" class="import-part-title">{t("import.part2.title")}</h3>
+          <p class="hint">{t("import.part2.lede")}</p>
         </div>
-        <label class="field">
-          {t("import.deck.chooseFile")}
-          <input type="file" accept="text/html,.html" onChange={onChooseDeckFile} />
-        </label>
-        {deckFileName ? <p class="hint">{deckFileName}</p> : null}
-        <label class="field">
-          {t("import.deck.externalLinks")}
-          <textarea
-            rows={2}
-            value={externalLinksText}
-            placeholder={t("import.deck.externalLinksHint")}
-            onInput={(event) => setExternalLinksText((event.target as HTMLTextAreaElement).value)}
-          />
-          <span class="hint">{t("import.deck.externalLinksHint")}</span>
-        </label>
 
-        {/* The only commit control used to live inside ImportPreview, which
-            renders only for a loaded bank — so a deck chosen on its own could
-            be read, named on screen, and never sent anywhere.
+        <div class="card stack">
+          <label class="field">
+            {t("import.slug")}
+            <input
+              type="text"
+              value={slug}
+              onInput={(event) => setSlug((event.target as HTMLInputElement).value)}
+            />
+            <span class="hint">{t("import.slugHint")}</span>
+          </label>
+        </div>
 
-            Exactly one commit button exists at a time. When a bank is loaded,
-            ImportPreview's button owns the submit and sends the deck with it;
-            this half then explains that in words, because a button that
-            disappears the moment the second file loads reads as the deck being
-            dropped, not as the two being merged.
-
-            When no bank is loaded, the button is always rendered and merely
-            disabled until a file is chosen. Rendering it only once a file
-            exists hid the one control the screen was missing behind the very
-            action the professor was looking for it to perform. */}
-        {bank && bank.ok && !replacing ? (
-          deckHtml.trim()
-            ? <p class="hint" role="status">{t("import.deck.savedWithQuestions")}</p>
-            : null
-        ) : (
-          <div class="row" style="justify-content: space-between; align-items: center;">
-            <p class="hint">
-              {deckHtml.trim() ? t("import.deck.aloneHint") : t("import.deck.chooseFirst")}
-            </p>
-            <button
-              class="btn primary"
-              type="button"
-              disabled={busy || !deckHtml.trim()}
-              style="flex: 0 0 auto;"
-              onClick={() => void onCommit()}
-            >
-              {t("import.deck.commitAlone")}
-            </button>
+        <div class="card stack">
+          <div>
+            <h4>{t("import.deck.sectionTitle")}</h4>
+            <p class="hint">{t("import.deck.sectionLede")}</p>
+            <p class="hint">{t("import.noAutoCue")}</p>
           </div>
-        )}
+          <label class="field">
+            {t("import.deck.chooseFile")}
+            <input type="file" accept="text/html,.html" onChange={onChooseDeckFile} />
+          </label>
+          {deckFileName ? <p class="hint">{deckFileName}</p> : null}
+          {/* Optional, and never a reason to refuse an upload. Printed open it
+              read as one more required step, with its hint shown twice. */}
+          {/* A restored draft can carry a host list; the summary shows it so a
+              collapsed block never hides a value that changes the upload. */}
+          <details>
+            <summary class="hint">
+              {t("import.deck.externalLinks")}
+              {externalLinksText.trim() ? `: ${parseHostList(externalLinksText).join(", ")}` : null}
+            </summary>
+            <div class="stack" style="padding-top: 0.5rem;">
+              <p class="hint" id="import-external-links-hint">{t("import.deck.externalLinksHint")}</p>
+              <textarea
+                rows={2}
+                value={externalLinksText}
+                aria-label={t("import.deck.externalLinks")}
+                aria-describedby="import-external-links-hint"
+                placeholder="example.com"
+                onInput={(event) => setExternalLinksText((event.target as HTMLTextAreaElement).value)}
+              />
+            </div>
+          </details>
+
+          {/* The only commit control used to live inside ImportPreview, which
+              renders only for a loaded bank — so a deck chosen on its own could
+              be read, named on screen, and never sent anywhere.
+
+              Exactly one commit button exists at a time. When a bank is loaded,
+              ImportPreview's button owns the submit and sends the deck with it;
+              this half then explains that in words, because a button that
+              disappears the moment the second file loads reads as the deck being
+              dropped, not as the two being merged.
+
+              When no bank is loaded, the button is always rendered and merely
+              disabled until a file is chosen. Rendering it only once a file
+              exists hid the one control the screen was missing behind the very
+              action the professor was looking for it to perform. */}
+          {bank && bank.ok && !replacing ? (
+            deckHtml.trim()
+              ? <p class="hint" role="status">{t("import.deck.savedWithQuestions")}</p>
+              : null
+          ) : (
+            <div class="row" style="justify-content: space-between; align-items: center;">
+              <p class="hint">
+                {deckHtml.trim() ? t("import.deck.aloneHint") : t("import.deck.chooseFirst")}
+              </p>
+              <button
+                class="btn primary"
+                type="button"
+                disabled={busy || !deckHtml.trim()}
+                style="flex: 0 0 auto;"
+                onClick={() => void onCommit()}
+              >
+                {t("import.deck.commitAlone")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div class="card stack">
+          <div>
+            <h4>{t("import.bank.sectionTitle")}</h4>
+            <p class="hint">{t("import.bank.sectionLede")}</p>
+          </div>
+          {showRawInputs ? (
+            <>
+              {/* Only offered when there's a previously-loaded, clean bank to
+                  cancel back to — a mid-file-selection change of mind should
+                  not lose anything either. */}
+              {replacing && bank && bank.ok ? (
+                <div class="row" style="justify-content: flex-end;">
+                  <button class="btn quiet" type="button" onClick={() => setReplacing(false)}>
+                    {t("content.close")}
+                  </button>
+                </div>
+              ) : null}
+              <label class="field">
+                {t("import.chooseFile")}
+                <input type="file" accept="application/json,.json" onChange={onChooseFile} />
+              </label>
+              <label class="field">
+                {t("import.paste")}
+                <textarea
+                  rows={6}
+                  value={fileText}
+                  onInput={(event) => onPasteInput((event.target as HTMLTextAreaElement).value)}
+                />
+              </label>
+              {bank && !bank.ok && bank.fileProblemKey ? (
+                <p class="error-text" role="alert">
+                  {t(bank.fileProblemKey, { detail: bank.fileProblem ?? "" })}
+                </p>
+              ) : null}
+            </>
+          ) : bank ? (
+            // bank.ok is guaranteed here — showRawInputs is true whenever it
+            // isn't — so this is always the "loaded cleanly" summary, never an
+            // error state. Collapsing behind this (instead of leaving a live,
+            // stale textarea sitting there) is what stops a stray click or a
+            // file re-selection from silently discarding every repair made
+            // below in ImportPreview.
+            <>
+              <p class="hint">{t("import.loadedSummary", { count: bank.questions.length })}</p>
+              {questionFileName ? <p class="hint">{questionFileName}</p> : null}
+              <button
+                class="btn quiet"
+                type="button"
+                onClick={() => { setFileText(""); setQuestionFileName(null); setReplacing(true); }}
+              >
+                {t("import.loadDifferentFile")}
+              </button>
+            </>
+          ) : null}
+        </div>
+
+        {bank && bank.ok && !replacing ? (
+          <ImportPreview bank={bank} onChange={setBank} onCommit={() => void onCommit()} />
+        ) : null}
+
+        {/* Next to the save buttons, not at the top of the page: both errors
+            come from pressing one of them. */}
+        {error ? <p class="error-text" role="alert">{error}</p> : null}
+        {busy ? <p class="hint" role="status">{t("import.saving")}</p> : null}
+
+        {result ? (
+          <ImportResultSummary result={result} hasDeck={resultHadDeck} hasBank={resultHadBank} />
+        ) : null}
+      </section>
+    </div>
+  );
+}
+
+const IMPORT_PATHS: [StringKey, StringKey][] = [
+  ["import.path.full.title", "import.path.full.do"],
+  ["import.path.quiz.title", "import.path.quiz.do"],
+  ["import.path.slides.title", "import.path.slides.do"]
+];
+
+/** The ways colleagues use this page, each with the steps and uploads it needs.
+ *  Declared at module scope, not inside ImportPanel — pitfall #4. */
+function ImportPathGuide() {
+  return (
+    <div class="card stack">
+      <h3>{t("import.path.title")}</h3>
+      <div class="grid-2">
+        {IMPORT_PATHS.map(([titleKey, doKey]) => (
+          <div class="card muted" style="gap: 0.25rem;" key={titleKey}>
+            <strong>{t(titleKey)}</strong>
+            <p class="hint">{t(doKey)}</p>
+          </div>
+        ))}
       </div>
-
-      {bank && bank.ok && !replacing ? (
-        <ImportPreview bank={bank} onChange={setBank} onCommit={() => void onCommit()} />
-      ) : null}
-
-      {busy ? <p class="hint" role="status">{t("import.saving")}</p> : null}
-
-      {result ? (
-        <ImportResultSummary result={result} hasDeck={resultHadDeck} hasBank={resultHadBank} />
-      ) : null}
     </div>
   );
 }

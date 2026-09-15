@@ -1321,6 +1321,15 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
   overflow-wrap: anywhere;
 }
 
+/* The Import tab's two halves: making the files in your own AI chat, then
+   uploading them here. One frame per half is what tells a first-time reader
+   where the prompts end and which upload belongs to which step. */
+.import-part { border-color: var(--border-strong); gap: 0.9rem; }
+.import-part-title { font-size: 1.15rem; }
+.import-part h4 { margin: 0; font-size: 1rem; font-weight: 650; line-height: 1.2; }
+/* File names like Week_03_Symmetric_Crypto_Final.html must wrap on a phone. */
+.import-part .hint { overflow-wrap: anywhere; }
+
 /* The piñata race — the room's screen. Same posture as the podium layer:
    fixed, opaque, dark whatever the app theme, nothing translucent for the
    room to read the professor's screen through. */

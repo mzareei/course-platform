@@ -2179,7 +2179,40 @@ export const strings = {
 
   // --------------------------------------------------------------- import
   "import.title": ["Import a lecture", "Importar una clase"],
-  "import.chooseFile": ["Choose a file", "Elegir un archivo"],
+  "import.lede": [
+    "Two parts: first make the lecture files in your own AI chat, then upload them here.",
+    "Dos partes: primero crea los archivos de la clase en tu propio chat de IA y después súbelos aquí."
+  ],
+  "import.path.title": ["What do you want to use the platform for?", "¿Para qué quieres usar la plataforma?"],
+  "import.path.full.title": [
+    "Everything: slides, class questions and the end-of-class quiz",
+    "Todo: presentación, preguntas de clase y quiz de fin de clase"
+  ],
+  "import.path.full.do": [
+    "Do steps 1 and 2 in Part 1, then upload both files in Part 2.",
+    "Haz los pasos 1 y 2 de la parte 1 y sube ambos archivos en la parte 2."
+  ],
+  "import.path.quiz.title": ["Only the end-of-class quiz", "Solo el quiz de fin de clase"],
+  "import.path.quiz.do": [
+    "Do steps 1 and 2, then upload both files. You will not show the slides, but the platform needs the deck to put the lecture on a class day.",
+    "Haz los pasos 1 y 2 y sube ambos archivos. No mostrarás las diapositivas, pero la plataforma necesita la presentación para asignar la clase a un día de clase."
+  ],
+  "import.path.slides.title": ["Only the slides", "Solo la presentación"],
+  "import.path.slides.do": [
+    "Do step 1, then upload only the slide deck. To add its questions later you need the same lecture ID, so write it down.",
+    "Haz el paso 1 y sube solo la presentación. Para agregar sus preguntas después necesitas el mismo identificador de clase, así que anótalo."
+  ],
+  "import.part1.eyebrow": ["Part 1 · In your AI chat", "Parte 1 · En tu chat de IA"],
+  "import.part2.eyebrow": ["Part 2 · On this page", "Parte 2 · En esta página"],
+  "import.part2.title": ["Upload the files", "Sube los archivos"],
+  "import.part2.lede": [
+    "Every lecture needs its slide deck, even if you only run the end-of-class quiz. Add the question bank for class questions and the quiz.",
+    "Toda clase necesita su presentación, aunque solo uses el quiz de fin de clase. Agrega el banco de preguntas para las preguntas de clase y el quiz."
+  ],
+  "import.chooseFile": [
+    "Choose the question bank file (.json)",
+    "Elegir el archivo del banco de preguntas (.json)"
+  ],
   "import.paste": ["Or paste the file contents", "O pega el contenido del archivo"],
   "import.loadedSummary": ["Loaded: {count} questions", "Cargadas: {count} preguntas"],
   "import.loadDifferentFile": ["Load a different file", "Cargar otro archivo"],
@@ -2220,21 +2253,39 @@ export const strings = {
     "A draft you were working on was restored.",
     "Se restauró un borrador en el que estabas trabajando."
   ],
-  "import.slug": ["Lecture slug", "Identificador de la clase"],
+  "import.slug": ["Lecture ID", "Identificador de la clase"],
   "import.slugHint": [
-    "Links the question bank and the deck to the same lecture. Lowercase letters, numbers and dashes. If you upload the deck now and its questions later, use this exact same slug both times — a different one creates a second, separate lecture.",
-    "Vincula el banco de preguntas y la presentación a la misma clase. Minúsculas, números y guiones. Si subes la presentación ahora y sus preguntas después, usa exactamente el mismo slug las dos veces — uno distinto crea una segunda clase aparte."
+    "Joins the slide deck and the question bank into one lecture. It usually fills in from the first file you choose, and you can change it. Lowercase letters, numbers and dashes. If you upload the deck now and its questions later, use this exact same ID both times — a different one creates a second, separate lecture. Write it down before saving: the field clears once the upload succeeds.",
+    "Une la presentación y el banco de preguntas en una sola clase. Normalmente se llena solo con el primer archivo que elijas, y puedes cambiarlo. Minúsculas, números y guiones. Si subes la presentación ahora y sus preguntas después, usa exactamente el mismo identificador las dos veces — uno distinto crea una segunda clase aparte. Anótalo antes de guardar: el campo se vacía cuando la subida termina bien."
   ],
   "import.slugRequired": [
-    "Enter a lecture slug before saving.",
+    "Enter a lecture ID before saving.",
     "Escribe un identificador de clase antes de guardar."
   ],
   "import.saving": ["Saving…", "Guardando…"],
   "import.commitFailed": ["Could not save this import.", "No se pudo guardar esta importación."],
   "import.bank.success": ["Question bank imported.", "Banco de preguntas importado."],
   "import.bank.failed": ["The question bank could not be imported.", "No se pudo importar el banco de preguntas."],
-  "import.deck.sectionTitle": ["Lecture deck (optional)", "Presentación de la clase (opcional)"],
-  "import.deck.chooseFile": ["Choose the deck HTML file", "Elegir el archivo HTML de la presentación"],
+  "import.bank.sectionTitle": [
+    "Question bank · the .json file from step 2",
+    "Banco de preguntas · el archivo .json del paso 2"
+  ],
+  "import.bank.sectionLede": [
+    "Holds the class questions and the end-of-class quiz. Skip it if you only want to present the slides.",
+    "Contiene las preguntas de clase y el quiz de fin de clase. Omítelo si solo quieres presentar las diapositivas."
+  ],
+  "import.deck.sectionTitle": [
+    "Slide deck · the .html file from step 1",
+    "Presentación · el archivo .html del paso 1"
+  ],
+  "import.deck.sectionLede": [
+    "Needed for every lecture, even if you never show the slides: without it you cannot put the lecture on a class day or run its end-of-class quiz.",
+    "Es necesaria para toda clase, aunque nunca muestres las diapositivas: sin ella no puedes asignar la clase a un día de clase ni hacer su quiz de fin de clase."
+  ],
+  "import.deck.chooseFile": [
+    "Choose the slide deck file (.html)",
+    "Elegir el archivo de la presentación (.html)"
+  ],
   "import.deck.externalLinks": [
     "Sites this deck links to (optional)",
     "Sitios a los que enlaza esta presentación (opcional)"
@@ -2257,34 +2308,35 @@ export const strings = {
   ],
   "import.deck.commitAlone": ["Upload the deck", "Subir la presentación"],
   "import.deck.chooseFirst": [
-    "Choose the deck HTML file above, then this button will send it.",
-    "Elige arriba el archivo HTML de la presentación y este botón la enviará."
+    "Choose the slide deck file above, then this button will send it.",
+    "Elige arriba el archivo de la presentación y este botón la enviará."
   ],
   "import.deck.aloneHint": [
-    "You can upload the deck now and add its questions later — step 2 needs this file first.",
-    "Puedes subir la presentación ahora y agregar sus preguntas después — el paso 2 necesita este archivo primero."
+    "Have the question bank too? Choose it below, and Save to the course sends both together. This button uploads the slides by themselves.",
+    "¿También tienes el banco de preguntas? Elígelo abajo y Guardar en el curso enviará ambos juntos. Este botón sube solo la presentación."
   ],
   "import.deck.savedWithQuestions": [
     "This deck will be saved together with the questions — use Save to the course at the bottom of the page. You do not need a separate button for it.",
     "Esta presentación se guardará junto con las preguntas — usa Guardar en el curso al final de la página. No necesitas un botón aparte para ella."
   ],
-  "import.deck.success": ["Lecture deck imported.", "Presentación importada."],
-  "import.deck.failed": ["The lecture deck could not be imported.", "No se pudo importar la presentación."],
+  "import.deck.success": ["Slide deck imported.", "Presentación importada."],
+  "import.deck.failed": ["The slide deck could not be imported.", "No se pudo importar la presentación."],
 
   // ------------------------------------------------- import · authoring prompt
   // Chrome only. The prompt body itself stays in English — it is instructions
   // to a model, not text a person reads.
-  "import.prompt.title": [
-    "Build a lecture in two steps",
-    "Crea una clase en dos pasos"
-  ],
+  "import.prompt.title": ["Make the files with your AI", "Crea los archivos con tu IA"],
   "import.prompt.lede": [
-    "Use whichever AI you already use — ChatGPT, Claude or Gemini. Step 1 turns your lecture into the slide deck. Step 2 reads that deck and writes the questions. Then upload both files below.",
-    "Usa la IA que ya uses — ChatGPT, Claude o Gemini. El paso 1 convierte tu clase en la presentación. El paso 2 lee esa presentación y escribe las preguntas. Después sube ambos archivos aquí abajo."
+    "Use whichever AI you already use — ChatGPT, Claude or Gemini. Step 1 turns your lecture into the slide deck (.html). Step 2 reads that deck and writes the question bank (.json).",
+    "Usa la IA que ya uses — ChatGPT, Claude o Gemini. El paso 1 convierte tu clase en la presentación (.html). El paso 2 lee esa presentación y escribe el banco de preguntas (.json)."
   ],
   "import.prompt.howRule": [
     "The deck decides where the class pauses. Step 1 places a Pulse check slide wherever a concept finishes, and step 2 only copies those questions across — which is why every question lands on the slide it belongs to.",
     "La presentación decide dónde se pausa la clase. El paso 1 coloca una diapositiva de Pulse check donde termina cada concepto, y el paso 2 solo copia esas preguntas — por eso cada pregunta cae en la diapositiva que le corresponde."
+  ],
+  "import.prompt.howRuleSummary": [
+    "Why step 2 needs the deck from step 1",
+    "Por qué el paso 2 necesita la presentación del paso 1"
   ],
   // No individual is credited here. The platform serves many instructors, and
   // a name on the shared authoring surface reads as ownership of everyone's
@@ -2311,29 +2363,23 @@ export const strings = {
     "Download the reference",
     "Descargar la referencia"
   ],
-  "import.prompt.step1Title": [
-    "Step 1 — the slide deck",
-    "Paso 1 — la presentación"
-  ],
+  "import.prompt.step1Title": ["Step 1 · The slide deck (.html)", "Paso 1 · La presentación (.html)"],
   "import.prompt.step1Lede": [
     "Attach two files — the style reference deck below and your own lecture PPTX or PDF — then paste this prompt. It answers with one HTML file: your slides in both languages, with a Pulse check slide everywhere the class should stop and answer.",
     "Adjunta dos archivos — la presentación de referencia de aquí abajo y tu propia clase en PPTX o PDF — y luego pega este prompt. Responde con un solo archivo HTML: tus diapositivas en ambos idiomas, con una diapositiva de Pulse check donde la clase deba detenerse a responder."
   ],
   "import.prompt.step1Save": [
-    "Download the file the AI gives you, or save its reply as a file ending in .html. Either way, upload it under Lecture deck below.",
-    "Descarga el archivo que te dé la IA, o guarda su respuesta como un archivo que termine en .html. En cualquier caso, súbelo en Presentación aquí abajo."
+    "Download the file the AI gives you, or save its reply as a file ending in .html. Upload it in Part 2, under Slide deck.",
+    "Descarga el archivo que te dé la IA, o guarda su respuesta como un archivo que termine en .html. Súbelo en la parte 2, en Presentación."
   ],
-  "import.prompt.step2Title": [
-    "Step 2 — the questions",
-    "Paso 2 — las preguntas"
-  ],
+  "import.prompt.step2Title": ["Step 2 · The question bank (.json)", "Paso 2 · El banco de preguntas (.json)"],
   "import.prompt.step2Lede": [
-    "Open a new chat, attach the .html file from step 1, and paste this prompt. It answers with the question file.",
-    "Abre un chat nuevo, adjunta el archivo .html del paso 1 y pega este prompt. Responde con el archivo de preguntas."
+    "Open a new chat, attach the .html file from step 1, and paste this prompt. It answers with the question bank (.json).",
+    "Abre un chat nuevo, adjunta el archivo .html del paso 1 y pega este prompt. Responde con el banco de preguntas (.json)."
   ],
   "import.prompt.step2Save": [
-    "Attach the .html file, not the PDF — the questions have to be read from the finished slides. Save the reply as a file ending in .json and upload it as the question file below.",
-    "Adjunta el archivo .html, no el PDF — las preguntas deben leerse de las diapositivas terminadas. Guarda la respuesta como un archivo que termine en .json y súbelo como archivo de preguntas aquí abajo."
+    "Attach the .html file, not the PDF — the questions have to be read from the finished slides. Save the reply as a file ending in .json and upload it in Part 2, under Question bank.",
+    "Adjunta el archivo .html, no el PDF — las preguntas deben leerse de las diapositivas terminadas. Guarda la respuesta como un archivo que termine en .json y súbelo en la parte 2, en Banco de preguntas."
   ],
   "import.prompt.showText": [
     "Show the prompt text",

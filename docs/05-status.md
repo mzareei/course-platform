@@ -1,6 +1,31 @@
 # Status
 
-**Last updated:** 2026-08-26
+**Last updated:** 2026-09-15
+
+### Import tab reorganised into two framed parts (2026-09-15)
+
+Colleagues found the Import tab hard to follow. The question-file input sat
+unlabeled under step 2, above the deck upload, and nothing said which steps each
+use of the platform needs. The tab now reads top to bottom as a three-way guide
+(everything / only the end-of-class quiz / only the slides), then **Part 1 · In
+your AI chat** framing the two prompt steps, then **Part 2 · On this page**
+framing Lecture ID, Slide deck (.html from step 1) and Question bank (.json from
+step 2), with the preview, save button and errors inside it. Layout and wording
+only: every handler, state and commit path in `ImportPanel` is unchanged, and
+`verify-content-import` passes without edits.
+
+**A quiz-only lecture still needs its deck.** A bank-only import writes a
+`quiz_bank` item. Both class-day pickers (`Schedule.tsx`, and Content Library's
+Assign to a class) list only `content_type === "lecture"`, and
+`course-session-management` rejects anything else. Run Class finds the bank only
+through the class day's lecture, so a bank without a deck can never start its
+end-of-class quiz from the UI. The guide and the deck card now tell instructors
+to upload both files under the same lecture ID. A deck imported later under the
+same slug converts the `quiz_bank` item into a lecture.
+
+Checked in a local render of the tab: deck-only upload button, bank plus deck
+merging into Save to the course, Load a different file and Close, draft restore,
+386px width, dark theme.
 
 ### Deck link checks became advisory, and everything pending shipped (2026-08-26)
 

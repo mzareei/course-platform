@@ -160,11 +160,11 @@ export function ImportPreview({
     <div class="stack import-preview">
       {groups.map((group) => (
         <section class="stack" key={group.slide ?? "unslotted"}>
-          <h3>
+          <h4>
             {group.slide !== null
               ? t("import.group.upToSlide", { slide: group.slide })
               : t("import.group.noSlide")}
-          </h3>
+          </h4>
           <div class="stack">
             {group.questions.map((question) => (
               <QuestionEditor
