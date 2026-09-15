@@ -1330,6 +1330,30 @@ table.data th.num .sort-header { width: 100%; text-align: right; }
 /* File names like Week_03_Symmetric_Crypto_Final.html must wrap on a phone. */
 .import-part .hint { overflow-wrap: anywhere; }
 
+/* ---------------------------------------------------------------- instructor guide */
+/* Five steps, each a small line drawing beside two lines of text. The drawings
+   take their colours from the theme tokens, so dark mode needs nothing extra. */
+.guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.guide-step { display: grid; grid-template-columns: 8.5rem 1fr; gap: 1.1rem; align-items: center; }
+.guide-step-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.guide-step-number {
+  display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; flex: 0 0 auto;
+  border-radius: var(--radius-pill); background: var(--primary-soft); color: var(--primary);
+  font-weight: 700; font-size: 0.85rem;
+}
+.guide-step-link { align-self: flex-start; }
+.guide-picture { display: block; width: 100%; max-width: 8.5rem; height: auto; color: var(--primary); }
+.guide-picture .soft { fill: var(--primary-soft); }
+.guide-picture .paper { fill: var(--surface-1); }
+.guide-picture .accent { stroke: var(--accent); }
+.guide-picture .accent-fill { fill: var(--accent); }
+.guide-picture .ink { fill: currentColor; }
+.guide-tips { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.35rem; }
+@media (max-width: 520px) {
+  .guide-step { grid-template-columns: 1fr; gap: 0.6rem; }
+  .guide-picture { max-width: 7rem; }
+}
+
 /* The piñata race — the room's screen. Same posture as the podium layer:
    fixed, opaque, dark whatever the app theme, nothing translucent for the
    room to read the professor's screen through. */

@@ -87,6 +87,12 @@ export function TeachHome() {
       )}
 
       <div class="grid-2">
+        {/* First, because a colleague on their first day has not yet learned
+            what the other three cards are for. */}
+        <a class="card" href="/teach/guide" style="text-decoration:none;color:inherit;">
+          <h3>{t("teach.card.guide")}</h3>
+          <p class="hint">{t("teach.card.guideBody")}</p>
+        </a>
         <a class="card" href="/teach/content" style="text-decoration:none;color:inherit;">
           <h3>{t("teach.card.content")}</h3>
           <p class="hint">{t("teach.card.contentBody")}</p>

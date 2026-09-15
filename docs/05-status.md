@@ -2,6 +2,18 @@
 
 **Last updated:** 2026-09-15
 
+### Instructor guide on Home (2026-09-15)
+
+A "How the platform works" card, first on the instructor Home grid, opens
+`/teach/guide`: five steps for a colleague's first day (add students, bring in a
+lecture, put it on a class day, teach, end the class) and three "Good to know"
+lines. Each step has a small inline SVG drawing with no words in it, coloured
+by theme-token classes so dark mode needs nothing extra, and a link to its
+screen. Every button and screen name in the guide is interpolated from that
+screen's own string key, so renaming a button renames the guide.
+`tools/verify-instructor-guide.mjs` holds the route, the Home link, those label
+keys and the drawing rules (aria-hidden, no `<text>`, no hard-coded colours).
+
 ### Import tab reorganised into two framed parts (2026-09-15)
 
 Colleagues found the Import tab hard to follow. The question-file input sat

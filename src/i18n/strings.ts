@@ -402,6 +402,64 @@ export const strings = {
     "See exactly what your students see.",
     "Mira exactamente lo que ven tus estudiantes."
   ],
+  "teach.card.guide": ["How the platform works", "Cómo funciona la plataforma"],
+  "teach.card.guideBody": [
+    "Five steps with pictures, from your class list to your grades. Start here on your first day.",
+    "Cinco pasos con dibujos, desde tu lista hasta las calificaciones. Empieza aquí tu primer día."
+  ],
+
+  // ------------------------------------------------------ instructor guide
+  // Button and screen names are passed in from their own keys, never retyped.
+  "guide.eyebrow": ["Instructor guide", "Guía para profesores"],
+  "guide.title": ["How the platform works", "Cómo funciona la plataforma"],
+  "guide.lede": [
+    "Five steps, from your class list to your grades.",
+    "Cinco pasos, desde tu lista de estudiantes hasta las calificaciones."
+  ],
+  "guide.open": ["Open {place}", "Abrir {place}"],
+  "guide.step1.title": ["Add your students", "Agrega a tus estudiantes"],
+  "guide.step1.when": ["Once a semester", "Una vez por semestre"],
+  "guide.step1.body": [
+    "Go to {people} › {rosterImport}. Use a spreadsheet with each student's name, student ID, email and group.",
+    "Ve a {people} › {rosterImport}. Usa una hoja de cálculo con el nombre, la matrícula, el correo y el grupo de cada estudiante."
+  ],
+  "guide.step2.title": ["Bring in a lecture", "Sube una lección"],
+  "guide.step2.when": ["Once per lecture", "Una vez por lección"],
+  "guide.step2.body": [
+    "Go to {content} › {import}. Your AI makes the slides and the questions, and you upload both files.",
+    "Ve a {content} › {import}. Tu IA crea las diapositivas y las preguntas, y tú subes ambos archivos."
+  ],
+  "guide.step3.title": ["Put it on a class day", "Asígnala a un día de clase"],
+  "guide.step3.when": ["Before each class", "Antes de cada clase"],
+  "guide.step3.body": [
+    "Go to {classes} › {addClassDay}, choose the date and pick the lecture.",
+    "Ve a {classes} › {addClassDay}, elige la fecha y la lección."
+  ],
+  "guide.step4.title": ["Teach", "Da la clase"],
+  "guide.step4.when": ["During class", "Durante la clase"],
+  "guide.step4.body": [
+    "On {home}, press {runClass}, then {startClass}. Students scan the QR code with their phones. Ask questions from the {plan}. At the end, press {openQuiz} › {startQuiz}.",
+    "En {home}, presiona {runClass} y luego {startClass}. Los estudiantes escanean el código QR con su teléfono. Haz preguntas desde el {plan}. Al final, presiona {openQuiz} › {startQuiz}."
+  ],
+  "guide.step5.title": ["End the class", "Termina la clase"],
+  "guide.step5.when": ["When class is over", "Al final de la clase"],
+  "guide.step5.body": [
+    "Press {endClass}. Grades post by themselves, and students can find the lecture in {review}. See the grades in {gradebook}.",
+    "Presiona {endClass}. Las calificaciones se publican solas y los estudiantes encuentran la lección en {review}. Consulta las calificaciones en {gradebook}."
+  ],
+  "guide.goodToKnow": ["Good to know", "Conviene saber"],
+  "guide.tip.pause": [
+    "Out of time? Press {pause}. Nothing is graded, and you can continue next session.",
+    "¿Se acabó el tiempo? Presiona {pause}. No se califica nada y puedes continuar en la próxima sesión."
+  ],
+  "guide.tip.reflection": [
+    "Students write their reflection once the quiz closes.",
+    "Los estudiantes escriben su reflexión cuando se cierra el quiz."
+  ],
+  "guide.tip.reset": [
+    "Never press {reset} on a real class. It erases the answers, attendance, quiz, reflections and grade.",
+    "Nunca presiones {reset} en una clase real. Borra las respuestas, la asistencia, el quiz, las reflexiones y la calificación."
+  ],
 
   // ---------------------------------------------------------------- classes
   "classes.eyebrow": ["Course setup", "Configuración del curso"],

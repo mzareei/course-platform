@@ -18,6 +18,7 @@ import { People } from "./screens/instructor/People";
 import { Classes } from "./screens/instructor/Classes";
 import { Content } from "./screens/instructor/Content";
 import { Admin } from "./screens/instructor/Admin";
+import { InstructorGuide } from "./screens/instructor/Guide";
 import { Viewer } from "./screens/Viewer";
 import { Live } from "./screens/student/Live";
 import { JoinClass } from "./screens/student/JoinClass";
@@ -93,6 +94,7 @@ function InstructorSurface() {
         <Route path="/teach/content" component={Content} />
         <Route path="/teach/grades" component={Gradebook} />
         <Route path="/teach/people" component={People} />
+        <Route path="/teach/guide" component={InstructorGuide} />
         <Route path="/admin" component={AdminRoute} />
         <Route path="/student" component={StudentTodayPreview} />
         <Route path="/student/review" component={StudentReviewPreview} />
