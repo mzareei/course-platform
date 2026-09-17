@@ -913,11 +913,6 @@ export const strings = {
   "people.groupEmpty": ["No one is enrolled in this group yet.", "Aún no hay nadie inscrito en este grupo."],
   "people.loadFailed": ["Could not load the roster and groups.", "No se pudieron cargar la lista y los grupos."],
   "people.group": ["Group", "Grupo"],
-  "people.ungroupedTitle": ["Not in a group yet", "Todavía sin grupo"],
-  "people.ungroupedBody": [
-    "These people are on the course but have no group. Assign one to bring them into a class.",
-    "Estas personas están en el curso pero no tienen grupo. Asigna uno para incluirlas en una clase."
-  ],
   "people.chooseGroup": ["Choose a group", "Elige un grupo"],
   "people.assignGroup": ["Assign group", "Asignar grupo"],
   "people.changeGroup": ["Change group", "Cambiar grupo"],
@@ -935,17 +930,6 @@ export const strings = {
   "people.assignRoleUnavailable": [
     "Only student accounts can be assigned to a group.",
     "Solo las cuentas de estudiante se pueden asignar a un grupo."
-  ],
-  "people.groupNotAssignable": [
-    "This group is completed or archived. Reactivate it before assigning students.",
-    "Este grupo está completado o archivado. Reactívalo antes de asignar estudiantes."
-  ],
-  "people.assignToViewingGroup": ["Assign a student to {group}", "Asignar un estudiante a {group}"],
-  "people.student": ["Student", "Estudiante"],
-  "people.chooseStudent": ["Choose a student", "Elige un estudiante"],
-  "people.noStudentsToAssign": [
-    "Every active student is already in this group.",
-    "Todos los estudiantes activos ya están en este grupo."
   ],
   "people.col.name": ["Name", "Nombre"],
   "people.col.id": ["ID", "ID"],

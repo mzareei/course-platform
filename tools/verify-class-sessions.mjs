@@ -182,8 +182,8 @@ assert.match(people, /listSections\(\)/, "People must load the authoritative cou
 assert.match(rosterAssignment, /new Set\(\["planned", "active"\]\)/);
 assert.match(
   people,
-  /selectedGroupAssignable[\s\S]+isAssignableGroupStatus\(selectedGroup\.status\)/,
-  "archived and completed filtered groups must not expose assignment controls"
+  /const availableGroups = groups\.filter\(\(group\) => isAssignableGroupStatus\(group\.status\)\)/,
+  "archived and completed groups must not be offered by the assignment control"
 );
 assert.match(
   people,
@@ -195,7 +195,6 @@ assert.match(
   /invite_email_sent[\s\S]+people\.addedWithInvitation/,
   "People must tell the instructor whether the invitation email was sent"
 );
-assert.match(people, /people\.groupNotAssignable/);
 assert.match(
   people,
   /isAssignableStudentProfileStatus\(person\.profile_status\)/,
@@ -229,7 +228,6 @@ assert.match(rosterApi, /section_id:\s*sectionId/);
 assert.match(people, /assignPersonSection/);
 assert.match(people, /people\.changeGroup/);
 assert.match(people, /people\.assignGroup/);
-assert.match(people, /people\.assignToViewingGroup/);
 assert.match(people, /cause instanceof ApiError/);
 assert.match(rosterAssignment, /people\.assignGroupUnavailable/);
 assert.match(rosterAssignment, /people\.assignStudentUnavailable/);

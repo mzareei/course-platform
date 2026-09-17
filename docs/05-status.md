@@ -1,6 +1,34 @@
 # Status
 
-**Last updated:** 2026-09-15
+**Last updated:** 2026-09-17
+
+### People loses the per-group assign card and the ungrouped list (2026-09-17)
+
+The professor asked for both blocks gone from every group view. The
+"Assign a student to Group X" card could only move a student the screen was not
+showing, and it skipped anyone whose membership was inactive — which is exactly
+who kept appearing below it. Each person's own row already carries the same
+control, with the same archived-group filter, so nothing an owner can do was
+lost.
+
+"Not in a group yet" listed every roster row whose enrollments were all dropped
+(`ungroupedPeople`, `features/scope/filters.ts`) — no role filter, no membership
+filter — so soft-removed QA accounts and a removed instructor sat there in every
+group view, permanently, with no control that could clear them. Worse, for a
+non-owner instructor `listRoster` scopes each person's `sections[]` to that
+instructor's own groups, so a student active in another group was shown as
+having none. `ungroupedPeople` stays exported and self-tested in
+`verify-scope-filter.mjs`; no screen renders it.
+
+Six string keys went with the blocks, and three assertions were re-pointed at
+the row control (`verify-scope-filter.mjs`, `verify-class-sessions.mjs`).
+
+**Still true after this change:** People > Remove is a soft removal, so those
+people remain on the course, now visible to the owner only, in the All groups
+roster with a "Removed" pill. The only hard delete is the owner-only Reset panel
+on Classes (`remove_course_student`, migration 0042), and it refuses staff — so
+a removed instructor is repaired by adding them again with their group, not by
+deleting them.
 
 ### Instructor guide on Home (2026-09-15)
 
@@ -510,10 +538,12 @@ touch.
 **Two judgement calls worth recording, because neither is obvious from the
 code:**
 
-- Inside a single-group view, People still shows a separate "Not in a group
-  yet" block. Without it, importing a roster while inside a group view would
-  strand every new student with nobody able to assign them — that block is the
-  only place a group-scoped instructor could ever reach them.
+- Inside a single-group view, People used to show a separate "Not in a group
+  yet" block, on the reasoning that importing a roster inside a group view
+  would otherwise strand every new student. **Removed 2026-09-17** — see the
+  entry at the top of this file. Both import paths require a group, so nobody
+  arrives without one; what the block actually listed was people whose
+  enrollments had been dropped.
 - Inside a single-group view, Content still shows whole-course releases
   (`section_id` null). That group genuinely can open them, and hiding them
   would misrepresent what its own students actually see.

@@ -24,7 +24,7 @@ import {
 import { context, refreshContext } from "../../state/session";
 import { t, apiErrorText } from "../../i18n";
 import { ConfirmButton } from "../../components/ConfirmButton";
-import { scopedRoster, ungroupedPeople } from "../../features/scope/filters";
+import { scopedRoster } from "../../features/scope/filters";
 import { activeSectionId, scopeOptions, setScopeToSection } from "../../state/scope";
 
 const ROLE_OPTIONS: Role[] = ["student", "teaching_assistant", "instructor", "observer"];
@@ -111,7 +111,6 @@ export function People() {
   const [resettingPin, setResettingPin] = useState<string | null>(null);
   const [inviting, setInviting] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
-  const [profileToAssign, setProfileToAssign] = useState("");
   const [selectedNoteProfile, setSelectedNoteProfile] = useState<RosterPerson | null>(null);
 
   const myProfileId = context.value?.profile?.id ?? "";
@@ -137,9 +136,6 @@ export function People() {
   const selectedGroup = (groups ?? []).find((group) => group.id === active) ?? null;
   const groupId = selectedGroup?.id ?? null;
 
-  const selectedGroupAssignable = Boolean(
-    selectedGroup && isAssignableGroupStatus(selectedGroup.status)
-  );
   const courseGroupIds = new Set((groups ?? []).map((group) => group.id));
 
   async function load() {
@@ -174,19 +170,6 @@ export function People() {
     (person.institutional_email || "").toLowerCase().includes(searchNeedle) ||
     (person.student_identifier || "").toLowerCase().includes(searchNeedle);
   const roster = scopedRoster(data?.roster ?? [], active).filter(matchesSearch);
-  // A student who was just imported has no group at all. Without this list,
-  // importing a roster inside a group view would leave nobody to assign.
-  const ungrouped = ungroupedPeople(data?.roster ?? [], active).filter(matchesSearch);
-  const studentsOutsideGroup = groupId && selectedGroupAssignable
-    ? (data?.roster ?? []).filter((person, index, rows) =>
-        person.course_role === "student" &&
-        person.membership_status === "active" &&
-        isAssignableStudentProfileStatus(person.profile_status) &&
-        person.profile_id !== myProfileId &&
-        currentCourseStudentSectionId(person.sections, courseGroupIds) !== groupId &&
-        rows.findIndex((candidate) => candidate.profile_id === person.profile_id) === index
-      )
-    : [];
 
   async function removePerson(profileId: string, fullName: string) {
     setNotice(null);
@@ -359,62 +342,23 @@ export function People() {
       <RosterImport onImported={() => void load()} />
 
       <h2>{t("people.roster")}</h2>
+      {/* Group assignment lives on each person's own row in the table below.
+          A separate card here could only ever move a student the screen was
+          not showing, and it never reached anyone whose enrollment was
+          dropped, which is who the professor kept finding in it. */}
       {selectedGroup ? (
-        <>
-          <div class="row">
-            <span class="pill scheduled">
-              {t("people.viewingGroup", { group: selectedGroup.section_name || selectedGroup.section_code })}
-            </span>
-            {/* Only offered while a `?group=` link is still unspent — normally
-                the effect above deletes it, so this appears when the switcher
-                could not honour the link (a group that is not in your menu).
-                Changing group is the switcher's job, not this link's. */}
-            {requestedGroupId ? (
-              <a class="btn quiet" href="/teach/people">{t("people.clearGroup")}</a>
-            ) : null}
-          </div>
-          <div class="card stack">
-            <h3>
-              {t("people.assignToViewingGroup", {
-                group: selectedGroup.section_name || selectedGroup.section_code
-              })}
-            </h3>
-            {!selectedGroupAssignable ? (
-              <p class="hint">{t("people.groupNotAssignable")}</p>
-            ) : studentsOutsideGroup.length ? (
-              <div class="row">
-                <label class="field">
-                  {t("people.student")}
-                  <select
-                    value={profileToAssign}
-                    disabled={Boolean(assigning)}
-                    onChange={(event) => setProfileToAssign((event.target as HTMLSelectElement).value)}
-                  >
-                    <option value="">{t("people.chooseStudent")}</option>
-                    {studentsOutsideGroup.map((person) => (
-                      <option value={person.profile_id}>{person.full_name}</option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  class="btn quiet"
-                  type="button"
-                  disabled={Boolean(assigning) || !profileToAssign}
-                  onClick={() => {
-                    const person = studentsOutsideGroup.find((candidate) => candidate.profile_id === profileToAssign);
-                    if (!person) return;
-                    setProfileToAssign("");
-                    void assignGroup(person, selectedGroup.id);
-                  }}
-                >
-                  {assigning ? t("people.assigningGroup") : t("people.assignGroup")}
-                </button>
-              </div>
-            ) : (
-              <p class="hint">{t("people.noStudentsToAssign")}</p>
-            )}
-          </div>
-        </>
+        <div class="row">
+          <span class="pill scheduled">
+            {t("people.viewingGroup", { group: selectedGroup.section_name || selectedGroup.section_code })}
+          </span>
+          {/* Only offered while a `?group=` link is still unspent — normally
+              the effect above deletes it, so this appears when the switcher
+              could not honour the link (a group that is not in your menu).
+              Changing group is the switcher's job, not this link's. */}
+          {requestedGroupId ? (
+            <a class="btn quiet" href="/teach/people">{t("people.clearGroup")}</a>
+          ) : null}
+        </div>
       ) : null}
       {data && (data.roster?.length ?? 0) > 5 ? (
         <input
@@ -546,46 +490,6 @@ export function People() {
           </table>
         </div>
       )}
-
-      {ungrouped.length ? (
-        <div class="card stack">
-          <h3>{t("people.ungroupedTitle")}</h3>
-          <p class="hint">{t("people.ungroupedBody")}</p>
-          <div class="table-scroll">
-            <table class="data">
-              <thead>
-                <tr>
-                  <th>{t("people.col.name")}</th>
-                  <th>{t("people.email")}</th>
-                  <th>{t("people.group")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ungrouped.map((person) => (
-                  <tr key={person.profile_id}>
-                    <td>{person.full_name}</td>
-                    <td>{person.institutional_email}</td>
-                    <td>
-                      {person.course_role === "student" &&
-                      person.membership_status === "active" &&
-                      isAssignableStudentProfileStatus(person.profile_status) &&
-                      person.profile_id !== myProfileId ? (
-                        <GroupAssignment
-                          person={person}
-                          groups={groups ?? []}
-                          courseGroupIds={courseGroupIds}
-                          assigning={assigning === person.profile_id}
-                          onAssign={(sectionId) => void assignGroup(person, sectionId)}
-                        />
-                      ) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
 
       {selectedNoteProfile ? (
         <section class="card stack">

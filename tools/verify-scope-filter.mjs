@@ -348,20 +348,17 @@ assert.match(
   /import \{[^}]*\bscopedRoster\b[^}]*\} from "\.\.\/\.\.\/features\/scope\/filters"/,
   "People must narrow the roster through the shared filter"
 );
-assert.match(
-  people,
-  /\bungroupedPeople\b/,
-  "People must still show students who are in no group yet, or a roster import strands them"
-);
+// The "Not in a group yet" block was removed on 2026-09-17. Its stated reason —
+// that a roster import would strand new students — had stopped being true: both
+// the CSV import and Add one person require a group, so nobody arrives without
+// one. What it actually listed was people whose enrollments had been dropped,
+// in every group view, forever, and for a non-owner instructor it mislabelled a
+// student who is active in another of the course's groups. ungroupedPeople stays
+// exported and self-tested below; no screen renders it.
 assert.match(
   people,
   /setScopeToSection\(/,
   "an existing ?group= link must move the switcher rather than fight it"
-);
-assert.match(
-  strings,
-  /"people\.ungroupedTitle": \[/,
-  "the ungrouped block needs a bilingual heading"
 );
 
 // ----------------------------------------------------------------- Grades
@@ -393,11 +390,12 @@ assert.match(
 );
 
 // ------------------------------------------- People: one source of truth
-// The bug this pins: the roster followed the switcher while the pill, the
-// "Assign a student to Group X" card and its write followed the `?group=`
-// parameter. Arriving from a 501 link and then switching to 401 left the card
-// offering 401's students and writing them into 501. The screen must have
-// exactly one answer to "which group am I looking at", and it is the switcher.
+// The bug this pins: the roster followed the switcher while the pill and the
+// old "Assign a student to Group X" card followed the `?group=` parameter.
+// Arriving from a 501 link and then switching to 401 left the card offering
+// 401's students and writing them into 501. That card is gone, but the rule it
+// broke still holds for the pill and the roster: the screen has exactly one
+// answer to "which group am I looking at", and it is the switcher.
 assert.match(
   people,
   /const active = activeSectionId\.value;[\s\S]{0,200}const selectedGroup =[\s\S]{0,120}group\.id === active/,
@@ -425,8 +423,13 @@ assert.match(
 );
 assert.match(
   people,
+  /onAssign=\{\(sectionId\) => void assignGroup\(person, sectionId\)\}/,
+  "the only assignment control left writes to the group picked in its own dropdown, on the person's own row"
+);
+assert.doesNotMatch(
+  people,
   /void assignGroup\(person, selectedGroup\.id\)/,
-  "the assign card must write to the group the screen is actually showing"
+  "the per-group assign card is gone: it could only move a student the screen was not showing"
 );
 // The full group list still has to reach the controls whose job is moving a
 // student between groups — narrowing those would make the screen useless.
