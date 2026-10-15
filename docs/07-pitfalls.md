@@ -2845,3 +2845,35 @@ Two failures stacked:
 running clock) must exist server-side *before* the moment of submission, and
 anything randomized must be dealt once and stored, never re-rolled per
 request. A remount is not an edge case on phones — it is the normal case.
+
+## 96. A PostgREST `.in(...)` list that grows with the term overflows the request URL
+
+**Reported by the professor 2026-10-15: the Gradebook screen stopped loading
+for the whole course (a `TypeError` from the edge function) while every
+per-class record still opened.** `course-gradebook-summary` loaded every
+`gradebook_scores` row in the course and then asked `grade_adjustments` for
+`gradebook_score_id=in.(…)` with all 449 score ids in a single GET. PostgREST
+puts the filter in the URL, and the edge gateway closes the HTTP/2 stream once
+the URL passes roughly 16 KB, about 400 uuids: `http2 error: stream error
+detected`. Nothing was wrong with the data. The course had simply posted
+enough class grades, and per-class records never hit it because they look up
+one session at a time. The same request worked all term until the day it did
+not.
+
+**Fix:** `_shared/in-chunks.ts`. `inChunks(ids, (chunk) => query)` splits the
+ids into batches of 100, runs the batches concurrently and concatenates the
+rows; an empty list makes no request. The Gradebook's `grade_adjustments` and
+`student_attempts` lookups go through it, as do the two attempt-scaled lookups
+in `_shared/class-grade.ts` (`loadEndOfClassRan`, `loadStudentQuiz`). The
+shared change reaches `course-student-progress`, `course-exit-ticket`,
+`course-class-record` and `course-session-management` only when each is next
+deployed; edge functions bundle `_shared` at deploy time.
+
+**Rule:** any `.in(column, ids)` whose list grows with the term — one id per
+posted score, per attempt, per response — goes through `inChunks`. A list
+bounded by the roster or by the number of classes (profiles, sections,
+sessions, gradebook items, pulse rounds) may stay a single request, but check
+the arithmetic: 400 uuids is the ceiling. Row order survives only inside a
+batch, so a query whose `.order(...)` matters across the whole set must either
+batch on the same column its "latest per id" logic keys on (every row for one
+id then lands in one batch) or sort the merged rows itself.

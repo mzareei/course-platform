@@ -1,6 +1,22 @@
 # Status
 
-**Last updated:** 2026-09-17
+**Last updated:** 2026-10-15
+
+### Gradebook loads again with a term of grades (2026-10-15)
+
+The professor Gradebook (`/teach/grades`) failed for the whole course with a
+`TypeError` from `course-gradebook-summary` while every per-class record still
+loaded. `loadGradebookRows` asked `grade_adjustments` for all 449 posted score
+ids in one `.in(...)` GET, and the edge gateway closes the HTTP/2 stream once
+that URL passes about 16 KB (`http2 error: stream error detected`). New
+`_shared/in-chunks.ts` runs such lookups 100 ids at a time and concatenates the
+rows; the Gradebook's score-scaled lookups (`grade_adjustments`,
+`student_attempts`) and the two attempt-scaled lookups in
+`_shared/class-grade.ts` (`loadEndOfClassRan`, `loadStudentQuiz`) use it. The
+`return json({...})` shape is unchanged. Deployed 2026-10-15 and confirmed in
+Chrome for Group 401 and for All groups. `course-student-progress`,
+`course-exit-ticket`, `course-class-record` and `course-session-management`
+pick up the shared change on their next deploy. Pitfall 96.
 
 ### People loses the per-group assign card and the ungrouped list (2026-09-17)
 
